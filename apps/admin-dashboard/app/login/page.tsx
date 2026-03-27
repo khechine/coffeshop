@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Coffee, Lock, Mail, Eye, EyeOff, ShieldCheck, Truck, Store, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { loginUser } from '../actions';
@@ -13,6 +13,14 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Clear stale local storage to prevent redirect loops from the landing page
+  useEffect(() => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('pos_cashier');
+    localStorage.removeItem('pos_cashier_role');
+    localStorage.removeItem('pos_cashier_permissions');
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
