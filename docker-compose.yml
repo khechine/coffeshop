@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  coffeeshop_db:
+    image: postgres:15
+    container_name: coffeeshop_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-coffeeshop}
+    ports:
+      - '5432:5432'
+    volumes:
+      - coffeeshop_pgdata:/var/lib/postgresql/data
+
+  coffeeshop_app:
+    build: .
+    container_name: coffeeshop_app
+    restart: always
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@coffeeshop_db:5432/${POSTGRES_DB:-coffeeshop}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-supers3cr3tc0ffeesh0p}
+      PORT: 3000
+    depends_on:
+      - coffeeshop_db
+
+volumes:
+  coffeeshop_pgdata:

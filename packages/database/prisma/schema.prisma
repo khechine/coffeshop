@@ -1,0 +1,366 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPERADMIN
+  STORE_OWNER
+  CASHIER
+  VENDOR
+  COURIER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  pinCode   String?
+  name      String
+  role      UserRole @default(CASHIER)
+  storeId   String?
+  store     Store?   @relation(fields: [storeId], references: [id])
+  phone     String?
+  emailVerified Boolean @default(false)
+  verificationToken String?
+  defaultPosMode String? @default("tables") // tables ou simplistic
+  permissions    String[] @default(["POS"])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendorProfile  VendorProfile?
+  courierProfile CourierProfile?
+  paidSales  Sale[] @relation("paidBy")
+  takenSales Sale[] @relation("takenBy")
+  sessionLogs StaffSessionLog[]
+}
+
+model StaffSessionLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  storeId   String
+  action    String   // LOGIN, LOGOUT
+  createdAt DateTime @default(now())
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id])
+  category    String   // "EAU_SONEDE", "STEG", "LOYER", "SALAIRE", "CNSS", "ACHAT", "AUTRE"
+  amount      Decimal
+  description String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  city      String?
+  phone     String?
+  lat       Float?
+  lng       Float?
+  
+  status        String   @default("PENDING_DOCS") // PENDING_DOCS, PENDING_VERIFICATION, ACTIVE, SUSPENDED
+  officialDocs  Json?    // Array of { name: string, url: string, type: string, status: string }
+  trialEndsAt   DateTime?
+  isVerified    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owners         User[]
+  products       Product[]
+  sales          Sale[]
+  stockItems     StockItem[]
+  suppliers      Supplier[]
+  orders         SupplierOrder[]
+  stockReports   StockReport[]
+  expenses       Expense[]
+  subscription   Subscription?
+  tables         StoreTable[]
+
+  activityPoleId String?
+  activityPole   ActivityPole? @relation(fields: [activityPoleId], references: [id])
+}
+
+model StoreTable {
+  id        String   @id @default(cuid())
+  label     String
+  capacity  Int      @default(2)
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Plan {
+  id            String         @id @default(cuid())
+  name          String
+  price         Decimal
+  maxStores     Int            @default(1)
+  maxProducts   Int            @default(50)
+  hasMarketplace Boolean       @default(true)
+  status        String         @default("ACTIVE")
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  storeId   String   @unique
+  store     Store    @relation(fields: [storeId], references: [id])
+  planId    String
+  plan      Plan     @relation(fields: [planId], references: [id])
+  status    String   @default("ACTIVE")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model ActivityPole {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  icon      String?  // emoji or icon name
+  stores    Store[]
+  vendors   VendorProfile[]
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  products  Product[]
+  createdAt DateTime  @default(now())
+}
+
+model Product {
+  id         String   @id @default(cuid())
+  name       String
+  price      Decimal
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  storeId    String
+  store      Store    @relation(fields: [storeId], references: [id])
+
+  recipe RecipeItem[]
+  sales     SaleItem[]
+  unitId     String?
+  unit       GlobalUnit? @relation(fields: [unitId], references: [id])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+// Ingrédients constitutifs d'un produit (Recette)
+model RecipeItem {
+  id          String    @id @default(cuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  stockItemId String
+  stockItem   StockItem @relation(fields: [stockItemId], references: [id])
+  quantity    Decimal // ex: 0.018 kg de café pour un expresso
+}
+
+model Sale {
+  id        String     @id @default(cuid())
+  total     Decimal
+  storeId   String
+  store     Store      @relation(fields: [storeId], references: [id])
+  tableName String?
+  baristaId String?
+  barista   User?      @relation("paidBy", fields: [baristaId], references: [id])
+  takenById String?
+  takenBy   User?      @relation("takenBy", fields: [takenById], references: [id])
+  items     SaleItem[]
+  createdAt DateTime   @default(now())
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Decimal
+}
+
+// Articles en stock (ex: Grains de café, Lait, Gobelets)
+model StockItem {
+  id           String  @id @default(cuid())
+  name         String
+  unitId       String?
+  unit         GlobalUnit? @relation(fields: [unitId], references: [id])
+  quantity     Decimal @default(0)
+  cost         Decimal @default(0)
+  minThreshold Decimal @default(0)
+  storeId      String
+  store        Store   @relation(fields: [storeId], references: [id])
+  
+  preferredVendorId String?
+  preferredVendor   VendorProfile? @relation(fields: [preferredVendorId], references: [id])
+
+  preferredSupplierId String?
+  preferredSupplier   Supplier? @relation(fields: [preferredSupplierId], references: [id])
+
+  recipeItems RecipeItem[]
+  orderItems  SupplierOrderItem[]
+  stockReportDetails StockReportDetail[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model StockReport {
+  id             String      @id @default(cuid())
+  storeId        String
+  store          Store       @relation(fields: [storeId], references: [id])
+  type           String      // "INVENTORY_CHECK", "WASTE", "ADJUSTMENT"
+  notes          String?
+  createdAt      DateTime    @default(now())
+  details        StockReportDetail[]
+}
+
+model StockReportDetail {
+  id             String      @id @default(cuid())
+  reportId       String
+  report         StockReport @relation(fields: [reportId], references: [id])
+  stockItemId    String
+  stockItem      StockItem   @relation(fields: [stockItemId], references: [id])
+  quantityBefore Decimal
+  quantityAfter  Decimal
+}
+
+model VendorProfile {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  user        User    @relation(fields: [userId], references: [id])
+  companyName String
+  description String?
+  address     String?
+  city        String?
+  phone       String?
+  lat         Float?
+  lng         Float?
+
+  status      String   @default("PENDING") // PENDING, ACTIVE, REJECTED
+  createdAt   DateTime @default(now())
+
+  activityPoleId String?
+  activityPole   ActivityPole? @relation(fields: [activityPoleId], references: [id])
+
+  categories MarketplaceCategory[]
+  products   MarketplaceProduct[]
+  orders     SupplierOrder[]
+  stockItems StockItem[]
+}
+
+model CourierProfile {
+  id          String          @id @default(cuid())
+  userId      String          @unique
+  user        User            @relation(fields: [userId], references: [id])
+  vehicleType String // Car, Bike, Truck
+  status      String          @default("AVAILABLE") // AVAILABLE, BUSY, OFFLINE
+  currentLat  Float?
+  currentLng  Float?
+  orders      SupplierOrder[]
+  createdAt   DateTime        @default(now())
+}
+
+model MarketplaceCategory {
+  id       String               @id @default(cuid())
+  name     String
+  icon     String?
+  products MarketplaceProduct[]
+  vendors   VendorProfile[]
+  createdAt DateTime        @default(now())
+}
+
+model MarketplaceProduct {
+  id    String  @id @default(cuid())
+  name  String
+  price Decimal
+  unit  String
+
+  categoryId String?
+  category   MarketplaceCategory? @relation(fields: [categoryId], references: [id])
+
+  isFeatured  Boolean   @default(false)
+  isFlashSale Boolean   @default(false)
+  discount    Decimal?
+  flashStart  DateTime?
+  flashEnd    DateTime?
+  image       String? // Mocked image URL
+  upsellIds   String[]  @default([]) // IDs of products to suggest for upselling
+
+  vendorId  String
+  vendor    VendorProfile @relation(fields: [vendorId], references: [id])
+  minOrderQuantity Decimal @default(1)
+  createdAt DateTime      @default(now())
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  PAID
+}
+
+model Supplier {
+  id      String          @id @default(cuid())
+  name    String
+  contact String?
+  phone   String?
+  orders  SupplierOrder[]
+  stockItems StockItem[]
+  storeId    String?
+  store      Store?          @relation(fields: [storeId], references: [id])
+  createdAt  DateTime      @default(now())
+}
+
+model SupplierOrder {
+  id      String      @id @default(cuid())
+  status  OrderStatus @default(PENDING)
+  total   Decimal
+  storeId String
+  store   Store       @relation(fields: [storeId], references: [id])
+
+  // Marketplace link
+  vendorId String?
+  vendor   VendorProfile? @relation(fields: [vendorId], references: [id])
+
+  // Legacy / Manual link
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+
+  courierId     String?
+  courier       CourierProfile? @relation(fields: [courierId], references: [id])
+  needsDelivery Boolean           @default(false)
+  items         SupplierOrderItem[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model SupplierOrderItem {
+  id          String        @id @default(cuid())
+  orderId     String
+  order       SupplierOrder @relation(fields: [orderId], references: [id])
+  stockItemId String?
+  stockItem   StockItem?    @relation(fields: [stockItemId], references: [id])
+  name        String? // Name of product if not linked to stockItem
+  quantity    Decimal
+  price       Decimal
+}
+model GlobalUnit {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  products  Product[]
+  stockItems StockItem[]
+  createdAt DateTime    @default(now())
+}

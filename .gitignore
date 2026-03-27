@@ -1,0 +1,12 @@
+node_modules
+.next
+.DS_Store
+.env
+.env.local
+.env.prod
+dist
+build
+.turbo
+*.log
+.pnpm-debug.log
+node_modules

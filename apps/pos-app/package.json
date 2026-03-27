@@ -1,0 +1,36 @@
+{
+  "name": "@coffeeshop/pos-app",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start --web",
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~55.0.6",
+    "@react-native-async-storage/async-storage": "^3.0.2",
+    "expo": "~55.0.7",
+    "expo-constants": "~55.0.8",
+    "expo-linking": "~55.0.7",
+    "expo-router": "~55.0.6",
+    "expo-status-bar": "~55.0.4",
+    "lucide-react-native": "^0.577.0",
+    "react": "19.2.0",
+    "react-dom": "^19.2.0",
+    "react-native": "0.83.2",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-web": "^0.19.13",
+    "zustand": "^3.7.2"
+  },
+  "devDependencies": {
+    "@expo/metro-config": "^55.0.10",
+    "@types/react": "~19.2.2",
+    "babel-plugin-transform-import-meta": "^2.3.3",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}
