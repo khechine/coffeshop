@@ -9,7 +9,7 @@ export class SalesService {
 
   constructor(private readonly inventoryService: InventoryService) {}
 
-  async createSale(dto: CreateSaleDto) {
+  async createSale(dto: CreateSaleDto): Promise<any> {
     try {
       // Create Sale using a transaction
       const sale = await prisma.$transaction(async (tx) => {
@@ -47,7 +47,7 @@ export class SalesService {
     }
   }
 
-  async getSales(storeId: string) {
+  async getSales(storeId: string): Promise<any> {
     return prisma.sale.findMany({
       where: { storeId },
       include: { items: { include: { product: true } } },

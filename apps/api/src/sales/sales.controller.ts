@@ -7,12 +7,12 @@ export class SalesController {
   constructor(private readonly salesService: SalesService) {}
 
   @Post()
-  async createSale(@Body() createSaleDto: CreateSaleDto) {
+  async createSale(@Body() createSaleDto: CreateSaleDto): Promise<any> {
     return this.salesService.createSale(createSaleDto);
   }
 
   @Get(':storeId')
-  async getSalesByStore(@Param('storeId') storeId: string) {
+  async getSalesByStore(@Param('storeId') storeId: string): Promise<any> {
     return this.salesService.getSales(storeId);
   }
 }
