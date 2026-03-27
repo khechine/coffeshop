@@ -46,7 +46,7 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
     if (typeof window === 'undefined') return;
 
     const initMap = async () => {
-      const L = (await import('leaflet')).default;
+      const L: any = (await import('leaflet')).default;
       
       if (!mapRef.current && mapContainerRef.current) {
         mapRef.current = L.map(mapContainerRef.current).setView([form.lat, form.lng], 13);
