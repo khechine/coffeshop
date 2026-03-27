@@ -20,7 +20,7 @@ services:
     restart: always
     command: ["pnpm", "--filter", "@coffeeshop/admin-dashboard", "start", "-p", "3000"]
     ports:
-      - "3000:3000"
+      - "3050:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@coffeeshop_db:5432/${POSTGRES_DB:-coffeeshop}?schema=public
       JWT_SECRET: ${JWT_SECRET:-supers3cr3tc0ffeesh0p}
@@ -34,7 +34,8 @@ services:
     restart: always
     command: ["pnpm", "--filter", "@coffeeshop/api", "start"]
     ports:
-      - "3001:3001"
+      - "3051:3001"
+
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@coffeeshop_db:5432/${POSTGRES_DB:-coffeeshop}?schema=public
       JWT_SECRET: ${JWT_SECRET:-supers3cr3tc0ffeesh0p}
