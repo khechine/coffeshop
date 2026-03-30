@@ -13,11 +13,13 @@ const ROLES = [
 const PERMISSIONS = [
   { key: 'DASHBOARD', label: 'Dashboard & Statistiques' },
   { key: 'POS',       label: 'Caisse POS (Ventes)' },
+  { key: 'TABLES',    label: 'Plan de Salle (Gestion Tables)' },
+  { key: 'RACHMA',    label: 'Mode Rachma (Pointage Rapide)' },
   { key: 'PRODUCTS',  label: 'Gestion des Produits' },
   { key: 'STOCK',     label: 'Gestion du Stock' },
   { key: 'SUPPLY',    label: 'Commandes Fournisseurs' },
   { key: 'STAFF',     label: 'Gestion du Personnel' },
-  { key: 'SUBS',      label: 'Abonnement SaaS' },
+  { key: 'BAR',       label: 'Gestion Bar (Prép/KDS)' },
 ];
 
 interface StaffMember { 
@@ -29,13 +31,18 @@ interface StaffMember {
   defaultPosMode: string | null;
   permissions: string[];
   pinCode?: string | null;
+  assignedTables?: string[];
 }
 
-export default function StaffClient({ staff }: { staff: StaffMember[] }) {
+export default function StaffClient({ staff, tables }: { staff: StaffMember[]; tables: { id: string; label: string }[] }) {
   const [isPending, startTransition] = useTransition();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<StaffMember | null>(null);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', role: 'CASHIER', defaultPosMode: 'tables', permissions: ['POS'] as string[] });
+  const [form, setForm] = useState({ 
+    name: '', email: '', phone: '', role: 'CASHIER', 
+    defaultPosMode: 'tables', permissions: ['POS'] as string[],
+    assignedTables: [] as string[]
+  });
   const [deleteTarget, setDeleteTarget] = useState<StaffMember | null>(null);
   const [pinTarget, setPinTarget] = useState<StaffMember | null>(null);
   const [newPin, setNewPin] = useState('');
@@ -43,8 +50,8 @@ export default function StaffClient({ staff }: { staff: StaffMember[] }) {
   const [logs, setLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
-  const openCreate = () => { setEditing(null); setForm({ name: '', email: '', phone: '', role: 'CASHIER', defaultPosMode: 'tables', permissions: ['POS'] }); setModalOpen(true); };
-  const openEdit = (m: StaffMember) => { setEditing(m); setForm({ name: m.name, email: m.email, phone: m.phone || '', role: m.role, defaultPosMode: m.defaultPosMode || 'tables', permissions: m.permissions || [] }); setModalOpen(true); };
+  const openCreate = () => { setEditing(null); setForm({ name: '', email: '', phone: '', role: 'CASHIER', defaultPosMode: 'tables', permissions: ['POS'], assignedTables: [] }); setModalOpen(true); };
+  const openEdit = (m: StaffMember) => { setEditing(m); setForm({ name: m.name, email: m.email, phone: m.phone || '', role: m.role, defaultPosMode: m.defaultPosMode || 'tables', permissions: m.permissions || [], assignedTables: m.assignedTables || [] }); setModalOpen(true); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,7 +130,9 @@ export default function StaffClient({ staff }: { staff: StaffMember[] }) {
                   <td><span className={`badge ${roleConf.badge}`}>{roleConf.label}</span></td>
                   <td>
                     {member.role === 'CASHIER'
-                      ? <span className="badge orange">POS ({member.defaultPosMode === 'simplistic' ? 'Simpliste' : 'Salle'})</span>
+                        ? <span className="badge orange">
+                            {member.defaultPosMode === 'rachma' ? 'Rachma' : member.defaultPosMode === 'simplistic' ? 'Simpliste' : member.defaultPosMode === 'bar' ? 'Bar' : 'Salle'}
+                          </span>
                       : <span className="badge green">✓ Complet</span>
                     }
                   </td>
@@ -192,7 +201,9 @@ export default function StaffClient({ staff }: { staff: StaffMember[] }) {
               <label style={label}>Mode POS par défaut</label>
               <select style={field} value={form.defaultPosMode} onChange={e => setForm(f => ({ ...f, defaultPosMode: e.target.value }))}>
                 <option value="tables">Plan de Salle (+1 ticket)</option>
+                <option value="rachma">Mode Rachma (Pointage)</option>
                 <option value="simplistic">Session Simpliste (+1 clic)</option>
+                <option value="bar">Bar (Prép./KDS)</option>
               </select>
             </div>
           </div>
@@ -211,6 +222,52 @@ export default function StaffClient({ staff }: { staff: StaffMember[] }) {
                   {p.label}
                 </label>
               ))}
+            </div>
+          </div>
+
+          <div>
+            <label style={label}>Affectation des Tables (Zone de service)</label>
+            <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '1.5px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>Cochez les tables visibles par cet utilisateur :</span>
+                <button type="button" onClick={() => {
+                  const items = tables.length > 0 ? tables.map(t => t.label) : Array.from({ length: 48 }, (_, i) => `T${i + 1}`);
+                  setForm(f => ({ ...f, assignedTables: (f.assignedTables || []).length === items.length ? [] : items }));
+                }} 
+                  style={{ fontSize: '11px', color: '#4F46E5', background: 'none', border: 'none', fontWeight: 800, cursor: 'pointer' }}>
+                  {(form.assignedTables || []).length === (tables.length || 48) ? 'Tout désélectionner' : 'Tout sélectionner'}
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
+                {(tables.length > 0 ? tables.map(t => t.label) : Array.from({ length: 48 }, (_, i) => `T${i + 1}`)).map((id) => {
+                  const isSelected = (form.assignedTables || []).includes(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => {
+                        const current = form.assignedTables || [];
+                        const next = isSelected ? current.filter(t => t !== id) : [...current, id];
+                        setForm(f => ({ ...f, assignedTables: next }));
+                      }}
+                      style={{
+                        padding: '8px 0',
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        borderRadius: '8px',
+                        border: '1px solid',
+                        borderColor: isSelected ? '#4F46E5' : '#E2E8F0',
+                        backgroundColor: isSelected ? '#4F46E5' : '#FFF',
+                        color: isSelected ? '#FFF' : '#64748B',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {id}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

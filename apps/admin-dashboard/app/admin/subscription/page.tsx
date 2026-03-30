@@ -28,8 +28,8 @@ export default async function SubscriptionManagement() {
     name: subscription.plan.name,
     price: Number(subscription.plan.price),
     status: subscription.status,
-    renewsAt: subscription.expiresAt ? new Date(subscription.expiresAt).toLocaleDateString() : 'N/A',
-    startedAt: subscription.createdAt ? new Date(subscription.createdAt).toLocaleDateString() : 'N/A',
+    renewsAt: subscription.expiresAt ? new Date(subscription.expiresAt).toLocaleDateString('fr-FR') : 'N/A',
+    startedAt: subscription.createdAt ? new Date(subscription.createdAt).toLocaleDateString('fr-FR') : 'N/A',
     maxStores: subscription.plan.maxStores,
     maxProducts: subscription.plan.maxProducts,
     features: [

@@ -71,6 +71,7 @@ export async function createProduct(data: { name: string; price: number; categor
       categoryId: data.categoryId,
       storeId: store.id,
       unitId: data.unitId || undefined,
+      active: true,
       recipe: data.recipe ? {
         create: data.recipe.map(r => ({
           stockItemId: r.stockItemId,
@@ -81,6 +82,7 @@ export async function createProduct(data: { name: string; price: number; categor
   });
   revalidatePath('/admin/products');
 }
+
 
 export async function updateProduct(id: string, data: { name: string; price: number; categoryId: string; unitId?: string; recipe?: { stockItemId: string; quantity: number }[] }) {
   await prisma.recipeItem.deleteMany({ where: { productId: id } });
@@ -103,10 +105,24 @@ export async function updateProduct(id: string, data: { name: string; price: num
 }
 
 export async function deleteProduct(id: string) {
-  await prisma.recipeItem.deleteMany({ where: { productId: id } });
-  await prisma.product.delete({ where: { id } });
-  revalidatePath('/admin/products');
+  // Check if product was ever sold
+  const count = await prisma.saleItem.count({ where: { productId: id } });
+  if (count > 0) {
+    throw new Error(`Impossible de supprimer : ce produit a déjà ${count} ventes enregistrées. Pensez à l'archiver à la place.`);
+  }
+
+  try {
+    // 1. Delete associated recipe items
+    await prisma.recipeItem.deleteMany({ where: { productId: id } });
+    
+    // 2. Delete the product
+    await prisma.product.delete({ where: { id } });
+    revalidatePath('/admin/products');
+  } catch (e: any) {
+    throw new Error(`Erreur lors de la suppression : ${e.message}`);
+  }
 }
+
 
 // ══════════════════════════════════════════════════════════════
 //  STOCK ITEMS
@@ -243,19 +259,33 @@ async function incrementStoreStock(orderId: string) {
       }
 
       if (stockItemId) {
-        await tx.stockItem.update({
-          where: { id: stockItemId },
-          data: { 
-            quantity: { increment: item.quantity },
-            cost: item.price // Update cost to last purchased price
+        const currentItem = await tx.stockItem.findUnique({ where: { id: stockItemId } });
+        if (currentItem) {
+          const oldQty = Number(currentItem.quantity || 0);
+          const oldCost = Number(currentItem.cost || 0);
+          const newQty = Number(item.quantity);
+          const newPrice = Number(item.price);
+          
+          let finalCost = newPrice;
+          if (oldQty > 0) {
+            finalCost = ((oldQty * oldCost) + (newQty * newPrice)) / (oldQty + newQty);
           }
-        });
+
+          await tx.stockItem.update({
+            where: { id: stockItemId },
+            data: { 
+              quantity: { increment: newQty },
+              cost: finalCost
+            }
+          });
+        }
       }
     }
   });
 
   revalidatePath(`/admin/stock`);
 }
+
 
 export async function deleteSupplierOrder(id: string) {
   await prisma.supplierOrderItem.deleteMany({ where: { orderId: id } });
@@ -266,7 +296,7 @@ export async function deleteSupplierOrder(id: string) {
 // ══════════════════════════════════════════════════════════════
 //  STAFF / USERS
 // ══════════════════════════════════════════════════════════════
-export async function createStaffMember(data: { name: string; email: string; phone: string; role: string; defaultPosMode?: string; permissions?: string[] }) {
+export async function createStaffMember(data: { name: string; email: string; phone: string; role: string; defaultPosMode?: string; permissions?: string[]; assignedTables?: string[] }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
   await prisma.user.create({
@@ -277,6 +307,7 @@ export async function createStaffMember(data: { name: string; email: string; pho
       role: data.role as any,
       defaultPosMode: data.defaultPosMode || 'tables',
       permissions: data.permissions || ['POS'],
+      assignedTables: data.assignedTables || [],
       password: 'changeme123',   // must be reset by the user
       storeId: store.id,
     },
@@ -284,7 +315,7 @@ export async function createStaffMember(data: { name: string; email: string; pho
   revalidatePath('/admin/staff');
 }
 
-export async function updateStaffMember(id: string, data: { name: string; email: string; phone: string; role: string; defaultPosMode?: string; permissions?: string[] }) {
+export async function updateStaffMember(id: string, data: { name: string; email: string; phone: string; role: string; defaultPosMode?: string; permissions?: string[]; assignedTables?: string[] }) {
   await prisma.user.update({ 
     where: { id }, 
     data: { 
@@ -293,13 +324,23 @@ export async function updateStaffMember(id: string, data: { name: string; email:
       phone: data.phone,
       role: data.role as any,
       defaultPosMode: data.defaultPosMode,
-      permissions: data.permissions
+      permissions: data.permissions,
+      assignedTables: data.assignedTables
     } 
   });
   revalidatePath('/admin/staff');
 }
 
 export async function deleteStaffMember(id: string) {
+  // 1. Clean up session logs
+  await prisma.staffSessionLog.deleteMany({ where: { userId: id } });
+  
+  // 2. Disconnect from sales history to avoid Restrict violation
+  // The sales will remain in the database but will no longer point to this user
+  await prisma.sale.updateMany({ where: { baristaId: id }, data: { baristaId: null } });
+  await prisma.sale.updateMany({ where: { takenById: id }, data: { takenById: null } });
+  
+  // 3. Delete the user
   await prisma.user.delete({ where: { id } });
   revalidatePath('/admin/staff');
 }
@@ -311,6 +352,14 @@ export async function createCategory(name: string) {
   await prisma.category.create({ data: { name } });
   revalidatePath('/admin/products');
 }
+
+export async function deleteCategory(id: string) {
+  const count = await prisma.product.count({ where: { categoryId: id } });
+  if (count > 0) throw new Error(`Suppression impossible : ${count} produits sont dans cette catégorie.`);
+  await prisma.category.delete({ where: { id } });
+  revalidatePath('/admin/products');
+}
+
 
 // ══════════════════════════════════════════════════════════════
 //  AUTH
@@ -1065,4 +1114,73 @@ export async function createExpenseAction(data: { category: string; amount: numb
 export async function deleteExpenseAction(id: string) {
   await prisma.expense.delete({ where: { id } });
   revalidatePath('/admin/expenses');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TERMINALS & TABLETS
+// ══════════════════════════════════════════════════════════════
+export async function getTerminalsAction() {
+  const store = await getStore();
+  if (!store) return [];
+  try {
+    return await (prisma.posTerminal as any).findMany({
+      where: { storeId: store.id },
+      orderBy: { createdAt: 'desc' }
+    });
+  } catch (e) {
+    return await prisma.$queryRawUnsafe(
+      `SELECT * FROM "PosTerminal" WHERE "storeId" = $1 ORDER BY "createdAt" DESC`,
+      store.id
+    );
+  }
+}
+
+export async function createTerminalAction(nickname: string) {
+  const store = await getStore();
+  if (!store) return;
+  try {
+     await (prisma.posTerminal as any).create({
+      data: {
+        nickname,
+        storeId: store.id,
+        status: 'INACTIVE'
+      }
+    });
+  } catch (e) {
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "PosTerminal" (id, nickname, "storeId", status, "createdAt", "updatedAt") 
+       VALUES ($1, $2, $3, 'INACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      Math.random().toString(36).substring(7),
+      nickname,
+      store.id
+    );
+  }
+  revalidatePath('/admin/terminals');
+}
+
+export async function generateTerminalCodeAction(id: string) {
+  const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
+  try {
+    await (prisma.posTerminal as any).update({
+      where: { id },
+      data: { activationCode: code }
+    });
+  } catch (e) {
+    await prisma.$executeRawUnsafe(
+      `UPDATE "PosTerminal" SET "activationCode" = $1, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $2`,
+      code,
+      id
+    );
+  }
+  revalidatePath('/admin/terminals');
+  return code;
+}
+
+export async function deleteTerminalAction(id: string) {
+  try {
+     await (prisma as any).posTerminal.delete({ where: { id } });
+  } catch (e) {
+     await prisma.$executeRawUnsafe(`DELETE FROM "PosTerminal" WHERE id = $1`, id);
+  }
+  revalidatePath('/admin/terminals');
 }

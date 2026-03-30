@@ -70,7 +70,7 @@ export default function SuperAdminMarketplaceClient({ products, orders }: { prod
                        <span style={{ fontWeight: 900, color: '#4F46E5', fontSize: '14px' }}>{Number(o.total).toFixed(3)} DT</span>
                     </div>
                     <div style={{ fontSize: '11px', color: '#64748B' }}>Fournisseur: {o.vendor?.companyName}</div>
-                    <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '4px' }}>{new Date(o.createdAt).toLocaleDateString()} • {o.items.length} articles</div>
+                    <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '4px' }}>{new Date(o.createdAt).toLocaleDateString('fr-FR')} • {o.items.length} articles</div>
                  </div>
                ))}
             </div>

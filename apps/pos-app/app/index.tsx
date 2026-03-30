@@ -13,6 +13,37 @@ const isMobile = width < 768;
 
 export default function Home() {
   const { addToCart, posMode, setPosMode } = useCartStore();
+  const [navStack, setNavStack] = React.useState<string[]>([]);
+
+  // Build Hierarchy
+  const buildHierarchy = () => {
+    const root: any = { sub: {}, products: [] };
+    mockProducts.forEach(p => {
+      const parts = (p.category || 'Autres').split(' > ').map(s => s.trim());
+      let current = root;
+      parts.forEach(part => {
+        if (!current.sub[part]) current.sub[part] = { sub: {}, products: [] };
+        current = current.sub[part];
+      });
+      current.products.push(p);
+    });
+    return root;
+  };
+
+  const hierarchy = buildHierarchy();
+  let currentLevel = hierarchy;
+  navStack.forEach(step => {
+    if (currentLevel.sub[step]) currentLevel = currentLevel.sub[step];
+  });
+
+  const subItems = Object.keys(currentLevel.sub).sort();
+  const levelProducts = currentLevel.products.sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+  const handleBack = () => {
+    const next = [...navStack];
+    next.pop();
+    setNavStack(next);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -42,18 +73,40 @@ export default function Home() {
       <View style={[styles.content, isMobile && styles.contentMobile]}>
         {posMode === 'standard' ? (
           <>
-            {/* Left Side: Product Grid */}
+            {/* Left Side: Product Hierarchy Grid */}
             <View style={[styles.productsArea, isMobile && styles.productsAreaMobile]}>
-              <Text style={styles.welcomeText}>Enregistrement par ticket</Text>
-              <FlatList
-                data={mockProducts}
-                keyExtractor={(item) => item.id}
-                numColumns={isMobile ? 2 : 3}
-                key={isMobile ? 'mobile' : 'tablet'}
-                contentContainerStyle={styles.listContainer}
-                renderItem={({ item }) => (
-                  <ProductCard product={item} onPress={addToCart} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingTop: 16 }}>
+                {navStack.length > 0 && (
+                  <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
+                    <Text style={{ fontSize: 18 }}>⬅️</Text>
+                  </TouchableOpacity>
                 )}
+                <Text style={styles.welcomeText}>
+                  {navStack.length === 0 ? "Ventes par ticket" : navStack.join(' › ')}
+                </Text>
+              </View>
+
+              <FlatList
+                data={[...subItems.map(name => ({ type: 'category', name })), ...levelProducts.map(p => ({ type: 'product', ...p }))]}
+                keyExtractor={(item) => item.type === 'category' ? `cat-${item.name}` : item.id}
+                numColumns={isMobile ? 2 : 3}
+                key={isMobile ? `mobile-${navStack.length}` : `tablet-${navStack.length}`}
+                contentContainerStyle={styles.listContainer}
+                renderItem={({ item }) => {
+                  if (item.type === 'category') {
+                    return (
+                      <TouchableOpacity 
+                        style={styles.categoryCard} 
+                        onPress={() => setNavStack([...navStack, item.name])}
+                      >
+                        <Text style={{ fontSize: 32, marginBottom: 8 }}>📂</Text>
+                        <Text style={styles.categoryName}>{item.name}</Text>
+                        <Text style={styles.categoryInfo}>Ouvrir</Text>
+                      </TouchableOpacity>
+                    );
+                  }
+                  return <ProductCard product={item} onPress={addToCart} />;
+                }}
               />
             </View>
 
@@ -62,6 +115,7 @@ export default function Home() {
               <Cart />
             </View>
           </>
+
         ) : (
           <SimplisticPOS />
         )}
@@ -158,5 +212,42 @@ const styles = StyleSheet.create({
     borderLeftWidth: 0,
     borderTopWidth: 1,
   },
+  backBtn: {
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginRight: 12,
+  },
+  categoryCard: {
+    width: (width - 64) / (isMobile ? 2 : 3) - 16,
+    height: 140,
+    backgroundColor: '#fff',
+    margin: 8,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  categoryName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#3e2723',
+    textAlign: 'center',
+  },
+  categoryInfo: {
+    fontSize: 11,
+    color: '#9ca3af',
+    marginTop: 4,
+    fontWeight: '600',
+  },
 });
+
 

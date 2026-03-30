@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { Plus, Edit2, Trash2, Coffee, Package, TrendingUp, Calculator } from 'lucide-react';
+import { Plus, Edit2, Trash2, Coffee, Package, Calculator, Archive, CheckCircle, Folder, Settings } from 'lucide-react';
 import Modal from '../../../components/Modal';
-import { createProduct, updateProduct, deleteProduct, createCategory } from '../../actions';
+import { createProduct, updateProduct, deleteProduct, createCategory, deleteCategory } from '../../actions';
 
 interface Product { 
   id: string; 
   name: string; 
   price: any; 
+  active: boolean;
   unit: string;
   category: { id: string; name: string }; 
   recipe: { id: string; quantity: any; stockItem: { id: string; name: string; unit: string; cost: any } }[] 
@@ -23,17 +24,18 @@ export default function ProductsClient({ products, categories, stockItems, globa
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [form, setForm] = useState<{ name: string; unitId: string; price: string; categoryId: string; recipe: { stockItemId: string; quantity: number }[] }>({ 
-    name: '', price: '', unitId: '', categoryId: '', recipe: [] 
+  const [form, setForm] = useState<{ name: string; unitId: string; price: string; categoryId: string; active: boolean; recipe: { stockItemId: string; quantity: number }[] }>({ 
+    name: '', price: '', unitId: '', categoryId: '', active: true, recipe: [] 
   });
 
   const [catModal, setCatModal] = useState(false);
-  const [catName, setCatName] = useState('');
+  const [manageCatModal, setManageCatModal] = useState(false);
+  const [catForm, setCatForm] = useState({ name: '', parentId: '' });
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
 
   const openCreate = () => { 
     setEditing(null); 
-    setForm({ name: '', price: '', unitId: '', categoryId: categories[0]?.id || '', recipe: [] }); 
+    setForm({ name: '', price: '', unitId: '', categoryId: categories[0]?.id || '', active: true, recipe: [] }); 
     setModalOpen(true); 
   };
   const openEdit = (p: Product) => { 
@@ -43,6 +45,7 @@ export default function ProductsClient({ products, categories, stockItems, globa
       price: String(Number(p.price)), 
       unitId: (p as any).unitId || '',
       categoryId: p.category.id, 
+      active: p.active ?? true,
       recipe: p.recipe.map(r => ({ stockItemId: r.stockItem.id, quantity: Number(r.quantity) }))
     }); 
     setModalOpen(true); 
@@ -66,9 +69,9 @@ export default function ProductsClient({ products, categories, stockItems, globa
   };
 
   const cogs = calculateCOGS();
-  const price = parseFloat(form.price || '0');
-  const profit = price - cogs;
-  const margin = price > 0 ? (profit / price) * 100 : 0;
+  const priceInput = parseFloat(form.price || '0');
+  const profit = priceInput - cogs;
+  const margin = priceInput > 0 ? (profit / priceInput) * 100 : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +81,7 @@ export default function ProductsClient({ products, categories, stockItems, globa
         price: parseFloat(form.price), 
         unitId: form.unitId || undefined,
         categoryId: form.categoryId,
+        active: form.active,
         recipe: form.recipe.filter(r => r.stockItemId && r.quantity > 0)
       };
       if (editing) await updateProduct(editing.id, data);
@@ -88,18 +92,45 @@ export default function ProductsClient({ products, categories, stockItems, globa
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    startTransition(async () => { await deleteProduct(deleteTarget.id); setDeleteTarget(null); });
+    startTransition(async () => { 
+      try {
+        await deleteProduct(deleteTarget.id); 
+        setDeleteTarget(null); 
+      } catch (e: any) {
+        alert(e.message);
+      }
+    });
   };
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!catName.trim()) return;
+    if (!catForm.name.trim()) return;
+    
+    let finalName = catForm.name.trim();
+    if (catForm.parentId) {
+      const parent = categories.find(c => c.id === catForm.parentId);
+      if (parent) finalName = `${parent.name} > ${finalName}`;
+    }
+
     startTransition(async () => {
-      await createCategory(catName.trim());
-      setCatName('');
+      await createCategory(finalName);
+      setCatForm({ name: '', parentId: '' });
       setCatModal(false);
     });
   };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ?")) return;
+    startTransition(async () => {
+      try {
+        await deleteCategory(id);
+      } catch (e: any) {
+        alert(e.message);
+      }
+    });
+  };
+
+  const rootCategories = categories.filter(c => !c.name.includes(' > '));
 
   const field: React.CSSProperties = { width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #E2E8F0', fontSize: '14px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' };
   const label: React.CSSProperties = { display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' };
@@ -110,7 +141,7 @@ export default function ProductsClient({ products, categories, stockItems, globa
         <div className="card-header">
           <span className="card-title"><Package size={16} /> Tous les Produits</span>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="btn btn-outline" style={{ fontSize: '12px' }} onClick={() => setCatModal(true)}>+ Catégorie</button>
+            <button className="btn btn-outline" style={{ fontSize: '12px' }} onClick={() => setManageCatModal(true)}><Settings size={14} style={{ marginRight: 6 }} /> Gérer catégories</button>
             <button className="btn btn-primary" onClick={openCreate}><Plus size={14} /> Nouveau Produit</button>
           </div>
         </div>
@@ -119,6 +150,7 @@ export default function ProductsClient({ products, categories, stockItems, globa
           <thead>
             <tr>
               <th>Produit</th>
+              <th>Statut</th>
               <th>Catégorie</th>
               <th>Prix de Vente</th>
               <th>Profit Net (Est.)</th>
@@ -130,8 +162,9 @@ export default function ProductsClient({ products, categories, stockItems, globa
               const catColor = CATEGORY_COLORS[p.category.name] || '#6366F1';
               const pCogs = p.recipe.reduce((acc, r) => acc + (Number(r.stockItem.cost || 0) * Number(r.quantity)), 0);
               const pProfit = Number(p.price) - pCogs;
+              const isActive = p.active ?? true;
               return (
-                <tr key={p.id}>
+                <tr key={p.id} style={{ opacity: isActive ? 1 : 0.6 }}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div style={{ width: 38, height: 38, borderRadius: '10px', background: `${catColor}18`, color: catColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -143,11 +176,18 @@ export default function ProductsClient({ products, categories, stockItems, globa
                       </div>
                     </div>
                   </td>
+                  <td>
+                    {isActive ? (
+                      <span className="badge" style={{ background: '#D1FAE5', color: '#065F46' }}>Actif</span>
+                    ) : (
+                      <span className="badge" style={{ background: '#F1F5F9', color: '#64748B' }}>Archivé</span>
+                    )}
+                  </td>
                   <td><span className="badge" style={{ background: `${catColor}18`, color: catColor }}>{p.category.name}</span></td>
                   <td><strong style={{ fontSize: '16px', color: '#1E293B' }}>{Number(p.price).toFixed(3)}</strong><span style={{ color: '#94A3B8', fontSize: '12px' }}> DT</span></td>
                   <td>
                     <div style={{ fontWeight: 800, color: '#10B981', fontSize: '15px' }}>+{pProfit.toFixed(3)} DT</div>
-                    <div style={{ fontSize: '10px', color: '#94A3B8' }}>Marge: {((pProfit / Number(p.price)) * 100).toFixed(0)}%</div>
+                    <div style={{ fontSize: '10px', color: '#94A3B8' }}>Marge: {Number(p.price) > 0 ? ((pProfit / Number(p.price)) * 100).toFixed(0) : 0}%</div>
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <button className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEdit(p)}><Edit2 size={14} /></button>
@@ -177,8 +217,8 @@ export default function ProductsClient({ products, categories, stockItems, globa
             </div>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+            <div style={{ gridColumn: 'span 1' }}>
               <label style={label}>Prix de Vente (DT)</label>
               <input style={{ ...field, fontSize: '18px', fontWeight: 900, color: '#1E293B' }} type="number" step="0.001" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="1.500" required />
             </div>
@@ -188,6 +228,17 @@ export default function ProductsClient({ products, categories, stockItems, globa
                 <option value="">-- Sélectionner --</option>
                 {globalUnits.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
+            </div>
+            <div>
+              <label style={label}>Statut (POS)</label>
+              <button 
+                type="button" 
+                onClick={() => setForm(f => ({ ...f, active: !f.active }))}
+                className={form.active ? 'btn btn-primary' : 'btn btn-outline'}
+                style={{ width: '100%', padding: '10px' }}
+              >
+                {form.active ? <><CheckCircle size={14} style={{ marginRight: 6 }} /> Actif</> : <><Archive size={14} style={{ marginRight: 6 }} /> Archivé</>}
+              </button>
             </div>
           </div>
 
@@ -241,18 +292,79 @@ export default function ProductsClient({ products, categories, stockItems, globa
         </form>
       </Modal>
 
-      {/* Categories and Delete modals omitted for brevity, but they should be kept in real implementation */}
-      {/* ... keeping other modals ... */}
-      <Modal open={catModal} onClose={() => setCatModal(false)} title="Nouvelle Catégorie" width={380}>
-        <form onSubmit={handleAddCategory} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div><label style={label}>Nom</label><input style={field} value={catName} onChange={e => setCatName(e.target.value)} required /></div>
-          <button type="submit" className="btn btn-primary" disabled={isPending}>Créer</button>
+      {/* Manage Categories Modal */}
+      <Modal open={manageCatModal} onClose={() => setManageCatModal(false)} title="Gestion des Catégories" width={500}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '14px', color: '#64748B' }}>{categories.length} catégories configurées</div>
+              <button className="btn btn-primary" onClick={() => { setCatModal(true); setManageCatModal(false); }}>+ Nouvelle</button>
+           </div>
+
+           <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {categories.map(c => (
+                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Folder size={16} color="#6366F1" />
+                      <span style={{ fontWeight: 600, color: '#1E293B' }}>{c.name}</span>
+                   </div>
+                   <button 
+                    className="btn btn-ghost" 
+                    style={{ color: '#EF4444', padding: '6px' }} 
+                    onClick={() => handleDeleteCategory(c.id)}
+                    disabled={isPending}
+                   >
+                    <Trash2 size={16} />
+                   </button>
+                </div>
+              ))}
+           </div>
+        </div>
+      </Modal>
+
+      {/* Create Category Modal */}
+      <Modal open={catModal} onClose={() => setCatModal(false)} title="Nouvelle Catégorie" width={420}>
+        <form onSubmit={handleAddCategory} style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '10px' }}>
+          <div>
+            <label style={label}>Nom de la Catégorie</label>
+            <input style={field} value={catForm.name} onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))} placeholder="ex: Chaud, Froid, etc." required />
+          </div>
+          
+          <div>
+            <label style={label}>Catégorie Parente (Optionnel)</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+              <button 
+                type="button" 
+                onClick={() => setCatForm(f => ({ ...f, parentId: '' }))}
+                className={!catForm.parentId ? 'badge' : 'badge badge-outline'}
+                style={{ cursor: 'pointer', border: 'none', background: !catForm.parentId ? '#6366F1' : '#F1F5F9', color: !catForm.parentId ? '#fff' : '#64748B' }}
+              >
+                Racine
+              </button>
+              {rootCategories.map(c => (
+                <button 
+                  key={c.id}
+                  type="button" 
+                  onClick={() => setCatForm(f => ({ ...f, parentId: c.id }))}
+                  className={catForm.parentId === c.id ? 'badge' : 'badge badge-outline'}
+                  style={{ cursor: 'pointer', border: 'none', background: catForm.parentId === c.id ? '#6366F1' : '#F1F5F9', color: catForm.parentId === c.id ? '#fff' : '#64748B' }}
+                >
+                  <Folder size={10} style={{ marginRight: 4 }} /> {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setCatModal(false); setManageCatModal(true); }}>Retour</button>
+            <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={isPending}>Créer la catégorie</button>
+          </div>
         </form>
       </Modal>
 
       <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Supprimer" width={400}>
         <div style={{ textAlign: 'center' }}>
-          <p>Confirmer la suppression de {deleteTarget?.name} ?</p>
+          <p>Confirmer la suppression de <strong>{deleteTarget?.name}</strong> ?</p>
+          <p style={{ fontSize: '12px', color: '#EF4444', marginTop: '8px' }}>Note: La suppression échouera si le produit a déjà été vendu.</p>
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
             <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setDeleteTarget(null)}>Non</button>
             <button className="btn btn-danger" style={{ flex: 1 }} onClick={handleDelete}>Oui, Supprimer</button>
@@ -262,3 +374,4 @@ export default function ProductsClient({ products, categories, stockItems, globa
     </>
   );
 }
+

@@ -5,6 +5,8 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableCors(); // Autoriser les requêtes depuis l'application mobile
+
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 

@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 export default async function StaffManagement() {
   const store = await getStore();
   const staff = store ? await prisma.user.findMany({ where: { storeId: store.id } }) : [];
+  const tables = store ? await prisma.storeTable.findMany({ where: { storeId: store.id }, orderBy: { label: 'asc' } }) : [];
 
   return (
     <div className="page-content">
@@ -34,7 +35,7 @@ export default async function StaffManagement() {
         </div>
       </div>
 
-      <StaffClient staff={staff as any} />
+      <StaffClient staff={staff as any} tables={tables as any} />
     </div>
   );
 }

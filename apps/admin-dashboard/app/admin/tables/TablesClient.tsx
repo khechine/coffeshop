@@ -73,7 +73,7 @@ export default function TablesClient({ initialTables }: { initialTables: any[] }
                <div style={{ fontWeight: 900, fontSize: '18px', color: '#1E293B', marginBottom: '4px' }}>{table.label}</div>
                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748B', fontSize: '14px' }}>
                   <span className="badge gray">{table.capacity} places</span>
-                  <span>• Créé le {new Date(table.createdAt).toLocaleDateString()}</span>
+                  <span>• Créé le {new Date(table.createdAt).toLocaleDateString('fr-FR')}</span>
                </div>
             </div>
           ))}

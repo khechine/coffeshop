@@ -27,16 +27,18 @@ model User {
   phone     String?
   emailVerified Boolean @default(false)
   verificationToken String?
-  defaultPosMode String? @default("tables") // tables ou simplistic
+  defaultPosMode String? @default("tables") 
   permissions    String[] @default(["POS"])
+  assignedTables String[] @default([]) // Tables assigned to this barista (labels)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   vendorProfile  VendorProfile?
   courierProfile CourierProfile?
-  paidSales  Sale[] @relation("paidBy")
-  takenSales Sale[] @relation("takenBy")
-  sessionLogs StaffSessionLog[]
+  paidSales     Sale[] @relation("paidBy")
+  takenSales    Sale[] @relation("takenBy")
+  preparedSales Sale[] @relation("preparedBy")
+  sessionLogs   StaffSessionLog[]
 }
 
 model StaffSessionLog {
@@ -87,8 +89,10 @@ model Store {
   expenses       Expense[]
   subscription   Subscription?
   tables         StoreTable[]
+  terminals      PosTerminal[]
 
   activityPoleId String?
+
   activityPole   ActivityPole? @relation(fields: [activityPoleId], references: [id])
 }
 
@@ -100,6 +104,20 @@ model StoreTable {
   store     Store    @relation(fields: [storeId], references: [id])
   createdAt DateTime @default(now())
 }
+
+model PosTerminal {
+  id             String   @id @default(cuid())
+  nickname       String   // ex: "Caisse Terrasse", "iPad Bar"
+  activationCode String?  @unique // 6-digit code
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id])
+  status         String   @default("INACTIVE") // INACTIVE, ACTIVE, REVOKED
+  lastUsedAt     DateTime?
+  token          String?  // Long-term pairing token
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 
 model Plan {
   id            String         @id @default(cuid())
@@ -152,9 +170,11 @@ model Product {
   sales     SaleItem[]
   unitId     String?
   unit       GlobalUnit? @relation(fields: [unitId], references: [id])
+  active     Boolean  @default(true)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 }
+
 
 // Ingrédients constitutifs d'un produit (Recette)
 model RecipeItem {
@@ -178,6 +198,14 @@ model Sale {
   takenBy   User?      @relation("takenBy", fields: [takenById], references: [id])
   items     SaleItem[]
   createdAt DateTime   @default(now())
+
+  // Préparateur (Bar/Kitchen Display System)
+  preparationStatus  String?   @default("PENDING") // PENDING, IN_PROGRESS, READY, SERVED
+  paymentStatus      String?   @default("PAID")    // PAID, UNPAID, CANCELLED
+  preparedById       String?
+  preparedBy         User?     @relation("preparedBy", fields: [preparedById], references: [id])
+  preparedAt         DateTime?
+  preparationStation String?   // "bar", "chicha", "cuisine" — multi-poste
 }
 
 model SaleItem {

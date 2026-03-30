@@ -15,8 +15,11 @@ export class SalesService {
       const sale = await prisma.$transaction(async (tx) => {
         const newSale = await tx.sale.create({
           data: {
+            id: dto.id || undefined, // Allow client-generated ID
             storeId: dto.storeId,
             total: dto.total,
+            baristaId: dto.baristaId,
+            takenById: dto.takenById || dto.baristaId,
             items: {
               create: dto.items.map(item => ({
                 productId: item.productId,
@@ -47,12 +50,43 @@ export class SalesService {
     }
   }
 
+  async updatePreparationStatus(
+    saleId: string, 
+    status: string, 
+    preparedById: string, 
+    preparationStation?: string
+  ): Promise<any> {
+    try {
+      return await prisma.sale.update({
+        where: { id: saleId },
+        data: {
+          preparationStatus: status,
+          preparedById,
+          preparedAt: status === 'READY' || status === 'SERVED' ? new Date() : undefined,
+          preparationStation: preparationStation || undefined
+        },
+        include: { 
+          items: { include: { product: true } },
+          barista: { select: { name: true } }
+        }
+      });
+    } catch (error) {
+      this.logger.error(`Error updating preparation status: ${error.message}`);
+      throw new BadRequestException('Could not update preparation status');
+    }
+  }
+
   async getSales(storeId: string): Promise<any> {
     return prisma.sale.findMany({
       where: { storeId },
-      include: { items: { include: { product: true } } },
+      include: { 
+        items: { include: { product: true } },
+        barista: { select: { name: true } },
+        takenBy: { select: { name: true } }
+      },
       orderBy: { createdAt: 'desc' },
       take: 50
     });
   }
+
 }

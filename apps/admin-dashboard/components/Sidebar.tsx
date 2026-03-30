@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Coffee, LayoutDashboard, Package, Layers, Users, CreditCard, Crown, Truck, Bell, LogOut, Clock } from 'lucide-react';
+import { Coffee, LayoutDashboard, Package, Layers, Users, CreditCard, Crown, Truck, Bell, LogOut, Clock, Tablet, Store, History, Settings, LayoutGrid, Boxes, ShoppingBag } from 'lucide-react';
+
 import { logoutUser } from '../app/actions';
 
 type Role = 'STORE_OWNER' | 'CASHIER' | 'VENDOR' | 'SUPERADMIN' | null;
@@ -71,11 +72,11 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
           <div className="nav-group">
             <span className="nav-section-label">Ventes &amp; Service</span>
             <Link href="/pos" className="nav-item pos-btn-sidebar" style={{ background: '#6366F1', color: '#fff', marginBottom: '8px', borderRadius: '12px' }}>
-              <Coffee size={18} />
+              <Store size={18} />
               Accès Caisse POS
             </Link>
             <Link href="/admin/sales" className={`nav-item${isActive('/admin/sales') ? ' active' : ''}`}>
-              <Clock size={18} />
+              <History size={18} />
               Historique des Ventes
             </Link>
           </div>
@@ -92,29 +93,31 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
               </Link>
             )}
             {role === 'STORE_OWNER' && (
-              <Link href="/admin/settings" className={`nav-item${isActive('/admin/settings') ? ' active' : ''}`}>
-                <Coffee size={18} />
-                Paramètres du Café
-              </Link>
-            )}
-             {hasPerm('SUBS') && (
-              <Link href="/admin/subscription" className={`nav-item${isActive('/admin/subscription') ? ' active' : ''}`}>
-                <CreditCard size={18} />
-                Mon Abonnement
+              <Link href="/admin/settings" className={`nav-item${isActive('/admin/settings') || isActive('/admin/subscription') ? ' active' : ''}`}>
+                <Settings size={18} />
+                Paramètres & Abonnement
               </Link>
             )}
             {hasPerm('POS') && (
               <Link href="/admin/tables" className={`nav-item${isActive('/admin/tables') ? ' active' : ''}`}>
-                <Layers size={18} />
+                <LayoutGrid size={18} />
                 Plan de Salle &amp; Tables
               </Link>
             )}
             {hasPerm('STAFF') && (
+
               <Link href="/admin/staff" className={`nav-item${isActive('/admin/staff') ? ' active' : ''}`}>
                 <Users size={18} />
                 Personnel &amp; Accès
               </Link>
             )}
+            {hasPerm('STAFF') && (
+              <Link href="/admin/terminals" className={`nav-item${isActive('/admin/terminals') ? ' active' : ''}`}>
+                <Tablet size={18} />
+                Terminaux &amp; Tablettes
+              </Link>
+            )}
+
             {(role === 'STORE_OWNER') && (
               <Link href="/admin/expenses" className={`nav-item${isActive('/admin/expenses') ? ' active' : ''}`}>
                 <CreditCard size={18} />
@@ -130,13 +133,13 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
             <span className="nav-section-label">Catalogue &amp; Stocks</span>
             {hasPerm('PRODUCTS') && (
               <Link href="/admin/products" className={`nav-item${isActive('/admin/products') ? ' active' : ''}`}>
-                <Package size={18} />
+                <Coffee size={18} />
                 Catalogue &amp; Recettes
               </Link>
             )}
             {hasPerm('STOCK') && (
               <Link href="/admin/stock" className={`nav-item${isActive('/admin/stock') ? ' active' : ''}`}>
-                <Layers size={18} />
+                <Boxes size={18} />
                 Matières Premières
               </Link>
             )}
@@ -153,7 +156,7 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
               Marketplace B2B
             </Link>
             <Link href="/vendor/dashboard" className={`nav-item${isActive('/vendor/dashboard') ? ' active' : ''}`}>
-              <Package size={18} />
+              <ShoppingBag size={18} />
               Fournisseurs &amp; B2B
             </Link>
           </div>
