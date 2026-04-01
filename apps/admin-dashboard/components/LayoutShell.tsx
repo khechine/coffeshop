@@ -18,6 +18,22 @@ export default function LayoutShell({
 }) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    // Initial state from localStorage
+    const storedCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+    setIsCollapsed(storedCollapsed);
+
+    // Listener for sidebar toggle
+    const handleToggle = () => {
+      const currentCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+      setIsCollapsed(currentCollapsed);
+    };
+
+    window.addEventListener('sidebarToggle', handleToggle);
+    return () => window.removeEventListener('sidebarToggle', handleToggle);
+  }, []);
 
   // Close menu when pathname changes
   useEffect(() => {
@@ -37,7 +53,7 @@ export default function LayoutShell({
       {/* Sidebar with mobile-open class */}
       <Sidebar storeName={storeName} isMobileOpen={isMenuOpen} hasMarketplace={hasMarketplace} />
 
-      <div className="main-content">
+      <div className={`main-content ${isCollapsed ? 'collapsed' : ''}`} style={{ marginLeft: isCollapsed ? 'var(--sidebar-collapsed-w)' : 'var(--sidebar-w)' }}>
         <header className="topbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button className="menu-toggle" onClick={() => setIsMenuOpen(!isMenuOpen)}>
@@ -66,3 +82,4 @@ export default function LayoutShell({
     </div>
   );
 }
+
