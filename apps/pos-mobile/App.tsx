@@ -802,31 +802,31 @@ function RachmaScreen() {
                   borderRadius: 12,
                   borderWidth: 1,
                   borderColor: qty > 0 ? getCategoryColor(p.categoryName) : '#CBD5E1',
-                  paddingVertical: 16,
-                  paddingHorizontal: 8,
+                  paddingVertical: 12, // Reduced from 16
+                  paddingHorizontal: 6, // Reduced from 8
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  minHeight: 140,
+                  minHeight: 130, // Reduced from 140 for better fit
                   elevation: 2,
                   shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2
                 }}>
-                  <Text style={{ color: '#0F172A', fontWeight: '900', fontSize: 14, textAlign: 'center', lineHeight: 18, minHeight: 40 }} numberOfLines={2}>
+                  <Text style={{ color: '#0F172A', fontWeight: '900', fontSize: 13, textAlign: 'center', lineHeight: 16, minHeight: 32 }} numberOfLines={2}>
                     {p.name.toUpperCase()}
                   </Text>
                 
                   <View style={{ 
-                    height: 56, width: 56, borderRadius: 28, 
+                    height: 48, width: 48, borderRadius: 24, // Smaller circle
                     backgroundColor: qty > 0 ? getCategoryColor(p.categoryName) : '#F1F5F9',
                     justifyContent: 'center', alignItems: 'center',
                     borderWidth: 3, borderColor: qty > 0 ? getCategoryColor(p.categoryName) : '#E2E8F0',
-                    marginVertical: 8
+                    marginVertical: 4
                   }}>
-                    <Text style={{ color: qty > 0 ? '#FFF' : '#64748B', fontSize: 26, fontWeight: '900' }}>
+                    <Text style={{ color: qty > 0 ? '#FFF' : '#64748B', fontSize: 22, fontWeight: '900' }}>
                       {qty}
                     </Text>
                   </View>
 
-                  <Text style={{ color: '#64748B', fontSize: 12, fontWeight: '800' }}>{p.price.toFixed(3)}</Text>
+                  <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '800' }}>{p.price.toFixed(3)}</Text>
                 </View>
               </TouchableOpacity>
             );
@@ -869,41 +869,41 @@ function RachmaScreen() {
         </View>
       )}
 
-      {/* Bottom Tally Bar */}
+      {/* Bottom Tally Bar - FIXED FOR ANDROID SQUEEZE */}
       <View style={{ 
         backgroundColor: '#FFF', borderTopWidth: 2, borderTopColor: '#1E293B',
-        padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+        padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
         shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, elevation: 12,
         zIndex: 100 
       }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: '#64748B', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 }}>TOTAL À ENCAISSER</Text>
-          <Text style={{ color: '#1E293B', fontSize: 24, fontWeight: '900' }}>{total.toFixed(3)} <Text style={{ fontSize: 12 }}>DT</Text></Text>
+        <View style={{ flex: 1.2, marginRight: 8 }}>
+          <Text style={{ color: '#64748B', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 }} numberOfLines={1}>TOTAL À ENCAISSER</Text>
+          <Text style={{ color: '#1E293B', fontSize: 22, fontWeight: '900' }} numberOfLines={1}>{total.toFixed(3)} <Text style={{ fontSize: 11 }}>DT</Text></Text>
         </View>
         
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{ flexDirection: 'row', gap: 6, flex: 3, justifyContent: 'flex-end' }}>
           <TouchableOpacity 
             onPress={handleClearRequest}
             activeOpacity={0.7}
-            style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 16, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' }}
+            style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', justifyContent: 'center' }}
           >
-            <Text style={{ color: '#64748B', fontWeight: '800', fontSize: 13 }}>TOUT VIDER</Text>
+            <Text style={{ color: '#64748B', fontWeight: '800', fontSize: 11 }}>VIDER</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             onPress={handlePrepare}
             activeOpacity={0.9}
-            style={{ backgroundColor: '#0EA5E9', paddingHorizontal: 20, paddingVertical: 14, borderRadius: 12, elevation: 4, alignItems: 'center' }}
+            style={{ backgroundColor: '#0EA5E9', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, elevation: 4, alignItems: 'center', justifyContent: 'center' }}
           >
-            <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 15 }}>PRÉPARER</Text>
+            <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 13 }}>PRÉPARER</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             onPress={handleFinish}
             activeOpacity={0.9}
-            style={{ backgroundColor: '#10B981', paddingHorizontal: 20, paddingVertical: 14, borderRadius: 12, elevation: 4, minWidth: 120, alignItems: 'center' }}
+            style={{ backgroundColor: '#10B981', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, elevation: 4, minWidth: 100, alignItems: 'center', justifyContent: 'center' }}
           >
-            <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 15 }}>ENCAISSER</Text>
+            <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 13 }}>ENCAISSER</Text>
           </TouchableOpacity>
         </View>
       </View>
