@@ -146,58 +146,60 @@ export default function ProductsClient({ products, categories, stockItems, globa
           </div>
         </div>
 
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Produit</th>
-              <th>Statut</th>
-              <th>Catégorie</th>
-              <th>Prix de Vente</th>
-              <th>Profit Net (Est.)</th>
-              <th style={{ textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map(p => {
-              const catColor = CATEGORY_COLORS[p.category.name] || '#6366F1';
-              const pCogs = p.recipe.reduce((acc, r) => acc + (Number(r.stockItem.cost || 0) * Number(r.quantity)), 0);
-              const pProfit = Number(p.price) - pCogs;
-              const isActive = p.active ?? true;
-              return (
-                <tr key={p.id} style={{ opacity: isActive ? 1 : 0.6 }}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: 38, height: 38, borderRadius: '10px', background: `${catColor}18`, color: catColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Coffee size={16} />
+        <div className="table-responsive">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Produit</th>
+                <th>Statut</th>
+                <th>Catégorie</th>
+                <th>Prix de Vente</th>
+                <th>Profit Net (Est.)</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map(p => {
+                const catColor = CATEGORY_COLORS[p.category.name] || '#6366F1';
+                const pCogs = p.recipe.reduce((acc, r) => acc + (Number(r.stockItem.cost || 0) * Number(r.quantity)), 0);
+                const pProfit = Number(p.price) - pCogs;
+                const isActive = p.active ?? true;
+                return (
+                  <tr key={p.id} style={{ opacity: isActive ? 1 : 0.6 }}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: 38, height: 38, borderRadius: '10px', background: `${catColor}18`, color: catColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Coffee size={16} />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, color: '#1E293B' }}>{p.name}</div>
+                          <div style={{ fontSize: '11px', color: '#94A3B8' }}>{p.recipe.length} ingrédients · Vendu par {p.unit || 'unité'}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontWeight: 700, color: '#1E293B' }}>{p.name}</div>
-                        <div style={{ fontSize: '11px', color: '#94A3B8' }}>{p.recipe.length} ingrédients · Vendu par {p.unit || 'unité'}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    {isActive ? (
-                      <span className="badge" style={{ background: '#D1FAE5', color: '#065F46' }}>Actif</span>
-                    ) : (
-                      <span className="badge" style={{ background: '#F1F5F9', color: '#64748B' }}>Archivé</span>
-                    )}
-                  </td>
-                  <td><span className="badge" style={{ background: `${catColor}18`, color: catColor }}>{p.category.name}</span></td>
-                  <td><strong style={{ fontSize: '16px', color: '#1E293B' }}>{Number(p.price).toFixed(3)}</strong><span style={{ color: '#94A3B8', fontSize: '12px' }}> DT</span></td>
-                  <td>
-                    <div style={{ fontWeight: 800, color: '#10B981', fontSize: '15px' }}>+{pProfit.toFixed(3)} DT</div>
-                    <div style={{ fontSize: '10px', color: '#94A3B8' }}>Marge: {Number(p.price) > 0 ? ((pProfit / Number(p.price)) * 100).toFixed(0) : 0}%</div>
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEdit(p)}><Edit2 size={14} /></button>
-                    <button className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteTarget(p)}><Trash2 size={14} /></button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </td>
+                    <td>
+                      {isActive ? (
+                        <span className="badge" style={{ background: '#D1FAE5', color: '#065F46' }}>Actif</span>
+                      ) : (
+                        <span className="badge" style={{ background: '#F1F5F9', color: '#64748B' }}>Archivé</span>
+                      )}
+                    </td>
+                    <td><span className="badge" style={{ background: `${catColor}18`, color: catColor }}>{p.category.name}</span></td>
+                    <td><strong style={{ fontSize: '16px', color: '#1E293B' }}>{Number(p.price).toFixed(3)}</strong><span style={{ color: '#94A3B8', fontSize: '12px' }}> DT</span></td>
+                    <td>
+                      <div style={{ fontWeight: 800, color: '#10B981', fontSize: '15px' }}>+{pProfit.toFixed(3)} DT</div>
+                      <div style={{ fontSize: '10px', color: '#94A3B8' }}>Marge: {Number(p.price) > 0 ? ((pProfit / Number(p.price)) * 100).toFixed(0) : 0}%</div>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEdit(p)}><Edit2 size={14} /></button>
+                      <button className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteTarget(p)}><Trash2 size={14} /></button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* === Create/Edit Product Modal === */}

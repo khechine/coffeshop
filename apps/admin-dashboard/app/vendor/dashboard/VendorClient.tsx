@@ -159,43 +159,45 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
             <span className="card-title"><Truck size={16} /> Fournisseurs</span>
             <button className="btn btn-primary" onClick={openCreateSupp}><Plus size={14} /> Nouveau Fournisseur</button>
           </div>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Fournisseur</th>
-                <th>Contact</th>
-                <th>Téléphone</th>
-                <th>Commandes</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {suppliers.map(s => (
-                <tr key={s.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: 36, height: 36, borderRadius: '10px', background: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px' }}>
-                        {s.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span style={{ fontWeight: 700, color: '#1E293B' }}>{s.name}</span>
-                    </div>
-                  </td>
-                  <td style={{ color: '#64748B' }}>{s.contact || '—'}</td>
-                  <td style={{ color: '#64748B' }}>{s.phone || '—'}</td>
-                  <td><span className="badge blue">{s.orders.length} commandes</span></td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEditSupp(s)}><Edit2 size={14} /></button>
-                    <button className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteSuppTarget(s)}><Trash2 size={14} /></button>
-                  </td>
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Fournisseur</th>
+                  <th>Contact</th>
+                  <th>Téléphone</th>
+                  <th>Commandes</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
-              ))}
-              {suppliers.length === 0 && (
-                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '48px', color: '#94A3B8' }}>
-                  <p style={{ fontWeight: 600 }}>Aucun fournisseur. Ajoutez-en un.</p>
-                </td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {suppliers.map(s => (
+                  <tr key={s.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '10px', background: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px' }}>
+                          {s.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span style={{ fontWeight: 700, color: '#1E293B' }}>{s.name}</span>
+                      </div>
+                    </td>
+                    <td style={{ color: '#64748B' }}>{s.contact || '—'}</td>
+                    <td style={{ color: '#64748B' }}>{s.phone || '—'}</td>
+                    <td><span className="badge blue">{s.orders.length} commandes</span></td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEditSupp(s)}><Edit2 size={14} /></button>
+                      <button className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteSuppTarget(s)}><Trash2 size={14} /></button>
+                    </td>
+                  </tr>
+                ))}
+                {suppliers.length === 0 && (
+                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '48px', color: '#94A3B8' }}>
+                    <p style={{ fontWeight: 600 }}>Aucun fournisseur. Ajoutez-en un.</p>
+                  </td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

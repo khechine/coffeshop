@@ -128,6 +128,7 @@ export default function ExpensesClient({ initialExpenses }: { initialExpenses: a
          <div className="card-header">
             <span className="card-title">Historique des Charges</span>
          </div>
+      <div className="table-responsive">
          <table className="data-table">
             <thead>
                <tr>
@@ -169,6 +170,7 @@ export default function ExpensesClient({ initialExpenses }: { initialExpenses: a
                )}
             </tbody>
          </table>
+      </div>
       </div>
 
       {/* Modal Creating Expense */}

@@ -45,9 +45,11 @@ html, body {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 50;
-  box-shadow: 4px 0 24px rgb(0 0 0 / .15);
-  transition: transform 0.3s ease;
+  z-index: 100; /* Higher z-index for sidebar */
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.2);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 @media (max-width: 768px) {
@@ -242,14 +244,15 @@ html, body {
 .topbar {
   height: var(--topbar-h);
   background: #fff;
-  border-bottom: 1px solid #E2E8F0;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 24px;
   position: sticky;
   top: 0;
   z-index: 40;
+  backdrop-filter: blur(8px);
 }
 
 .menu-toggle {
@@ -320,6 +323,9 @@ html, body {
 .page-content {
   padding: 24px;
   flex: 1;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 @media (max-width: 640px) {
@@ -370,10 +376,10 @@ html, body {
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   position: relative;
   overflow: hidden;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .kpi-card:hover {
@@ -468,7 +474,17 @@ html, body {
 /* ===== TABLE ===== */
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  margin-bottom: 1rem;
 }
 
 .data-table thead th {

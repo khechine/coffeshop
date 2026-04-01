@@ -95,63 +95,65 @@ export default function StaffClient({ staff, tables }: { staff: StaffMember[]; t
           <span className="card-title">👥 Équipe Complète</span>
           <button className="btn btn-primary" onClick={openCreate}><Plus size={14} /> Ajouter un Employé</button>
         </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Employé</th>
-              <th>Contact</th>
-              <th>Rôle</th>
-              <th>Accès POS</th>
-              <th style={{ textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {staff.map(member => {
-              const roleConf = ROLES.find(r => r.value === member.role) || ROLES[1];
-              return (
-                <tr key={member.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: 38, height: 38, borderRadius: '50%', background: member.role === 'STORE_OWNER' ? 'linear-gradient(135deg,#4F46E5,#7C3AED)' : '#F1F5F9', color: member.role === 'STORE_OWNER' ? '#fff' : '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px' }}>
-                        {member.name.charAt(0).toUpperCase()}
+        <div className="table-responsive">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Employé</th>
+                <th>Contact</th>
+                <th>Rôle</th>
+                <th>Accès POS</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {staff.map(member => {
+                const roleConf = ROLES.find(r => r.value === member.role) || ROLES[1];
+                return (
+                  <tr key={member.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: 38, height: 38, borderRadius: '50%', background: member.role === 'STORE_OWNER' ? 'linear-gradient(135deg,#4F46E5,#7C3AED)' : '#F1F5F9', color: member.role === 'STORE_OWNER' ? '#fff' : '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px' }}>
+                          {member.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, color: '#1E293B' }}>{member.name}</div>
+                          <div style={{ fontSize: '12px', color: '#94A3B8' }}>{roleConf.desc}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontWeight: 700, color: '#1E293B' }}>{member.name}</div>
-                        <div style={{ fontSize: '12px', color: '#94A3B8' }}>{roleConf.desc}</div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: '#475569' }}><Mail size={12} /> {member.email}</div>
+                        {member.phone && <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: '#94A3B8' }}><Phone size={11} /> {member.phone}</div>}
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: '#475569' }}><Mail size={12} /> {member.email}</div>
-                      {member.phone && <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: '#94A3B8' }}><Phone size={11} /> {member.phone}</div>}
-                    </div>
-                  </td>
-                  <td><span className={`badge ${roleConf.badge}`}>{roleConf.label}</span></td>
-                  <td>
-                    {member.role === 'CASHIER'
-                        ? <span className="badge orange">
-                            {member.defaultPosMode === 'rachma' ? 'Rachma' : member.defaultPosMode === 'simplistic' ? 'Simpliste' : member.defaultPosMode === 'bar' ? 'Bar' : 'Salle'}
-                          </span>
-                      : <span className="badge green">✓ Complet</span>
-                    }
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button title="Historique Sessions" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openLogs(member)}><History size={14} /></button>
-                    <button title="Gérer PIN" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => { setPinTarget(member); setNewPin(member.pinCode || ''); }}><Key size={14} /></button>
-                    <button title="Modifier" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEdit(member)}><Edit2 size={14} /></button>
-                    <button title="Révoquer" className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteTarget(member)}><Trash2 size={14} /></button>
-                  </td>
-                </tr>
-              );
-            })}
-            {staff.length === 0 && (
-              <tr><td colSpan={5} style={{ textAlign: 'center', padding: '48px', color: '#94A3B8' }}>
-                <p style={{ fontWeight: 600 }}>Aucun employé. Ajoutez votre équipe.</p>
-              </td></tr>
-            )}
-          </tbody>
-        </table>
+                    </td>
+                    <td><span className={`badge ${roleConf.badge}`}>{roleConf.label}</span></td>
+                    <td>
+                      {member.role === 'CASHIER'
+                          ? <span className="badge orange">
+                              {member.defaultPosMode === 'rachma' ? 'Rachma' : member.defaultPosMode === 'simplistic' ? 'Simpliste' : member.defaultPosMode === 'bar' ? 'Bar' : 'Salle'}
+                            </span>
+                        : <span className="badge green">✓ Complet</span>
+                      }
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button title="Historique Sessions" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openLogs(member)}><History size={14} /></button>
+                      <button title="Gérer PIN" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => { setPinTarget(member); setNewPin(member.pinCode || ''); }}><Key size={14} /></button>
+                      <button title="Modifier" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEdit(member)}><Edit2 size={14} /></button>
+                      <button title="Révoquer" className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteTarget(member)}><Trash2 size={14} /></button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {staff.length === 0 && (
+                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '48px', color: '#94A3B8' }}>
+                  <p style={{ fontWeight: 600 }}>Aucun employé. Ajoutez votre équipe.</p>
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Permissions Matrix */}
@@ -159,28 +161,30 @@ export default function StaffClient({ staff, tables }: { staff: StaffMember[]; t
         <div className="card-header">
           <span className="card-title"><ShieldCheck size={16} /> Matrice des Droits d'Accès (Résumé Global)</span>
         </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Fonctionnalité</th>
-              {staff.map(m => (
-                <th key={m.id} style={{ textAlign: 'center', fontSize: '11px' }}>{m.name.split(' ')[0]}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {PERMISSIONS.map(p => (
-              <tr key={p.key}>
-                <td style={{ fontWeight: 600 }}>{p.label}</td>
+        <div className="table-responsive">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Fonctionnalité</th>
                 {staff.map(m => (
-                  <td key={m.id} style={{ textAlign: 'center' }}>
-                    {(m.permissions || []).includes(p.key) || m.role === 'STORE_OWNER' ? <span className="badge green">✓</span> : <span style={{ color: '#CBD5E1' }}>—</span>}
-                  </td>
+                  <th key={m.id} style={{ textAlign: 'center', fontSize: '11px' }}>{m.name.split(' ')[0]}</th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {PERMISSIONS.map(p => (
+                <tr key={p.key}>
+                  <td style={{ fontWeight: 600 }}>{p.label}</td>
+                  {staff.map(m => (
+                    <td key={m.id} style={{ textAlign: 'center' }}>
+                      {(m.permissions || []).includes(p.key) || m.role === 'STORE_OWNER' ? <span className="badge green">✓</span> : <span style={{ color: '#CBD5E1' }}>—</span>}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* === Create/Edit Modal === */}

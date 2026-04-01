@@ -104,73 +104,75 @@ export default function StockClient({ stockItems, vendors, suppliers, globalUnit
           <span className="card-title"><Layers size={16} /> État des Stocks</span>
           <button className="btn btn-primary" onClick={openCreate}><Plus size={14} /> Ajouter Matière Première</button>
         </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Article</th>
-              <th>Quantité</th>
-              <th>Coût Unitaire</th>
-              <th>Valeur (Sum)</th>
-              <th>Statut B2B</th>
-              <th style={{ textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stockItems.map(item => {
-              const isCritical = Number(item.quantity) <= Number(item.minThreshold);
-              const value = Number(item.quantity) * Number(item.cost || 0);
-              const pct = Math.min(100, Math.max(3, (Number(item.quantity) / Math.max(Number(item.minThreshold) * 2, 0.001)) * 100));
-              
-              return (
-                <tr key={item.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: 36, height: 36, borderRadius: '10px', background: isCritical ? '#FEE2E2' : '#D1FAE5', color: isCritical ? '#EF4444' : '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {isCritical ? <AlertTriangle size={16} /> : <Layers size={16} />}
+        <div className="table-responsive">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Article</th>
+                <th>Quantité</th>
+                <th>Coût Unitaire</th>
+                <th>Valeur (Sum)</th>
+                <th>Statut B2B</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stockItems.map(item => {
+                const isCritical = Number(item.quantity) <= Number(item.minThreshold);
+                const value = Number(item.quantity) * Number(item.cost || 0);
+                const pct = Math.min(100, Math.max(3, (Number(item.quantity) / Math.max(Number(item.minThreshold) * 2, 0.001)) * 100));
+                
+                return (
+                  <tr key={item.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '10px', background: isCritical ? '#FEE2E2' : '#D1FAE5', color: isCritical ? '#EF4444' : '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {isCritical ? <AlertTriangle size={16} /> : <Layers size={16} />}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, color: '#1E293B' }}>{item.name}</div>
+                          <div style={{ fontSize: '11px', color: '#94A3B8' }}>Unité: {item.unit?.name || '—'}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontWeight: 700, color: '#1E293B' }}>{item.name}</div>
-                        <div style={{ fontSize: '11px', color: '#94A3B8' }}>Unité: {item.unit?.name || '—'}</div>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 800, color: isCritical ? '#EF4444' : '#1E293B' }}>
+                        {Number(item.quantity).toFixed(2)} {item.unit?.name || ''}
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 800, color: isCritical ? '#EF4444' : '#1E293B' }}>
-                      {Number(item.quantity).toFixed(2)} {item.unit?.name || ''}
-                    </div>
-                    <div className="progress-track" style={{ marginTop: 6, width: 60 }}>
-                      <div className="progress-fill" style={{ width: `${pct}%`, background: isCritical ? '#EF4444' : pct < 60 ? '#F59E0B' : '#10B981' }} />
-                    </div>
-                  </td>
-                  <td>
-                    <span style={{ fontWeight: 600, color: '#64748B' }}>{Number(item.cost || 0).toFixed(3)} DT</span>
-                  </td>
-                  <td>
-                    <span style={{ fontWeight: 800, color: '#10B981' }}>{value.toFixed(3)} DT</span>
-                  </td>
-                  <td>
-                    {isCritical
-                      ? <span className="badge red">⚠ Réappro</span>
-                      : <span className="badge green">✓ OK</span>
-                    }
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button className="btn btn-ghost" title="Ajuster le stock" style={{ padding: '6px 10px', color: '#10B981', marginRight: '4px' }} onClick={() => { setAdjustTarget(item); setAdjustDelta(''); }}>
-                      <PlusCircle size={14} />
-                    </button>
-                    <button className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEdit(item)}><Edit2 size={14} /></button>
-                    <button className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteTarget(item)}><Trash2 size={14} /></button>
-                  </td>
-                </tr>
-              );
-            })}
-            {stockItems.length === 0 && (
-              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '48px', color: '#94A3B8' }}>
-                <p style={{ fontWeight: 600 }}>Aucun stock. Ajoutez vos matières premières.</p>
-              </td></tr>
-            )}
-          </tbody>
-        </table>
+                      <div className="progress-track" style={{ marginTop: 6, width: 60 }}>
+                        <div className="progress-fill" style={{ width: `${pct}%`, background: isCritical ? '#EF4444' : pct < 60 ? '#F59E0B' : '#10B981' }} />
+                      </div>
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: 600, color: '#64748B' }}>{Number(item.cost || 0).toFixed(3)} DT</span>
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: 800, color: '#10B981' }}>{value.toFixed(3)} DT</span>
+                    </td>
+                    <td>
+                      {isCritical
+                        ? <span className="badge red">⚠ Réappro</span>
+                        : <span className="badge green">✓ OK</span>
+                      }
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button className="btn btn-ghost" title="Ajuster le stock" style={{ padding: '6px 10px', color: '#10B981', marginRight: '4px' }} onClick={() => { setAdjustTarget(item); setAdjustDelta(''); }}>
+                        <PlusCircle size={14} />
+                      </button>
+                      <button className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEdit(item)}><Edit2 size={14} /></button>
+                      <button className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteTarget(item)}><Trash2 size={14} /></button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {stockItems.length === 0 && (
+                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '48px', color: '#94A3B8' }}>
+                  <p style={{ fontWeight: 600 }}>Aucun stock. Ajoutez vos matières premières.</p>
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* === Create / Edit Modal === */}
