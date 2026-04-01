@@ -9,7 +9,7 @@
         "buildType": "apk"
       },
       "ios": {
-        "simulator": true
+        "distribution": "internal"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.coffeeshop.elkassa.com"
