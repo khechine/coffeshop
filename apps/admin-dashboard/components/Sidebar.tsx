@@ -98,6 +98,12 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
                 <span>Plan de Salle</span>
               </Link>
             )}
+            {(hasPerm('TERMINALS') || role === 'STORE_OWNER') && (
+              <Link href="/admin/terminals" className={`nav-item${isActive('/admin/terminals') ? ' active' : ''}`}>
+                <Tablet size={18} />
+                <span>Jumelage Terminal</span>
+              </Link>
+            )}
             {hasPerm('STAFF') && (
               <Link href="/admin/staff" className={`nav-item${isActive('/admin/staff') ? ' active' : ''}`}>
                 <Users size={18} />

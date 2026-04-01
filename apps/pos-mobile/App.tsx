@@ -19,17 +19,26 @@ Notifications.setNotificationHandler({
 
 // ─── LOGIN VIEW ────────────────────────────────────────────
 function LoginView() {
-  const { authenticate } = usePOSStore();
+  const { authenticate, activateTerminal } = usePOSStore();
   const [storeIdInput, setStoreIdInput] = useState('');
+  const [activationCode, setActivationCode] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
+  const [isLoading, setIsLoading] = useState(false);
   
-  const handleLogin = () => {
-    if (!storeIdInput.trim()) {
-      Alert.alert("Erreur", "Veuillez entrer un ID de Boutique valide.");
+  const handleLogin = async () => {
+    if (!storeIdInput.trim() || !activationCode.trim()) {
+      Alert.alert("Champs requis", "Veuillez entrer l'ID Boutique ET le Code d'Activation à 6 chiffres.");
       return;
     }
-    authenticate('pair-token-' + Math.random().toString(36), storeIdInput.trim());
+    
+    setIsLoading(true);
+    const success = await activateTerminal(activationCode.trim(), storeIdInput.trim());
+    setIsLoading(false);
+
+    if (!success) {
+      Alert.alert("Échec", "ID Boutique ou Code d'Activation invalide.");
+    }
   };
 
   const startScan = async () => {
@@ -48,14 +57,19 @@ function LoginView() {
     try {
       const payload = JSON.parse(data);
       if (payload.type === 'coffeeshop-pair' && payload.storeId) {
-        authenticate('qr-token-' + Math.random().toString(36), payload.storeId);
+        // If QR contains both (future proofing)
+        if (payload.code) {
+           activateTerminal(payload.code, payload.storeId);
+        } else {
+           setStoreIdInput(payload.storeId);
+           Alert.alert("Scanner", "ID Boutique récupéré. Veuillez maintenant saisir le code d'activation à 6 chiffres.");
+        }
       } else {
         Alert.alert("Code invalide", "Ce code QR n'est pas reconnu par CoffeeShop.");
       }
     } catch (e) {
-       // Manual entry if it's just a string
-       if (data.length > 3) {
-         authenticate('manual-qr-token', data.trim());
+       if (data.length > 5) {
+         setStoreIdInput(data.trim());
        }
     }
   };
@@ -89,31 +103,52 @@ function LoginView() {
       <View style={styles.loginBox}>
         <Text style={styles.logoEmoji}>☕</Text>
         <Text style={styles.loginTitle}>Activation Caisse</Text>
-        <Text style={styles.loginSub}>Scannez le QR code sur votre Dashboard ou entrez l'ID manuellement.</Text>
+        <Text style={styles.loginSub}>Saisissez les informations de jumelage affichées sur votre Dashboard.</Text>
         
-        <TouchableOpacity style={styles.qrBtn} onPress={startScan}>
-          <Text style={{ fontSize: 32, marginBottom: 8 }}>📷</Text>
-          <Text style={styles.qrBtnText}>Scanner le QR Code</Text>
-        </TouchableOpacity>
-
         <View style={styles.divider}>
           <View style={styles.line} />
-          <Text style={styles.dividerText}>OU ENTRER MANUELLEMENT</Text>
+          <Text style={styles.dividerText}>PAIRING</Text>
           <View style={styles.line} />
         </View>
         
+        <Text style={styles.label}>ID DE LA BOUTIQUE</Text>
         <TextInput
           style={styles.input}
-          placeholder="ID Boutique (ex: store-lac2)"
+          placeholder="Ex: store-lac2"
           placeholderTextColor="#94A3B8"
           value={storeIdInput}
           onChangeText={setStoreIdInput}
           autoCapitalize="none"
         />
+
+        <Text style={styles.label}>CODE D'ACTIVATION (6 CHIFFRES)</Text>
+        <TextInput
+          style={[styles.input, { letterSpacing: 8, textAlign: 'center', fontSize: 24, fontWeight: '900' }]}
+          placeholder="000000"
+          placeholderTextColor="#E2E8F0"
+          value={activationCode}
+          onChangeText={setActivationCode}
+          keyboardType="number-pad"
+          maxLength={6}
+        />
         
-        <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
-          <Text style={styles.loginBtnText}>Activer manuellement</Text>
+        <TouchableOpacity 
+          style={[styles.loginBtn, isLoading && { opacity: 0.7 }]} 
+          onPress={handleLogin}
+          disabled={isLoading}
+        >
+          <Text style={styles.loginBtnText}>{isLoading ? "Activation..." : "ACTIVER CAISSE"}</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity style={styles.qrBtnSmall} onPress={startScan}>
+          <Text style={styles.qrBtnTextSmall}>📷 Scanner l'ID Boutique</Text>
+        </TouchableOpacity>
+
+        <View style={{ marginTop: 20, opacity: 0.3 }}>
+          <Text style={{ fontSize: 9, color: '#94A3B8', textAlign: 'center' }}>
+            SERVER: {process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001'}
+          </Text>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -2006,6 +2041,9 @@ const styles = StyleSheet.create({
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
   line: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
   dividerText: { marginHorizontal: 16, color: '#94A3B8', fontSize: 11, fontWeight: '900', letterSpacing: 1 },
+  label: { width: '100%', color: '#94A3B8', fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 },
+  qrBtnSmall: { marginTop: 24, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, backgroundColor: 'rgba(79, 70, 229, 0.1)', borderWidth: 1, borderColor: '#4F46E5', width: '100%', alignItems: 'center' },
+  qrBtnTextSmall: { color: '#4F46E5', fontSize: 13, fontWeight: '800' },
 });
 
 // ─── NEW POS HIERARCHY STYLES ───────────────────────────

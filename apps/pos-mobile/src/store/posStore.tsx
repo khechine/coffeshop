@@ -47,6 +47,7 @@ export interface POSState {
   userRole: UserRole;
   rachmaCart: Record<string, number>;
   authenticate: (token: string, storeId: string) => void;
+  activateTerminal: (code: string, storeId: string) => Promise<boolean>;
   loginWithPin: (pin: string) => Promise<boolean>;
   logoutBarista: () => void;
   logout: () => void;
@@ -175,6 +176,23 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const authenticate = (token: string, store: string) => {
     setAuthToken(token);
     setStoreId(store);
+  };
+
+  const activateTerminal = async (code: string, storeId: string): Promise<boolean> => {
+    const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+    try {
+      const response = await fetch(`${API_URL}/auth/activate-terminal?code=${code}&storeId=${storeId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAuthToken('terminal-token-' + data.terminalId);
+        setStoreId(data.storeId);
+        setStoreName(data.storeName);
+        return true;
+      }
+    } catch (e) {
+      console.error("❌ Erreur activation terminal:", e);
+    }
+    return false;
   };
 
   const loginWithPin = async (pin: string): Promise<boolean> => {
@@ -480,7 +498,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <POSContext.Provider value={{ 
       cart, tables, activeTable, products, pendingSales, authToken, storeId, storeName, storeTables,
-      currentBarista, userRole, rachmaCart, authenticate, loginWithPin, logoutBarista, logout, 
+      currentBarista, userRole, rachmaCart, authenticate, activateTerminal, loginWithPin, logoutBarista, logout, 
       addToCart, removeFromCart, addToRachma, removeFromRachma, clearRachma, clearCart, 
       setActiveTable, checkout, checkoutTable, checkoutRachma, 
       syncSales, setProducts, setStoreTables, getTotalItems, getTableTotal, getTotalPrice, getRachmaTotal,
