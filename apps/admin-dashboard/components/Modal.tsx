@@ -38,71 +38,35 @@ export default function Modal({ open, onClose, title, children, width = 500 }: M
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(15, 23, 42, 0.45)', // Lighter, more modern backdrop
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '24px',
-        backdropFilter: 'blur(10px)',
-        opacity: isAnimating ? 1 : 0,
-        transition: 'opacity 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-      }}
+      className={`fixed inset-0 z-[1000] flex items-center justify-center p-6 backdrop-blur-md transition-all duration-300 ${
+        isAnimating ? 'bg-slate-950/60 opacity-100' : 'bg-slate-950/0 opacity-0 pointer-events-none'
+      }`}
     >
       <div
         ref={ref}
-        style={{
-          background: '#FFFFFF', 
-          borderRadius: '24px', 
-          width: '100%', 
-          maxWidth: width,
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 1px 1px rgba(0, 0, 0, 0.05)',
-          display: 'flex', 
-          flexDirection: 'column',
-          maxHeight: 'calc(100vh - 48px)',
-          overflow: 'hidden',
-          transform: isAnimating ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(20px)',
-          transition: 'transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 300ms ease',
-          opacity: isAnimating ? 1 : 0,
-        }}
+        style={{ maxWidth: width }}
+        className={`bg-white dark:bg-slate-900 w-full rounded-[32px] shadow-2xl flex flex-col max-h-[calc(100vh-48px)] overflow-hidden transition-all duration-300 transform border border-slate-200 dark:border-slate-800 ${
+          isAnimating ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-4 opacity-0'
+        }`}
       >
         {/* Header */}
-        <div style={{ padding: '24px 28px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: 'linear-gradient(to right, #F8FAFC, #FFFFFF)' }}>
+        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between flex-shrink-0 bg-slate-50/50 dark:bg-slate-900/50">
           <div>
-            <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#1E1B4B', margin: 0, letterSpacing: '-0.5px' }}>{title}</h2>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{title}</h2>
           </div>
           <button 
             onClick={onClose}
-            className="modal-close-btn"
-            style={{ 
-              width: 36, height: 36, borderRadius: '12px', border: '1px solid #E2E8F0', 
-              background: '#FFFFFF', cursor: 'pointer', display: 'flex', 
-              alignItems: 'center', justifyContent: 'center', color: '#64748B', 
-              transition: 'all 0.2s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.borderColor = '#FEE2E2'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = '#FFFFFF'; e.currentTarget.style.color = '#64748B'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+            className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 dark:hover:border-rose-500/20 transition-all shadow-sm"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Content */}
-        <div style={{ 
-          padding: '28px', 
-          overflowY: 'auto', 
-          flex: 1, 
-          scrollbarWidth: 'thin',
-          scrollbarColor: '#CBD5E1 transparent'
-        }}>
+        <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
           {children}
         </div>
       </div>
-      
-      <style>{`
-        div::-webkit-scrollbar { width: 6px; }
-        div::-webkit-scrollbar-track { background: transparent; }
-        div::-webkit-scrollbar-thumb { background-color: #CBD5E1; border-radius: 20px; }
-      `}</style>
     </div>
   );
 }

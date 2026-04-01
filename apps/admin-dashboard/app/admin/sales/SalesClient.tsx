@@ -41,7 +41,7 @@ export default function SalesClient({ initialSales, storeName }: { initialSales:
          <table className="data-table">
             <thead>
               <tr>
-                <th>Date & Heure</th>
+                <th className="mobile-hide">Date & Heure</th>
                 <th>Ticket ID</th>
                 <th>Détails de la Commande</th>
                 <th>Staff (Prise / Encaissement)</th>
@@ -52,7 +52,7 @@ export default function SalesClient({ initialSales, storeName }: { initialSales:
             <tbody>
               {filtered.map(sale => (
                 <tr key={sale.id}>
-                   <td style={{ whiteSpace: 'nowrap' }}>
+                   <td className="mobile-hide" style={{ whiteSpace: 'nowrap' }}>
                       <div style={{ fontWeight: 800, color: '#1E293B', fontSize: '14px' }}>{sale.date}</div>
                       <div style={{ fontSize: '12px', color: '#94A3B8' }}>{sale.time}</div>
                    </td>

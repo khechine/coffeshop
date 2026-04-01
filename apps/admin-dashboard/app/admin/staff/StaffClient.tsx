@@ -90,17 +90,16 @@ export default function StaffClient({ staff, tables }: { staff: StaffMember[]; t
 
   return (
     <>
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <div className="card-header">
-          <span className="card-title">👥 Équipe Complète</span>
-          <button className="btn btn-primary" onClick={openCreate}><Plus size={14} /> Ajouter un Employé</button>
+      <div className="card" style={{ marginBottom: '32px', border: 'none', boxShadow: '0 10px 30px -5px rgba(0,0,0,0.05)', borderRadius: '24px', overflow: 'hidden' }}>
+        <div className="card-header" style={{ padding: '24px 32px', background: '#fff', borderBottom: '1px solid #F1F5F9' }}>
+          <span className="card-title" style={{ fontSize: '18px', fontWeight: 900, color: '#1E1B4B' }}>👥 Équipe Complète</span>
+          <button className="btn btn-primary" onClick={openCreate} style={{ padding: '10px 20px', borderRadius: '12px' }}><Plus size={14} strokeWidth={3} /> Ajouter un Collaborateur</button>
         </div>
         <div className="table-responsive">
           <table className="data-table">
             <thead>
               <tr>
                 <th>Employé</th>
-                <th>Contact</th>
                 <th>Rôle</th>
                 <th>Accès POS</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
@@ -122,12 +121,6 @@ export default function StaffClient({ staff, tables }: { staff: StaffMember[]; t
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: '#475569' }}><Mail size={12} /> {member.email}</div>
-                        {member.phone && <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: '#94A3B8' }}><Phone size={11} /> {member.phone}</div>}
-                      </div>
-                    </td>
                     <td><span className={`badge ${roleConf.badge}`}>{roleConf.label}</span></td>
                     <td>
                       {member.role === 'CASHIER'
@@ -146,20 +139,21 @@ export default function StaffClient({ staff, tables }: { staff: StaffMember[]; t
                   </tr>
                 );
               })}
-              {staff.length === 0 && (
-                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '48px', color: '#94A3B8' }}>
-                  <p style={{ fontWeight: 600 }}>Aucun employé. Ajoutez votre équipe.</p>
-                </td></tr>
-              )}
+               {staff.length === 0 && (
+                 <tr><td colSpan={4} style={{ textAlign: 'center', padding: '64px', color: '#94A3B8' }}>
+                   <p style={{ fontWeight: 700, fontSize: '16px', color: '#1E1B4B' }}>Aucun collaborateur trouvé.</p>
+                   <p style={{ fontSize: '13px', marginTop: '4px' }}>Commencez par ajouter votre premier membre d'équipe.</p>
+                 </td></tr>
+               )}
             </tbody>
           </table>
         </div>
       </div>
 
       {/* Permissions Matrix */}
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title"><ShieldCheck size={16} /> Matrice des Droits d'Accès (Résumé Global)</span>
+      <div className="card" style={{ border: 'none', boxShadow: '0 10px 30px -5px rgba(0,0,0,0.05)', borderRadius: '24px', overflow: 'hidden' }}>
+        <div className="card-header" style={{ padding: '24px 32px', background: '#fff', borderBottom: '1px solid #F1F5F9' }}>
+          <span className="card-title" style={{ fontSize: '16px', fontWeight: 900, color: '#1E1B4B' }}><ShieldCheck size={18} /> Matrice des Droits d'Accès</span>
         </div>
         <div className="table-responsive">
           <table className="data-table">

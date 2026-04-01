@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 *, *::before, *::after {
@@ -25,8 +29,13 @@
 html, body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background: #F8FAFC;
-  color: #1E293B;
+  @apply bg-slate-50 text-slate-900;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+  width: 100%;
+}
+
+.dark html, .dark body {
+  @apply bg-slate-950 text-slate-50;
 }
 
 /* ===== DASHBOARD SHELL ===== */
@@ -238,6 +247,8 @@ html, body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0; /* Critical for flex child overflow */
+  max-width: 100%;
 }
 
 /* ===== TOPBAR ===== */
@@ -387,7 +398,14 @@ html, body {
   transform: translateY(-1px);
 }
 
-.kpi-card::after {
+@media (max-width: 480px) {
+  .kpi-card {
+    padding: 16px;
+    gap: 12px;
+  }
+}
+ 
+ .kpi-card::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -703,6 +721,9 @@ html, body {
   .page-header .btn {
     width: 100%;
     justify-content: center;
+  }
+  .mobile-hide {
+    display: none !important;
   }
 }
 

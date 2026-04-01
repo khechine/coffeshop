@@ -60,98 +60,177 @@ export default async function SubscriptionManagement() {
   const invoices: any[] = []; 
 
   return (
-    <div className="page-content">
-      <div className="page-header">
+    <div className="w-full space-y-10">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1>Mon Abonnement SaaS</h1>
-          <p>Gérez votre forfait, consultez votre utilisation et votre historique de facturation.</p>
+          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Mon Abonnement SaaS</h1>
+          <p className="text-slate-500 font-medium mt-2">Gérez votre forfait, consultez votre utilisation et votre historique de facturation.</p>
+        </div>
+        <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-2xl flex items-center gap-3 shadow-sm dark:shadow-none">
+          <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            {currentPlan ? 'Service Actif' : 'Période d\'essai'}
+          </span>
         </div>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:'20px',marginBottom:'20px'}}>
-        {/* Current Plan Card */}
-        {currentPlan ? (
-          <div className="card" style={{overflow:'visible'}}>
-            <div style={{padding:'28px',background:'linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%)',borderRadius:'14px 14px 0 0'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
-                <div>
-                  <div style={{fontSize:'12px',fontWeight:700,color:'rgba(255,255,255,.6)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:'4px'}}>Plan Actuel</div>
-                  <div style={{fontSize:'36px',fontWeight:900,color:'#fff',letterSpacing:'-1px',marginBottom:'8px'}}>{currentPlan.name}</div>
-                  <span style={{display:'inline-flex',alignItems:'center',gap:'6px',background:'rgba(255,255,255,.15)',color:'#fff',padding:'4px 12px',borderRadius:'100px',fontSize:'13px',fontWeight:600}}>
-                    <CheckCircle2 size={14} /> Abonnement Actif
-                  </span>
-                </div>
-                <div style={{textAlign:'right'}}>
-                  <div style={{fontSize:'48px',fontWeight:900,color:'#fff',letterSpacing:'-2px'}}>{currentPlan.price}</div>
-                  <div style={{fontSize:'14px',color:'rgba(255,255,255,.6)'}}>DT / mois</div>
-                </div>
-              </div>
-
-              <div style={{display:'flex',gap:'20px',marginTop:'20px',padding:'16px',background:'rgba(255,255,255,.1)',borderRadius:'10px'}}>
-                <div>
-                  <div style={{fontSize:'11px',color:'rgba(255,255,255,.6)',fontWeight:600}}>Commencé le</div>
-                  <div style={{fontSize:'14px',fontWeight:700,color:'#fff'}}>{currentPlan.startedAt}</div>
-                </div>
-                <div style={{width:'1px',background:'rgba(255,255,255,.15)'}} />
-                <div>
-                  <div style={{fontSize:'11px',color:'rgba(255,255,255,.6)',fontWeight:600}}>Renouvellement</div>
-                  <div style={{fontSize:'14px',fontWeight:700,color:'#fff'}}>{currentPlan.renewsAt}</div>
-                </div>
-                <div style={{width:'1px',background:'rgba(255,255,255,.15)'}} />
-                <div>
-                  <div style={{fontSize:'11px',color:'rgba(255,255,255,.6)',fontWeight:600}}>Cycle</div>
-                  <div style={{fontSize:'14px',fontWeight:700,color:'#fff'}}>Mensuel</div>
-                </div>
-              </div>
-            </div>
-
-            <div style={{padding:'24px'}}>
-              <div style={{fontWeight:700,color:'#1E293B',marginBottom:'16px',fontSize:'14px'}}>✓ Inclus dans votre forfait</div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
-                {currentPlan.features.map((f, i) => (
-                  <div key={i} style={{display:'flex',alignItems:'center',gap:'8px',padding:'10px 12px',borderRadius:'8px',background:'#F8FAFC',fontSize:'13px',fontWeight:600,color:'#475569'}}>
-                    <span style={{color:'#10B981'}}>{f.icon}</span>
-                    {f.label}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* Left Column: Current Plan */}
+        <div className="xl:col-span-2 space-y-8">
+          {currentPlan ? (
+            <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 rounded-[40px] overflow-hidden backdrop-blur-md shadow-sm dark:shadow-none group relative">
+              <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/5 blur-[100px] pointer-events-none group-hover:bg-indigo-500/10 transition-colors" />
+              
+              <div className="p-8 md:p-10 bg-gradient-to-br from-indigo-600 to-violet-700 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 blur-3xl -mr-32 -mt-32" />
+                <div className="flex flex-col md:flex-row justify-between items-start gap-6 relative z-10">
+                  <div>
+                    <div className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] mb-3">Plan Actuel</div>
+                    <h2 className="text-5xl font-black text-white tracking-tighter mb-4">{currentPlan.name}</h2>
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/20 text-white text-xs font-black uppercase tracking-widest">
+                      <CheckCircle2 size={14} /> Abonnement Actif
+                    </div>
                   </div>
-                ))}
+                  <div className="md:text-right">
+                    <div className="text-6xl font-black text-white tracking-tighter">
+                      {currentPlan.price}
+                      <span className="text-lg font-bold opacity-60 ml-2 italic">DT / mois</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 mt-10 p-6 bg-black/20 backdrop-blur-xl rounded-[32px] border border-white/10 relative z-10">
+                  <div className="space-y-1">
+                    <div className="text-[10px] text-white/40 font-black uppercase tracking-wider">Commencé le</div>
+                    <div className="text-sm font-bold text-white">{currentPlan.startedAt}</div>
+                  </div>
+                  <div className="space-y-1 border-x border-white/10 px-4">
+                    <div className="text-[10px] text-white/40 font-black uppercase tracking-wider">Renouvellement</div>
+                    <div className="text-sm font-bold text-white">{currentPlan.renewsAt}</div>
+                  </div>
+                  <div className="space-y-1 pl-4">
+                    <div className="text-[10px] text-white/40 font-black uppercase tracking-wider">Cycle</div>
+                    <div className="text-sm font-bold text-white uppercase tracking-widest">Mensuel</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8 md:p-10 space-y-8">
+                <div>
+                  <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.2em] mb-6">✓ Inclus dans votre forfait</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {currentPlan.features.map((f, i) => (
+                      <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 text-sm font-bold text-slate-600 dark:text-slate-300 transition-all hover:scale-[1.02]">
+                        <span className="text-emerald-500 bg-emerald-500/10 p-2 rounded-xl">{f.icon}</span>
+                        {f.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-8 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                  <p className="text-xs text-slate-400 font-medium italic">Besoin de plus de fonctionnalités ? Explorez nos forfaits premium ci-dessous.</p>
+                  <button className="text-rose-500 hover:text-rose-600 text-xs font-black uppercase tracking-widest transition-colors flex items-center gap-2">
+                    <AlertCircle size={14} /> Annuler l'abonnement
+                  </button>
+                </div>
               </div>
             </div>
-
-            <div style={{padding:'16px 24px',borderTop:'1px solid #E2E8F0',display:'flex',justifyContent:'space-between',alignItems:'center',background:'#F8FAFC',borderRadius:'0 0 14px 14px'}}>
-              <button style={{color:'#EF4444',border:'none',background:'none',fontSize:'13px',fontWeight:600,cursor:'pointer'}}>
-                Annuler l'abonnement
+          ) : (
+            <div className="bg-white dark:bg-slate-900/40 border-2 border-dashed border-slate-200 dark:border-slate-800/50 rounded-[40px] p-20 text-center flex flex-col items-center shadow-sm dark:shadow-none">
+              <div className="w-24 h-24 bg-slate-50 dark:bg-slate-900/50 rounded-[32px] flex items-center justify-center text-slate-300 dark:text-slate-700 mb-8 border border-slate-100 dark:border-slate-800 shadow-inner">
+                <AlertCircle size={48} />
+              </div>
+              <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">Aucun abonnement actif</h3>
+              <p className="text-slate-500 max-w-sm font-medium leading-relaxed mb-10">
+                Vous utilisez actuellement la période d'essai ou n'avez pas encore choisi de forfait pour votre établissement.
+              </p>
+              <button className="px-10 py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 uppercase tracking-widest">
+                Choisir un forfait
               </button>
             </div>
-          </div>
-        ) : (
-          <div className="card" style={{ padding: '40px', textAlign: 'center' }}>
-            <AlertCircle size={48} color="#94A3B8" style={{ margin: '0 auto 16px' }} />
-            <h2 style={{ fontSize: '20px', fontWeight: 800 }}>Aucun abonnement actif</h2>
-            <p style={{ color: '#64748B', maxWidth: '300px', margin: '8px auto 24px' }}>Vous utilisez actuellement la période d'essai ou n'avez pas encore choisi de forfait.</p>
-            <button className="btn btn-primary" onClick={() => {}}>Choisir un forfait ci-dessous</button>
-          </div>
-        )}
+          )}
 
-        {/* Usage + Invoices */}
-        <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
-          {/* Usage */}
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title"><BarChart3 size={16} /> Utilisation du Forfait</span>
+          {/* Other Plans Grid */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-3">
+              <div className="w-1.5 h-6 bg-indigo-500 rounded-full" />
+              Plans Disponibles
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {otherPlans.map((plan: any) => (
+                <div key={plan.id} className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 p-8 rounded-[40px] backdrop-blur-md shadow-sm dark:shadow-none hover:border-indigo-500/30 transition-all group flex flex-col h-full">
+                  <div className="flex justify-between items-start mb-8">
+                    <div>
+                      <h4 className="text-xl font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{plan.name}</h4>
+                      <div className="flex items-baseline gap-1 mt-2">
+                        <span className="text-4xl font-black text-slate-900 dark:text-white">{Number(plan.price)}</span>
+                        <span className="text-xs font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest italic">DT / mois</span>
+                      </div>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 group-hover:bg-indigo-500 group-hover:text-white transition-all">
+                      <Zap size={20} />
+                    </div>
+                  </div>
+                  
+                  <ul className="space-y-4 mb-10 flex-1">
+                    <li className="flex items-center gap-3 text-sm font-bold text-slate-600 dark:text-slate-400">
+                      <div className="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center"><CheckCircle2 size={12} strokeWidth={3} /></div>
+                      {plan.maxStores} Point(s) de Vente
+                    </li>
+                    <li className="flex items-center gap-3 text-sm font-bold text-slate-600 dark:text-slate-400">
+                      <div className="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center"><CheckCircle2 size={12} strokeWidth={3} /></div>
+                      {plan.maxProducts} Produits max.
+                    </li>
+                    <li className="flex items-center gap-3 text-sm font-bold text-slate-600 dark:text-slate-400">
+                      <div className="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center"><CheckCircle2 size={12} strokeWidth={3} /></div>
+                      Ventes POS Illimitées
+                    </li>
+                  </ul>
+
+                  <button className="w-full py-4 rounded-2xl bg-slate-900 dark:bg-slate-800 text-white font-black text-xs hover:bg-indigo-600 transition-all uppercase tracking-widest flex items-center justify-center gap-2">
+                    Basculer sur ce plan <ArrowRight size={14} />
+                  </button>
+                </div>
+              ))}
             </div>
-            <div style={{padding:'16px',display:'flex',flexDirection:'column',gap:'16px'}}>
+          </div>
+        </div>
+
+        {/* Right Column: Usage & Invoices */}
+        <div className="space-y-8">
+          {/* Usage KPIs */}
+          <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 p-8 rounded-[40px] backdrop-blur-md shadow-sm dark:shadow-none">
+            <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.2em] mb-8 flex items-center gap-2">
+              <BarChart3 size={14} className="text-indigo-500" /> Utilisation du Forfait
+            </h3>
+            <div className="space-y-8">
               {usageKpis.map(u => {
                 const maxVal = typeof u.max === 'number' ? u.max : 1;
                 const pct = typeof u.max === 'number' ? Math.round((u.value / maxVal) * 100) : 0;
                 return (
-                  <div key={u.label}>
-                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:'6px'}}>
-                      <span style={{fontSize:'13px',fontWeight:600,color:'#475569'}}>{u.label}</span>
-                      <span style={{fontSize:'13px',fontWeight:700,color:pct>80?'#EF4444':'#1E293B'}}>{u.value}/{u.max} {u.unit}</span>
+                  <div key={u.label} className="group">
+                    <div className="flex justify-between items-end mb-3">
+                      <div>
+                        <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{u.label}</div>
+                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                          {u.value} <span className="text-xs font-bold text-slate-400 italic">/ {u.max} {u.unit}</span>
+                        </div>
+                      </div>
+                      <div className={`text-xs font-black ${pct > 80 ? 'text-rose-500' : 'text-indigo-500'}`}>
+                        {pct}%
+                      </div>
                     </div>
                     {typeof u.max === 'number' && (
-                      <div className="progress-track">
-                        <div className="progress-fill" style={{width:`${pct}%`,background:pct>80?'#EF4444':pct>60?'#F59E0B':'#6366F1'}} />
+                      <div className="h-2.5 bg-slate-100 dark:bg-slate-950 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 shadow-inner">
+                        <div 
+                          className={`h-full transition-all duration-1000 ease-out rounded-full shadow-lg ${
+                            pct > 80 ? 'bg-rose-500 shadow-rose-500/20' : 
+                            pct > 60 ? 'bg-amber-500 shadow-amber-500/20' : 
+                            'bg-indigo-500 shadow-indigo-500/20'
+                          }`} 
+                          style={{ width: `${pct}%` }} 
+                        />
                       </div>
                     )}
                   </div>
@@ -161,58 +240,34 @@ export default async function SubscriptionManagement() {
           </div>
 
           {/* Invoices */}
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title"><Calendar size={16} /> Historique Factures</span>
-            </div>
-            <div style={{padding:'12px',display:'flex',flexDirection:'column',gap:'6px'}}>
+          <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 p-8 rounded-[40px] backdrop-blur-md shadow-sm dark:shadow-none">
+            <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.2em] mb-8 flex items-center gap-2">
+              <Calendar size={14} className="text-indigo-500" /> Historique Factures
+            </h3>
+            <div className="space-y-3">
               {invoices.length === 0 ? (
-                 <p style={{ textAlign: 'center', padding: '12px', color: '#94A3B8', fontSize: '13px' }}>Aucune facture disponible.</p>
+                 <div className="py-10 text-center bg-slate-50 dark:bg-slate-950/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+                    <CreditCard size={32} className="mx-auto mb-3 text-slate-300 dark:text-slate-700 opacity-50" />
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Aucune facture</p>
+                 </div>
               ) : invoices.map(inv => (
-                <div key={inv.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 12px',borderRadius:'8px',background:'#F8FAFC'}}>
+                <div key={inv.id} className="flex justify-between items-center p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-900 transition-all shadow-sm hover:shadow-md cursor-pointer group">
                   <div>
-                    <div style={{fontWeight:700,fontSize:'13px',color:'#1E293B'}}>{inv.id}</div>
-                    <div style={{fontSize:'11px',color:'#94A3B8'}}>{inv.date}</div>
+                    <div className="text-sm font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors italic">#{inv.id}</div>
+                    <div className="text-[10px] text-slate-400 font-bold mt-0.5">{inv.date}</div>
                   </div>
-                  <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-                    <span style={{fontWeight:700,color:'#1E293B'}}>{inv.amount} DT</span>
-                    <span className="badge green" style={{fontSize:'10px'}}>✓</span>
+                  <div className="text-right">
+                    <div className="text-sm font-black text-slate-900 dark:text-white">{inv.amount} DT</div>
+                    <div className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mt-0.5 bg-emerald-500/10 px-2 py-0.5 rounded-full inline-block">Payé ✓</div>
                   </div>
                 </div>
               ))}
             </div>
+            
+            <button className="w-full mt-8 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-black text-[10px] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all uppercase tracking-[0.2em]">
+              Voir tous les reçus
+            </button>
           </div>
-        </div>
-      </div>
-
-      {/* Other Plans */}
-      <div>
-        <div style={{fontWeight:800,fontSize:'18px',color:'#1E293B',marginBottom:'16px'}}>Plans Disponibles</div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(350px, 1fr))',gap:'16px'}}>
-          {otherPlans.map((plan: any) => (
-            <div key={plan.id} className="card" style={{ padding: '24px' }}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'16px'}}>
-                <div>
-                  <h3 style={{fontSize:'18px',fontWeight:800,color:'#1E293B'}}>{plan.name}</h3>
-                  <div style={{fontSize:'28px',fontWeight:900,color:'#6366F1',marginTop:'4px'}}>{Number(plan.price)} <span style={{fontSize:'13px',color:'#94A3B8',fontWeight:600}}>DT/mois</span></div>
-                </div>
-                <button className="btn btn-primary" style={{fontSize:'12px'}}>
-                  Choisir ce plan <ArrowRight size={12} />
-                </button>
-              </div>
-              <ul style={{display:'flex',flexDirection:'column',gap:'8px', padding: 0, listStyle: 'none'}}>
-                  <li style={{display:'flex',alignItems:'center',gap:'8px',fontSize:'13px',color:'#64748B'}}>
-                    <CheckCircle2 size={14} color="#10B981" strokeWidth={3} /> {plan.maxStores} Point(s) de Vente
-                  </li>
-                  <li style={{display:'flex',alignItems:'center',gap:'8px',fontSize:'13px',color:'#64748B'}}>
-                    <CheckCircle2 size={14} color="#10B981" strokeWidth={3} /> {plan.maxProducts} Produits au catalogue
-                  </li>
-                  <li style={{display:'flex',alignItems:'center',gap:'8px',fontSize:'13px',color:'#64748B'}}>
-                    <CheckCircle2 size={14} color="#10B981" strokeWidth={3} /> Ventes POS Illimitées
-                  </li>
-              </ul>
-            </div>
-          ))}
         </div>
       </div>
     </div>

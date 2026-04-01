@@ -37,6 +37,10 @@ export default function POSClient({
 }) {
   const [cashierId, setCashierId] = useState<string | null>(null);
   const [cashierName, setCashierName] = useState<string | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [pressingProductId, setPressingProductId] = useState<string | null>(null);
+  const [lastProcessedLongPress, setLastProcessedLongPress] = useState<number>(0);
+  const longPressHandledRef = useRef(false);
   const [isMobile, setIsMobile] = useState(false);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
@@ -46,8 +50,6 @@ export default function POSClient({
   const [dailySales, setDailySales] = useState<any[]>(initialSales);
   const [viewMode, setViewMode] = useState<ViewMode>('tables');
   const [simplisticSession, setSimplisticSession] = useState<Record<string, number>>({});
-  const [simplisticLosses, setSimplisticLosses] = useState<Record<string, number>>({});
-  const [isLossMode, setIsLossMode] = useState(false);
   const [isTakeawayMode, setIsTakeawayMode] = useState(false);
   const [packagingId, setPackagingId] = useState<string | null>(null);
   const [selectedSale, setSelectedSale] = useState<any | null>(null);
@@ -76,7 +78,6 @@ export default function POSClient({
     
     // Load simplistic session for THIS barista
     const savedSimplistic = localStorage.getItem(`pos_simplistic_${cashierId}`);
-    const savedLosses = localStorage.getItem(`pos_losses_${cashierId}`);
     
     if (savedSimplistic) {
       try {
@@ -87,17 +88,6 @@ export default function POSClient({
       }
     } else {
       setSimplisticSession({});
-    }
-
-    if (savedLosses) {
-      try {
-        setSimplisticLosses(JSON.parse(savedLosses));
-      } catch (e) {
-        console.error("Failed to load losses", e);
-        setSimplisticLosses({});
-      }
-    } else {
-      setSimplisticLosses({});
     }
   }, [cashierId]);
 
@@ -206,7 +196,9 @@ export default function POSClient({
     p.name.toLowerCase().includes('gobelet') || 
     p.name.toLowerCase().includes('sachet') || 
     p.name.toLowerCase().includes('sac') ||
-    p.name.toLowerCase().includes('boite')
+    p.name.toLowerCase().includes('boite') ||
+    p.name.toLowerCase().includes('emballage') ||
+    p.price === 0
   );
 
   const needsPackaging = (product: any) => {
@@ -218,12 +210,25 @@ export default function POSClient({
   const addItem = (product: any, packagingProduct?: any) => {
     if (!activeTable) return;
 
-    // If it's a candidate for packaging and NO choice has been made yet (neither packaging nor 'Sur Place')
+    // If it's a candidate for packaging and NO choice has been made yet
     if (needsPackaging(product) && typeof packagingProduct === 'undefined' && !packagingProducts.find(p => p.id === product.id)) {
-      setPendingProduct(product);
-      setPopupTriggerMode('ORDER');
-      setShowPackagingPopup(true);
-      return;
+      // If takeaway mode is ON and we have a default packaging, use it automatically
+      if (isTakeawayMode && packagingId) {
+        const foundPack = packagingProducts.find(p => p.id === packagingId);
+        if (foundPack) {
+           addItem(product, foundPack);
+           return;
+        }
+      }
+      
+      // Otherwise, ONLY show popup if it's NOT takeaway mode (Dine-in) or if we don't have a default packaging
+      // Actually, if it's Dine-in, we don't need a popup (Tasse).
+      if (isTakeawayMode) {
+        setPendingProduct(product);
+        setPopupTriggerMode('ORDER');
+        setShowPackagingPopup(true);
+        return;
+      }
     }
 
     const current = tableOrders[activeTable] || { items: [], baristaId: cashierId, baristaName: cashierName };
@@ -332,76 +337,83 @@ export default function POSClient({
 
     const product = initialProducts.find(p => p.id === productId);
     if (!product) return;
-
-    // Check for popup trigger
-    if (needsPackaging(product) && typeof packagingProduct === 'undefined' && !packagingProducts.find(p => p.id === productId)) {
+ 
+    // Check for popup trigger if Takeaway ON but NO packagingId selected
+    if (needsPackaging(product) && isTakeawayMode && !packagingId && typeof packagingProduct === 'undefined' && !packagingProducts.find(p => p.id === productId)) {
       setPendingProduct(product);
       setPopupTriggerMode('SIMPLISTIC');
       setShowPackagingPopup(true);
       return;
     }
+ 
+    setSimplisticSession(prev => {
+      const next = { ...prev, [productId]: (prev[productId] || 0) + 1 };
+      localStorage.setItem(`pos_simplistic_${cashierId}`, JSON.stringify(next));
+      return next;
+    });
 
-    if (isLossMode) {
-      setSimplisticLosses(prev => {
-        const next = { ...prev, [productId]: (prev[productId] || 0) + 1 };
-        localStorage.setItem(`pos_losses_${cashierId}`, JSON.stringify(next));
+    // Automatically handle packaging item in simplistic mode
+    const finalPackId = packagingProduct ? packagingProduct.id : (isTakeawayMode && packagingId ? packagingId : null);
+    if (finalPackId) {
+      setSimplisticTakeaway(prev => {
+        const next = { ...prev, [finalPackId]: (prev[finalPackId] || 0) + 1 };
+        localStorage.setItem(`pos_takeaway_${cashierId}`, JSON.stringify(next));
         return next;
       });
-    } else {
-      setSimplisticSession(prev => {
-        const next = { ...prev, [productId]: (prev[productId] || 0) + 1 };
-        localStorage.setItem(`pos_simplistic_${cashierId}`, JSON.stringify(next));
-        return next;
-      });
-
-      // Handle packaging item in simplistic mode
-      const targetPackId = packagingProduct ? packagingProduct.id : (isTakeawayMode && packagingId ? packagingId : null);
-      if (targetPackId) {
-        setSimplisticTakeaway(prev => {
-          const next = { ...prev, [targetPackId]: (prev[targetPackId] || 0) + 1 };
-          localStorage.setItem(`pos_takeaway_${cashierId}`, JSON.stringify(next));
-          return next;
-        });
-      }
     }
+
     setShowPackagingPopup(false);
     setPendingProduct(null);
+  };
+
+  const removeSimplistic = (productId: string) => {
+    if (!cashierId) return;
+
+    setSimplisticSession(prev => {
+      const current = prev[productId] || 0;
+      if (current <= 0) return prev;
+      const next = { ...prev, [productId]: current - 1 };
+      localStorage.setItem(`pos_simplistic_${cashierId}`, JSON.stringify(next));
+      return next;
+    });
+
+    // Also remove packaging if active
+    if (isTakeawayMode && packagingId) {
+      setSimplisticTakeaway(prev => {
+        const current = prev[packagingId] || 0;
+        if (current <= 0) return prev;
+        const next = { ...prev, [packagingId]: current - 1 };
+        localStorage.setItem(`pos_takeaway_${cashierId}`, JSON.stringify(next));
+        return next;
+      });
+    }
   };
 
   const resetSimplistic = () => {
     if (!cashierId) return;
     setSimplisticSession({});
-    setSimplisticLosses({});
     setSimplisticTakeaway({});
     localStorage.removeItem(`pos_simplistic_${cashierId}`);
-    localStorage.removeItem(`pos_losses_${cashierId}`);
     localStorage.removeItem(`pos_takeaway_${cashierId}`);
   };
 
   const validateSimplistic = async () => {
     const items = Object.entries(simplisticSession)
-      .filter(([_, qty]) => qty > 0)
+      .filter(([_, qty]) => (qty as number) > 0)
       .map(([id, qty]) => {
         const prod = initialProducts.find(p => p.id === id);
-        return { productId: id, name: prod?.name || '?', price: prod?.price || 0, quantity: qty };
+        return { productId: id, name: prod?.name || '?', price: prod?.price || 0, quantity: qty as number };
       });
-
-    const lossItems = Object.entries(simplisticLosses)
-      .filter(([_, qty]) => qty > 0)
-      .map(([id, qty]) => {
-        const prod = initialProducts.find(p => p.id === id);
-        return { productId: id, name: `${prod?.name} (Perte)`, price: 0, quantity: qty };
-      });
-
+ 
     const packagingItems = Object.entries(simplisticTakeaway)
-      .filter(([_, qty]) => qty > 0)
+      .filter(([_, qty]) => (qty as number) > 0)
       .map(([id, qty]) => {
         const prod = initialProducts.find(p => p.id === id);
-        return { productId: id, name: `${prod?.name} (Emballage)`, price: 0, quantity: qty };
+        return { productId: id, name: `${prod?.name} (Emballage)`, price: 0, quantity: qty as number };
       });
-
-    if (items.length === 0 && lossItems.length === 0 && packagingItems.length === 0) return;
-
+ 
+    if (items.length === 0 && packagingItems.length === 0) return;
+ 
     try {
       const finalItems = [...items, ...packagingItems];
       if (finalItems.length > 0) {
@@ -413,17 +425,7 @@ export default function POSClient({
           takenById: cashierId!
         });
       }
-
-      if (lossItems.length > 0) {
-        await recordSale({
-          total: 0,
-          items: lossItems,
-          tableName: 'Pertes de Session',
-          baristaId: cashierId!,
-          takenById: cashierId!
-        });
-      }
-
+ 
       // Update local history
       const newLogs = [];
       if (items.length > 0) {
@@ -439,23 +441,9 @@ export default function POSClient({
           items: items
         });
       }
-      if (lossItems.length > 0) {
-        newLogs.push({
-          id: Math.random().toString(),
-          total: 0,
-          table: 'Pertes de Session',
-          cashier: cashierName,
-          cashierId: cashierId,
-          takenBy: cashierName,
-          takenById: cashierId,
-          time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-          items: lossItems
-        });
-      }
-
+ 
       setDailySales([...newLogs, ...dailySales]);
       resetSimplistic();
-      setIsLossMode(false);
       alert("Enregistré avec succès !");
     } catch (e) {
       console.error(e);
@@ -542,52 +530,131 @@ export default function POSClient({
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Topbar */}
-        <div style={{ height: '64px', background: '#fff', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', flexShrink: 0 }}>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: 40, height: 40, borderRadius: '10px', background: '#6366F110', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                 <Coffee size={20} color="#6366F1" />
+        <div style={{ height: '76px', background: '#fff', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 12px' : '0 24px', flexShrink: 0, boxShadow: '0 2px 10px rgba(0,0,0,0.02)', zIndex: 100 }}>
+           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px' }}>
+              <div style={{ width:isMobile ? 38 : 44, height: isMobile ? 38 : 44, borderRadius: '12px', background: 'linear-gradient(135deg, #6366F1, #4F46E5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(99,102,241,0.2)' }}>
+                 <Coffee size={isMobile ? 20 : 24} color="#fff" />
               </div>
-              <div>
-                 <div style={{ fontWeight: 900, fontSize: '16px', color: '#1E1B4B', lineHeight: 1.2 }}>{storeName}</div>
-                 <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {viewMode === 'tables' ? 'Plan de Salle' : viewMode === 'order' ? 'Prise de Commande' : viewMode === 'simplistic' ? 'Mode Simplifié' : 'Historique'}
+              <div style={{ display: isMobile && viewMode !== 'tables' ? 'none' : 'block' }}>
+                 <div style={{ fontWeight: 900, fontSize: isMobile ? '14px' : '18px', color: '#1E1B4B', lineHeight: 1.1, textTransform: 'uppercase', letterSpacing: '-0.3px' }}>{storeName}</div>
+                 <div style={{ fontSize: '11px', color: '#6366F1', fontWeight: 800, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#6366F1' }} />
+                    {viewMode === 'tables' ? 'PLAN DE SALLE' : viewMode === 'order' ? 'COMMANDE' : viewMode === 'simplistic' ? 'COMPTAGE RAPIDE' : 'JOURNAL'}
                  </div>
               </div>
            </div>
 
-           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 16px', background: '#F8FAFC', borderRadius: '100px', border: '1px solid #E2E8F0', marginRight: '8px' }}>
-                 <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B' }}>{cashierName}</div>
-                    <div style={{ fontSize: '9px', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
-                       <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} /> EN LIGNE
-                    </div>
-                 </div>
-                 <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #6366F1, #4F46E5)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '13px', boxShadow: '0 2px 4px rgba(99, 102, 241, 0.2)' }}>
-                    {cashierName?.charAt(0)}
-                 </div>
+           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px' }}>
+              {/* GLOBAL TAKEAWAY CONTROLS - Segmented Switch Style */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                background: '#F1F5F9', 
+                padding: '4px', 
+                borderRadius: '14px',
+                border: '1px solid #E2E8F0'
+              }}>
+                <button 
+                  onClick={() => setIsTakeawayMode(false)}
+                  style={{ 
+                    height: isMobile ? '32px' : '36px', 
+                    padding: isMobile ? '0 10px' : '0 16px', 
+                    borderRadius: '10px', 
+                    background: !isTakeawayMode ? '#fff' : 'transparent', 
+                    color: !isTakeawayMode ? '#1E293B' : '#64748B', 
+                    border: 'none', 
+                    boxShadow: !isTakeawayMode ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                    fontSize: '11px', 
+                    fontWeight: 800, 
+                    cursor: 'pointer', 
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Coffee size={14} />
+                  <span>SUR PLACE</span>
+                </button>
+                <button 
+                  onClick={() => setIsTakeawayMode(true)}
+                  style={{ 
+                    height: isMobile ? '32px' : '36px', 
+                    padding: isMobile ? '0 10px' : '0 16px', 
+                    borderRadius: '10px', 
+                    background: isTakeawayMode ? '#6366F1' : 'transparent', 
+                    color: isTakeawayMode ? '#fff' : '#64748B', 
+                    border: 'none', 
+                    boxShadow: isTakeawayMode ? '0 4px 10px rgba(99,102,241,0.2)' : 'none',
+                    fontSize: '11px', 
+                    fontWeight: 800, 
+                    cursor: 'pointer', 
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <ShoppingBag size={14} />
+                  <span>À EMPORTER</span>
+                </button>
               </div>
 
-              <div style={{ height: '32px', width: '1px', background: '#E2E8F0', margin: '0 4px' }} />
+              {/* PACKAGING SELECTOR - Hidden on very small mobile if space is tight, but kept for tablets */}
+              {!isMobile && (
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  background: '#F8FAFC', 
+                  padding: '4px 12px', 
+                  borderRadius: '12px', 
+                  border: '1px solid #E2E8F0',
+                  height: '44px'
+                }}>
+                   <span style={{ fontSize: '9px', fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Emballage</span>
+                   <select 
+                     value={packagingId || ''} 
+                     onChange={(e) => setPackagingId(e.target.value)}
+                     style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 800, outline: 'none', color: '#1E293B', padding: 0 }}
+                   >
+                     <option value="">(Auto-Popup)</option>
+                     {initialProducts
+                       .filter(p => p.name.toLowerCase().includes('gobelet') || p.name.toLowerCase().includes('sac') || p.name.toLowerCase().includes('emballage'))
+                       .map(p => <option key={p.id} value={p.id}>{p.name.toUpperCase()}</option>)
+                     }
+                   </select>
+                </div>
+              )}
 
-              <button 
-                onClick={() => router.push('/')}
-                style={{ height: '40px', padding: '0 16px', borderRadius: '10px', background: '#fff', border: '1.5px solid #E2E8F0', color: '#475569', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
-                onMouseOver={(e) => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
-                onMouseOut={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
-              >
-                <LayoutDashboard size={16} />
-                Dashboard
-              </button>
+              {!isMobile && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 6px 6px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                   <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B' }}>{cashierName}</div>
+                      <div style={{ fontSize: '9px', color: '#10B981', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end', letterSpacing: '0.05em' }}>
+                         EN LIGNE
+                      </div>
+                   </div>
+                   <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px' }}>
+                      {cashierName?.charAt(0).toUpperCase()}
+                   </div>
+                </div>
+              )}
 
-              <button 
-                onClick={handleLogout}
-                style={{ height: '40px', width: '40px', borderRadius: '10px', background: '#FEF2F2', color: '#EF4444', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
-                onMouseOver={(e) => e.currentTarget.style.background = '#FEE2E2'}
-                onMouseOut={(e) => e.currentTarget.style.background = '#FEF2F2'}
-              >
-                <LogOut size={18} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button 
+                  onClick={() => router.push('/')}
+                  style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                >
+                  <LayoutDashboard size={20} />
+                </button>
+
+                <button 
+                  onClick={handleLogout}
+                  style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgb(239, 68, 68)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Lock size={20} />
+                </button>
+              </div>
            </div>
         </div>
 
@@ -598,7 +665,10 @@ export default function POSClient({
                    <button onClick={() => { setActiveTable('direct'); setViewMode('order'); }}
                      style={{ padding: '14px 24px', borderRadius: '12px', background: '#6366F1', color: '#fff', fontWeight: 800, border: 'none', cursor: 'pointer' }}>+ Vente Directe</button>
                    <div style={{ display: 'flex', gap: '16px' }}>
-                      <div style={box}><div style={{ fontSize: '10px', color: '#94A3B8' }}>MON CA</div><div style={{ fontSize: '18px', fontWeight: 900 }}>{dailyTotal.toFixed(3)} DT</div></div>
+                      <div style={{ padding: isMobile ? '12px 16px' : '20px 24px', borderRadius: '16px', background: '#fff', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                         <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase' }}>C.A. Session</div>
+                         <div style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 900, color: '#1E1B4B' }}>{dailyTotal.toFixed(3)} <span style={{ fontSize: '11px', opacity: 0.6 }}>DT</span></div>
+                      </div>
                    </div>
                 </div>
 
@@ -630,12 +700,14 @@ export default function POSClient({
              </div>
            )}
 
-           {viewMode === 'order' && (
-             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                <div style={{ flex: 1, background: '#F8FAFC', display: 'flex', flexDirection: 'column' }}>
-                   <div style={{ padding: '20px', display: 'flex', gap: '12px' }}>
-                      <button onClick={() => setViewMode('tables')} style={{ padding: '8px 16px', background: '#fff', borderRadius: '8px', border: '1px solid #E2E8F0' }}>← Tables</button>
-                   </div>
+            {viewMode === 'order' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: 'hidden' }}>
+                 <div style={{ flex: 1, background: '#F8FAFC', display: 'flex', flexDirection: 'column', height: isMobile ? '50%' : '100%' }}>
+                    <div style={{ padding: '16px 20px', display: 'flex', gap: '12px', borderBottom: '1px solid #E2E8F0', background: '#fff' }}>
+                       <button onClick={() => setViewMode('tables')} style={{ padding: '10px 18px', background: '#F1F5F9', border: 'none', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}>
+                          <ArrowLeft size={16} /> <span>Salle</span>
+                       </button>
+                    </div>
                     <div style={{ padding: '0 20px 20px', display: 'flex', gap: '8px', overflowX: 'auto', flexShrink: 0 }} className="no-scrollbar">
                        {categories.map(cat => (
                          <button key={cat} onClick={() => setPosCategory(cat)}
@@ -664,7 +736,16 @@ export default function POSClient({
                     </div>
                 </div>
 
-                <div style={{ width: '400px', background: '#fff', borderLeft: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ 
+                  width: isMobile ? '100%' : '400px', 
+                  height: isMobile ? '50%' : '100%',
+                  background: '#fff', 
+                  borderLeft: isMobile ? 'none' : '1px solid #E2E8F0', 
+                  borderTop: isMobile ? '3px solid #E2E8F0' : 'none',
+                  display: 'flex', 
+                   flexDirection: 'column',
+                   zIndex: 10
+                }}>
                    <div style={{ padding: '24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between' }}>
                       <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900 }}>{activeTable === 'direct' ? 'Vente Directe' : `Table ${initialTables.find(t => t.id === activeTable)?.label}`}</h2>
                       <button onClick={() => updateTableOrders({ ...tableOrders, [activeTable!]: { ...currentTableOrder!, items: [] } })} style={{ color: '#EF4444', background: 'none', border: 'none' }}><Trash2 size={20} /></button>
@@ -819,61 +900,75 @@ export default function POSClient({
             })()}
 
             {viewMode === 'simplistic' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: isMobile ? '12px' : '30px', background: '#F8FAFC' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '16px' : '30px' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: isMobile ? '12px' : '32px', background: '#F8FAFC' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '20px' : '40px' }}>
                   <div>
-                    <h2 style={{ fontSize: isMobile ? '24px' : '32px', fontWeight: 900, color: '#1E1B4B', margin: 0 }}>Comptage de Session</h2>
-                    {!isMobile && <p style={{ color: '#64748B', fontSize: '18px', marginTop: '4px' }}>{isLossMode ? 'MODE PERTE (DÉFECTUEUX)' : 'MODE VENTE (NORMAL)'}</p>}
-                  </div>
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F1F5F9', padding: '4px 12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                      <ShoppingBag size={18} color={isTakeawayMode ? '#6366F1' : '#94A3B8'} />
-                      <select 
-                        value={packagingId || ''} 
-                        onChange={(e) => setPackagingId(e.target.value)}
-                        style={{ background: 'none', border: 'none', fontSize: '13px', fontWeight: 700, outline: 'none', color: '#1E293B' }}
-                      >
-                        <option value="">Aucun Emballage</option>
-                        {initialProducts
-                          .filter(p => p.name.toLowerCase().includes('gobelet') || p.name.toLowerCase().includes('emballage') || p.name.toLowerCase().includes('sac') || p.name.toLowerCase().includes('boite'))
-                          .map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))
-                        }
-                      </select>
-                      <button 
-                        onClick={() => setIsTakeawayMode(!isTakeawayMode)}
-                        style={{ padding: '6px 10px', borderRadius: '8px', background: isTakeawayMode ? '#6366F1' : '#CBD5E1', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 800 }}
-                      >
-                        {isTakeawayMode ? 'ON' : 'OFF'}
-                      </button>
+                    <h2 style={{ fontSize: isMobile ? '28px' : '40px', fontWeight: 950, color: '#1E1B4B', margin: 0, letterSpacing: '-1.5px' }}>Comptage de Session</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981' }} />
+                       <span style={{ color: '#64748B', fontSize: '15px', fontWeight: 700 }}>Ventes en cours</span>
                     </div>
-                    <button 
-                      className={`btn ${isLossMode ? 'btn-danger' : 'btn-primary'}`}
-                      style={{ height: '48px', padding: '0 20px', fontSize: '14px', fontWeight: 800 }}
-                      onClick={() => setIsLossMode(!isLossMode)}
-                    >
-                      {isLossMode ? 'PASSÉ EN VENTE' : 'PASSÉ EN PERTE'}
-                    </button>
-                    <button onClick={resetSimplistic} style={{ padding: '8px 16px', borderRadius: '12px', background: '#FEE2E2', color: '#EF4444', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Trash2 size={18} />
-                    </button>
                   </div>
+                  
+                  <button onClick={resetSimplistic} style={{ width: '52px', height: '52px', borderRadius: '16px', background: '#FEF2F2', color: '#EF4444', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Trash2 size={24} />
+                  </button>
                 </div>
 
-                <div style={{ flex: 1, overflow: 'auto' }}>
+                <div style={{ flex: 1, overflow: 'auto' }} className="no-scrollbar">
                   <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? '160px' : '220px'}, 1fr))`, gap: isMobile ? '12px' : '20px' }}>
                     {initialProducts.map(p => {
                       const qty = simplisticSession[p.id] || 0;
-                      const lossQty = simplisticLosses[p.id] || 0;
+                      
+                      // Handling long press logic
+                      const startPress = () => {
+                        longPressHandledRef.current = false; // Reset for new press
+                        setPressingProductId(p.id);
+                        const timer = setTimeout(() => {
+                           removeSimplistic(p.id);
+                           longPressHandledRef.current = true; // Mark as handled
+                           setLongPressTimer(null);
+                           setPressingProductId(null);
+                           setLastProcessedLongPress(Date.now()); 
+                           if (navigator.vibrate) navigator.vibrate(50);
+                        }, 600); // 600ms for safety
+                        setLongPressTimer(timer);
+                      };
+                      
+                      const cancelPress = () => {
+                        setPressingProductId(null);
+                        if (longPressTimer) {
+                          clearTimeout(longPressTimer);
+                          setLongPressTimer(null);
+                        }
+                      };
+
                       return (
-                        <button key={p.id} onClick={() => addSimplistic(p.id)}
+                        <button key={p.id} 
+                          onMouseDown={startPress}
+                          onMouseUp={cancelPress}
+                          onMouseLeave={cancelPress}
+                          onTouchStart={startPress}
+                          onTouchEnd={cancelPress}
+                          onClick={(e) => {
+                            // If a long press was handled during this touch/click cycle, block the addition
+                            if (longPressHandledRef.current) {
+                               longPressHandledRef.current = false;
+                               return;
+                            }
+                            // Fallback safety check with timestamp
+                            if (Date.now() - lastProcessedLongPress < 400) return;
+                            
+                            if (!longPressTimer) addSimplistic(p.id);
+                          }}
                           style={{ 
                             height: isMobile ? '140px' : '180px', borderRadius: isMobile ? '20px' : '30px', background: '#fff', border: '2px solid #E2E8F0', 
                             cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', 
                             justifyContent: 'center', gap: isMobile ? '8px' : '12px', transition: 'all 0.2s', position: 'relative',
-                            boxShadow: (qty > 0 || lossQty > 0) ? '0 10px 15px -3px rgba(99, 102, 241, 0.1)' : 'none',
-                            borderColor: isLossMode ? (lossQty > 0 ? '#EF4444' : '#E2E8F0') : (qty > 0 ? '#6366F1' : '#E2E8F0')
+                            boxShadow: (qty > 0) ? '0 10px 15px -3px rgba(99, 102, 241, 0.1)' : 'none',
+                            borderColor: (qty > 0 ? '#6366F1' : '#E2E8F0'),
+                            transform: (pressingProductId === p.id ? 'scale(0.95)' : 'scale(1)'),
+                            userSelect: 'none'
                           }}>
                           {isTakeawayMode && packagingId && (
                              <div style={{ position: 'absolute', top: 12, left: 12 }}>
@@ -882,8 +977,7 @@ export default function POSClient({
                           )}
                           <div style={{ fontWeight: 800, fontSize: isMobile ? '16px' : '20px', color: '#1E293B', textAlign: 'center', padding: '0 8px' }}>{p.name}</div>
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            {qty > 0 && <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#6366F1', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 900 }}>{qty}</div>}
-                            {lossQty > 0 && <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#EF4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 900 }}>{lossQty}</div>}
+                            {qty > 0 && <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#6366F1', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 900 }}>{(qty as number)}</div>}
                           </div>
                           <div style={{ color: '#6366F1', fontWeight: 800, fontSize: isMobile ? '14px' : '18px' }}>{p.price.toFixed(3)}</div>
                         </button>
@@ -896,18 +990,15 @@ export default function POSClient({
                   <button onClick={validateSimplistic} 
                     style={{ 
                       flex: 1, height: isMobile ? '70px' : '100px', borderRadius: isMobile ? '20px' : '30px', 
-                      background: isLossMode ? '#EF4444' : (simplisticTotal > 0 ? '#10B981' : '#CBD5E1'), 
+                      background: (simplisticTotal > 0 ? '#10B981' : '#CBD5E1'), 
                       color: '#fff', fontSize: isMobile ? '16px' : '20px', fontWeight: 900, border: 'none', 
                       cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', 
-                      justifyContent: 'center', boxShadow: 'none'
+                      justifyContent: 'center', boxShadow: simplisticTotal > 0 ? '0 10px 20px -5px rgba(16, 185, 129, 0.3)' : 'none'
                     }}>
-                    <Save size={20} />
+                    <Save size={24} style={{ marginBottom: '4px' }} />
                     <span>
-                      {isLossMode ? 'VALIDER PERTES' : `VALIDER VENTES : ${simplisticTotal.toFixed(3)} DT`}
+                       VALIDER VENTES : {simplisticTotal.toFixed(3)} DT
                     </span>
-                    {Object.values(simplisticLosses).reduce((a,b)=>a+b, 0) > 0 && !isLossMode && (
-                      <span style={{ fontSize: '11px', opacity: 0.8 }}>({Object.values(simplisticLosses).reduce((a,b)=>a+b, 0)} pertes en cours)</span>
-                    )}
                   </button>
                 </div>
               </div>
@@ -950,26 +1041,28 @@ export default function POSClient({
                 <div style={{ flex: 1, height: '1px', background: '#E2E8F0' }} />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                {packagingProducts.length > 0 ? (
-                  packagingProducts.map(pack => (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', maxHeight: '300px', overflow: 'auto', padding: '4px' }} className="no-scrollbar">
+                {(packagingProducts.length > 0 ? packagingProducts : initialProducts.slice(0, 40)).map(pack => (
                     <button 
                       key={pack.id}
-                      onClick={() => popupTriggerMode === 'ORDER' ? addItem(pendingProduct, pack) : addSimplistic(pendingProduct.id, pack)}
-                      style={{ height: '120px', borderRadius: '20px', background: '#6366F110', border: '2px solid #6366F120', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', cursor: 'pointer', transition: 'all 0.2s' }}
-                      onMouseOver={(e) => { e.currentTarget.style.borderColor = '#6366F140'; e.currentTarget.style.background = '#6366F115'; }}
-                      onMouseOut={(e) => { e.currentTarget.style.borderColor = '#6366F120'; e.currentTarget.style.background = '#6366F110'; }}
+                      onClick={() => {
+                        setPackagingId(pack.id);
+                        if (popupTriggerMode === 'ORDER') addItem(pendingProduct, pack);
+                        else addSimplistic(pendingProduct.id, pack);
+                      }}
+                      style={{ height: '100px', borderRadius: '20px', background: '#6366F110', border: '2px solid #6366F120', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
                     >
-                       <ShoppingBag size={24} color="#6366F1" />
-                       <div style={{ fontWeight: 800, color: '#1E293B', fontSize: '13px', textAlign: 'center' }}>{pack.name}</div>
+                       <ShoppingBag size={20} color="#6366F1" />
+                       <div style={{ fontWeight: 800, color: '#1E293B', fontSize: '11px', textAlign: 'center', lineHeight: 1.2 }}>{pack.name}</div>
                     </button>
                   ))
-                ) : (
-                  <div style={{ gridColumn: 'span 2', padding: '20px', borderRadius: '16px', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', textAlign: 'center', fontSize: '13px', fontWeight: 600 }}>
-                    Aucun produit "Emballage" (Gobelet, etc.) n'a été trouvé dans votre catalogue. 
-                  </div>
-                )}
+                }
               </div>
+              {packagingProducts.length === 0 && (
+                <div style={{ marginTop: '8px', fontSize: '11px', color: '#6366F1', textAlign: 'center', fontWeight: 600 }}>
+                   SÉLECTIONNEZ VOTRE EMBALLAGE CI-DESSUS (Gobelet, Box, etc.)
+                </div>
+              )}
             </div>
 
             <button 

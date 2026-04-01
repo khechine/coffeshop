@@ -20,7 +20,7 @@ export default async function StaffManagement() {
         </div>
       </div>
 
-      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: '24px' }}>
+      <div className="kpi-grid">
         <div className="kpi-card blue">
           <div className="kpi-icon blue"><Users size={22} /></div>
           <div><div className="kpi-label">Total Employés</div><div className="kpi-value">{staff.length}</div></div>

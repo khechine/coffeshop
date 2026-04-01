@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Building2, Mail, Lock, Phone, MapPin, Send, CheckCircle, Store } from 'lucide-react';
+import { Building2, Mail, Lock, Phone, MapPin, Send, CheckCircle, Store, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { registerVendorAction } from '../../actions';
 
@@ -18,6 +18,7 @@ export default function VendorRegisterPage() {
     description: ''
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,7 +78,22 @@ export default function VendorRegisterPage() {
             </div>
             <div>
               <label style={labelStyle}>Mot de passe</label>
-              <input type="password" style={inputStyle} placeholder="••••••••" value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type={showPassword ? 'text' : 'password'} 
+                  style={{ ...inputStyle, paddingRight: '48px' }} 
+                  placeholder="••••••••" 
+                  value={form.password} 
+                  onChange={e => setForm({...form, password: e.target.value})} 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)} 
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', color: '#64748B' }}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
             <button 
               onClick={() => setStep(2)}

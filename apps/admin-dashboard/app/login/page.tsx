@@ -100,7 +100,10 @@ export default function LoginPage() {
       {/* Right side: Login Form */}
       <div style={{ width: '560px', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }} className="full-width-mobile">
          <div style={{ width: '100%', maxWidth: '380px' }}>
-            <div style={{ marginBottom: '40px' }}>
+            <div style={{ marginBottom: '32px' }}>
+               <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#64748B', textDecoration: 'none', fontSize: '13px', fontWeight: 700, marginBottom: '24px', transition: 'all 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = '#1E293B'} onMouseOut={(e) => e.currentTarget.style.color = '#64748B'}>
+                  <ArrowRight size={16} style={{ transform: 'rotate(180deg)' }} /> Retour à l'accueil
+               </Link>
                <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#1E293B', marginBottom: '8px', letterSpacing: '-0.5px' }}>Bienvenue</h2>
                <p style={{ color: '#64748B', fontSize: '16px' }}>Identifiez-vous pour continuer.</p>
             </div>
@@ -130,7 +133,7 @@ export default function LoginPage() {
                <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mot de passe</label>
-                     <a href="#" style={{ fontSize: '12px', color: '#6366F1', fontWeight: 700, textDecoration: 'none' }}>Oublié ?</a>
+                     <Link href="#" style={{ fontSize: '12px', color: '#6366F1', fontWeight: 700, textDecoration: 'none' }}>Mot de passe oublié ?</Link>
                   </div>
                   <div style={{ position: 'relative' }}>
                      <Lock size={18} color="#CBD5E1" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />

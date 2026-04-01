@@ -58,11 +58,11 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
     <aside className={`sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
-          <Coffee size={20} color="#fff" />
+          <Coffee size={22} color="#fff" strokeWidth={2.5} />
         </div>
         <div className="sidebar-logo-text">
           <h1>CoffeeSaaS</h1>
-          <span>Platform B2B</span>
+          <span>B2B Platform</span>
         </div>
       </div>
 
@@ -70,14 +70,14 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
         {/* VENTES & SERVICE */}
         {hasPerm('POS') && (
           <div className="nav-group">
-            <span className="nav-section-label">Ventes &amp; Service</span>
-            <Link href="/pos" className="nav-item pos-btn-sidebar" style={{ background: '#6366F1', color: '#fff', marginBottom: '8px', borderRadius: '12px' }}>
-              <Store size={18} />
-              Accès Caisse POS
+            <span className="nav-section-label">Ventes & Direct</span>
+            <Link href="/pos" className="nav-item pos-btn-sidebar" style={{ background: 'linear-gradient(135deg, #6366F1, #4F46E5)', color: '#fff', marginBottom: '12px', padding: '12px 14px', borderRadius: '12px' }}>
+              <Store size={18} strokeWidth={2.5} />
+              <span style={{ fontWeight: 800 }}>Accès Caisse POS</span>
             </Link>
             <Link href="/admin/sales" className={`nav-item${isActive('/admin/sales') ? ' active' : ''}`}>
               <History size={18} />
-              Historique des Ventes
+              <span>Historique Ventes</span>
             </Link>
           </div>
         )}
@@ -85,43 +85,35 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
         {/* PILOTAGE */}
         {(hasPerm('DASHBOARD') || role === 'STORE_OWNER') && (
           <div className="nav-group">
-            <span className="nav-section-label">Pilotage &amp; Vision</span>
+            <span className="nav-section-label">Pilotage Business</span>
             {hasPerm('DASHBOARD') && (
               <Link href="/" className={`nav-item${isActive('/') ? ' active' : ''}`}>
                 <LayoutDashboard size={18} />
-                Tableau de Bord
-              </Link>
-            )}
-            {role === 'STORE_OWNER' && (
-              <Link href="/admin/settings" className={`nav-item${isActive('/admin/settings') || isActive('/admin/subscription') ? ' active' : ''}`}>
-                <Settings size={18} />
-                Paramètres & Abonnement
+                <span>Vue d'ensemble</span>
               </Link>
             )}
             {hasPerm('POS') && (
               <Link href="/admin/tables" className={`nav-item${isActive('/admin/tables') ? ' active' : ''}`}>
                 <LayoutGrid size={18} />
-                Plan de Salle &amp; Tables
+                <span>Plan de Salle</span>
               </Link>
             )}
             {hasPerm('STAFF') && (
-
               <Link href="/admin/staff" className={`nav-item${isActive('/admin/staff') ? ' active' : ''}`}>
                 <Users size={18} />
-                Personnel &amp; Accès
+                <span>Équipe & Accès</span>
               </Link>
             )}
-            {hasPerm('STAFF') && (
-              <Link href="/admin/terminals" className={`nav-item${isActive('/admin/terminals') ? ' active' : ''}`}>
-                <Tablet size={18} />
-                Terminaux &amp; Tablettes
-              </Link>
-            )}
-
-            {(role === 'STORE_OWNER') && (
+            {role === 'STORE_OWNER' && (
               <Link href="/admin/expenses" className={`nav-item${isActive('/admin/expenses') ? ' active' : ''}`}>
                 <CreditCard size={18} />
-                Gestion des Charges
+                <span>Gestion Dépenses</span>
+              </Link>
+            )}
+            {role === 'STORE_OWNER' && (
+              <Link href="/admin/settings" className={`nav-item${isActive('/admin/settings') || isActive('/admin/subscription') ? ' active' : ''}`}>
+                <Settings size={18} />
+                <span>Configuration Admin</span>
               </Link>
             )}
           </div>
@@ -130,17 +122,17 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
         {/* PRODUITS & CATALOGUE */}
         {(hasPerm('PRODUCTS') || hasPerm('STOCK')) && (
           <div className="nav-group">
-            <span className="nav-section-label">Catalogue &amp; Stocks</span>
+            <span className="nav-section-label">Gestion Produits</span>
             {hasPerm('PRODUCTS') && (
               <Link href="/admin/products" className={`nav-item${isActive('/admin/products') ? ' active' : ''}`}>
                 <Coffee size={18} />
-                Catalogue &amp; Recettes
+                <span>Menu & Recettes</span>
               </Link>
             )}
             {hasPerm('STOCK') && (
               <Link href="/admin/stock" className={`nav-item${isActive('/admin/stock') ? ' active' : ''}`}>
                 <Boxes size={18} />
-                Matières Premières
+                <span>Stock Matières</span>
               </Link>
             )}
           </div>
@@ -150,31 +142,31 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
         {/* MARKETPLACE */}
         {(hasPerm('SUPPLY') || role === 'STORE_OWNER') && (
           <div className="nav-group">
-            <span className="nav-section-label">B2B &amp; Marketplace</span>
+            <span className="nav-section-label">Sourcing & B2B</span>
             {hasPerm('SUPPLY') && hasMarketplace && (
-              <Link href="/marketplace" className={`nav-item${isActive('/marketplace') ? ' active' : ''}`} style={{ border: '1px solid rgba(79,70,229,0.2)' }}>
-                <Truck size={18} color="#4F46E5" />
-                Marketplace B2B
+              <Link href="/marketplace" className={`nav-item${isActive('/marketplace') ? ' active' : ''}`} style={{ border: '1px solid rgba(99,102,241,0.15)', background: isActive('/marketplace') ? 'rgba(99,102,241,0.1)' : 'transparent' }}>
+                <Truck size={18} color="#818CF8" />
+                <span>Marketplace B2B</span>
               </Link>
             )}
             <Link href="/vendor/dashboard" className={`nav-item${isActive('/vendor/dashboard') ? ' active' : ''}`}>
               <ShoppingBag size={18} />
-              Fournisseurs &amp; B2B
+              <span>Fournisseurs Externes</span>
             </Link>
           </div>
         )}
       </nav>
 
       <div className="sidebar-footer">
-        <div className="user-card">
-          <div className="user-avatar">{cashierName.charAt(0).toUpperCase()}</div>
+        <div className="user-card" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div className="user-avatar" style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}>{cashierName.charAt(0).toUpperCase()}</div>
           <div className="user-info">
-            <div className="user-name">{cashierName}</div>
-            <div className="user-role">OWNER • {storeName || 'Café Dashboard'}</div>
+            <div className="user-name" style={{ fontSize: '14px' }}>{cashierName}</div>
+            <div className="user-role" style={{ fontSize: '10px', opacity: 0.6 }}>{role?.replace('_', ' ') || 'OWNER'}</div>
           </div>
         </div>
         <button onClick={handleLogout} className="btn btn-ghost"
-          style={{ width: '100%', marginTop: '8px', justifyContent: 'center', fontSize: '12px' }}>
+          style={{ width: '100%', marginTop: '12px', justifyContent: 'center', fontSize: '13px', color: 'rgba(255,255,255,0.5)', borderRadius: '10px' }}>
           <LogOut size={14} />
           Déconnexion
         </button>

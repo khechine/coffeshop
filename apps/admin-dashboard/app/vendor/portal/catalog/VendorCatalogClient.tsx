@@ -88,64 +88,99 @@ export default function VendorCatalogClient({ initialProducts, categories, globa
     }
   };
 
-  const field: React.CSSProperties = { width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #E2E8F0', fontSize: '14px', outline: 'none' };
-  const label: React.CSSProperties = { display: 'block', fontSize: '11px', fontWeight: 800, color: '#64748B', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' };
+  const inputClass = "w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600";
+  const labelClass = "block text-[11px] font-black text-slate-500 mb-1.5 uppercase tracking-wider";
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="flex flex-col gap-8">
       
       {/* Search and Action Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '16px 24px', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-        <div style={{ position: 'relative', width: '300px' }}>
-          <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
-          <input type="text" placeholder="Rechercher mes produits..." style={{ ...field, paddingLeft: '48px', height: '44px', background: '#F8FAFC' }} />
+      <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900/40 backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800/50 gap-6 shadow-sm dark:shadow-none">
+        <div className="relative w-full md:max-w-md">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+          <input 
+            type="text" 
+            placeholder="Rechercher mes produits..." 
+            className={`${inputClass} pl-12 h-12`} 
+          />
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => setImportModalOpen(true)}>
-            <FileSpreadsheet size={18} /> Importer Catalogue
+        <div className="flex gap-3 w-full md:w-auto">
+          <button 
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-white transition-all shadow-sm dark:shadow-none" 
+            onClick={() => setImportModalOpen(true)}
+          >
+            <FileSpreadsheet size={18} /> Importer
           </button>
-          <button className="btn btn-primary" onClick={handleCreateNew}>
+          <button 
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20" 
+            onClick={handleCreateNew}
+          >
             <Plus size={18} /> Nouveau produit
           </button>
         </div>
       </div>
 
       {/* Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {initialProducts.map(p => (
-          <div key={p.id} style={{ background: '#fff', borderRadius: '24px', border: '1px solid #E2E8F0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ height: '180px', background: '#F8FAFC', position: 'relative' }}>
-              <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
+          <div 
+            key={p.id} 
+            className="bg-white dark:bg-slate-900/40 rounded-[32px] border border-slate-200 dark:border-slate-800/50 overflow-hidden flex flex-col transition-all duration-300 hover:border-indigo-500/30 hover:-translate-y-1 group shadow-sm hover:shadow-xl dark:shadow-none dark:hover:shadow-indigo-500/5"
+          >
+            <div className="h-48 bg-slate-100 dark:bg-slate-950 relative overflow-hidden">
+              <img 
+                src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} 
+                className="w-full h-full object-cover opacity-90 dark:opacity-60 group-hover:opacity-100 dark:group-hover:opacity-80 group-hover:scale-105 transition-all duration-500" 
+              />
+              <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
                 {p.isFeatured && (
-                  <div style={{ background: '#F59E0B', color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900, boxShadow: '0 2px 4px rgba(245,158,11,0.3)' }}>🔥 VEDETTE</div>
+                  <div className="bg-amber-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 border border-amber-400/20">
+                    🔥 Vedette
+                  </div>
                 )}
                 {p.isFlashSale && (
-                  <div style={{ background: '#EF4444', color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900, boxShadow: '0 2px 4px rgba(239,68,68,0.3)' }}>⚡ FLASH -{p.discount}%</div>
+                  <div className="bg-rose-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 border border-rose-400/20">
+                    ⚡ -{p.discount}%
+                  </div>
                 )}
               </div>
             </div>
-            <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 700, marginBottom: '6px' }}>{categories.find(c => c.id === p.categoryId)?.name || 'Sans catégorie'}</div>
-              <h4 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: 900, color: '#1E293B', lineHeight: '1.4' }}>{p.name}</h4>
+            
+            <div className="p-6 flex flex-1 flex-col">
+              <div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest mb-2">
+                {categories.find(c => c.id === p.categoryId)?.name || 'Sans catégorie'}
+              </div>
+              <h4 className="text-lg font-black text-slate-900 dark:text-white leading-tight mb-4 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                {p.name}
+              </h4>
               
-              <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800/50 flex justify-between items-end">
                 <div>
-                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                     <span style={{ fontSize: '24px', fontWeight: 900, color: '#4F46E5' }}>{Number(p.price).toFixed(3)}</span>
-                     <span style={{ fontSize: '13px', fontWeight: 800, color: '#64748B' }}>DT</span>
+                   <div className="flex items-baseline gap-1">
+                     <span className="text-2xl font-black text-slate-900 dark:text-white">{Number(p.price).toFixed(3)}</span>
+                     <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">DT</span>
                    </div>
-                   <div style={{ fontSize: '12px', color: '#94A3B8' }}>par {p.unit}</div>
+                   <div className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-widest">par {p.unit}</div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={() => handleEdit(p)} className="btn btn-outline" style={{ padding: '10px', borderRadius: '12px' }}><Edit2 size={16} /></button>
-                  <button onClick={() => handleDelete(p.id)} className="btn btn-outline" style={{ padding: '10px', borderRadius: '12px', color: '#EF4444' }}><Trash2 size={16} /></button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleEdit(p)} 
+                    className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-400 hover:text-white hover:bg-indigo-600 dark:hover:bg-indigo-600 hover:border-indigo-500 transition-all"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(p.id)} 
+                    className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 dark:hover:border-rose-500/20 transition-all"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
               
               {p.isFlashSale && p.flashEnd && (
-                <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed #E2E8F0', fontSize: '12px', color: '#EF4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Clock size={14} /> Fin de l'offre : {new Date(p.flashEnd).toLocaleDateString()}
+                <div className="mt-4 flex items-center gap-2 text-[10px] font-black text-rose-500 dark:text-rose-400 uppercase tracking-widest bg-rose-50 dark:bg-rose-500/5 border border-rose-100 dark:border-rose-500/10 px-3 py-1.5 rounded-lg">
+                  <Clock size={12} /> Fin : {new Date(p.flashEnd).toLocaleDateString()}
                 </div>
               )}
             </div>
@@ -153,104 +188,104 @@ export default function VendorCatalogClient({ initialProducts, categories, globa
         ))}
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? "Modifier le Produit" : "Nouveau Produit Marketplace"}>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '500px' }}>
-          <div><label style={label}>Nom du produit</label><input style={field} value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="ex: Café Grains Robusta" required /></div>
+      {/* Modal Produit */}
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? "Modifier le Produit" : "Nouveau Produit Marketplace"} width={600}>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className={labelClass}>Nom du produit</label>
+            <input className={inputClass} value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="ex: Café Grains Robusta" required />
+          </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-            <div><label style={label}>Prix (DT)</label><input style={field} type="number" step="0.001" value={form.price} onChange={e => setForm({...form, price: e.target.value})} required /></div>
+          <div className="grid grid-cols-3 gap-4">
             <div>
-              <label style={label}>Unité</label>
-              <select style={{...field, appearance: 'none'}} value={form.unit} onChange={e => setForm({...form, unit: e.target.value})} required>
-                <option value="">-- Sélectionner --</option>
-                {globalUnits.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+              <label className={labelClass}>Prix (DT)</label>
+              <input className={inputClass} type="number" step="0.001" value={form.price} onChange={e => setForm({...form, price: e.target.value})} required />
+            </div>
+            <div>
+              <label className={labelClass}>Unité</label>
+              <select className={`${inputClass} appearance-none cursor-pointer`} value={form.unit} onChange={e => setForm({...form, unit: e.target.value})} required>
+                <option value="" className="text-slate-900">Choisir...</option>
+                {globalUnits.map(u => <option key={u.id} value={u.name} className="text-slate-900">{u.name}</option>)}
               </select>
             </div>
-            <div><label style={label}>Qte Min</label><input style={field} type="number" step="0.5" value={form.minOrderQuantity} onChange={e => setForm({...form, minOrderQuantity: e.target.value})} required /></div>
+            <div>
+              <label className={labelClass}>Qte Min</label>
+              <input className={inputClass} type="number" step="0.5" value={form.minOrderQuantity} onChange={e => setForm({...form, minOrderQuantity: e.target.value})} required />
+            </div>
           </div>
 
           <div>
-            <label style={label}>Catégorie</label>
-            <select style={{...field, appearance: 'none', background: '#F8FAFC'}} value={form.categoryId} onChange={e => setForm({...form, categoryId: e.target.value})} required>
-              <option value="">Sélectionner une catégorie...</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <label className={labelClass}>Catégorie</label>
+            <select className={`${inputClass} appearance-none cursor-pointer`} value={form.categoryId} onChange={e => setForm({...form, categoryId: e.target.value})} required>
+              <option value="" className="text-slate-900">Sélectionner une catégorie...</option>
+              {categories.map(c => <option key={c.id} value={c.id} className="text-slate-900">{c.name}</option>)}
             </select>
           </div>
 
           <div>
-            <label style={label}>Image (URL)</label>
-            <input style={field} value={form.image} onChange={e => setForm({...form, image: e.target.value})} placeholder="https://..." />
+            <label className={labelClass}>Image (URL)</label>
+            <input className={inputClass} value={form.image} onChange={e => setForm({...form, image: e.target.value})} placeholder="https://..." />
           </div>
 
-          <div style={{ display: 'flex', gap: '20px', background: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
-              <input type="checkbox" checked={form.isFeatured} onChange={e => setForm({...form, isFeatured: e.target.checked})} />
-              Vedette
+          <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-950/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input 
+                type="checkbox" 
+                className="w-5 h-5 rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-indigo-600 focus:ring-indigo-500"
+                checked={form.isFeatured} 
+                onChange={e => setForm({...form, isFeatured: e.target.checked})} 
+              />
+              <span className="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">🔥 Produit Vedette</span>
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', color: '#EF4444' }}>
-              <input type="checkbox" checked={form.isFlashSale} onChange={e => setForm({...form, isFlashSale: e.target.checked})} />
-              Vente Flash 🔥
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input 
+                type="checkbox" 
+                className="w-5 h-5 rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-rose-600 focus:ring-rose-500"
+                checked={form.isFlashSale} 
+                onChange={e => setForm({...form, isFlashSale: e.target.checked})} 
+              />
+              <span className="text-sm font-bold text-rose-600 dark:text-rose-400 group-hover:text-rose-700 dark:group-hover:text-rose-300 transition-colors">⚡ Vente Flash</span>
             </label>
-          </div>
-
-          <div>
-             <label style={label}><ArrowRightCircle size={14} /> Suggestions Upselling (Ventes additionnelles)</label>
-             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px', padding: '12px', border: '1.5px solid #E2E8F0', borderRadius: '12px', maxHeight: '120px', overflowY: 'auto' }}>
-                {initialProducts.filter(p => p.id !== editingId).map(p => (
-                  <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer' }}>
-                     <input 
-                        type="checkbox" 
-                        checked={(form.upsellIds || []).includes(p.id)} 
-                        onChange={e => {
-                           const current = form.upsellIds || [];
-                           const next = e.target.checked ? [...current, p.id] : current.filter((id: string) => id !== p.id);
-                           setForm({ ...form, upsellIds: next });
-                        }} 
-                     />
-                     <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
-                  </label>
-                ))}
-             </div>
           </div>
 
           {form.isFlashSale && (
-            <div style={{ background: '#FEF2F2', padding: '20px', borderRadius: '16px', border: '1px solid #FEE2E2', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="bg-rose-50 dark:bg-rose-500/5 border border-rose-100 dark:border-rose-500/10 p-5 rounded-2xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                <div>
-                 <label style={label}>Remise (%)</label>
-                 <input style={field} type="number" value={form.discount} onChange={e => setForm({...form, discount: e.target.value})} placeholder="ex: 15" required />
+                 <label className={labelClass + " !text-rose-600 dark:!text-rose-400"}>Remise (%)</label>
+                 <input className={inputClass + " !border-rose-200 dark:!border-rose-500/20 focus:!border-rose-500"} type="number" value={form.discount} onChange={e => setForm({...form, discount: e.target.value})} placeholder="ex: 15" required />
                </div>
-               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+               <div className="grid grid-cols-2 gap-4">
                  <div>
-                    <label style={label}>Début</label>
-                    <input style={field} type="datetime-local" value={form.flashStart} onChange={e => setForm({...form, flashStart: e.target.value})} required />
+                    <label className={labelClass + " !text-rose-600 dark:!text-rose-400"}>Début</label>
+                    <input className={inputClass + " !border-rose-200 dark:!border-rose-500/20 focus:!border-rose-500"} type="datetime-local" value={form.flashStart} onChange={e => setForm({...form, flashStart: e.target.value})} required />
                  </div>
                  <div>
-                    <label style={label}>Fin</label>
-                    <input style={field} type="datetime-local" value={form.flashEnd} onChange={e => setForm({...form, flashEnd: e.target.value})} required />
+                    <label className={labelClass + " !text-rose-600 dark:!text-rose-400"}>Fin</label>
+                    <input className={inputClass + " !border-rose-200 dark:!border-rose-500/20 focus:!border-rose-500"} type="datetime-local" value={form.flashEnd} onChange={e => setForm({...form, flashEnd: e.target.value})} required />
                  </div>
                </div>
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-            <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setModalOpen(false)}>Annuler</button>
-            <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={isPending}>
-              {isPending ? '⏳ Action en cours...' : (editingId ? 'Mettre à jour' : 'Publier le produit')}
+          <div className="flex gap-3 pt-4">
+            <button type="button" className="flex-1 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" onClick={() => setModalOpen(false)}>Annuler</button>
+            <button type="submit" className="flex-[2] px-6 py-3 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50" disabled={isPending}>
+              {isPending ? 'Action...' : (editingId ? 'Mettre à jour' : 'Publier le produit')}
             </button>
           </div>
         </form>
-       </Modal>
+      </Modal>
 
       {/* CSV Import Modal */}
-      <Modal open={importModalOpen} onClose={() => setImportModalOpen(false)} title="Importer votre catalogue (CSV)">
-         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '480px' }}>
-            <div style={{ padding: '20px', background: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-               <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#1E293B', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FileSpreadsheet size={18} color="#6366F1" /> Structure du fichier CSV
+      <Modal open={importModalOpen} onClose={() => setImportModalOpen(false)} title="Importer votre catalogue (CSV)" width={500}>
+         <div className="space-y-6">
+            <div className="p-6 bg-slate-50 dark:bg-slate-950/50 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4">
+               <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-wider">
+                  <FileSpreadsheet size={18} className="text-indigo-600 dark:text-indigo-400" /> Structure CSV
                </h3>
-               <p style={{ fontSize: '13px', color: '#64748B', lineHeight: '1.5', marginBottom: '12px' }}>
-                  Votre fichier doit contenir les colonnes suivantes (dans cet ordre) : <br />
-                  <code style={{ background: '#EEF2FF', padding: '2px 4px', borderRadius: '4px', color: '#4F46E5', fontWeight: 700 }}>Nom, Prix, Unité, Catégorie, ImageURL</code>
+               <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                  Votre fichier doit contenir les colonnes suivantes : <br />
+                  <code className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-400/10 px-1.5 py-0.5 rounded mt-2 inline-block font-mono">Nom, Prix, Unité, Catégorie, ImageURL</code>
                </p>
                <button 
                   onClick={() => {
@@ -261,38 +296,37 @@ export default function VendorCatalogClient({ initialProducts, categories, globa
                     a.download = 'modele_catalogue_coffeeshop.csv';
                     a.click();
                   }}
-                  className="btn btn-outline" 
-                  style={{ width: '100%', justifyContent: 'center', borderColor: '#6366F1', color: '#6366F1', fontWeight: 800 }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-black text-xs hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
                >
                   Télécharger le modèle CSV
                </button>
             </div>
 
-            <div style={{ border: '2px dashed #E2E8F0', borderRadius: '20px', padding: '40px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.borderColor = '#6366F1'} onMouseOut={e => e.currentTarget.style.borderColor = '#E2E8F0'}>
-               <div style={{ width: '64px', height: '64px', background: '#EEF2FF', borderRadius: '50%', color: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                  <Package size={28} />
+            <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[32px] p-12 text-center group hover:border-indigo-500/30 transition-colors cursor-pointer relative overflow-hidden">
+               <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-400 dark:text-slate-700 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:scale-110 transition-all duration-300 shadow-inner">
+                  <Package size={32} />
                </div>
-               <div style={{ fontSize: '15px', fontWeight: 800, color: '#1E293B' }}>Cliquez pour uploader</div>
-               <div style={{ fontSize: '13px', color: '#94A3B8', marginTop: '4px' }}>ou glissez votre fichier ici</div>
-               <input type="file" style={{ display: 'none' }} accept=".csv" />
+               <div className="text-sm font-black text-slate-900 dark:text-white mb-1">Cliquez pour uploader</div>
+               <div className="text-xs text-slate-500 font-bold">ou glissez votre fichier ici</div>
+               <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept=".csv" />
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
-               <button onClick={() => setImportModalOpen(false)} className="btn btn-outline" style={{ flex: 1 }}>Annuler</button>
-               <button onClick={handleImport} className="btn btn-primary" style={{ flex: 2 }}>Lancer l'importation</button>
+            <div className="flex gap-3">
+               <button onClick={() => setImportModalOpen(false)} className="flex-1 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">Annuler</button>
+               <button onClick={handleImport} className="flex-[2] px-4 py-3 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-500 transition-colors">Lancer l'importation</button>
             </div>
          </div>
       </Modal>
 
-      {/* Floating Notification */}
+      {/* Floating Toast */}
       {toast?.show && (
-        <div style={{ position: 'fixed', bottom: '40px', right: '40px', background: '#fff', padding: '16px 24px', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '12px', zIndex: 999 }}>
-           <div style={{ background: '#10B981', width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-              <CheckCircle2 size={18} />
+        <div className="fixed bottom-10 right-10 bg-white dark:bg-slate-900 p-4 pr-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex items-center gap-4 animate-in slide-in-from-right duration-500 z-[999]">
+           <div className="bg-emerald-500 w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+              <CheckCircle2 size={20} />
            </div>
            <div>
-              <div style={{ fontWeight: 800, fontSize: '14px', color: '#1E293B' }}>Succès !</div>
-              <div style={{ fontSize: '13px', color: '#64748B' }}>{toast.message}</div>
+              <div className="font-black text-sm text-slate-900 dark:text-white">Succès !</div>
+              <div className="text-xs text-slate-500 font-medium">{toast.message}</div>
            </div>
         </div>
       )}

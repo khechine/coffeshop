@@ -154,54 +154,66 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px', marginTop: '30px' }}>
-        <div className="card">
-           <div className="card-header"><span className="card-title"><Zap size={16} /> Meilleures Ventes (Quantité)</span></div>
-           <div style={{ padding: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '24px', marginTop: '30px' }}>
+        <div className="card" style={{ border: 'none', boxShadow: 'var(--shadow-md)' }}>
+           <div className="card-header" style={{ background: '#fff', borderBottom: '1px solid #F1F5F9' }}>
+             <span className="card-title" style={{ fontSize: '14px', fontWeight: 800, color: '#1E293B' }}><Zap size={16} /> Meilleurs Produits</span>
+           </div>
+           <div style={{ padding: '24px' }}>
               {topProducts.map((p: any, idx) => (
-                <div key={idx} style={{ marginBottom: '16px' }}>
+                <div key={idx} style={{ marginBottom: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
-                    <span style={{ fontWeight: 800 }}>{p.name}</span>
-                    <span style={{ fontWeight: 800, color: '#64748B' }}>{p.quantity} unités</span>
+                    <span style={{ fontWeight: 700, color: '#475569' }}>{p.name}</span>
+                    <span style={{ fontWeight: 800, color: '#64748B' }}>{p.quantity} <span style={{ fontSize: '11px', fontWeight: 500 }}>u.</span></span>
                   </div>
-                  <div className="progress-track"><div className="progress-fill" style={{ width: `${(p.revenue / revenue) * 100}%`, background: '#6366F1' }} /></div>
-                  <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>CA généré: {p.revenue.toFixed(3)} DT</div>
+                  <div className="progress-track" style={{ height: '8px', background: '#F1F5F9' }}>
+                    <div className="progress-fill" style={{ width: `${(p.revenue / revenue) * 100}%`, background: 'linear-gradient(90deg, #6366F1, #818CF8)', borderRadius: '100px' }} />
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '6px', fontWeight: 600 }}>CA généré: {p.revenue.toFixed(3)} DT</div>
                 </div>
               ))}
            </div>
         </div>
 
-        <div className="card">
-           <div className="card-header"><span className="card-title"><User size={16} /> Performance Staff</span></div>
-           <div style={{ padding: '20px' }}>
+        <div className="card" style={{ border: 'none', boxShadow: 'var(--shadow-md)' }}>
+           <div className="card-header" style={{ background: '#fff', borderBottom: '1px solid #F1F5F9' }}>
+             <span className="card-title" style={{ fontSize: '14px', fontWeight: 800, color: '#1E293B' }}><User size={16} /> Performance Staff</span>
+           </div>
+           <div style={{ padding: '24px' }}>
               {salesByBarista.map((b, idx) => {
                 const name = baristas.find(u => u.id === b.baristaId)?.name || 'Inconnu';
                 const rev = Number(b._sum.total || 0);
                 return (
-                  <div key={idx} style={{ marginBottom: '16px' }}>
+                  <div key={idx} style={{ marginBottom: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
-                      <span style={{ fontWeight: 800 }}>{name}</span>
+                      <span style={{ fontWeight: 700, color: '#475569' }}>{name}</span>
                       <span style={{ fontWeight: 800, color: '#10B981' }}>{rev.toFixed(3)} DT</span>
                     </div>
-                    <div className="progress-track"><div className="progress-fill" style={{ width: `${(rev/revenue)*100}%`, background: '#10B981' }} /></div>
+                    <div className="progress-track" style={{ height: '8px', background: '#F1F5F9' }}>
+                      <div className="progress-fill" style={{ width: `${(rev/revenue)*100}%`, background: 'linear-gradient(90deg, #10B981, #34D399)', borderRadius: '100px' }} />
+                    </div>
                   </div>
                 );
               })}
            </div>
         </div>
 
-        <div className="card">
-           <div className="card-header"><span className="card-title"><Zap size={16} /> Performance Tables</span></div>
-           <div style={{ padding: '20px' }}>
+        <div className="card" style={{ border: 'none', boxShadow: 'var(--shadow-md)' }}>
+           <div className="card-header" style={{ background: '#fff', borderBottom: '1px solid #F1F5F9' }}>
+             <span className="card-title" style={{ fontSize: '14px', fontWeight: 800, color: '#1E293B' }}><Layers size={16} /> Performance Tables</span>
+           </div>
+           <div style={{ padding: '24px' }}>
               {salesByTable.map((t, idx) => {
                 const total = Number(t._sum.total || 0);
                 return (
-                  <div key={idx} style={{ marginBottom: '16px' }}>
+                  <div key={idx} style={{ marginBottom: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
-                      <span style={{ fontWeight: 800 }}>Table: {t.tableName}</span>
+                      <span style={{ fontWeight: 700, color: '#475569' }}>Table: {t.tableName}</span>
                       <span style={{ fontWeight: 800, color: '#6366F1' }}>{total.toFixed(3)} DT</span>
                     </div>
-                    <div className="progress-track"><div className="progress-fill" style={{ width: `${(total/revenue)*100}%`, background: '#6366F1' }} /></div>
+                    <div className="progress-track" style={{ height: '8px', background: '#F1F5F9' }}>
+                      <div className="progress-fill" style={{ width: `${(total/revenue)*100}%`, background: 'linear-gradient(90deg, #6366F1, #C084FC)', borderRadius: '100px' }} />
+                    </div>
                   </div>
                 );
               })}

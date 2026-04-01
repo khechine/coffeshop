@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { Plus, Edit2, Trash2, Truck, Package, Send, ChevronDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, Truck, Package, Send, ChevronDown, Calendar } from 'lucide-react';
 import Modal from '../../../components/Modal';
 import { createSupplier, updateSupplier, deleteSupplier, createSupplierOrder, updateOrderStatus, deleteSupplierOrder } from '../../actions';
 
@@ -33,8 +33,11 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
   const [deleteOrderTarget, setDeleteOrderTarget] = useState<Order | null>(null);
   const [orderForm, setOrderForm] = useState({ supplierId: '', items: [{ stockItemId: '', quantity: '', price: '' }] });
 
-  const field: React.CSSProperties = { width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #E2E8F0', fontSize: '14px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' };
-  const label: React.CSSProperties = { display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' };
+  const inputClass = "w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-900/50 text-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-600";
+  const labelClass = "block text-[11px] font-black text-slate-500 mb-1.5 uppercase tracking-wider";
+
+  const totalSpent = allOrders.reduce((acc, o) => acc + Number(o.total), 0);
+  const pendingOrders = allOrders.filter(o => o.status === 'PENDING').length;
 
   const openCreateSupp = () => { setEditingSupp(null); setSuppForm({ name: '', contact: '', phone: '' }); setSuppModal(true); };
   const openEditSupp = (s: Supplier) => { setEditingSupp(s); setSuppForm({ name: s.name, contact: s.contact || '', phone: s.phone || '' }); setSuppModal(true); };
@@ -79,12 +82,68 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
   };
 
   return (
-    <>
+    <div className="space-y-8">
+      {/* Header & Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-slate-900/40 border border-slate-800/50 p-6 rounded-3xl backdrop-blur-md">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400">
+              <Package size={24} />
+            </div>
+            <div>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Commandes Totales</p>
+              <h3 className="text-2xl font-black text-white">{allOrders.length}</h3>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500">
+            <span className="text-orange-400 font-bold">{pendingOrders}</span> en attente de traitement
+          </div>
+        </div>
+
+        <div className="bg-slate-900/40 border border-slate-800/50 p-6 rounded-3xl backdrop-blur-md">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400">
+              <Truck size={24} />
+            </div>
+            <div>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Dépenses Totales</p>
+              <h3 className="text-2xl font-black text-white">{totalSpent.toFixed(3)} DT</h3>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500">
+            Moyenne de <span className="text-white font-bold">{(totalSpent / (allOrders.length || 1)).toFixed(3)} DT</span> par commande
+          </div>
+        </div>
+
+        <div className="bg-slate-900/40 border border-slate-800/50 p-6 rounded-3xl backdrop-blur-md">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-400">
+              <Plus size={24} />
+            </div>
+            <div>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Fournisseurs</p>
+              <h3 className="text-2xl font-black text-white">{suppliers.length}</h3>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500">
+            Réseau de partenaires actifs
+          </div>
+        </div>
+      </div>
+
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '4px', background: '#F1F5F9', borderRadius: '12px', padding: '4px', marginBottom: '20px', width: 'fit-content' }}>
-        {[{ key: 'orders', label: '📦 Commandes' }, { key: 'suppliers', label: '🏭 Fournisseurs' }].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key as any)}
-            style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13px', transition: 'all .15s', background: tab === t.key ? '#fff' : 'transparent', color: tab === t.key ? '#4F46E5' : '#64748B', boxShadow: tab === t.key ? '0 1px 4px rgba(0,0,0,.1)' : 'none' }}>
+      <div className="flex gap-1 bg-slate-900/50 p-1 rounded-2xl w-fit border border-slate-800/50">
+        {[{ key: 'orders', label: 'Commandes', icon: Package }, { key: 'suppliers', label: 'Fournisseurs', icon: Truck }].map(t => (
+          <button 
+            key={t.key} 
+            onClick={() => setTab(t.key as any)}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
+              tab === t.key 
+                ? 'bg-slate-800 text-white shadow-lg' 
+                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'
+            }`}
+          >
+            <t.icon size={16} />
             {t.label}
           </button>
         ))}
@@ -92,57 +151,89 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
 
       {/* ═══ ORDERS TAB ═══ */}
       {tab === 'orders' && (
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title"><Package size={16} /> Commandes de Réapprovisionnement</span>
-            <button className="btn btn-primary" onClick={() => setOrderModal(true)} disabled={suppliers.length === 0}>
-              <Plus size={14} /> Nouvelle Commande
+        <div className="bg-slate-900/40 border border-slate-800/50 rounded-3xl overflow-hidden backdrop-blur-md">
+          <div className="p-6 border-b border-slate-800/50 flex justify-between items-center">
+            <h2 className="text-lg font-black flex items-center gap-2">
+              <Package size={20} className="text-indigo-400" />
+              Réapprovisionnements
+            </h2>
+            <button 
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors" 
+              onClick={() => setOrderModal(true)} 
+              disabled={suppliers.length === 0}
+            >
+              <Plus size={18} /> Nouvelle Commande
             </button>
           </div>
 
           {allOrders.length === 0 ? (
-            <div style={{ padding: '48px', textAlign: 'center', color: '#94A3B8' }}>
-              <Package size={40} style={{ margin: '0 auto 12px', opacity: .3 }} />
-              <p style={{ fontWeight: 600 }}>Aucune commande. Créez votre première commande B2B.</p>
+            <div className="py-20 text-center text-slate-500">
+              <Package size={48} className="mx-auto mb-4 opacity-10" />
+              <p className="font-bold">Aucune commande enregistrée</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-              {allOrders.map((order, idx) => {
+            <div className="divide-y divide-slate-800/50">
+              {allOrders.map((order) => {
                 const statusConf = STATUS_MAP[order.status] || STATUS_MAP.PENDING;
                 return (
-                  <div key={order.id} style={{ padding: '20px 24px', borderBottom: idx < allOrders.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <span className={`badge ${statusConf.badge}`}>{statusConf.label}</span>
-                          <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#94A3B8' }}>#{order.id.slice(-6).toUpperCase()}</span>
+                  <div key={order.id} className="p-6 hover:bg-white/[0.02] transition-colors">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                            statusConf.badge === 'orange' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' :
+                            statusConf.badge === 'blue' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                            statusConf.badge === 'purple' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
+                            statusConf.badge === 'green' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            'bg-red-500/10 text-red-400 border border-red-500/20'
+                          }`}>
+                            {statusConf.label}
+                          </span>
+                          <span className="font-mono text-[10px] text-slate-500 bg-slate-800/50 px-2 py-1 rounded-md">
+                            #{order.id.slice(-6).toUpperCase()}
+                          </span>
                         </div>
-                        <div style={{ fontWeight: 700, color: '#1E293B', fontSize: '16px' }}>
-                          {order.supplier.name} → {order.store.name}
+                        <div className="text-lg font-black text-white leading-tight">
+                          {order.supplier.name} <span className="text-slate-600 mx-1">→</span> {order.store.name}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>
+                        <div className="text-xs text-slate-500 flex items-center gap-2 font-medium">
+                          <Calendar size={12} />
                           {new Date(order.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
                         </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '22px', fontWeight: 900, color: '#4F46E5' }}>{Number(order.total).toFixed(3)} DT</span>
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          <select value={order.status} onChange={e => handleStatusChange(order.id, e.target.value)} disabled={isPending}
-                            style={{ ...field, width: 'auto', padding: '6px 10px', fontSize: '12px', background: '#fff' }}>
+                      
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <div className="text-2xl font-black text-indigo-400">{Number(order.total).toFixed(3)} <span className="text-xs opacity-50">DT</span></div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <select 
+                            value={order.status} 
+                            onChange={e => handleStatusChange(order.id, e.target.value)} 
+                            disabled={isPending}
+                            className="bg-slate-800 border-none text-slate-300 text-xs font-bold py-2 px-3 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer"
+                          >
                             {Object.entries(STATUS_MAP).map(([val, conf]) => <option key={val} value={val}>{conf.label}</option>)}
                           </select>
-                          <button className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteOrderTarget(order)}><Trash2 size={14} /></button>
+                          <button 
+                            className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" 
+                            onClick={() => setDeleteOrderTarget(order)}
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </div>
                     </div>
-                    <div style={{ background: '#F8FAFC', borderRadius: '10px', padding: '12px 16px' }}>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        {order.items.map((item: any) => (
-                          <span key={item.id} className="badge gray">
-                            {Number(item.quantity)} {item.stockItem?.unit || ''} {item.stockItem?.name || item.name} × {Number(item.price).toFixed(3)} DT
-                          </span>
-                        ))}
-                      </div>
+                    
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {order.items.map((item: any) => (
+                        <div key={item.id} className="bg-slate-800/50 border border-slate-700/30 px-3 py-1.5 rounded-xl text-[11px] font-bold text-slate-300 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                          {Number(item.quantity)} {item.stockItem?.unit || ''} {item.stockItem?.name || item.name} 
+                          <span className="text-slate-500">×</span>
+                          <span className="text-indigo-400">{Number(item.price).toFixed(3)} DT</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 );
@@ -154,46 +245,64 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
 
       {/* ═══ SUPPLIERS TAB ═══ */}
       {tab === 'suppliers' && (
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title"><Truck size={16} /> Fournisseurs</span>
-            <button className="btn btn-primary" onClick={openCreateSupp}><Plus size={14} /> Nouveau Fournisseur</button>
+        <div className="bg-slate-900/40 border border-slate-800/50 rounded-3xl overflow-hidden backdrop-blur-md">
+          <div className="p-6 border-b border-slate-800/50 flex justify-between items-center">
+            <h2 className="text-lg font-black flex items-center gap-2">
+              <Truck size={20} className="text-indigo-400" />
+              Fournisseurs Partenaires
+            </h2>
+            <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors" onClick={openCreateSupp}>
+              <Plus size={18} /> Nouveau Fournisseur
+            </button>
           </div>
-          <div className="table-responsive">
-            <table className="data-table">
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr>
-                  <th>Fournisseur</th>
-                  <th>Contact</th>
-                  <th>Téléphone</th>
-                  <th>Commandes</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                <tr className="bg-white/[0.02]">
+                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider">Fournisseur</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider">Contact</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider">Téléphone</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider text-center">Commandes</th>
+                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-800/50">
                 {suppliers.map(s => (
-                  <tr key={s.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: 36, height: 36, borderRadius: '10px', background: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px' }}>
+                  <tr key={s.id} className="hover:bg-white/[0.01] transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-black text-sm">
                           {s.name.charAt(0).toUpperCase()}
                         </div>
-                        <span style={{ fontWeight: 700, color: '#1E293B' }}>{s.name}</span>
+                        <span className="font-bold text-white text-sm">{s.name}</span>
                       </div>
                     </td>
-                    <td style={{ color: '#64748B' }}>{s.contact || '—'}</td>
-                    <td style={{ color: '#64748B' }}>{s.phone || '—'}</td>
-                    <td><span className="badge blue">{s.orders.length} commandes</span></td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEditSupp(s)}><Edit2 size={14} /></button>
-                      <button className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteSuppTarget(s)}><Trash2 size={14} /></button>
+                    <td className="px-6 py-4 text-sm text-slate-400 font-medium">{s.contact || '—'}</td>
+                    <td className="px-6 py-4 text-sm text-slate-400 font-medium font-mono">{s.phone || '—'}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="bg-indigo-500/10 text-indigo-400 px-2.5 py-1 rounded-lg text-[10px] font-black border border-indigo-500/20 uppercase">
+                        {s.orders.length} commandes
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-1">
+                        <button className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" onClick={() => openEditSupp(s)}>
+                          <Edit2 size={16} />
+                        </button>
+                        <button className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-all" onClick={() => setDeleteSuppTarget(s)}>
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {suppliers.length === 0 && (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '48px', color: '#94A3B8' }}>
-                    <p style={{ fontWeight: 600 }}>Aucun fournisseur. Ajoutez-en un.</p>
-                  </td></tr>
+                  <tr>
+                    <td colSpan={5} className="py-20 text-center text-slate-500 font-bold">
+                      Aucun fournisseur ajouté
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -203,91 +312,114 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
 
       {/* === Supplier Modal === */}
       <Modal open={suppModal} onClose={() => setSuppModal(false)} title={editingSupp ? 'Modifier Fournisseur' : 'Nouveau Fournisseur'}>
-        <form onSubmit={handleSuppSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div><label style={label}>Nom du Fournisseur</label><input style={field} value={suppForm.name} onChange={e => setSuppForm(f => ({ ...f, name: e.target.value }))} placeholder="ex: Grossiste Ben Yedder" required /></div>
-          <div><label style={label}>Contact (nom du responsable)</label><input style={field} value={suppForm.contact} onChange={e => setSuppForm(f => ({ ...f, contact: e.target.value }))} placeholder="ex: M. Kamel B." /></div>
-          <div><label style={label}>Téléphone</label><input style={field} value={suppForm.phone} onChange={e => setSuppForm(f => ({ ...f, phone: e.target.value }))} placeholder="+216 XX XXX XXX" /></div>
-          <div style={{ display: 'flex', gap: '10px', paddingTop: '8px' }}>
-            <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setSuppModal(false)}>Annuler</button>
-            <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={isPending}>{isPending ? '...' : (editingSupp ? 'Mettre à Jour' : 'Créer')}</button>
+        <form onSubmit={handleSuppSubmit} className="space-y-5">
+          <div>
+            <label className={labelClass}>Nom du Fournisseur</label>
+            <input className={inputClass} value={suppForm.name} onChange={e => setSuppForm(f => ({ ...f, name: e.target.value }))} placeholder="ex: Grossiste Ben Yedder" required />
+          </div>
+          <div>
+            <label className={labelClass}>Contact (nom du responsable)</label>
+            <input className={inputClass} value={suppForm.contact} onChange={e => setSuppForm(f => ({ ...f, contact: e.target.value }))} placeholder="ex: M. Kamel B." />
+          </div>
+          <div>
+            <label className={labelClass}>Téléphone</label>
+            <input className={inputClass} value={suppForm.phone} onChange={e => setSuppForm(f => ({ ...f, phone: e.target.value }))} placeholder="+216 XX XXX XXX" />
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button type="button" className="flex-1 px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 font-bold text-sm hover:bg-slate-800/50 transition-colors" onClick={() => setSuppModal(false)}>Annuler</button>
+            <button type="submit" className="flex-[2] px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-500 transition-colors disabled:opacity-50" disabled={isPending}>
+              {isPending ? 'Chargement...' : (editingSupp ? 'Mettre à Jour' : 'Créer Fournisseur')}
+            </button>
           </div>
         </form>
       </Modal>
 
       {/* === Order Modal === */}
-      <Modal open={orderModal} onClose={() => setOrderModal(false)} title="Nouvelle Commande B2B" width={560}>
-        <form onSubmit={handleOrderSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <Modal open={orderModal} onClose={() => setOrderModal(false)} title="Nouvelle Commande B2B" width={600}>
+        <form onSubmit={handleOrderSubmit} className="space-y-6">
           <div>
-            <label style={label}>Fournisseur</label>
-            <select style={field} value={orderForm.supplierId} onChange={e => setOrderForm(f => ({ ...f, supplierId: e.target.value }))} required>
-              <option value="">-- Sélectionner un fournisseur --</option>
+            <label className={labelClass}>Sélectionner le Fournisseur</label>
+            <select className={inputClass} value={orderForm.supplierId} onChange={e => setOrderForm(f => ({ ...f, supplierId: e.target.value }))} required>
+              <option value="">-- Choisir un partenaire --</option>
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
 
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <label style={{ ...label, marginBottom: 0 }}>Articles à Commander</label>
-              <button type="button" className="btn btn-ghost" style={{ fontSize: '12px', padding: '4px 10px' }} onClick={addOrderLine}><Plus size={12} /> Ajouter ligne</button>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <label className={labelClass + " !mb-0"}>Articles à Commander</label>
+              <button type="button" className="text-[10px] font-black uppercase tracking-wider text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 px-2 py-1 rounded-md bg-indigo-500/5 border border-indigo-500/10 transition-colors" onClick={addOrderLine}>
+                <Plus size={12} /> Ajouter ligne
+              </button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
               {orderForm.items.map((item, idx) => (
-                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '8px', alignItems: 'center' }}>
-                  <select style={field} value={item.stockItemId} onChange={e => updateOrderLine(idx, 'stockItemId', e.target.value)}>
-                    <option value="">-- Article --</option>
-                    {stockItems.map(si => <option key={si.id} value={si.id}>{si.name} ({si.unit})</option>)}
-                  </select>
-                  <input style={field} type="number" step="any" min="0" placeholder="Qté" value={item.quantity} onChange={e => updateOrderLine(idx, 'quantity', e.target.value)} />
-                  <input style={field} type="number" step="any" min="0" placeholder="Prix/u DT" value={item.price} onChange={e => updateOrderLine(idx, 'price', e.target.value)} />
-                  <button type="button" style={{ width: 32, height: 32, borderRadius: '8px', border: 'none', background: '#FEE2E2', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => removeOrderLine(idx)}>
-                    <Trash2 size={12} />
+                <div key={idx} className="flex gap-3 items-start animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="flex-1">
+                    <select className={inputClass} value={item.stockItemId} onChange={e => updateOrderLine(idx, 'stockItemId', e.target.value)} required>
+                      <option value="">-- Article --</option>
+                      {stockItems.map(si => <option key={si.id} value={si.id}>{si.name} ({si.unit})</option>)}
+                    </select>
+                  </div>
+                  <div className="w-24">
+                    <input className={inputClass} type="number" step="any" min="0" placeholder="Qté" value={item.quantity} onChange={e => updateOrderLine(idx, 'quantity', e.target.value)} required />
+                  </div>
+                  <div className="w-32">
+                    <input className={inputClass} type="number" step="any" min="0" placeholder="Prix/u" value={item.price} onChange={e => updateOrderLine(idx, 'price', e.target.value)} required />
+                  </div>
+                  <button type="button" className="p-2.5 text-red-400 hover:bg-red-400/10 rounded-xl transition-colors mt-0.5" onClick={() => removeOrderLine(idx)}>
+                    <Trash2 size={16} />
                   </button>
                 </div>
               ))}
             </div>
           </div>
 
-          <div style={{ background: '#F8FAFC', borderRadius: '10px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontWeight: 600, color: '#64748B' }}>Total Estimé</span>
-            <span style={{ fontWeight: 800, color: '#4F46E5', fontSize: '18px' }}>
-              {orderForm.items.reduce((acc, i) => acc + (parseFloat(i.quantity || '0') * parseFloat(i.price || '0')), 0).toFixed(3)} DT
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setOrderModal(false)}>Annuler</button>
-            <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={isPending}>
-              {isPending ? '...' : <><Send size={14} /> Envoyer la Commande</>}
+          <div className="bg-indigo-500/5 border border-indigo-500/10 p-5 rounded-2xl flex justify-between items-center">
+            <div>
+              <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Total Estimé</p>
+              <p className="text-2xl font-black text-white">
+                {orderForm.items.reduce((acc, i) => acc + (parseFloat(i.quantity || '0') * parseFloat(i.price || '0')), 0).toFixed(3)} 
+                <span className="text-xs font-bold text-slate-500 ml-1">DT</span>
+              </p>
+            </div>
+            <button type="submit" className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 flex items-center gap-2" disabled={isPending}>
+              {isPending ? 'Envoi...' : <><Send size={16} /> Envoyer</>}
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* Delete Supplier */}
+      {/* Delete Modals with Dark Theme */}
       <Modal open={!!deleteSuppTarget} onClose={() => setDeleteSuppTarget(null)} title="Supprimer Fournisseur" width={400}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}><Trash2 size={24} color="#EF4444" /></div>
-          <p style={{ fontWeight: 700, color: '#1E293B', marginBottom: '8px' }}>Supprimer "{deleteSuppTarget?.name}" ?</p>
-          <p style={{ color: '#94A3B8', fontSize: '14px', marginBottom: '24px' }}>Toutes ses commandes seront également supprimées.</p>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setDeleteSuppTarget(null)}>Annuler</button>
-            <button className="btn btn-danger" style={{ flex: 1 }} onClick={handleDeleteSupp} disabled={isPending}>{isPending ? '...' : 'Supprimer'}</button>
+        <div className="text-center p-2">
+          <div className="w-16 h-16 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Trash2 size={32} />
+          </div>
+          <h3 className="text-xl font-black text-white mb-2">Supprimer "{deleteSuppTarget?.name}" ?</h3>
+          <p className="text-slate-500 text-sm mb-8 leading-relaxed">Cette action est irréversible. Toutes les commandes liées à ce fournisseur seront définitivement supprimées.</p>
+          <div className="flex gap-3">
+            <button className="flex-1 px-4 py-3 rounded-xl border border-slate-800 text-slate-400 font-bold hover:bg-slate-800/50 transition-colors" onClick={() => setDeleteSuppTarget(null)}>Annuler</button>
+            <button className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-black hover:bg-red-500 transition-colors" onClick={handleDeleteSupp} disabled={isPending}>{isPending ? '...' : 'Supprimer'}</button>
           </div>
         </div>
       </Modal>
 
-      {/* Delete Order */}
       <Modal open={!!deleteOrderTarget} onClose={() => setDeleteOrderTarget(null)} title="Supprimer Commande" width={400}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}><Trash2 size={24} color="#EF4444" /></div>
-          <p style={{ fontWeight: 700, color: '#1E293B', marginBottom: '8px' }}>Supprimer cette commande ?</p>
-          <p style={{ color: '#94A3B8', fontSize: '14px', marginBottom: '24px' }}>Référence: #{deleteOrderTarget?.id.slice(-6).toUpperCase()}</p>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setDeleteOrderTarget(null)}>Annuler</button>
-            <button className="btn btn-danger" style={{ flex: 1 }} onClick={handleDeleteOrder} disabled={isPending}>{isPending ? '...' : 'Supprimer'}</button>
+        <div className="text-center p-2">
+          <div className="w-16 h-16 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Trash2 size={32} />
+          </div>
+          <h3 className="text-xl font-black text-white mb-2">Supprimer la commande ?</h3>
+          <p className="text-slate-500 text-sm mb-2 font-mono">Référence: #{deleteOrderTarget?.id.slice(-6).toUpperCase()}</p>
+          <p className="text-slate-500 text-sm mb-8 leading-relaxed">Voulez-vous vraiment retirer cette commande de l'historique ?</p>
+          <div className="flex gap-3">
+            <button className="flex-1 px-4 py-3 rounded-xl border border-slate-800 text-slate-400 font-bold hover:bg-slate-800/50 transition-colors" onClick={() => setDeleteOrderTarget(null)}>Annuler</button>
+            <button className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-black hover:bg-red-500 transition-colors" onClick={handleDeleteOrder} disabled={isPending}>{isPending ? '...' : 'Supprimer'}</button>
           </div>
         </div>
       </Modal>
-    </>
+    </div>
   );
 }
