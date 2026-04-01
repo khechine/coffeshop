@@ -17,7 +17,15 @@ interface Product {
 interface Category { id: string; name: string }
 interface StockItem { id: string; name: string; unit: string; cost: any }
 
-const CATEGORY_COLORS: Record<string, string> = { 'Café': '#F59E0B', 'Boissons': '#06B6D4', 'Restauration': '#10B981', 'Desserts': '#EC4899' };
+const CATEGORY_COLORS: Record<string, string> = { 
+  'Café': '#F59E0B', 
+  'Boissons': '#06B6D4', 
+  'Restauration': '#10B981', 
+  'Desserts': '#EC4899',
+  'Emballage': '#6366F1',     // Special category for packaging
+};
+
+const PACKAGING_CATEGORY = 'emballage'; // Exact name to match (case-insensitive)
 
 export default function ProductsClient({ products, categories, stockItems, globalUnits }: { products: Product[]; categories: Category[]; stockItems: StockItem[]; globalUnits: any[] }) {
   const [isPending, startTransition] = useTransition();
@@ -169,7 +177,7 @@ export default function ProductsClient({ products, categories, stockItems, globa
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: 38, height: 38, borderRadius: '10px', background: `${catColor}18`, color: catColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Coffee size={16} />
+                          {p.category.name.toLowerCase() === PACKAGING_CATEGORY ? <Package size={16} /> : <Coffee size={16} />}
                         </div>
                         <div>
                           <div style={{ fontWeight: 700, color: '#1E293B' }}>{p.name}</div>
@@ -184,7 +192,14 @@ export default function ProductsClient({ products, categories, stockItems, globa
                         <span className="badge" style={{ background: '#F1F5F9', color: '#64748B' }}>Archivé</span>
                       )}
                     </td>
-                    <td><span className="badge" style={{ background: `${catColor}18`, color: catColor }}>{p.category.name}</span></td>
+                    <td>
+                      <span className="badge" style={{ background: `${catColor}18`, color: catColor }}>
+                        {p.category.name.toLowerCase() === PACKAGING_CATEGORY ? '📦 ' : ''}{p.category.name}
+                      </span>
+                      {p.category.name.toLowerCase() === PACKAGING_CATEGORY && (
+                        <span className="badge" style={{ background: '#EEF2FF', color: '#6366F1', marginLeft: '6px', fontSize: '10px' }}>POS Popup</span>
+                      )}
+                    </td>
                     <td><strong style={{ fontSize: '16px', color: '#1E293B' }}>{Number(p.price).toFixed(3)}</strong><span style={{ color: '#94A3B8', fontSize: '12px' }}> DT</span></td>
                     <td>
                       <div style={{ fontWeight: 800, color: '#10B981', fontSize: '15px' }}>+{pProfit.toFixed(3)} DT</div>

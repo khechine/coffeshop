@@ -192,14 +192,21 @@ export default function POSClient({
 
   const categories = ['Tous', ...Array.from(new Set(initialProducts.map(p => p.category)))];
 
-  const packagingProducts = initialProducts.filter(p => 
-    p.name.toLowerCase().includes('gobelet') || 
-    p.name.toLowerCase().includes('sachet') || 
-    p.name.toLowerCase().includes('sac') ||
-    p.name.toLowerCase().includes('boite') ||
-    p.name.toLowerCase().includes('emballage') ||
-    p.price === 0
-  );
+  // First try by dedicated 'Emballage' category, then fall back to keywords
+  const packagingProducts = initialProducts.filter(p =>
+    p.category?.toLowerCase() === 'emballage'
+  ).length > 0
+    ? initialProducts.filter(p => p.category?.toLowerCase() === 'emballage')
+    : initialProducts.filter(p =>
+        p.name.toLowerCase().includes('gobelet') ||
+        p.name.toLowerCase().includes('sachet') ||
+        p.name.toLowerCase().includes('sac') ||
+        p.name.toLowerCase().includes('boite') ||
+        p.name.toLowerCase().includes('emballage') ||
+        p.price === 0
+      );
+
+  const hasEmballageCategory = initialProducts.some(p => p.category?.toLowerCase() === 'emballage');
 
   const needsPackaging = (product: any) => {
     const cat = product.category?.toLowerCase() || '';
@@ -618,10 +625,7 @@ export default function POSClient({
                      style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 800, outline: 'none', color: '#1E293B', padding: 0 }}
                    >
                      <option value="">(Auto-Popup)</option>
-                     {initialProducts
-                       .filter(p => p.name.toLowerCase().includes('gobelet') || p.name.toLowerCase().includes('sac') || p.name.toLowerCase().includes('emballage'))
-                       .map(p => <option key={p.id} value={p.id}>{p.name.toUpperCase()}</option>)
-                     }
+                     {packagingProducts.map(p => <option key={p.id} value={p.id}>{p.name.toUpperCase()}</option>)}
                    </select>
                 </div>
               )}
@@ -1058,9 +1062,14 @@ export default function POSClient({
                   ))
                 }
               </div>
-              {packagingProducts.length === 0 && (
-                <div style={{ marginTop: '8px', fontSize: '11px', color: '#6366F1', textAlign: 'center', fontWeight: 600 }}>
-                   SÉLECTIONNEZ VOTRE EMBALLAGE CI-DESSUS (Gobelet, Box, etc.)
+              {!hasEmballageCategory && packagingProducts.length === 0 && (
+                <div style={{ marginTop: '8px', padding: '10px', background: '#FFF7ED', border: '1px solid #FDE68A', borderRadius: '10px', fontSize: '11px', color: '#92400E', textAlign: 'center', fontWeight: 600 }}>
+                  💡 Créez une catégorie "Emballage" dans votre catalogue pour afficher uniquement vos gobelets ici.
+                </div>
+              )}
+              {hasEmballageCategory && packagingProducts.length === 0 && (
+                <div style={{ marginTop: '8px', padding: '10px', background: '#FEF2F2', borderRadius: '10px', fontSize: '11px', color: '#991B1B', textAlign: 'center', fontWeight: 600 }}>
+                  Aucun produit dans la catégorie "Emballage" trouvé.
                 </div>
               )}
             </div>
