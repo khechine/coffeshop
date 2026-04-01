@@ -11,22 +11,8 @@ export default async function VendorDashboard() {
 
   const hasMarketplace = (store as any)?.subscription?.plan?.hasMarketplace === true;
 
-  if (!hasMarketplace) {
-    return (
-      <div className="page-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '70vh' }}>
-        <div className="card" style={{ maxWidth: 500, padding: '48px', textAlign: 'center', borderRadius: '24px' }}>
-           <div style={{ width: 64, height: 64, background: '#FEF2F2', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: '#EF4444' }}>
-              <Lock size={32} />
-           </div>
-           <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#1E293B', marginBottom: '16px' }}>Accès Restreint</h1>
-           <p style={{ color: '#64748B', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
-              La gestion des fournisseurs B2B et l'accès au catalogue partenaire ne sont pas inclus dans votre forfait actuel.
-           </p>
-           <a href="/" className="btn btn-primary">Retour au Dashboard</a>
-        </div>
-      </div>
-    );
-  }
+  // We no longer block the entire page if marketplace is disabled.
+  // Store owners can always manage manual suppliers.
 
   const suppliersRaw = await prisma.supplier.findMany({
     where: {

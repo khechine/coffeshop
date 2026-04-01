@@ -148,13 +148,15 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
 
 
         {/* MARKETPLACE */}
-        {hasPerm('SUPPLY') && hasMarketplace && (
+        {(hasPerm('SUPPLY') || role === 'STORE_OWNER') && (
           <div className="nav-group">
             <span className="nav-section-label">B2B &amp; Marketplace</span>
-            <Link href="/marketplace" className={`nav-item${isActive('/marketplace') ? ' active' : ''}`} style={{ border: '1px solid rgba(79,70,229,0.2)' }}>
-              <Truck size={18} color="#4F46E5" />
-              Marketplace B2B
-            </Link>
+            {hasPerm('SUPPLY') && hasMarketplace && (
+              <Link href="/marketplace" className={`nav-item${isActive('/marketplace') ? ' active' : ''}`} style={{ border: '1px solid rgba(79,70,229,0.2)' }}>
+                <Truck size={18} color="#4F46E5" />
+                Marketplace B2B
+              </Link>
+            )}
             <Link href="/vendor/dashboard" className={`nav-item${isActive('/vendor/dashboard') ? ' active' : ''}`}>
               <ShoppingBag size={18} />
               Fournisseurs &amp; B2B
