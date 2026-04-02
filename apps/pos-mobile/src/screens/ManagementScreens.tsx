@@ -1,16 +1,64 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Alert, Platform, Modal } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Platform } from 'react-native';
+import { useConfirm } from '../context/ConfirmContext';
+import { usePOSStore } from '../store/posStore';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
 
-// ══════════════════════════════════════════════════════════════
-// CATEGORIES MANAGEMENT SCREEN
-// ══════════════════════════════════════════════════════════════
+// Style Factory
+const createMgStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  title: { fontSize: 26, fontWeight: '900', color: theme.colors.cream, marginBottom: 4 },
+  subtitle: { fontSize: 14, color: theme.colors.caramel, marginBottom: 20 },
+  cardRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  card: { flex: 1, padding: 20, borderRadius: 16 },
+  cardLabel: { fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: '600', marginBottom: 8 },
+  cardValue: { fontSize: 28, fontWeight: '900', color: '#FFF' },
+  emptyText: { color: theme.colors.creamMuted, fontSize: 15, textAlign: 'center', marginTop: 40 },
+  row: {
+    backgroundColor: theme.colors.surface, padding: 16, borderRadius: 12, marginBottom: 8,
+    borderWidth: 1, borderColor: theme.colors.glassBorder,
+  },
+  rowTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.cream },
+  rowSub: { fontSize: 13, color: theme.colors.caramel, marginTop: 2 },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  badgeText: { fontSize: 11, fontWeight: '700' },
+  fab: {
+    position: 'absolute', bottom: Platform.OS === 'android' ? 125 : 90, right: 20,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: theme.colors.caramel, justifyContent: 'center', alignItems: 'center',
+    ...(theme.shadows.floating as any)
+  },
+  fabText: { color: theme.colors.background, fontSize: 28, fontWeight: '900', marginTop: -2 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: 20 },
+  modalContent: { backgroundColor: theme.colors.surface, borderRadius: 20, padding: 24, maxHeight: '85%', borderWidth: 1, borderColor: theme.colors.glassBorder },
+  modalTitle: { fontSize: 22, fontWeight: '900', color: theme.colors.cream, marginBottom: 16 },
+  input: {
+    backgroundColor: theme.colors.background, padding: 14, borderRadius: 12, fontSize: 16,
+    marginBottom: 12, borderWidth: 1, borderColor: theme.colors.glassBorder, color: theme.colors.cream,
+  },
+  btnRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  btnPrimary: { flex: 1, backgroundColor: theme.colors.caramel, padding: 16, borderRadius: 12, alignItems: 'center' },
+  btnDanger: { flex: 1, backgroundColor: theme.colors.danger, padding: 16, borderRadius: 12, alignItems: 'center' },
+  btnCancel: { flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: 16, borderRadius: 12, alignItems: 'center' },
+  btnText: { color: theme.colors.background, fontSize: 16, fontWeight: '900' },
+  btnTextDark: { color: theme.colors.cream, fontSize: 16, fontWeight: '800' },
+  pickerRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  pickerChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.glassBorder },
+  pickerChipActive: { backgroundColor: theme.colors.caramel, borderColor: theme.colors.caramel },
+  pickerChipText: { fontSize: 13, fontWeight: '600', color: theme.colors.cream },
+  pickerChipTextActive: { color: theme.colors.background },
+  label: { fontSize: 13, fontWeight: '700', color: theme.colors.caramel, marginBottom: 6, marginTop: 4 },
+});
+
 export function CategoriesScreen({ storeId }: { storeId: string }) {
+  const { theme } = usePOSStore();
+  const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', parentId: '' });
+  const { alert, confirm } = useConfirm();
 
   const fetchData = async () => {
     try {
@@ -27,7 +75,7 @@ export function CategoriesScreen({ storeId }: { storeId: string }) {
 
   const handleCreate = async () => {
     if (!form.name.trim()) {
-      Alert.alert('Erreur', 'Le nom est requis');
+      alert('Erreur', 'Le nom est requis');
       return;
     }
 
@@ -51,32 +99,30 @@ export function CategoriesScreen({ storeId }: { storeId: string }) {
         fetchData();
       }
     } catch (e) {
-      Alert.alert('Erreur', 'Echec creation');
+      alert('Erreur', 'Echec creation');
     }
   };
 
   const handleDelete = (item: any) => {
-    Alert.alert('Supprimer', `Supprimer "${item.name}" ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer', style: 'destructive', onPress: async () => {
-          try {
-            const res = await fetch(`${API_URL}/management/categories/${item.id}`, { method: 'DELETE' });
-            if (!res.ok) {
-              const data = await res.json();
-              throw new Error(data.message || 'Echec suppression');
-            }
-            fetchData();
-          } catch (e: any) {
-            Alert.alert('Erreur', e.message);
+    confirm({
+      title: 'Supprimer',
+      message: `Supprimer "${item.name}" ?`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${API_URL}/management/categories/${item.id}`, { method: 'DELETE' });
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.message || 'Echec suppression');
           }
+          fetchData();
+        } catch (e: any) {
+          alert('Erreur', e.message);
         }
-      },
-    ]);
+      }
+    });
   };
 
-
-  // Filter root categories for parent selection (to avoid deep recursive nesting for now)
   const rootCategories = categories.filter(c => !c.name.includes(' > '));
 
   return (
@@ -88,7 +134,7 @@ export function CategoriesScreen({ storeId }: { storeId: string }) {
         {loading ? <Text style={mgStyles.emptyText}>Chargement...</Text> : (
           <>
             <View style={mgStyles.cardRow}>
-              <View style={[mgStyles.card, { backgroundColor: '#7C3AED' }]}>
+              <View style={[mgStyles.card, { backgroundColor: theme.colors.caramel }]}>
                 <Text style={mgStyles.cardLabel}>Total categories</Text>
                 <Text style={mgStyles.cardValue}>{categories.length}</Text>
               </View>
@@ -125,12 +171,13 @@ export function CategoriesScreen({ storeId }: { storeId: string }) {
             <TextInput 
               style={mgStyles.input} 
               placeholder="ex: Boissons ou Froides" 
+              placeholderTextColor={theme.colors.creamMuted}
               value={form.name} 
               onChangeText={v => setForm({ ...form, name: v })} 
             />
 
             <Text style={mgStyles.label}>Catégorie Parente (Optionnel)</Text>
-            <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>
+            <Text style={{ fontSize: 11, color: theme.colors.creamMuted, marginBottom: 8 }}>
               Choisissez une racine pour créer une sous-catégorie (ex: Café › Chaud)
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={mgStyles.pickerRow}>
@@ -168,59 +215,11 @@ export function CategoriesScreen({ storeId }: { storeId: string }) {
 
 
 // ══════════════════════════════════════════════════════════════
-// Shared styles for management screens
-// ══════════════════════════════════════════════════════════════
-export const mgStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F1F5F9' },
-  title: { fontSize: 26, fontWeight: '900', color: '#0F172A', marginBottom: 4 },
-  subtitle: { fontSize: 14, color: '#64748B', marginBottom: 20 },
-  cardRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  card: { flex: 1, padding: 20, borderRadius: 16 },
-  cardLabel: { fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: '600', marginBottom: 8 },
-  cardValue: { fontSize: 28, fontWeight: '900', color: '#FFF' },
-  emptyText: { color: '#94A3B8', fontSize: 15, textAlign: 'center', marginTop: 40 },
-  row: {
-    backgroundColor: '#FFF', padding: 16, borderRadius: 12, marginBottom: 8,
-    borderWidth: 1, borderColor: '#E2E8F0',
-  },
-  rowTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
-  rowSub: { fontSize: 13, color: '#64748B', marginTop: 2 },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  badgeText: { fontSize: 11, fontWeight: '700' },
-  fab: {
-    position: 'absolute', bottom: 90, right: 20,
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: '#4F46E5', justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 8,
-  },
-  fabText: { color: '#FFF', fontSize: 28, fontWeight: '700', marginTop: -2 },
-  // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: '#FFF', borderRadius: 20, padding: 24, maxHeight: '85%' },
-  modalTitle: { fontSize: 22, fontWeight: '900', color: '#0F172A', marginBottom: 16 },
-  input: {
-    backgroundColor: '#F1F5F9', padding: 14, borderRadius: 12, fontSize: 16,
-    marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0', color: '#0F172A',
-  },
-  btnRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  btnPrimary: { flex: 1, backgroundColor: '#4F46E5', padding: 16, borderRadius: 12, alignItems: 'center' },
-  btnDanger: { flex: 1, backgroundColor: '#EF4444', padding: 16, borderRadius: 12, alignItems: 'center' },
-  btnCancel: { flex: 1, backgroundColor: '#F1F5F9', padding: 16, borderRadius: 12, alignItems: 'center' },
-  btnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
-  btnTextDark: { color: '#64748B', fontSize: 16, fontWeight: '700' },
-  pickerRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  pickerChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
-  pickerChipActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
-  pickerChipText: { fontSize: 13, fontWeight: '600', color: '#64748B' },
-  pickerChipTextActive: { color: '#FFF' },
-  label: { fontSize: 13, fontWeight: '700', color: '#64748B', marginBottom: 6, marginTop: 4 },
-});
-
-// ══════════════════════════════════════════════════════════════
 // PRODUCTS MANAGEMENT SCREEN
 // ══════════════════════════════════════════════════════════════
 export function ProductsScreen({ storeId }: { storeId: string }) {
+  const { theme } = usePOSStore();
+  const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [stockItems, setStockItems] = useState<any[]>([]);
@@ -234,6 +233,7 @@ export function ProductsScreen({ storeId }: { storeId: string }) {
     active: true,
     recipe: [] as { stockItemId: string; quantity: string }[] 
   });
+  const { alert, confirm } = useConfirm();
 
   const fetchData = async () => {
     try {
@@ -274,7 +274,7 @@ export function ProductsScreen({ storeId }: { storeId: string }) {
 
   const handleSave = async () => {
     if (!form.name || !form.price || !form.categoryId) {
-      Alert.alert('Erreur', 'Remplissez tous les champs');
+      alert('Erreur', 'Remplissez tous les champs');
       return;
     }
     try {
@@ -313,25 +313,25 @@ export function ProductsScreen({ storeId }: { storeId: string }) {
         setShowModal(false);
         fetchData();
       }
-    } catch (e) { Alert.alert('Erreur', 'Echec sauvegarde'); }
+    } catch (e) { alert('Erreur', 'Echec sauvegarde'); }
   };
 
   const handleDelete = (item: any) => {
-    Alert.alert('Supprimer', `Supprimer "${item.name}" ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer', style: 'destructive', onPress: async () => {
-          try {
-            await fetch(`${API_URL}/management/products/${item.id}`, { method: 'DELETE' });
-            fetchData();
-          } catch (e) { Alert.alert('Erreur', 'Echec suppression'); }
-        }
-      },
-    ]);
+    confirm({
+      title: 'Supprimer',
+      message: `Supprimer "${item.name}" ?`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await fetch(`${API_URL}/management/products/${item.id}`, { method: 'DELETE' });
+          fetchData();
+        } catch (e) { alert('Erreur', 'Echec suppression'); }
+      }
+    });
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F1F5F9' }}>
+    <View style={mgStyles.container}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <Text style={mgStyles.title}>Produits</Text>
         <Text style={mgStyles.subtitle}>{products.length} produits configures</Text>
@@ -339,11 +339,11 @@ export function ProductsScreen({ storeId }: { storeId: string }) {
         {loading ? <Text style={mgStyles.emptyText}>Chargement...</Text> : (
           <>
             <View style={mgStyles.cardRow}>
-              <View style={[mgStyles.card, { backgroundColor: '#4F46E5' }]}>
+              <View style={[mgStyles.card, { backgroundColor: theme.colors.caramel }]}>
                 <Text style={mgStyles.cardLabel}>Total produits</Text>
                 <Text style={mgStyles.cardValue}>{products.length}</Text>
               </View>
-              <View style={[mgStyles.card, { backgroundColor: '#059669' }]}>
+              <View style={[mgStyles.card, { backgroundColor: theme.colors.surfaceLight }]}>
                 <Text style={mgStyles.cardLabel}>Categories</Text>
                 <Text style={mgStyles.cardValue}>{categories.length}</Text>
               </View>
@@ -358,14 +358,14 @@ export function ProductsScreen({ storeId }: { storeId: string }) {
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Text style={mgStyles.rowTitle}>{p.name}</Text>
                         {!isActive && (
-                          <View style={[mgStyles.badge, { backgroundColor: '#F1F5F9', marginLeft: 8 }]}>
-                            <Text style={[mgStyles.badgeText, { color: '#64748B' }]}>Archivé</Text>
+                          <View style={[mgStyles.badge, { backgroundColor: theme.colors.surfaceLight, marginLeft: 8 }]}>
+                            <Text style={[mgStyles.badgeText, { color: theme.colors.creamMuted }]}>Archivé</Text>
                           </View>
                         )}
                       </View>
                       <Text style={mgStyles.rowSub}>{p.category?.name || '-'}</Text>
                     </View>
-                    <Text style={{ fontSize: 18, fontWeight: '800', color: '#4F46E5' }}>
+                    <Text style={{ fontSize: 18, fontWeight: '800', color: theme.colors.caramel }}>
                       {Number(p.price).toFixed(3)} DT
                     </Text>
                   </View>
@@ -449,7 +449,7 @@ export function ProductsScreen({ storeId }: { storeId: string }) {
                 </View>
               ))}
               <TouchableOpacity 
-                style={{ padding: 8, alignItems: 'center', backgroundColor: '#F1F5F9', borderRadius: 8, marginBottom: 16 }}
+                style={{ padding: 8, alignItems: 'center', backgroundColor: theme.colors.surfaceLight, borderRadius: 8, marginBottom: 16 }}
                 onPress={() => setForm({ ...form, recipe: [...form.recipe, { stockItemId: '', quantity: '0' }] })}
               >
                 <Text style={{ color: '#4F46E5', fontWeight: '700' }}>+ Ajouter un ingredient</Text>
@@ -476,6 +476,8 @@ export function ProductsScreen({ storeId }: { storeId: string }) {
 // STOCK (Matieres Premieres) MANAGEMENT SCREEN
 // ══════════════════════════════════════════════════════════════
 export function StockManagementScreen({ storeId }: { storeId: string }) {
+  const { theme } = usePOSStore();
+  const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   const [items, setItems] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
@@ -483,6 +485,7 @@ export function StockManagementScreen({ storeId }: { storeId: string }) {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [form, setForm] = useState({ name: '', quantity: '', cost: '', minThreshold: '', unitId: '', supplierId: '' });
+  const { alert, confirm } = useConfirm();
 
   const fetchData = async () => {
     try {
@@ -520,7 +523,7 @@ export function StockManagementScreen({ storeId }: { storeId: string }) {
   };
 
   const handleSave = async () => {
-    if (!form.name) { Alert.alert('Erreur', 'Le nom est requis'); return; }
+    if (!form.name) { alert('Erreur', 'Le nom est requis'); return; }
     try {
       const url = editItem ? `${API_URL}/management/stock/${editItem.id}` : `${API_URL}/management/stock`;
       const res = await fetch(url, {
@@ -537,17 +540,19 @@ export function StockManagementScreen({ storeId }: { storeId: string }) {
         }),
       });
       if (res.ok) { setShowModal(false); fetchData(); }
-    } catch (e) { Alert.alert('Erreur', 'Echec sauvegarde'); }
+    } catch (e) { alert('Erreur', 'Echec sauvegarde'); }
   };
 
   const handleDelete = (item: any) => {
-    Alert.alert('Supprimer', `Supprimer "${item.name}" ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: async () => {
+    confirm({
+      title: 'Supprimer',
+      message: `Supprimer "${item.name}" ?`,
+      type: 'danger',
+      onConfirm: async () => {
         await fetch(`${API_URL}/management/stock/${item.id}`, { method: 'DELETE' });
         fetchData();
-      }},
-    ]);
+      }
+    });
   };
 
   const getStatus = (item: any) => {
@@ -558,7 +563,7 @@ export function StockManagementScreen({ storeId }: { storeId: string }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F1F5F9' }}>
+    <View style={mgStyles.container}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <Text style={mgStyles.title}>Matieres Premieres</Text>
         <Text style={mgStyles.subtitle}>Inventaire et approvisionnement</Text>
@@ -566,7 +571,7 @@ export function StockManagementScreen({ storeId }: { storeId: string }) {
         {loading ? <Text style={mgStyles.emptyText}>Chargement...</Text> : (
           <>
             <View style={mgStyles.cardRow}>
-              <View style={[mgStyles.card, { backgroundColor: '#4F46E5' }]}>
+              <View style={[mgStyles.card, { backgroundColor: theme.colors.caramel }]}>
                 <Text style={mgStyles.cardLabel}>Articles</Text>
                 <Text style={mgStyles.cardValue}>{items.length}</Text>
               </View>
@@ -655,11 +660,14 @@ export function StockManagementScreen({ storeId }: { storeId: string }) {
 // SUPPLIERS MANAGEMENT SCREEN
 // ══════════════════════════════════════════════════════════════
 export function SuppliersScreen({ storeId }: { storeId: string }) {
+  const { theme } = usePOSStore();
+  const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [form, setForm] = useState({ name: '', contact: '', phone: '' });
+  const { alert, confirm } = useConfirm();
 
   const fetchData = async () => {
     try {
@@ -684,7 +692,7 @@ export function SuppliersScreen({ storeId }: { storeId: string }) {
   };
 
   const handleSave = async () => {
-    if (!form.name) { Alert.alert('Erreur', 'Le nom est requis'); return; }
+    if (!form.name) { alert('Erreur', 'Le nom est requis'); return; }
     try {
       const url = editItem ? `${API_URL}/management/suppliers/${editItem.id}` : `${API_URL}/management/suppliers`;
       const res = await fetch(url, {
@@ -693,21 +701,23 @@ export function SuppliersScreen({ storeId }: { storeId: string }) {
         body: JSON.stringify({ name: form.name, contact: form.contact, phone: form.phone, ...(!editItem && { storeId }) }),
       });
       if (res.ok) { setShowModal(false); fetchData(); }
-    } catch (e) { Alert.alert('Erreur', 'Echec sauvegarde'); }
+    } catch (e) { alert('Erreur', 'Echec sauvegarde'); }
   };
 
   const handleDelete = (item: any) => {
-    Alert.alert('Supprimer', `Supprimer "${item.name}" ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: async () => {
+    confirm({
+      title: 'Supprimer',
+      message: `Supprimer "${item.name}" ?`,
+      type: 'danger',
+      onConfirm: async () => {
         await fetch(`${API_URL}/management/suppliers/${item.id}`, { method: 'DELETE' });
         fetchData();
-      }},
-    ]);
+      }
+    });
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F1F5F9' }}>
+    <View style={mgStyles.container}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <Text style={mgStyles.title}>Fournisseurs</Text>
         <Text style={mgStyles.subtitle}>Gestion des partenaires</Text>
@@ -715,7 +725,7 @@ export function SuppliersScreen({ storeId }: { storeId: string }) {
         {loading ? <Text style={mgStyles.emptyText}>Chargement...</Text> : (
           <>
             <View style={mgStyles.cardRow}>
-              <View style={[mgStyles.card, { backgroundColor: '#4F46E5' }]}>
+              <View style={[mgStyles.card, { backgroundColor: theme.colors.caramel }]}>
                 <Text style={mgStyles.cardLabel}>Fournisseurs</Text>
                 <Text style={mgStyles.cardValue}>{suppliers.length}</Text>
               </View>
@@ -724,7 +734,7 @@ export function SuppliersScreen({ storeId }: { storeId: string }) {
             {suppliers.map(s => (
               <TouchableOpacity key={s.id} style={mgStyles.row} onPress={() => openEdit(s)} onLongPress={() => handleDelete(s)}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#4F46E5', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.caramel, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
                     <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14 }}>{s.name.substring(0, 2).toUpperCase()}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
@@ -775,12 +785,15 @@ export function SuppliersScreen({ storeId }: { storeId: string }) {
 // ORDERS (Commandes) MANAGEMENT SCREEN
 // ══════════════════════════════════════════════════════════════
 export function OrdersScreen({ storeId }: { storeId: string }) {
+  const { theme } = usePOSStore();
+  const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   const [orders, setOrders] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [stockItems, setStockItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ supplierId: '', items: [{ stockItemId: '', name: '', quantity: '1', price: '0' }] });
+  const { alert, confirm } = useConfirm();
 
   const fetchData = async () => {
     try {
@@ -828,7 +841,7 @@ export function OrdersScreen({ storeId }: { storeId: string }) {
 
   const handleCreate = async () => {
     const validItems = form.items.filter(i => i.name || i.stockItemId);
-    if (validItems.length === 0) { Alert.alert('Erreur', 'Ajoutez au moins un article'); return; }
+    if (validItems.length === 0) { alert('Erreur', 'Ajoutez au moins un article'); return; }
     
     const total = validItems.reduce((sum, i) => sum + parseFloat(i.quantity) * parseFloat(i.price), 0);
     try {
@@ -848,25 +861,26 @@ export function OrdersScreen({ storeId }: { storeId: string }) {
         }),
       });
       if (res.ok) { setShowModal(false); fetchData(); }
-    } catch (e) { Alert.alert('Erreur', 'Echec creation'); }
+    } catch (e) { alert('Erreur', 'Echec creation'); }
   };
 
   const updateStatus = (orderId: string, newStatus: string) => {
-    Alert.alert('Changer statut', `Passer en "${newStatus}" ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Confirmer', onPress: async () => {
+    confirm({
+      title: 'Changer statut',
+      message: `Passer en "${newStatus}" ?`,
+      onConfirm: async () => {
         await fetch(`${API_URL}/management/orders/${orderId}/status`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus }),
         });
         fetchData();
-      }},
-    ]);
+      }
+    });
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F1F5F9' }}>
+    <View style={mgStyles.container}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <Text style={mgStyles.title}>Commandes</Text>
         <Text style={mgStyles.subtitle}>Approvisionnement fournisseurs</Text>
@@ -953,7 +967,7 @@ export function OrdersScreen({ storeId }: { storeId: string }) {
 
             <Text style={mgStyles.label}>Articles</Text>
             {form.items.map((item, idx) => (
-              <View key={idx} style={{ backgroundColor: '#F8FAFC', padding: 12, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
+              <View key={idx} style={{ backgroundColor: theme.colors.surfaceLight, padding: 12, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: theme.colors.glassBorder }}>
                 <Text style={[mgStyles.label, { marginTop: 0 }]}>Matiere premiere</Text>
                 <View style={mgStyles.pickerRow}>
                   {stockItems.slice(0, 10).map(si => (
@@ -992,6 +1006,8 @@ export function OrdersScreen({ storeId }: { storeId: string }) {
 // NOTIFICATIONS SCREEN
 // ══════════════════════════════════════════════════════════════
 export function NotificationsScreen({ storeId }: { storeId: string }) {
+  const { theme } = usePOSStore();
+  const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -1015,14 +1031,14 @@ export function NotificationsScreen({ storeId }: { storeId: string }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F1F5F9' }}>
+    <View style={mgStyles.container}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <View>
             <Text style={mgStyles.title}>Notifications</Text>
             <Text style={mgStyles.subtitle}>Alertes et rappels</Text>
           </View>
-          <TouchableOpacity onPress={fetchNotifications} style={{ padding: 10, backgroundColor: '#4F46E5', borderRadius: 12 }}>
+          <TouchableOpacity onPress={fetchNotifications} style={{ padding: 10, backgroundColor: theme.colors.caramel, borderRadius: 12 }}>
             <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 13 }}>Actualiser</Text>
           </TouchableOpacity>
         </View>

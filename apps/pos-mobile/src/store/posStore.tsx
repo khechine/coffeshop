@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AntigravityTheme } from '../theme/AntigravityTheme';
+import { NeonFoodTheme } from '../theme/NeonFoodTheme';
+import { ITheme } from '../theme/ThemeInterface';
 
 export interface Product {
   id: string;
@@ -45,12 +48,17 @@ export interface POSState {
     defaultPosMode?: string 
   } | null;
   userRole: UserRole;
+  themeName: 'antigravity' | 'neon-food';
+  theme: ITheme;
   rachmaCart: Record<string, number>;
+  rachmaHistory: { id: string, productId: string, name: string, timestamp: number, type: 'ADD' | 'REMOVE' }[];
   authenticate: (token: string, storeId: string) => void;
   activateTerminal: (code: string, storeId: string) => Promise<boolean>;
   loginWithPin: (pin: string) => Promise<boolean>;
   logoutBarista: () => void;
   logout: () => void;
+  deactivateTerminal: () => Promise<void>;
+  setTheme: (name: 'antigravity' | 'neon-food') => void;
   addToCart: (productId: string) => void;
   removeFromCart: (productId: string) => void;
   addToRachma: (productId: string) => void;
@@ -98,6 +106,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [storeName, setStoreName] = useState<string | null>(null);
   const [storeTables, setStoreTablesState] = useState<{ id: string, label: string }[]>([]);
   const [rachmaCart, setRachmaCart] = useState<Record<string, number>>({});
+  const [rachmaHistory, setRachmaHistory] = useState<{ id: string, productId: string, name: string, timestamp: number, type: 'ADD' | 'REMOVE' }[]>([]);
   const [currentBarista, setCurrentBarista] = useState<{ 
     id: string, name: string, 
     assignedTables?: string[],
@@ -105,6 +114,9 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     defaultPosMode?: string
   } | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
+  const [themeName, setThemeName] = useState<'antigravity' | 'neon-food'>('antigravity');
+  
+  const theme = themeName === 'neon-food' ? NeonFoodTheme : AntigravityTheme;
   
   const [isReady, setIsReady] = useState(false);
 
@@ -122,6 +134,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const storedBarista = await AsyncStorage.getItem('pos-current-barista');
         const storedRole = await AsyncStorage.getItem('pos-user-role');
         const storedRachma = await AsyncStorage.getItem('pos-rachma-cart');
+        const storedTheme = await AsyncStorage.getItem('pos-active-theme');
         
         if (storedCart) setCart(JSON.parse(storedCart));
         if (storedTables) setTables(JSON.parse(storedTables));
@@ -133,6 +146,9 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (storedBarista) setCurrentBarista(JSON.parse(storedBarista));
         if (storedRole) setUserRole(storedRole as UserRole);
         if (storedRachma) setRachmaCart(JSON.parse(storedRachma));
+        if (storedTheme === 'neon-food' || storedTheme === 'antigravity') {
+          setThemeName(storedTheme as any);
+        }
         
       } catch (e) {
         // ignore storage errors
@@ -169,9 +185,10 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (userRole) AsyncStorage.setItem('pos-user-role', userRole).catch(() => {});
       else AsyncStorage.removeItem('pos-user-role');
 
+      AsyncStorage.setItem('pos-active-theme', themeName).catch(() => {});
       AsyncStorage.setItem('pos-rachma-cart', JSON.stringify(rachmaCart)).catch(() => {});
     }
-  }, [cart, tables, pendingSales, authToken, storeId, storeName, storeTables, currentBarista, userRole, rachmaCart, isReady]);
+  }, [cart, tables, pendingSales, authToken, storeId, storeName, storeTables, currentBarista, userRole, themeName, rachmaCart, isReady]);
 
   const authenticate = (token: string, store: string) => {
     setAuthToken(token);
@@ -231,6 +248,10 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCurrentBarista(null);
     setUserRole(null);
   };
+
+  const setTheme = (name: 'antigravity' | 'neon-food') => {
+    setThemeName(name);
+  };
   
   const logout = () => {
     setAuthToken(null);
@@ -238,6 +259,41 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCurrentBarista(null);
     setUserRole(null);
     clearCart();
+    // Additional hard reset of everything from storage happens in the useEffect, but we'll manually ensure it here too
+  };
+  
+  const deactivateTerminal = async () => {
+    const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+    
+    try {
+      if (authToken && storeId) {
+        await fetch(`${API_URL}/auth/deactivate-terminal?storeId=${storeId}&token=${authToken}`, {
+          method: 'POST'
+        });
+      }
+    } catch (e) {
+      console.warn("❌ Backend deactivation notify failed, proceeding anyway.");
+    }
+
+    logout();
+    setStoreName(null);
+    setStoreTablesState([]);
+    setPendingSales([]);
+    setProductsState(defaultProducts);
+    
+    // Total wipe of local storage to ensure "il peut plus accéder"
+    await AsyncStorage.multiRemove([
+      'pos-auth-token',
+      'pos-store-id',
+      'pos-store-name',
+      'pos-store-tables',
+      'pos-current-barista',
+      'pos-user-role',
+      'pos-offline-sales',
+      'pos-tables',
+      'pos-offline-cart',
+      'pos-rachma-cart'
+    ]);
   };
 
 
@@ -271,19 +327,44 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addToRachma = (id: string) => {
+    const product = products.find(p => p.id === id);
     setRachmaCart(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+    setRachmaHistory(prev => [
+      { 
+        id: Math.random().toString(36).substr(2, 9), 
+        productId: id, 
+        name: product?.name || 'Inconnu', 
+        timestamp: Date.now(), 
+        type: 'ADD' 
+      },
+      ...prev.slice(0, 49) // Keep last 50 actions
+    ]);
   };
 
   const removeFromRachma = (id: string) => {
+    const product = products.find(p => p.id === id);
     setRachmaCart(prev => {
       const next = { ...prev };
       next[id] = Math.max(0, (next[id] || 0) - 1);
       if (next[id] === 0) delete next[id];
       return next;
     });
+    setRachmaHistory(prev => [
+      { 
+        id: Math.random().toString(36).substr(2, 9), 
+        productId: id, 
+        name: product?.name || 'Inconnu', 
+        timestamp: Date.now(), 
+        type: 'REMOVE' 
+      },
+      ...prev.slice(0, 49)
+    ]);
   };
 
-  const clearRachma = () => setRachmaCart({});
+  const clearRachma = () => {
+    setRachmaCart({});
+    setRachmaHistory([]);
+  };
 
   const clearCart = () => {
     if (activeTable) {
@@ -498,7 +579,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <POSContext.Provider value={{ 
       cart, tables, activeTable, products, pendingSales, authToken, storeId, storeName, storeTables,
-      currentBarista, userRole, rachmaCart, authenticate, activateTerminal, loginWithPin, logoutBarista, logout, 
+      currentBarista, userRole, themeName, theme, rachmaCart, rachmaHistory, authenticate, activateTerminal, loginWithPin, logoutBarista, logout, deactivateTerminal, setTheme,
       addToCart, removeFromCart, addToRachma, removeFromRachma, clearRachma, clearCart, 
       setActiveTable, checkout, checkoutTable, checkoutRachma, 
       syncSales, setProducts, setStoreTables, getTotalItems, getTableTotal, getTotalPrice, getRachmaTotal,

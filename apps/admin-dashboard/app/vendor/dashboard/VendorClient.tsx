@@ -33,7 +33,7 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
   const [deleteOrderTarget, setDeleteOrderTarget] = useState<Order | null>(null);
   const [orderForm, setOrderForm] = useState({ supplierId: '', items: [{ stockItemId: '', quantity: '', price: '' }] });
 
-  const inputClass = "w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-900/50 text-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-600";
+  const inputClass = "w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600";
   const labelClass = "block text-[11px] font-black text-slate-500 mb-1.5 uppercase tracking-wider";
 
   const totalSpent = allOrders.reduce((acc, o) => acc + Number(o.total), 0);
@@ -85,62 +85,56 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
     <div className="space-y-8">
       {/* Header & Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-slate-900/40 border border-slate-800/50 p-6 rounded-3xl backdrop-blur-md">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400">
-              <Package size={24} />
-            </div>
-            <div>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Commandes Totales</p>
-              <h3 className="text-2xl font-black text-white">{allOrders.length}</h3>
-            </div>
+        <div className="kpi-card purple">
+          <div className="kpi-icon purple">
+            <Package size={24} />
           </div>
-          <div className="text-xs text-slate-500">
-            <span className="text-orange-400 font-bold">{pendingOrders}</span> en attente de traitement
+          <div>
+            <p className="kpi-label">Commandes Totales</p>
+            <h3 className="kpi-value">{allOrders.length}</h3>
+            <div className="text-xs text-slate-500">
+              <span className="text-orange-400 font-bold">{pendingOrders}</span> en attente de traitement
+            </div>
           </div>
         </div>
 
-        <div className="bg-slate-900/40 border border-slate-800/50 p-6 rounded-3xl backdrop-blur-md">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400">
-              <Truck size={24} />
-            </div>
-            <div>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Dépenses Totales</p>
-              <h3 className="text-2xl font-black text-white">{totalSpent.toFixed(3)} DT</h3>
-            </div>
+        <div className="kpi-card green">
+          <div className="kpi-icon green">
+            <Truck size={24} />
           </div>
-          <div className="text-xs text-slate-500">
-            Moyenne de <span className="text-white font-bold">{(totalSpent / (allOrders.length || 1)).toFixed(3)} DT</span> par commande
+          <div>
+            <p className="kpi-label">Dépenses Totales</p>
+            <h3 className="kpi-value">{totalSpent.toFixed(3)} DT</h3>
+            <div className="text-xs text-slate-500">
+              Moyenne de <span className="font-bold">{(totalSpent / (allOrders.length || 1)).toFixed(3)} DT</span> par commande
+            </div>
           </div>
         </div>
 
-        <div className="bg-slate-900/40 border border-slate-800/50 p-6 rounded-3xl backdrop-blur-md">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-400">
-              <Plus size={24} />
-            </div>
-            <div>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Fournisseurs</p>
-              <h3 className="text-2xl font-black text-white">{suppliers.length}</h3>
-            </div>
+        <div className="kpi-card blue">
+          <div className="kpi-icon blue">
+            <Plus size={24} />
           </div>
-          <div className="text-xs text-slate-500">
-            Réseau de partenaires actifs
+          <div>
+            <p className="kpi-label">Fournisseurs</p>
+            <h3 className="kpi-value">{suppliers.length}</h3>
+            <div className="text-xs text-slate-500">
+              Réseau de partenaires actifs
+            </div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-900/50 p-1 rounded-2xl w-fit border border-slate-800/50">
+      <div className="flex gap-1 bg-slate-200 dark:bg-slate-900/50 p-1 rounded-2xl w-fit border border-slate-300 dark:border-slate-800/50">
         {[{ key: 'orders', label: 'Commandes', icon: Package }, { key: 'suppliers', label: 'Fournisseurs', icon: Truck }].map(t => (
           <button 
             key={t.key} 
             onClick={() => setTab(t.key as any)}
             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
               tab === t.key 
-                ? 'bg-slate-800 text-white shadow-lg' 
-                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-white shadow-lg' 
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-800/30'
             }`}
           >
             <t.icon size={16} />
@@ -151,8 +145,8 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
 
       {/* ═══ ORDERS TAB ═══ */}
       {tab === 'orders' && (
-        <div className="bg-slate-900/40 border border-slate-800/50 rounded-3xl overflow-hidden backdrop-blur-md">
-          <div className="p-6 border-b border-slate-800/50 flex justify-between items-center">
+        <div className="card">
+          <div className="card-header">
             <h2 className="text-lg font-black flex items-center gap-2">
               <Package size={20} className="text-indigo-400" />
               Réapprovisionnements
@@ -172,11 +166,11 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
               <p className="font-bold">Aucune commande enregistrée</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-800/50">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
               {allOrders.map((order) => {
                 const statusConf = STATUS_MAP[order.status] || STATUS_MAP.PENDING;
                 return (
-                  <div key={order.id} className="p-6 hover:bg-white/[0.02] transition-colors">
+                  <div key={order.id} className="p-6 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                       <div className="space-y-2">
                         <div className="flex items-center gap-3">
@@ -189,12 +183,12 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
                           }`}>
                             {statusConf.label}
                           </span>
-                          <span className="font-mono text-[10px] text-slate-500 bg-slate-800/50 px-2 py-1 rounded-md">
+                          <span className="font-mono text-[10px] text-slate-500 bg-slate-100 dark:bg-slate-800/50 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-800">
                             #{order.id.slice(-6).toUpperCase()}
                           </span>
                         </div>
-                        <div className="text-lg font-black text-white leading-tight">
-                          {order.supplier.name} <span className="text-slate-600 mx-1">→</span> {order.store.name}
+                        <div className="text-lg font-black text-slate-900 dark:text-white leading-tight">
+                          {order.supplier.name} <span className="text-slate-400 dark:text-slate-600 mx-1">→</span> {order.store.name}
                         </div>
                         <div className="text-xs text-slate-500 flex items-center gap-2 font-medium">
                           <Calendar size={12} />
@@ -211,7 +205,7 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
                             value={order.status} 
                             onChange={e => handleStatusChange(order.id, e.target.value)} 
                             disabled={isPending}
-                            className="bg-slate-800 border-none text-slate-300 text-xs font-bold py-2 px-3 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer"
+                            className="bg-slate-100 dark:bg-slate-800 border-none text-slate-600 dark:text-slate-300 text-xs font-bold py-2 px-3 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer"
                           >
                             {Object.entries(STATUS_MAP).map(([val, conf]) => <option key={val} value={val}>{conf.label}</option>)}
                           </select>
@@ -227,11 +221,11 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
                     
                     <div className="mt-4 flex flex-wrap gap-2">
                       {order.items.map((item: any) => (
-                        <div key={item.id} className="bg-slate-800/50 border border-slate-700/30 px-3 py-1.5 rounded-xl text-[11px] font-bold text-slate-300 flex items-center gap-2">
+                        <div key={item.id} className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/30 px-3 py-1.5 rounded-xl text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-2 transition-all">
                           <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
                           {Number(item.quantity)} {item.stockItem?.unit || ''} {item.stockItem?.name || item.name} 
-                          <span className="text-slate-500">×</span>
-                          <span className="text-indigo-400">{Number(item.price).toFixed(3)} DT</span>
+                          <span className="text-slate-400 dark:text-slate-500">×</span>
+                          <span className="text-indigo-600 dark:text-indigo-400">{Number(item.price).toFixed(3)} DT</span>
                         </div>
                       ))}
                     </div>
@@ -245,8 +239,8 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
 
       {/* ═══ SUPPLIERS TAB ═══ */}
       {tab === 'suppliers' && (
-        <div className="bg-slate-900/40 border border-slate-800/50 rounded-3xl overflow-hidden backdrop-blur-md">
-          <div className="p-6 border-b border-slate-800/50 flex justify-between items-center">
+        <div className="card">
+          <div className="card-header">
             <h2 className="text-lg font-black flex items-center gap-2">
               <Truck size={20} className="text-indigo-400" />
               Fournisseurs Partenaires
@@ -259,7 +253,7 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-white/[0.02]">
+                <tr className="bg-slate-50 dark:bg-white/[0.02]">
                   <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider">Fournisseur</th>
                   <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider">Contact</th>
                   <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider">Téléphone</th>
@@ -267,7 +261,7 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
                   <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/50">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
                 {suppliers.map(s => (
                   <tr key={s.id} className="hover:bg-white/[0.01] transition-colors">
                     <td className="px-6 py-4">
@@ -275,7 +269,7 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
                         <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-black text-sm">
                           {s.name.charAt(0).toUpperCase()}
                         </div>
-                        <span className="font-bold text-white text-sm">{s.name}</span>
+                        <span className="font-bold text-slate-900 dark:text-white text-sm">{s.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-400 font-medium">{s.contact || '—'}</td>
@@ -326,7 +320,7 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
             <input className={inputClass} value={suppForm.phone} onChange={e => setSuppForm(f => ({ ...f, phone: e.target.value }))} placeholder="+216 XX XXX XXX" />
           </div>
           <div className="flex gap-3 pt-4">
-            <button type="button" className="flex-1 px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 font-bold text-sm hover:bg-slate-800/50 transition-colors" onClick={() => setSuppModal(false)}>Annuler</button>
+            <button type="button" className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" onClick={() => setSuppModal(false)}>Annuler</button>
             <button type="submit" className="flex-[2] px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-500 transition-colors disabled:opacity-50" disabled={isPending}>
               {isPending ? 'Chargement...' : (editingSupp ? 'Mettre à Jour' : 'Créer Fournisseur')}
             </button>
@@ -376,12 +370,12 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
             </div>
           </div>
 
-          <div className="bg-indigo-500/5 border border-indigo-500/10 p-5 rounded-2xl flex justify-between items-center">
+          <div className="bg-indigo-500/5 dark:bg-indigo-500/5 border border-indigo-500/10 p-5 rounded-2xl flex justify-between items-center">
             <div>
-              <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Total Estimé</p>
-              <p className="text-2xl font-black text-white">
+              <p className="text-[10px] font-black text-indigo-400 dark:text-indigo-300 uppercase tracking-widest">Total Estimé</p>
+              <p className="text-2xl font-black text-slate-900 dark:text-white">
                 {orderForm.items.reduce((acc, i) => acc + (parseFloat(i.quantity || '0') * parseFloat(i.price || '0')), 0).toFixed(3)} 
-                <span className="text-xs font-bold text-slate-500 ml-1">DT</span>
+                <span className="text-xs font-bold text-slate-400 dark:text-slate-500 ml-1">DT</span>
               </p>
             </div>
             <button type="submit" className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 flex items-center gap-2" disabled={isPending}>
@@ -394,13 +388,13 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
       {/* Delete Modals with Dark Theme */}
       <Modal open={!!deleteSuppTarget} onClose={() => setDeleteSuppTarget(null)} title="Supprimer Fournisseur" width={400}>
         <div className="text-center p-2">
-          <div className="w-16 h-16 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-16 h-16 bg-red-500/10 text-red-500 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
             <Trash2 size={32} />
           </div>
-          <h3 className="text-xl font-black text-white mb-2">Supprimer "{deleteSuppTarget?.name}" ?</h3>
-          <p className="text-slate-500 text-sm mb-8 leading-relaxed">Cette action est irréversible. Toutes les commandes liées à ce fournisseur seront définitivement supprimées.</p>
+          <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Supprimer "{deleteSuppTarget?.name}" ?</h3>
+          <p className="text-slate-500 dark:text-slate-500 text-sm mb-8 leading-relaxed">Cette action est irréversible. Toutes les commandes liées à ce fournisseur seront définitivement supprimées.</p>
           <div className="flex gap-3">
-            <button className="flex-1 px-4 py-3 rounded-xl border border-slate-800 text-slate-400 font-bold hover:bg-slate-800/50 transition-colors" onClick={() => setDeleteSuppTarget(null)}>Annuler</button>
+            <button className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" onClick={() => setDeleteSuppTarget(null)}>Annuler</button>
             <button className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-black hover:bg-red-500 transition-colors" onClick={handleDeleteSupp} disabled={isPending}>{isPending ? '...' : 'Supprimer'}</button>
           </div>
         </div>
