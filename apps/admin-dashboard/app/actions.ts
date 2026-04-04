@@ -11,28 +11,31 @@ export async function getStore() {
   if (!userId) return null;
 
   try {
-     const user = await prisma.user.findUnique({
-       where: { id: userId },
-       include: { 
-         store: {
-           include: {
-             subscription: {
-               include: { plan: true }
-             }
-           }
-         } 
-       }
+     // Robust fetch for user and store
+     const user = await (prisma as any).user.findUnique({
+       where: { id: userId }
      });
 
-     if (user?.store) {
-        const storeObj: any = user.store;
-        const plan = storeObj?.subscription?.plan;
-        
-        // Combined access: from Plan OR manual override
-        const hasMarketplace = (plan?.hasMarketplace === true) || (storeObj?.forceMarketplaceAccess === true);
-        storeObj.hasMarketplace = hasMarketplace;
-        
-        return storeObj;
+     if (user?.storeId) {
+        const store = await (prisma as any).store.findUnique({
+          where: { id: user.storeId },
+          include: {
+            subscription: {
+              include: { plan: true }
+            }
+          }
+        });
+
+        if (store) {
+           const storeObj: any = store;
+           const plan = storeObj?.subscription?.plan;
+           
+           // Combined access: from Plan OR manual override
+           const hasMarketplace = (plan?.hasMarketplace === true) || (storeObj?.forceMarketplaceAccess === true);
+           storeObj.hasMarketplace = hasMarketplace;
+           
+           return storeObj;
+        }
      }
   } catch (err) {
      console.error("getStore error, trying raw fallback", err);
@@ -417,7 +420,8 @@ export async function updateUserPasswordAction(userId: string, newPassword: stri
 }
 
 export async function loginUser(email: string, pass: string) {
-  const user = await prisma.user.findUnique({ where: { email } });
+  // Use (prisma as any) to bypass environment-specific client validation bugs
+  const user = await (prisma as any).user.findUnique({ where: { email } });
   if (!user) return { error: 'Utilisateur non trouvé' };
   
   const isMatch = await bcrypt.compare(pass, user.password);
@@ -633,8 +637,15 @@ export async function getMarketplaceCategoryTree() {
 export async function proposeSubCategoryAction(name: string, parentId: string) {
   const userId = (await cookies()).get('userId')?.value;
   if (!userId) throw new Error('Non authentifié');
-  const user = await prisma.user.findUnique({ where: { id: userId }, include: { vendorProfile: true } });
-  if (!user?.vendorProfile) throw new Error('Profil vendeur introuvable');
+
+  // Robust fetch for user and vendor profile separately
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('Utilisateur non trouvé');
+
+  const vendorProfile = await (prisma as any).vendorProfile.findFirst({
+    where: { userId: user.id }
+  });
+  if (!vendorProfile) throw new Error('Profil vendeur introuvable');
 
   // Check if a category with this name already exists under this parent
   const existing = await prisma.marketplaceCategory.findFirst({
@@ -647,7 +658,7 @@ export async function proposeSubCategoryAction(name: string, parentId: string) {
       name: name.trim(),
       parentId,
       status: 'PENDING',
-      proposedByVendorId: user.vendorProfile.id,
+      proposedByVendorId: vendorProfile.id,
     }
   });
   return { success: true };
@@ -666,7 +677,7 @@ export async function getPendingCategoryProposals() {
 export async function getUser() {
   const userId = (await cookies()).get('userId')?.value;
   if (!userId) return null;
-  return prisma.user.findUnique({ where: { id: userId } });
+  return (prisma as any).user.findUnique({ where: { id: userId } });
 }
 
 // ── Admin: approve or reject a proposed subcategory ───────────────────────────
@@ -831,15 +842,22 @@ export async function getVendorPortalData() {
   const userId = (await cookies()).get('userId')?.value;
   if (!userId) return null;
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: { vendorProfile: true }
+  // Robust separate fetches to avoid Prisma runtime issues
+  const user = await (prisma as any).user.findUnique({
+    where: { id: userId }
   });
 
-  if (!user || !user.vendorProfile) return null;
+  if (!user) return null;
 
-  const vendor = await prisma.vendorProfile.findUnique({
-    where: { id: user.vendorProfile.id },
+  const vendorProfile = await (prisma as any).vendorProfile.findFirst({
+    where: { userId: user.id }
+  });
+
+  if (!vendorProfile) return null;
+
+  // Now fetch the deep data using the vendorProfile.id directly
+  const vendor = await (prisma as any).vendorProfile.findUnique({
+    where: { id: vendorProfile.id },
     include: { 
       products: true,
       activityPoles: true,
@@ -904,9 +922,14 @@ export async function importCsvProductsAction(rows: {
   const userId = (await cookies()).get('userId')?.value;
   if (!userId) throw new Error('Non authentifié');
 
-  const user = await prisma.user.findUnique({ where: { id: userId }, include: { vendorProfile: true } });
-  if (!user?.vendorProfile) throw new Error('Profil vendeur introuvable');
-  const vendorId = user.vendorProfile.id;
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('Utilisateur non trouvé');
+
+  const vendorProfile = await (prisma as any).vendorProfile.findFirst({
+    where: { userId: user.id }
+  });
+  if (!vendorProfile) throw new Error('Profil vendeur introuvable');
+  const vendorId = vendorProfile.id;
 
   // Fetch all ACTIVE categories (root + children) for name matching
   const allCategories = await prisma.marketplaceCategory.findMany({
