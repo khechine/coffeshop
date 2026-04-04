@@ -34,7 +34,7 @@ ssh $ssh_server << EOF
   docker compose up -d --build
   
   echo "🗄️ Synchronizing Prisma schema..."
-  docker compose exec -T api npx prisma db push --schema=packages/database/prisma/schema.prisma --accept-data-loss
+  docker compose exec -T api npx prisma@5.14.0 db push --schema=packages/database/prisma/schema.prisma --accept-data-loss
   
   echo "🧹 Cleaning up unused images..."
   docker image prune -f
