@@ -2,7 +2,7 @@
 
 import React, { useTransition, useState } from 'react';
 import { Tag, Plus, Trash2, X, PlusCircle } from 'lucide-react';
-import { createProductCategoryAction, deleteProductCategoryAction } from '../../../../actions';
+import { createProductCategoryAction, deleteProductCategoryAction } from '../../../actions';
 
 export default function CategoryListClient({ initialCategories }: { initialCategories: any[] }) {
   const [isPending, startTransition] = useTransition();
