@@ -2,6 +2,7 @@
 
 import { prisma } from '@coffeeshop/database';
 import { revalidatePath } from 'next/cache';
+import * as bcrypt from 'bcrypt';
 import { cookies } from 'next/headers';
 
 // ── Helpers (Updated for phone field) ──────────────────────────
@@ -418,7 +419,9 @@ export async function updateUserPasswordAction(userId: string, newPassword: stri
 export async function loginUser(email: string, pass: string) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return { error: 'Utilisateur non trouvé' };
-  if (user.password !== pass) return { error: 'Mot de passe incorrect' };
+  
+  const isMatch = await bcrypt.compare(pass, user.password);
+  if (!isMatch) return { error: 'Mot de passe incorrect' };
   
   const response = { 
     id: user.id, 
@@ -428,6 +431,7 @@ export async function loginUser(email: string, pass: string) {
     permissions: user.permissions,
     defaultPosMode: user.defaultPosMode
   };
+
 
   (await cookies()).set('userId', user.id, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
   

@@ -23,6 +23,9 @@ importers:
       '@coffeeshop/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      bcrypt:
+        specifier: ^5.1.1
+        version: 5.1.1
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -51,6 +54,9 @@ importers:
         specifier: ^2.3.0
         version: 2.6.1
     devDependencies:
+      '@types/bcrypt':
+        specifier: ^5.0.2
+        version: 5.0.2
       '@types/leaflet':
         specifier: ^1.9.12
         version: 1.9.21
