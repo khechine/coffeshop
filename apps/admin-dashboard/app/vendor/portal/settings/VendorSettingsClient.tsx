@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
-import { Settings, Building2, Save, CheckCircle2, Briefcase } from 'lucide-react';
-import { updateVendorCategoriesAction, updateVendorActivityPoleAction } from '../../../actions';
+import React, { useState, useTransition, useEffect, useRef } from 'react';
+import { Building2, Save, CheckCircle2, Briefcase, MapPin, Crosshair } from 'lucide-react';
+import { updateVendorActivityPolesAction, updateVendorProfileAction } from '../../../actions';
+
+import 'leaflet/dist/leaflet.css';
 
 export default function VendorSettingsClient({
   portalData,
@@ -16,14 +18,85 @@ export default function VendorSettingsClient({
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ show: boolean; message: string } | null>(null);
 
-  // ── Activity Pole ──────────────────────────────────────────
-  const [selectedPoleId, setSelectedPoleId] = useState<string>(
-    portalData.activityPoleId || ''
-  );
+  // ── Profile & Map state ───────────────────────────────────
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
 
-  // ── Marketplace categories (multi-select) ─────────────────
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    portalData.categories?.map((c: any) => c.id) || []
+  const [profileForm, setProfileForm] = useState({
+    companyName: portalData.companyName || '',
+    description: portalData.description || '',
+    address: portalData.address || '',
+    city: portalData.city || '',
+    phone: portalData.phone || '',
+    lat: portalData.lat || 36.80,
+    lng: portalData.lng || 10.18,
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const initMap = async () => {
+      const L: any = (await import('leaflet')).default;
+      
+      if (!mapRef.current && mapContainerRef.current) {
+        mapRef.current = L.map(mapContainerRef.current).setView([profileForm.lat, profileForm.lng], 13);
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(mapRef.current);
+
+        const customIcon = L.divIcon({
+          className: 'custom-div-icon',
+          html: `
+            <div style="background-color: #4F46E5; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+              <div style="transform: rotate(45deg); color: white; margin-bottom: 2px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+              </div>
+            </div>
+          `,
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+        });
+
+        markerRef.current = L.marker([profileForm.lat, profileForm.lng], { 
+          icon: customIcon,
+          draggable: true 
+        }).addTo(mapRef.current);
+
+        markerRef.current.on('dragend', (e: any) => {
+          const latLng = e.target.getLatLng();
+          setProfileForm(f => ({ ...f, lat: latLng.lat, lng: latLng.lng }));
+        });
+
+        mapRef.current.on('click', (e: any) => {
+          const latLng = e.latlng;
+          if (markerRef.current) markerRef.current.setLatLng(latLng);
+          setProfileForm(f => ({ ...f, lat: latLng.lat, lng: latLng.lng }));
+        });
+      }
+    };
+
+    initMap();
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleSaveProfile = () => {
+    startTransition(async () => {
+      await updateVendorProfileAction(portalData.id, profileForm);
+      showToast('Coordonnées enregistrées avec succès !');
+    });
+  };
+
+  // ── Activity Poles (multi-select) ─────────────────────────
+  const [selectedPoleIds, setSelectedPoleIds] = useState<string[]>(
+    portalData.activityPoles?.map((p: any) => p.id) || []
   );
 
   const showToast = (message: string) => {
@@ -31,23 +104,16 @@ export default function VendorSettingsClient({
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleToggleCategory = (id: string) => {
-    setSelectedCategories(prev =>
-      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+  const handleTogglePole = (id: string) => {
+    setSelectedPoleIds(prev =>
+      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
     );
   };
 
-  const handleSaveCategories = () => {
+  const handleSavePoles = () => {
     startTransition(async () => {
-      await updateVendorCategoriesAction(portalData.id, selectedCategories);
-      showToast('Catégories marketplace mises à jour !');
-    });
-  };
-
-  const handleSavePole = () => {
-    startTransition(async () => {
-      await updateVendorActivityPoleAction(portalData.id, selectedPoleId || null);
-      showToast('Pôle d\'activité enregistré !');
+      await updateVendorActivityPolesAction(portalData.id, selectedPoleIds);
+      showToast('Secteurs d\'activité enregistrés !');
     });
   };
 
@@ -79,8 +145,8 @@ export default function VendorSettingsClient({
                 <Briefcase size={28} className="text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-black text-slate-900 dark:text-white">Secteur d'Activité</h2>
-                <p className="text-slate-500 text-sm font-medium">Définissez votre spécialité principale</p>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white">Secteurs d'Activité</h2>
+                <p className="text-slate-500 text-sm font-medium">Sélectionnez vos spécialités ({selectedPoleIds.length} sélectionnés)</p>
               </div>
             </div>
 
@@ -89,29 +155,28 @@ export default function VendorSettingsClient({
                 Aucun pôle d'activité configuré
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8 relative z-10">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-8 relative z-10">
                 {activityPoles.map(pole => {
-                  const isActive = selectedPoleId === pole.id;
+                  const isActive = selectedPoleIds.includes(pole.id);
                   return (
                     <label 
                       key={pole.id} 
-                      className={`flex items-center gap-4 p-5 rounded-[24px] border-2 cursor-pointer transition-all duration-300 ${
+                      className={`flex items-center gap-3 p-3 rounded-[16px] border cursor-pointer transition-all duration-300 ${
                         isActive 
-                          ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/10' 
+                          ? 'border-violet-500 bg-violet-500/10 shadow-sm shadow-violet-500/10' 
                           : 'border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/30 hover:border-slate-200 dark:hover:border-slate-700'
                       }`}
                     >
                       <input
-                        type="radio"
-                        name="activityPole"
+                        type="checkbox"
                         value={pole.id}
                         checked={isActive}
-                        onChange={() => setSelectedPoleId(pole.id)}
-                        className="w-5 h-5 accent-violet-500"
+                        onChange={() => handleTogglePole(pole.id)}
+                        className="w-4 h-4 accent-violet-500 shrink-0 rounded"
                       />
-                      <div className="flex flex-col">
-                        {pole.icon && <span className="text-2xl mb-1">{pole.icon}</span>}
-                        <span className={`font-black text-sm uppercase tracking-wider ${isActive ? 'text-violet-600 dark:text-violet-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                      <div className="flex flex-col overflow-hidden">
+                        {pole.icon && <span className="text-xl leading-none mb-1">{pole.icon}</span>}
+                        <span className={`font-black text-[10px] uppercase tracking-wider truncate ${isActive ? 'text-violet-600 dark:text-violet-400' : 'text-slate-400 dark:text-slate-500'}`}>
                           {pole.name}
                         </span>
                       </div>
@@ -122,65 +187,15 @@ export default function VendorSettingsClient({
             )}
 
             <button 
-              onClick={handleSavePole} 
+              onClick={handleSavePoles} 
               disabled={isPending} 
               className="w-full flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-violet-600 text-white font-black text-sm hover:bg-violet-500 transition-all shadow-xl shadow-violet-600/20 disabled:opacity-50 uppercase tracking-widest relative z-10"
             >
-              {isPending ? 'Enregistrement...' : <><Save size={18} /> Enregistrer le secteur</>}
+              {isPending ? 'Enregistrement...' : <><Save size={18} /> Enregistrer les secteurs</>}
             </button>
           </div>
 
-          {/* ── CATÉGORIES MARKETPLACE ── */}
-          <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 p-8 md:p-10 rounded-[40px] backdrop-blur-md relative overflow-hidden shadow-sm dark:shadow-none">
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/5 blur-[100px] pointer-events-none" />
-            
-            <div className="flex justify-between items-center mb-10 relative z-10">
-              <div className="flex items-center gap-6">
-                <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-500/10 rounded-[24px] flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20">
-                  <Settings size={28} />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white">Catalogue Marketplace</h2>
-                  <p className="text-slate-500 text-sm font-medium">Rayons où vos produits seront visibles</p>
-                </div>
-              </div>
-              <div className="hidden sm:block bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-indigo-100 dark:border-indigo-500/20">
-                {selectedCategories.length} Spécialités
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-8 relative z-10">
-              {portalData.allCategories?.map((cat: any) => {
-                const isActive = selectedCategories.includes(cat.id);
-                return (
-                  <label 
-                    key={cat.id} 
-                    className={`flex items-center gap-3 p-4 rounded-2xl border transition-all cursor-pointer ${
-                      isActive 
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shadow-sm dark:shadow-indigo-500/5' 
-                        : 'border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-transparent text-slate-400 dark:text-slate-500 hover:border-slate-200 dark:hover:border-slate-700 hover:text-slate-600 dark:hover:text-slate-400'
-                    }`}
-                  >
-                    <input 
-                      type="checkbox" 
-                      className="w-4 h-4 rounded-md accent-indigo-500"
-                      checked={isActive}
-                      onChange={() => handleToggleCategory(cat.id)}
-                    />
-                    <span className="font-bold text-xs uppercase tracking-wider truncate">{cat.name}</span>
-                  </label>
-                );
-              })}
-            </div>
-
-            <button 
-              onClick={handleSaveCategories} 
-              disabled={isPending} 
-              className="w-full flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50 uppercase tracking-widest relative z-10"
-            >
-              {isPending ? 'Mise à jour...' : <><Save size={18} /> Enregistrer le catalogue</>}
-            </button>
-          </div>
 
           {/* ── INFOS ENTREPRISE ── */}
           <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 p-8 md:p-10 rounded-[40px] backdrop-blur-md shadow-sm dark:shadow-none">
@@ -197,29 +212,69 @@ export default function VendorSettingsClient({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
                 <label className={labelClass}>Raison Sociale</label>
-                <input className={inputClass} defaultValue={portalData.companyName} />
+                <input className={inputClass} value={profileForm.companyName} onChange={e => setProfileForm(f => ({ ...f, companyName: e.target.value }))} />
               </div>
               <div className="md:col-span-2">
                 <label className={labelClass}>Bio / Présentation de l'entreprise</label>
-                <textarea className={`${inputClass} min-h-[120px] resize-none py-4`} defaultValue={portalData.description || ''} />
+                <textarea className={`${inputClass} min-h-[120px] resize-none py-4`} value={profileForm.description} onChange={e => setProfileForm(f => ({ ...f, description: e.target.value }))} />
               </div>
               <div>
                 <label className={labelClass}>Contact Téléphone</label>
-                <input className={inputClass} defaultValue={portalData.phone} />
+                <input className={inputClass} value={profileForm.phone} onChange={e => setProfileForm(f => ({ ...f, phone: e.target.value }))} />
               </div>
               <div>
                 <label className={labelClass}>Gouvernorat / Ville</label>
-                <input className={inputClass} defaultValue={portalData.city} />
+                <input className={inputClass} value={profileForm.city} onChange={e => setProfileForm(f => ({ ...f, city: e.target.value }))} />
               </div>
               <div className="md:col-span-2">
                 <label className={labelClass}>Siège Social (Adresse complète)</label>
-                <input className={inputClass} defaultValue={portalData.address} />
+                <input className={inputClass} value={profileForm.address} onChange={e => setProfileForm(f => ({ ...f, address: e.target.value }))} />
+              </div>
+            </div>
+
+            {/* MAP COMPONENT */}
+            <div className="mt-10 overflow-hidden border border-slate-200 dark:border-slate-800 rounded-2xl relative">
+              <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                <span className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2"><MapPin size={16} className="text-indigo-500"/> Position sur la Carte</span>
+                <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Déplacez le marqueur</div>
+              </div>
+              <div style={{ position: 'relative', height: '300px', width: '100%' }}>
+                <div ref={mapContainerRef} style={{ height: '100%', width: '100%' }} />
+                <button type="button" 
+                  onClick={() => {
+                    if (navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition((pos) => {
+                        const { latitude, longitude } = pos.coords;
+                        setProfileForm(f => ({ ...f, lat: latitude, lng: longitude }));
+                        if (mapRef.current) mapRef.current.setView([latitude, longitude], 15);
+                        if (markerRef.current) markerRef.current.setLatLng([latitude, longitude]);
+                      });
+                    }
+                  }}
+                  className="absolute bottom-4 right-4 z-[1000] bg-white border-0 p-3 rounded-full cursor-pointer shadow-lg flex items-center justify-center hover:scale-110 transition-transform text-indigo-600"
+                >
+                  <Crosshair size={20} />
+                </button>
+              </div>
+              <div className="flex gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800">
+                <div className="flex-1">
+                  <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-1">LATITUDE</label>
+                  <input className="w-full bg-transparent text-sm font-mono text-slate-600 dark:text-slate-300 outline-none" value={profileForm.lat.toFixed(6)} readOnly disabled />
+                </div>
+                <div className="flex-1 border-l border-slate-200 dark:border-slate-800 pl-4">
+                  <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-1">LONGITUDE</label>
+                  <input className="w-full bg-transparent text-sm font-mono text-slate-600 dark:text-slate-300 outline-none" value={profileForm.lng.toFixed(6)} readOnly disabled />
+                </div>
               </div>
             </div>
             
             <div className="pt-6">
-              <button className="w-full px-8 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-white font-black text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all uppercase tracking-widest">
-                Sauvegarder les informations
+              <button 
+                onClick={handleSaveProfile}
+                disabled={isPending}
+                className="w-full px-8 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-white font-black text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all uppercase tracking-widest disabled:opacity-50"
+              >
+                {isPending ? 'Enregistrement...' : 'Sauvegarder les informations'}
               </button>
             </div>
           </div>
@@ -241,13 +296,16 @@ export default function VendorSettingsClient({
                 </span>
               </div>
               
-              {selectedPoleId && (
-                <div className="flex justify-between items-center py-4 border-b border-slate-100 dark:border-slate-800/50">
-                  <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Pôle Actif</span>
-                  <span className="text-xs font-black text-violet-600 dark:text-violet-400 flex items-center gap-2">
-                    {activityPoles.find(p => p.id === selectedPoleId)?.icon}
-                    {activityPoles.find(p => p.id === selectedPoleId)?.name}
-                  </span>
+              {selectedPoleIds.length > 0 && (
+                <div className="py-4 border-b border-slate-100 dark:border-slate-800/50">
+                  <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-3">Secteurs Actifs</span>
+                  <div className="flex flex-wrap gap-2">
+                    {activityPoles.filter(p => selectedPoleIds.includes(p.id)).map(p => (
+                      <span key={p.id} className="flex items-center gap-1 px-2.5 py-1 bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 rounded-lg text-[10px] font-black border border-violet-100 dark:border-violet-500/20">
+                        {p.icon} {p.name}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 

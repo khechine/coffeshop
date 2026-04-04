@@ -1,62 +1,242 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
-import { Plus, Edit2, Trash2, Package, Search, Image as ImageIcon, CheckCircle, Zap, Calendar, Clock, FileSpreadsheet, ArrowRightCircle, CheckCircle2 } from 'lucide-react';
+import React, { useState, useTransition, useMemo } from 'react';
+import {
+  Plus, Edit2, Trash2, Package, Clock, FileSpreadsheet, Download,
+  CheckCircle2, AlertCircle, Loader2, BarChart3, TrendingUp, TrendingDown,
+  Minus, ChevronDown, Tag, Sparkles
+} from 'lucide-react';
 import Modal from '../../../../components/Modal';
-import { createMarketplaceProductAction, updateMarketplaceProductAction, deleteMarketplaceProductAction } from '../../../actions';
+import {
+  createMarketplaceProductAction, updateMarketplaceProductAction,
+  deleteMarketplaceProductAction, importCsvProductsAction,
+  proposeSubCategoryAction,
+} from '../../../actions';
 
-export default function VendorCatalogClient({ initialProducts, categories, globalUnits }: { initialProducts: any[]; categories: any[]; globalUnits: any[] }) {
-   const [modalOpen, setModalOpen] = useState(false);
-   const [importModalOpen, setImportModalOpen] = useState(false);
-   const [toast, setToast] = useState<{ show: boolean, message: string } | null>(null);
-   const [editingId, setEditingId] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+// ─── Types ────────────────────────────────────────────────────────────────────
+type SubCategory = { id: string; name: string; icon?: string | null };
+type RootCategory = SubCategory & { children: SubCategory[] };
+type BenchmarkRow = {
+  categoryId: string | null;
+  categoryName: string;
+  parentCategoryName: string | null;
+  displayCategory: string;
+  unit: string;
+  brand: string | null;
+  myPrice: number | null;
+  min: number | null; max: number | null; avg: number | null;
+  competitorCount: number;
+  position: 'cheapest' | 'competitive' | 'expensive' | 'exclusive' | 'unset';
+};
 
-   const showToast = (message: string) => {
-     setToast({ show: true, message });
-     setTimeout(() => setToast(null), 3000);
-   };
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const positionConfig: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  cheapest:    { label: 'Compétitif',                   color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20', icon: <TrendingDown size={12} /> },
+  competitive: { label: 'Dans la moyenne',              color: 'text-indigo-600 dark:text-indigo-400',   bg: 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-100 dark:border-indigo-500/20',    icon: <Minus size={12} /> },
+  expensive:   { label: 'Au-dessus du marché',          color: 'text-amber-600 dark:text-amber-400',    bg: 'bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20',         icon: <TrendingUp size={12} /> },
+  exclusive:   { label: 'Exclusif — pas de concurrent', color: 'text-violet-600 dark:text-violet-400',  bg: 'bg-violet-50 dark:bg-violet-500/10 border-violet-100 dark:border-violet-500/20',    icon: <Sparkles size={12} /> },
+  unset:       { label: 'Hors catalogue',               color: 'text-slate-500 dark:text-slate-400',    bg: 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700/50',         icon: <Minus size={12} /> },
+};
+
+// ─── Hierarchical Category Selector ──────────────────────────────────────────
+function CategorySelector({
+  categoryTree, value, onChange, onPropose, inputClass,
+}: {
+  categoryTree: RootCategory[];
+  value: string;
+  onChange: (catId: string) => void;
+  onPropose: () => void;
+  inputClass: string;
+}) {
+  const [parentId, setParentId] = useState<string>('');
+
+  const selectedParent = categoryTree.find(c => c.id === parentId);
+  const hasChildren = selectedParent && selectedParent.children.length > 0;
+
+  const handleParentChange = (id: string) => {
+    setParentId(id);
+    onChange(id); // select parent if no sub-cat
+  };
+  const handleChildChange = (id: string) => onChange(id);
+
+  return (
+    <div className="space-y-2">
+      {/* Parent category */}
+      <select
+        className={`${inputClass} appearance-none cursor-pointer`}
+        value={parentId}
+        onChange={e => handleParentChange(e.target.value)}
+        required
+      >
+        <option value="">Catégorie principale...</option>
+        {categoryTree.map(c => (
+          <option key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ''}{c.name}</option>
+        ))}
+      </select>
+
+      {/* Sub-category (only if parent has children) */}
+      {selectedParent && (
+        <div className="flex gap-2">
+          <select
+            className={`${inputClass} flex-1 appearance-none cursor-pointer`}
+            value={value === parentId ? '' : value}
+            onChange={e => handleChildChange(e.target.value || parentId)}
+          >
+            <option value="">Toute la catégorie (pas de sous-cat.)</option>
+            {selectedParent.children.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={onPropose}
+            title="Proposer une nouvelle sous-catégorie"
+            className="shrink-0 px-3 py-2 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-700 text-indigo-500 text-xs font-black hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+          >
+            + Proposer
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function VendorCatalogClient({
+  initialProducts, categoryTree, globalUnits, benchmarkData = [], vendorId,
+}: {
+  initialProducts: any[];
+  categoryTree: RootCategory[];
+  globalUnits: any[];
+  benchmarkData?: BenchmarkRow[];
+  vendorId: string;
+}) {
+  const [activeTab, setActiveTab]           = useState<'catalog' | 'benchmark'>('catalog');
+  const [modalOpen, setModalOpen]           = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [proposeModalOpen, setProposeModalOpen] = useState(false);
+  const [toast, setToast]                   = useState<{ show: boolean; message: string; error?: boolean } | null>(null);
+  const [editingId, setEditingId]           = useState<string | null>(null);
+  const [isPending, startTransition]        = useTransition();
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterBrand, setFilterBrand]       = useState<string>('all');
+
+  // CSV state
+  const [csvStep, setCsvStep]   = useState<'upload' | 'preview' | 'importing' | 'done'>('upload');
+  const [csvRows, setCsvRows]   = useState<any[]>([]);
+  const [csvErrors, setCsvErrors] = useState<string[]>([]);
+  const [csvResult, setCsvResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
+
+  // Propose subcategory state
+  const [proposeParentId, setProposeParentId]   = useState('');
+  const [proposeSubName, setProposeSubName]     = useState('');
+  const [proposeStatus, setProposeStatus]       = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+
+  const showToast = (message: string, error = false) => {
+    setToast({ show: true, message, error });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  // Flat list of all categories (root + children) for display
+  const allCategories = useMemo(() => {
+    const flat: { id: string; name: string; parentName?: string }[] = [];
+    for (const root of categoryTree) {
+      flat.push({ id: root.id, name: root.name });
+      for (const child of root.children) {
+        flat.push({ id: child.id, name: child.name, parentName: root.name });
+      }
+    }
+    return flat;
+  }, [categoryTree]);
+
+  const getCategoryLabel = (id?: string | null) => {
+    if (!id) return 'Sans catégorie';
+    const cat = allCategories.find(c => c.id === id);
+    if (!cat) return 'Sans catégorie';
+    return cat.parentName ? `${cat.parentName} › ${cat.name}` : cat.name;
+  };
+
   const [form, setForm] = useState<any>({
-    name: '',
-    price: '',
-    unit: 'kg',
-    categoryId: '',
-    image: '',
-    isFeatured: false,
-    isFlashSale: false,
-    discount: '',
-    flashStart: '',
-    flashEnd: '',
-    minOrderQuantity: '1'
+    name: '', price: '', unit: 'kg', categoryId: '', brand: '', image: '',
+    isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQuantity: '1',
   });
 
   const handleEdit = (p: any) => {
     setEditingId(p.id);
     setForm({
-      name: p.name,
-      price: p.price.toString(),
-      unit: p.unit,
-      categoryId: p.categoryId,
-      image: p.image || '',
-      isFeatured: p.isFeatured,
-      isFlashSale: p.isFlashSale,
+      name: p.name, price: p.price.toString(), unit: p.unit, categoryId: p.categoryId || '',
+      brand: (p as any).brand || '', image: p.image || '',
+      isFeatured: p.isFeatured, isFlashSale: p.isFlashSale,
       discount: p.discount ? p.discount.toString() : '',
       flashStart: p.flashStart ? new Date(p.flashStart).toISOString().slice(0, 16) : '',
-      flashEnd: p.flashEnd ? new Date(p.flashEnd).toISOString().slice(0, 16) : '',
-      minOrderQuantity: p.minOrderQuantity ? p.minOrderQuantity.toString() : '1'
+      flashEnd:   p.flashEnd   ? new Date(p.flashEnd).toISOString().slice(0, 16) : '',
+      minOrderQuantity: p.minOrderQuantity ? p.minOrderQuantity.toString() : '1',
     });
     setModalOpen(true);
   };
 
   const handleCreateNew = () => {
     setEditingId(null);
-    setForm({ name: '', price: '', unit: 'kg', categoryId: '', image: '', isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQuantity: '1' });
+    setForm({ name: '', price: '', unit: 'kg', categoryId: '', brand: '', image: '', isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQuantity: '1' });
     setModalOpen(true);
   };
 
-  const handleImport = () => {
-    showToast('Importation lancée avec succès !');
-    setImportModalOpen(false);
+  const handleExportCsv = () => {
+    const header = 'Nom,Prix,Unite,Categorie,Marque,ImageURL';
+    const rows = initialProducts.map(p => {
+      const catLabel = getCategoryLabel(p.categoryId);
+      return `"${p.name}",${Number(p.price).toFixed(3)},${p.unit},"${catLabel}","${(p as any).brand || ''}","${p.image || ''}"`;
+    }).join('\n');
+    const blob = new Blob([`${header}\n${rows}`], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `catalogue_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const parseCsvFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text.trim().split('\n').filter(Boolean);
+      if (lines.length < 2) { setCsvErrors(['Fichier vide ou sans données']); setCsvStep('preview'); return; }
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+      const requiredCols = ['nom', 'prix', 'unite', 'categorie'];
+      const missing = requiredCols.filter(r => !headers.includes(r));
+      if (missing.length > 0) { setCsvErrors([`Colonnes manquantes : ${missing.join(', ')}`]); setCsvStep('preview'); return; }
+      const parsed: any[] = [];
+      const errors: string[] = [];
+      lines.slice(1).forEach((line, i) => {
+        const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        const name = cols[headers.indexOf('nom')] || '';
+        const priceRaw = cols[headers.indexOf('prix')] || '';
+        const unit = cols[headers.indexOf('unite')] || '';
+        const categoryName = cols[headers.indexOf('categorie')] || '';
+        const brand = headers.indexOf('marque') >= 0 ? cols[headers.indexOf('marque')] : '';
+        const imageIdx = headers.indexOf('imageurl');
+        const image = imageIdx >= 0 ? cols[imageIdx] : '';
+        const price = parseFloat(priceRaw.replace(',', '.'));
+        if (!name) { errors.push(`Ligne ${i + 2}: Nom manquant`); return; }
+        if (isNaN(price) || price <= 0) { errors.push(`Ligne ${i + 2} (${name}): Prix invalide "${priceRaw}"`); return; }
+        if (!unit) { errors.push(`Ligne ${i + 2} (${name}): Unité manquante`); return; }
+        parsed.push({ name, price, unit, categoryName, brand: brand || null, image: image?.startsWith('http') ? image : '' });
+      });
+      setCsvRows(parsed); setCsvErrors(errors); setCsvStep('preview');
+    };
+    reader.readAsText(file);
+  };
+
+  const handleConfirmImport = () => {
+    if (csvRows.length === 0) return;
+    setCsvStep('importing');
+    startTransition(async () => {
+      const result = await importCsvProductsAction(csvRows);
+      setCsvResult(result); setCsvStep('done');
+    });
+  };
+
+  const handleImportModalClose = () => {
+    setImportModalOpen(false); setCsvStep('upload'); setCsvRows([]); setCsvErrors([]); setCsvResult(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,136 +246,261 @@ export default function VendorCatalogClient({ initialProducts, categories, globa
         ...form,
         price: parseFloat(form.price),
         minOrderQuantity: parseFloat(form.minOrderQuantity),
-        discount: form.isFlashSale ? parseFloat(form.discount) : null,
+        brand: form.brand || null,
+        discount:   form.isFlashSale ? parseFloat(form.discount) : null,
         flashStart: form.isFlashSale && form.flashStart ? new Date(form.flashStart).toISOString() : null,
-        flashEnd: form.isFlashSale && form.flashEnd ? new Date(form.flashEnd).toISOString() : null
+        flashEnd:   form.isFlashSale && form.flashEnd   ? new Date(form.flashEnd).toISOString()   : null,
       };
-
-      if (editingId) {
-        await updateMarketplaceProductAction(editingId, payload);
-      } else {
-        await createMarketplaceProductAction(payload);
-      }
+      if (editingId) await updateMarketplaceProductAction(editingId, payload);
+      else           await createMarketplaceProductAction(payload);
       setModalOpen(false);
+      showToast(editingId ? 'Produit mis à jour ✓' : 'Produit publié ✓');
     });
   };
 
   const handleDelete = (id: string) => {
     if (confirm('Voulez-vous vraiment supprimer ce produit ?')) {
-      startTransition(async () => {
-        await deleteMarketplaceProductAction(id);
-      });
+      startTransition(async () => { await deleteMarketplaceProductAction(id); });
     }
   };
 
-  const inputClass = "w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600";
+  const handleProposeSubcat = async () => {
+    if (!proposeSubName.trim() || !proposeParentId) return;
+    setProposeStatus('sending');
+    const res = await proposeSubCategoryAction(proposeSubName.trim(), proposeParentId);
+    if ((res as any).error) { setProposeStatus('error'); }
+    else { setProposeStatus('done'); showToast('Proposition envoyée — en attente de validation admin'); }
+  };
+
+  // ── Benchmark filters ──
+  const benchCats  = useMemo(() => Array.from(new Set(benchmarkData.map(r => r.displayCategory).filter(Boolean))), [benchmarkData]);
+  const benchBrands = useMemo(() => Array.from(new Set(benchmarkData.map(r => r.brand).filter(Boolean))) as string[], [benchmarkData]);
+  const filteredBenchmark = useMemo(() => benchmarkData.filter(r => {
+    if (filterCategory !== 'all' && r.displayCategory !== filterCategory) return false;
+    if (filterBrand     !== 'all' && (r.brand ?? 'Générique') !== filterBrand) return false;
+    return true;
+  }), [benchmarkData, filterCategory, filterBrand]);
+
+  const inputClass = "w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400";
   const labelClass = "block text-[11px] font-black text-slate-500 mb-1.5 uppercase tracking-wider";
 
   return (
     <div className="flex flex-col gap-8">
-      
-      {/* Search and Action Bar */}
-      <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900/40 backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800/50 gap-6 shadow-sm dark:shadow-none">
-        <div className="relative w-full md:max-w-md">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-          <input 
-            type="text" 
-            placeholder="Rechercher mes produits..." 
-            className={`${inputClass} pl-12 h-12`} 
-          />
-        </div>
-        <div className="flex gap-3 w-full md:w-auto">
-          <button 
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-white transition-all shadow-sm dark:shadow-none" 
-            onClick={() => setImportModalOpen(true)}
-          >
-            <FileSpreadsheet size={18} /> Importer
-          </button>
-          <button 
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20" 
-            onClick={handleCreateNew}
-          >
-            <Plus size={18} /> Nouveau produit
-          </button>
-        </div>
-      </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {initialProducts.map(p => (
-          <div 
-            key={p.id} 
-            className="bg-white dark:bg-slate-900/40 rounded-[32px] border border-slate-200 dark:border-slate-800/50 overflow-hidden flex flex-col transition-all duration-300 hover:border-indigo-500/30 hover:-translate-y-1 group shadow-sm hover:shadow-xl dark:shadow-none dark:hover:shadow-indigo-500/5"
-          >
-            <div className="h-48 bg-slate-100 dark:bg-slate-950 relative overflow-hidden">
-              <img 
-                src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} 
-                className="w-full h-full object-cover opacity-90 dark:opacity-60 group-hover:opacity-100 dark:group-hover:opacity-80 group-hover:scale-105 transition-all duration-500" 
-              />
-              <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
-                {p.isFeatured && (
-                  <div className="bg-amber-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 border border-amber-400/20">
-                    🔥 Vedette
-                  </div>
-                )}
-                {p.isFlashSale && (
-                  <div className="bg-rose-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 border border-rose-400/20">
-                    ⚡ -{p.discount}%
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="p-6 flex flex-1 flex-col">
-              <div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest mb-2">
-                {categories.find(c => c.id === p.categoryId)?.name || 'Sans catégorie'}
-              </div>
-              <h4 className="text-lg font-black text-slate-900 dark:text-white leading-tight mb-4 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                {p.name}
-              </h4>
-              
-              <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800/50 flex justify-between items-end">
-                <div>
-                   <div className="flex items-baseline gap-1">
-                     <span className="text-2xl font-black text-slate-900 dark:text-white">{Number(p.price).toFixed(3)}</span>
-                     <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">DT</span>
-                   </div>
-                   <div className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-widest">par {p.unit}</div>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => handleEdit(p)} 
-                    className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-400 hover:text-white hover:bg-indigo-600 dark:hover:bg-indigo-600 hover:border-indigo-500 transition-all"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(p.id)} 
-                    className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 dark:hover:border-rose-500/20 transition-all"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-              
-              {p.isFlashSale && p.flashEnd && (
-                <div className="mt-4 flex items-center gap-2 text-[10px] font-black text-rose-500 dark:text-rose-400 uppercase tracking-widest bg-rose-50 dark:bg-rose-500/5 border border-rose-100 dark:border-rose-500/10 px-3 py-1.5 rounded-lg">
-                  <Clock size={12} /> Fin : {new Date(p.flashEnd).toLocaleDateString()}
-                </div>
-              )}
-            </div>
+      {/* ── TOOLBAR ── */}
+      <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900/40 backdrop-blur-md p-4 rounded-3xl border border-slate-200 dark:border-slate-800/50 gap-4 shadow-sm">
+        <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/50 rounded-2xl shrink-0">
+          <button onClick={() => setActiveTab('catalog')} className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-sm transition-all ${activeTab === 'catalog' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            <Package size={15} /> Mon Catalogue
+          </button>
+          <button onClick={() => setActiveTab('benchmark')} className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-sm transition-all ${activeTab === 'benchmark' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            <BarChart3 size={15} /> Benchmark Prix
+            {benchmarkData.length > 0 && <span className="ml-1 px-2 py-0.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-full text-[10px] font-black">{benchmarkData.length}</span>}
+          </button>
+        </div>
+        {activeTab === 'catalog' && (
+          <div className="flex gap-2 w-full md:w-auto">
+            <button onClick={handleExportCsv} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold text-sm hover:bg-slate-50 hover:text-emerald-600 transition-all">
+              <Download size={16} /> Exporter
+            </button>
+            <button onClick={() => { setCsvStep('upload'); setImportModalOpen(true); }} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold text-sm hover:bg-slate-50 hover:text-indigo-600 transition-all">
+              <FileSpreadsheet size={16} /> Importer CSV
+            </button>
+            <button onClick={handleCreateNew} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20">
+              <Plus size={16} /> Nouveau produit
+            </button>
           </div>
-        ))}
+        )}
       </div>
 
-      {/* Modal Produit */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? "Modifier le Produit" : "Nouveau Produit Marketplace"} width={600}>
-        <form onSubmit={handleSubmit} className="space-y-6">
+      {/* ── CATALOG TAB ── */}
+      {activeTab === 'catalog' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {initialProducts.map(p => (
+            <div key={p.id} className="bg-white dark:bg-slate-900/40 rounded-[32px] border border-slate-200 dark:border-slate-800/50 overflow-hidden flex flex-col transition-all duration-300 hover:border-indigo-500/30 hover:-translate-y-1 group shadow-sm hover:shadow-xl">
+              <div className="h-48 bg-slate-100 dark:bg-slate-950 relative overflow-hidden">
+                <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
+                <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+                  {p.isFeatured  && <div className="bg-amber-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">🔥 Vedette</div>}
+                  {p.isFlashSale && <div className="bg-rose-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">⚡ -{p.discount}%</div>}
+                </div>
+              </div>
+              <div className="p-5 flex flex-1 flex-col">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">{getCategoryLabel(p.categoryId)}</span>
+                  {(p as any).brand && <span className="px-2 py-0.5 bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 rounded-full text-[9px] font-black"><Tag size={8} className="inline mr-1" />{(p as any).brand}</span>}
+                </div>
+                <h4 className="text-base font-black text-slate-900 dark:text-white leading-tight mb-4 group-hover:text-indigo-600 transition-colors">{p.name}</h4>
+                <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800/50 flex justify-between items-end">
+                  <div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-black text-slate-900 dark:text-white">{Number(p.price).toFixed(3)}</span>
+                      <span className="text-xs font-bold text-slate-400 uppercase">DT / {p.unit}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEdit(p)} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-400 hover:text-white hover:bg-indigo-600 hover:border-indigo-500 transition-all"><Edit2 size={15} /></button>
+                    <button onClick={() => handleDelete(p.id)} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-400 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200 transition-all"><Trash2 size={15} /></button>
+                  </div>
+                </div>
+                {p.isFlashSale && p.flashEnd && (
+                  <div className="mt-3 flex items-center gap-2 text-[10px] font-black text-rose-500 uppercase tracking-widest bg-rose-50 dark:bg-rose-500/5 border border-rose-100 px-3 py-1.5 rounded-lg">
+                    <Clock size={12} /> Fin : {new Date(p.flashEnd).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          {initialProducts.length === 0 && (
+            <div className="col-span-full py-20 text-center">
+              <Package size={48} className="mx-auto text-slate-300 mb-4" />
+              <div className="text-lg font-black text-slate-900 dark:text-white mb-2">Catalogue vide</div>
+              <div className="text-slate-500 text-sm mb-6">Ajoutez vos premiers produits ou importez un CSV.</div>
+              <button onClick={handleCreateNew} className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 shadow-lg shadow-indigo-600/20">
+                <Plus size={16} className="inline mr-2" />Ajouter un produit
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── BENCHMARK TAB ── */}
+      {activeTab === 'benchmark' && (() => {
+        const myRows     = filteredBenchmark.filter(r => r.myPrice !== null);
+        const othersRows = filteredBenchmark.filter(r => r.myPrice === null);
+
+        const renderRow = (row: BenchmarkRow, i: number, highlight = false) => {
+          const cfg = positionConfig[row.position] ?? positionConfig.unset;
+          return (
+            <tr key={i} className={`transition-colors ${highlight ? 'bg-indigo-50/40 dark:bg-indigo-500/5 hover:bg-indigo-50' : 'hover:bg-slate-50 dark:hover:bg-white/[0.02]'}`}>
+              <td className="px-5 py-3.5">
+                <div className="flex items-center gap-2">
+                  {highlight && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />}
+                  <div>
+                    <div className="font-black text-slate-900 dark:text-white text-sm">{row.displayCategory}</div>
+                    {row.brand && <span className="text-[9px] font-black text-violet-500 uppercase"><Tag size={8} className="inline mr-0.5" />{row.brand}</span>}
+                  </div>
+                </div>
+              </td>
+              <td className="px-5 py-3.5 text-[10px] font-black text-slate-400 uppercase">{row.unit}</td>
+              <td className="px-5 py-3.5">
+                {row.myPrice !== null
+                  ? <span className="font-black text-slate-900 dark:text-white">{row.myPrice.toFixed(3)} DT</span>
+                  : <span className="text-slate-400 text-xs italic">—</span>}
+              </td>
+              <td className="px-5 py-3.5 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{row.min !== null ? `${row.min.toFixed(3)} DT` : '—'}</td>
+              <td className="px-5 py-3.5 text-indigo-600 dark:text-indigo-400 font-bold text-sm">{row.avg !== null ? `${row.avg.toFixed(3)} DT` : '—'}</td>
+              <td className="px-5 py-3.5 text-amber-600 dark:text-amber-400 font-bold text-sm">{row.max !== null ? `${row.max.toFixed(3)} DT` : '—'}</td>
+              <td className="px-5 py-3.5 text-center">
+                <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-black text-slate-600 dark:text-slate-300">
+                  {row.competitorCount === 0 ? '—' : `${row.competitorCount} vendeur${row.competitorCount > 1 ? 's' : ''}`}
+                </span>
+              </td>
+              <td className="px-5 py-3.5">
+                <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-black whitespace-nowrap w-fit ${cfg.bg} ${cfg.color}`}>
+                  {cfg.icon} {cfg.label}
+                </span>
+              </td>
+            </tr>
+          );
+        };
+
+        return (
+          <div className="space-y-5">
+            {/* Filter pills — category */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <ChevronDown size={14} className="text-slate-400 rotate-[-90deg]" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">Catégorie :</span>
+              {(['all', ...benchCats] as string[]).map(cat => (
+                <button key={cat} onClick={() => setFilterCategory(cat)}
+                  className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-wider transition-all ${filterCategory === cat ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-600'}`}>
+                  {cat === 'all' ? 'Tout' : cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Filter pills — brand */}
+            {benchBrands.length > 0 && (
+              <div className="flex flex-wrap gap-2 items-center">
+                <Tag size={12} className="text-slate-400" />
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">Marque :</span>
+                {(['all', ...benchBrands, 'Générique'] as string[]).map(b => (
+                  <button key={b} onClick={() => setFilterBrand(b)}
+                    className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-wider transition-all ${filterBrand === b ? 'bg-violet-600 text-white border-violet-600' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-violet-400 hover:text-violet-600'}`}>
+                    {b === 'all' ? 'Toutes' : b}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Legend */}
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(positionConfig).filter(([k]) => k !== 'unset').map(([, cfg]) => (
+                <div key={cfg.label} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase ${cfg.bg} ${cfg.color}`}>
+                  {cfg.icon} {cfg.label}
+                </div>
+              ))}
+            </div>
+
+            {filteredBenchmark.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900/40 border-2 border-dashed border-slate-200 rounded-[40px] p-16 text-center">
+                <BarChart3 size={48} className="mx-auto text-slate-300 mb-4" />
+                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Aucune donnée</h3>
+                <p className="text-slate-500 text-sm max-w-sm mx-auto">Ajoutez des produits à votre catalogue ou changez de filtre.</p>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 rounded-[32px] overflow-hidden shadow-sm">
+                <div className="p-5 border-b border-slate-100 dark:border-slate-800/50 flex items-center gap-3">
+                  <BarChart3 size={18} className="text-indigo-500" />
+                  <h2 className="text-base font-black text-slate-900 dark:text-white">
+                    {filteredBenchmark.length} segment(s) de marché · {myRows.length} dans votre catalogue
+                  </h2>
+                  <span className="ml-auto text-[10px] text-slate-400 font-medium italic">Les prix concurrents sont anonymisés</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50 dark:bg-slate-950/40">
+                      <tr>
+                        {['Segment (catégorie › sous-cat.)', 'Unité', 'Mon Prix', 'Min marché', 'Moy. marché', 'Max marché', 'Concurrence', 'Position'].map(h => (
+                          <th key={h} className="px-5 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/30">
+                      {myRows.length > 0 && (
+                        <tr className="bg-indigo-600">
+                          <td colSpan={8} className="px-5 py-2 text-[10px] font-black text-white uppercase tracking-widest">
+                            📦 Mes segments — {myRows.length} référence(s) dans mon catalogue
+                          </td>
+                        </tr>
+                      )}
+                      {myRows.map((r, i) => renderRow(r, i, true))}
+
+                      {myRows.length > 0 && othersRows.length > 0 && (
+                        <tr className="bg-slate-100 dark:bg-slate-800/60">
+                          <td colSpan={8} className="px-5 py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                            🔍 Opportunités marché — {othersRows.length} segment(s) absents de votre catalogue
+                          </td>
+                        </tr>
+                      )}
+                      {othersRows.map((r, i) => renderRow(r, i, false))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── MODAL PRODUIT ── */}
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? 'Modifier le Produit' : 'Nouveau Produit Marketplace'} width={620}>
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className={labelClass}>Nom du produit</label>
-            <input className={inputClass} value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="ex: Café Grains Robusta" required />
+            <input className={inputClass} value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="ex: Charbon Naturel Coco" required />
           </div>
-          
+
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className={labelClass}>Prix (DT)</label>
@@ -204,8 +509,8 @@ export default function VendorCatalogClient({ initialProducts, categories, globa
             <div>
               <label className={labelClass}>Unité</label>
               <select className={`${inputClass} appearance-none cursor-pointer`} value={form.unit} onChange={e => setForm({...form, unit: e.target.value})} required>
-                <option value="" className="text-slate-900">Choisir...</option>
-                {globalUnits.map(u => <option key={u.id} value={u.name} className="text-slate-900">{u.name}</option>)}
+                <option value="">Choisir...</option>
+                {globalUnits.map((u: any) => <option key={u.id} value={u.name}>{u.name}</option>)}
               </select>
             </div>
             <div>
@@ -216,10 +521,21 @@ export default function VendorCatalogClient({ initialProducts, categories, globa
 
           <div>
             <label className={labelClass}>Catégorie</label>
-            <select className={`${inputClass} appearance-none cursor-pointer`} value={form.categoryId} onChange={e => setForm({...form, categoryId: e.target.value})} required>
-              <option value="" className="text-slate-900">Sélectionner une catégorie...</option>
-              {categories.map(c => <option key={c.id} value={c.id} className="text-slate-900">{c.name}</option>)}
-            </select>
+            <CategorySelector
+              categoryTree={categoryTree}
+              value={form.categoryId}
+              onChange={id => setForm({...form, categoryId: id})}
+              onPropose={() => setProposeModalOpen(true)}
+              inputClass={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className={labelClass}><Tag size={11} className="inline mr-1" />Marque (optionnel)</label>
+            <input className={inputClass} value={form.brand} onChange={e => setForm({...form, brand: e.target.value})} placeholder='ex: Al Fakher, Fumari, Tangiers — laisser vide si générique' list="brand-list" />
+            <datalist id="brand-list">
+              {Array.from(new Set(initialProducts.map((p: any) => p.brand).filter(Boolean))).map((b: any) => <option key={b} value={b} />)}
+            </datalist>
           </div>
 
           <div>
@@ -228,106 +544,163 @@ export default function VendorCatalogClient({ initialProducts, categories, globa
           </div>
 
           <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-950/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <input 
-                type="checkbox" 
-                className="w-5 h-5 rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-indigo-600 focus:ring-indigo-500"
-                checked={form.isFeatured} 
-                onChange={e => setForm({...form, isFeatured: e.target.checked})} 
-              />
-              <span className="text-sm font-bold text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">🔥 Produit Vedette</span>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" className="w-5 h-5 rounded-lg" checked={form.isFeatured} onChange={e => setForm({...form, isFeatured: e.target.checked})} />
+              <span className="text-sm font-bold text-slate-600 dark:text-slate-300">🔥 Produit Vedette</span>
             </label>
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <input 
-                type="checkbox" 
-                className="w-5 h-5 rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-rose-600 focus:ring-rose-500"
-                checked={form.isFlashSale} 
-                onChange={e => setForm({...form, isFlashSale: e.target.checked})} 
-              />
-              <span className="text-sm font-bold text-rose-600 dark:text-rose-400 group-hover:text-rose-700 dark:group-hover:text-rose-300 transition-colors">⚡ Vente Flash</span>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" className="w-5 h-5 rounded-lg" checked={form.isFlashSale} onChange={e => setForm({...form, isFlashSale: e.target.checked})} />
+              <span className="text-sm font-bold text-rose-600">⚡ Vente Flash</span>
             </label>
           </div>
 
           {form.isFlashSale && (
-            <div className="bg-rose-50 dark:bg-rose-500/5 border border-rose-100 dark:border-rose-500/10 p-5 rounded-2xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-               <div>
-                 <label className={labelClass + " !text-rose-600 dark:!text-rose-400"}>Remise (%)</label>
-                 <input className={inputClass + " !border-rose-200 dark:!border-rose-500/20 focus:!border-rose-500"} type="number" value={form.discount} onChange={e => setForm({...form, discount: e.target.value})} placeholder="ex: 15" required />
-               </div>
-               <div className="grid grid-cols-2 gap-4">
-                 <div>
-                    <label className={labelClass + " !text-rose-600 dark:!text-rose-400"}>Début</label>
-                    <input className={inputClass + " !border-rose-200 dark:!border-rose-500/20 focus:!border-rose-500"} type="datetime-local" value={form.flashStart} onChange={e => setForm({...form, flashStart: e.target.value})} required />
-                 </div>
-                 <div>
-                    <label className={labelClass + " !text-rose-600 dark:!text-rose-400"}>Fin</label>
-                    <input className={inputClass + " !border-rose-200 dark:!border-rose-500/20 focus:!border-rose-500"} type="datetime-local" value={form.flashEnd} onChange={e => setForm({...form, flashEnd: e.target.value})} required />
-                 </div>
-               </div>
+            <div className="bg-rose-50 dark:bg-rose-500/5 border border-rose-100 p-4 rounded-2xl space-y-4">
+              <div><label className={labelClass + ' !text-rose-600'}>Remise (%)</label>
+                <input className={inputClass} type="number" value={form.discount} onChange={e => setForm({...form, discount: e.target.value})} required />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className={labelClass + ' !text-rose-600'}>Début</label>
+                  <input className={inputClass} type="datetime-local" value={form.flashStart} onChange={e => setForm({...form, flashStart: e.target.value})} required /></div>
+                <div><label className={labelClass + ' !text-rose-600'}>Fin</label>
+                  <input className={inputClass} type="datetime-local" value={form.flashEnd} onChange={e => setForm({...form, flashEnd: e.target.value})} required /></div>
+              </div>
             </div>
           )}
 
-          <div className="flex gap-3 pt-4">
-            <button type="button" className="flex-1 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" onClick={() => setModalOpen(false)}>Annuler</button>
-            <button type="submit" className="flex-[2] px-6 py-3 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50" disabled={isPending}>
-              {isPending ? 'Action...' : (editingId ? 'Mettre à jour' : 'Publier le produit')}
+          <div className="flex gap-3 pt-2">
+            <button type="button" className="flex-1 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 font-bold hover:bg-slate-50 transition-colors" onClick={() => setModalOpen(false)}>Annuler</button>
+            <button type="submit" className="flex-[2] px-6 py-3 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 disabled:opacity-50" disabled={isPending}>
+              {isPending ? 'Enregistrement...' : (editingId ? 'Mettre à jour' : 'Publier le produit')}
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* CSV Import Modal */}
-      <Modal open={importModalOpen} onClose={() => setImportModalOpen(false)} title="Importer votre catalogue (CSV)" width={500}>
-         <div className="space-y-6">
-            <div className="p-6 bg-slate-50 dark:bg-slate-950/50 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4">
-               <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-wider">
-                  <FileSpreadsheet size={18} className="text-indigo-600 dark:text-indigo-400" /> Structure CSV
-               </h3>
-               <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                  Votre fichier doit contenir les colonnes suivantes : <br />
-                  <code className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-400/10 px-1.5 py-0.5 rounded mt-2 inline-block font-mono">Nom, Prix, Unité, Catégorie, ImageURL</code>
-               </p>
-               <button 
-                  onClick={() => {
-                    const blob = new Blob(["Nom,Prix,Unite,Categorie,ImageURL\nCafe Grains,24.500,kg,Cafe,https://...\nLait Entier,1.450,Litre,Laitage,"], { type: 'text/csv' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'modele_catalogue_coffeeshop.csv';
-                    a.click();
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-black text-xs hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
-               >
-                  Télécharger le modèle CSV
-               </button>
+      {/* ── MODAL PROPOSER UNE SOUS-CATÉGORIE ── */}
+      <Modal open={proposeModalOpen} onClose={() => { setProposeModalOpen(false); setProposeStatus('idle'); setProposeSubName(''); }} title="Proposer une sous-catégorie" width={480}>
+        {proposeStatus === 'done' ? (
+          <div className="flex flex-col items-center gap-4 py-8">
+            <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20"><CheckCircle2 size={32} /></div>
+            <div className="text-center">
+              <div className="font-black text-slate-900 dark:text-white text-lg mb-1">Proposition envoyée !</div>
+              <p className="text-slate-500 text-sm">Votre suggestion sera examinée par notre équipe. Vous serez notifié dès son approbation.</p>
             </div>
-
-            <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[32px] p-12 text-center group hover:border-indigo-500/30 transition-colors cursor-pointer relative overflow-hidden">
-               <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-400 dark:text-slate-700 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:scale-110 transition-all duration-300 shadow-inner">
-                  <Package size={32} />
-               </div>
-               <div className="text-sm font-black text-slate-900 dark:text-white mb-1">Cliquez pour uploader</div>
-               <div className="text-xs text-slate-500 font-bold">ou glissez votre fichier ici</div>
-               <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept=".csv" />
+            <button onClick={() => { setProposeModalOpen(false); setProposeStatus('idle'); setProposeSubName(''); }} className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-500">Fermer</button>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <div className="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-2xl text-sm text-amber-700 dark:text-amber-300 font-medium">
+              💡 Votre proposition sera soumise à validation avant d'être disponible pour tous les vendeurs.
             </div>
-
+            <div>
+              <label className={labelClass}>Catégorie parente</label>
+              <select className={`${inputClass} appearance-none cursor-pointer`} value={proposeParentId} onChange={e => setProposeParentId(e.target.value)} required>
+                <option value="">Choisir une catégorie principale...</option>
+                {categoryTree.map(c => <option key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ''}{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Nom de la nouvelle sous-catégorie</label>
+              <input className={inputClass} value={proposeSubName} onChange={e => setProposeSubName(e.target.value)} placeholder="ex: Charbons naturel coco, Têtes en verre..." />
+            </div>
+            {proposeStatus === 'error' && (
+              <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-sm font-bold">
+                <AlertCircle size={16} /> Cette sous-catégorie existe déjà.
+              </div>
+            )}
             <div className="flex gap-3">
-               <button onClick={() => setImportModalOpen(false)} className="flex-1 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">Annuler</button>
-               <button onClick={handleImport} className="flex-[2] px-4 py-3 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-500 transition-colors">Lancer l'importation</button>
+              <button type="button" onClick={() => setProposeModalOpen(false)} className="flex-1 px-4 py-3 rounded-2xl border border-slate-200 text-slate-500 font-bold hover:bg-slate-50">Annuler</button>
+              <button type="button" onClick={handleProposeSubcat} disabled={!proposeSubName.trim() || !proposeParentId || proposeStatus === 'sending'} className="flex-[2] px-4 py-3 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-500 disabled:opacity-50">
+                {proposeStatus === 'sending' ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Envoyer la proposition'}
+              </button>
             </div>
-         </div>
+          </div>
+        )}
       </Modal>
 
-      {/* Floating Toast */}
+      {/* ── MODAL CSV IMPORT ── */}
+      <Modal open={importModalOpen} onClose={handleImportModalClose} title="Importer votre catalogue (CSV)" width={600}>
+        <div className="space-y-6">
+          {csvStep === 'upload' && (
+            <>
+              <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <p className="text-xs text-slate-500 font-medium">Format : <code className="text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded font-mono">Nom, Prix, Unite, Categorie, Marque, ImageURL</code></p>
+                <button onClick={() => { const b = new Blob(['Nom,Prix,Unite,Categorie,Marque,ImageURL\nCharbon Coco King,12.500,kg,Charbons,CocoKing,\nTabac Al Fakher Pomme,8.900,50g,Tabac,Al Fakher,'], { type: 'text/csv' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'modele_catalogue.csv'; a.click(); }} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-indigo-200 text-indigo-600 font-black text-xs hover:bg-indigo-50 transition-colors">
+                  <Download size={14} /> Télécharger le modèle
+                </button>
+              </div>
+              <label className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[24px] p-10 flex flex-col items-center gap-3 group hover:border-indigo-500/50 cursor-pointer transition-colors">
+                <div className="w-14 h-14 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-indigo-500 transition-colors"><FileSpreadsheet size={28} /></div>
+                <div className="text-sm font-black text-slate-900 dark:text-white">Glissez votre CSV ici</div>
+                <div className="text-xs text-slate-500">ou cliquez pour choisir un fichier</div>
+                <input type="file" accept=".csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) parseCsvFile(f); }} />
+              </label>
+            </>
+          )}
+          {csvStep === 'preview' && (
+            <>
+              {csvErrors.length > 0 && <div className="space-y-2">{csvErrors.map((err, i) => <div key={i} className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-600 font-bold"><AlertCircle size={14} className="shrink-0 mt-0.5" />{err}</div>)}</div>}
+              {csvRows.length > 0 ? (
+                <>
+                  <div className="text-xs font-black text-slate-500 uppercase tracking-widest">{csvRows.length} produits prêts à importer</div>
+                  <div className="overflow-auto max-h-64 rounded-2xl border border-slate-200 dark:border-slate-800">
+                    <table className="w-full text-xs">
+                      <thead className="bg-slate-50 dark:bg-slate-900/50"><tr>{['Nom', 'Prix', 'Unité', 'Catégorie', 'Marque'].map(h => <th key={h} className="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase">{h}</th>)}</tr></thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {csvRows.map((r, i) => (
+                          <tr key={i} className="hover:bg-slate-50">
+                            <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">{r.name}</td>
+                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.price.toFixed(3)} DT</td>
+                            <td className="px-4 py-3 text-slate-500">{r.unit}</td>
+                            <td className="px-4 py-3"><span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-md font-bold">{r.categoryName || '—'}</span></td>
+                            <td className="px-4 py-3">{r.brand ? <span className="px-2 py-0.5 bg-violet-50 text-violet-600 rounded-md font-bold">{r.brand}</span> : <span className="text-slate-400">—</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex gap-3">
+                    <button onClick={() => setCsvStep('upload')} className="flex-1 px-4 py-3 rounded-2xl border border-slate-200 text-slate-500 font-bold hover:bg-slate-50">Retour</button>
+                    <button onClick={handleConfirmImport} disabled={isPending} className="flex-[2] px-4 py-3 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 disabled:opacity-50">✅ Confirmer l'importation</button>
+                  </div>
+                </>
+              ) : <div className="text-center py-10 text-slate-400 font-bold text-sm">Aucune ligne valide trouvée.</div>}
+            </>
+          )}
+          {csvStep === 'importing' && (
+            <div className="flex flex-col items-center gap-4 py-12">
+              <Loader2 size={36} className="text-indigo-500 animate-spin" />
+              <div className="text-sm font-black text-slate-900 dark:text-white">Import en cours...</div>
+              <div className="text-xs text-slate-500">{csvRows.length} produits à traiter</div>
+            </div>
+          )}
+          {csvStep === 'done' && csvResult && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-5 bg-emerald-50 rounded-2xl border border-emerald-100">
+                <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shrink-0"><CheckCircle2 size={24} /></div>
+                <div>
+                  <div className="font-black text-emerald-700">{csvResult.created} produit(s) créés</div>
+                  {csvResult.skipped > 0 && <div className="text-xs text-slate-500 mt-1">{csvResult.skipped} ignoré(s)</div>}
+                </div>
+              </div>
+              {csvResult.errors.length > 0 && <div className="space-y-1.5">{csvResult.errors.map((err, i) => <div key={i} className="text-xs text-rose-600 font-bold flex items-center gap-2 bg-rose-50 px-3 py-2 rounded-xl"><AlertCircle size={12} />{err}</div>)}</div>}
+              <button onClick={handleImportModalClose} className="w-full px-4 py-3 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-500">Fermer et voir le catalogue</button>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* ── TOAST ── */}
       {toast?.show && (
-        <div className="fixed bottom-10 right-10 bg-white dark:bg-slate-900 p-4 pr-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex items-center gap-4 animate-in slide-in-from-right duration-500 z-[999]">
-           <div className="bg-emerald-500 w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
-              <CheckCircle2 size={20} />
-           </div>
-           <div>
-              <div className="font-black text-sm text-slate-900 dark:text-white">Succès !</div>
-              <div className="text-xs text-slate-500 font-medium">{toast.message}</div>
-           </div>
+        <div className={`fixed bottom-10 right-10 p-4 pr-8 rounded-3xl border shadow-2xl flex items-center gap-4 animate-in slide-in-from-right duration-500 z-[999] ${toast.error ? 'bg-rose-50 border-rose-200' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'}`}>
+          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg ${toast.error ? 'bg-rose-500' : 'bg-emerald-500'}`}>
+            {toast.error ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
+          </div>
+          <div>
+            <div className="font-black text-sm text-slate-900 dark:text-white">{toast.error ? 'Erreur' : 'Succès !'}</div>
+            <div className="text-xs text-slate-500 font-medium">{toast.message}</div>
+          </div>
         </div>
       )}
     </div>

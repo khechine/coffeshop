@@ -295,6 +295,20 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
             )}
           </div>
         )}
+        {/* ADMINISTRATION PLATEFORME (SuperAdmin Only) */}
+        {role === 'SUPERADMIN' && (
+          <div className="nav-group" style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            {displayExpanded && (
+              <div className="nav-section-header" style={{ padding: '0 12px 6px' }}>
+                <span className="nav-section-label" style={{ padding: 0, color: '#818CF8' }}>Administration Plateforme</span>
+              </div>
+            )}
+            <Link href="/superadmin/marketplace/categories" className={`nav-item${isActive('/superadmin/marketplace/categories') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
+              <LayoutGrid size={18} />
+              {displayExpanded && <span>Catégories Marketplace</span>}
+            </Link>
+          </div>
+        )}
       </nav>
 
     </aside>

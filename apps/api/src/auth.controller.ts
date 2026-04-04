@@ -1,5 +1,6 @@
-import { Controller, Get, Query, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UnauthorizedException } from '@nestjs/common';
 import { prisma } from '@coffeeshop/database';
+import * as bcrypt from 'bcrypt';
 
 @Controller('auth')
 export class AuthController {
@@ -72,6 +73,41 @@ export class AuthController {
       storeName: terminal.store?.name,
       terminalId: terminal.id,
       terminalNickname: terminal.nickname
+    };
+  }
+
+  @Post('login')
+  async login(@Body() body: any) {
+    const { email, password } = body;
+    if (!email || !password) {
+      throw new UnauthorizedException('Email et mot de passe requis');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+      include: { store: { select: { name: true } } }
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Utilisateur non trouvé');
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      throw new UnauthorizedException('Mot de passe incorrect');
+    }
+
+    // In a real app we'd use JwtService, but let's follow the established pattern or simple JWT
+    return {
+      token: `user-jwt-${user.id}-${Date.now()}`, // Temporary token format
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        storeId: user.storeId,
+        storeName: user.store?.name
+      }
     };
   }
 }

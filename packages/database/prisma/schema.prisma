@@ -75,6 +75,7 @@ model Store {
   officialDocs  Json?    // Array of { name: string, url: string, type: string, status: string }
   trialEndsAt   DateTime?
   isVerified    Boolean  @default(false)
+  forceMarketplaceAccess Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -90,6 +91,7 @@ model Store {
   subscription   Subscription?
   tables         StoreTable[]
   terminals      PosTerminal[]
+  categories     Category[]
 
   activityPoleId String?
 
@@ -151,10 +153,14 @@ model ActivityPole {
 }
 
 model Category {
-  id       String    @id @default(cuid())
-  name     String
+  id        String    @id @default(cuid())
+  name      String
+  storeId   String?
+  store     Store?    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   products  Product[]
   createdAt DateTime  @default(now())
+
+  @@index([storeId])
 }
 
 model Product {
@@ -278,8 +284,7 @@ model VendorProfile {
   status      String   @default("PENDING") // PENDING, ACTIVE, REJECTED
   createdAt   DateTime @default(now())
 
-  activityPoleId String?
-  activityPole   ActivityPole? @relation(fields: [activityPoleId], references: [id])
+  activityPoles ActivityPole[]
 
   categories MarketplaceCategory[]
   products   MarketplaceProduct[]
@@ -303,9 +308,20 @@ model MarketplaceCategory {
   id       String               @id @default(cuid())
   name     String
   icon     String?
-  products MarketplaceProduct[]
+  slug     String?              @unique
+
+  // Hierarchy: null = root category, set = subcategory
+  parentId String?
+  parent   MarketplaceCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children MarketplaceCategory[] @relation("CategoryTree")
+
+  // Approval workflow for vendor-proposed subcategories
+  status            String  @default("ACTIVE") // ACTIVE | PENDING | REJECTED
+  proposedByVendorId String? // vendorId who proposed this subcategory
+
+  products  MarketplaceProduct[]
   vendors   VendorProfile[]
-  createdAt DateTime        @default(now())
+  createdAt DateTime             @default(now())
 }
 
 model MarketplaceProduct {
@@ -317,18 +333,21 @@ model MarketplaceProduct {
   categoryId String?
   category   MarketplaceCategory? @relation(fields: [categoryId], references: [id])
 
+  brand    String?   // ex: "Al Fakher", "Fumari" — null if generic
+  tags     String[]  @default([]) // free tags for search/grouping
+
   isFeatured  Boolean   @default(false)
   isFlashSale Boolean   @default(false)
   discount    Decimal?
   flashStart  DateTime?
   flashEnd    DateTime?
-  image       String? // Mocked image URL
-  upsellIds   String[]  @default([]) // IDs of products to suggest for upselling
+  image       String?
+  upsellIds   String[]  @default([])
 
-  vendorId  String
-  vendor    VendorProfile @relation(fields: [vendorId], references: [id])
-  minOrderQuantity Decimal @default(1)
-  createdAt DateTime      @default(now())
+  vendorId         String
+  vendor           VendorProfile @relation(fields: [vendorId], references: [id])
+  minOrderQuantity Decimal       @default(1)
+  createdAt        DateTime      @default(now())
 }
 
 enum OrderStatus {

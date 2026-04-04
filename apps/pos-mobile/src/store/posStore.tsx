@@ -29,7 +29,8 @@ export interface SaleEvent {
   baristaId?: string; // Accountability
 }
 
-export type UserRole = 'owner' | 'cashier' | null;
+export type UserRole = 'owner' | 'cashier' | 'vendor' | 'superadmin' | null;
+export type AuthMode = 'TERMINAL' | 'ACCOUNT' | null;
 
 export interface POSState {
   cart: Record<string, number>;
@@ -40,6 +41,7 @@ export interface POSState {
   authToken: string | null;
   storeId: string | null;
   storeName: string | null;
+  authMode: AuthMode;
   storeTables: { id: string, label: string }[];
   currentBarista: { 
     id: string, name: string, 
@@ -54,6 +56,7 @@ export interface POSState {
   rachmaHistory: { id: string, productId: string, name: string, timestamp: number, type: 'ADD' | 'REMOVE' }[];
   authenticate: (token: string, storeId: string) => void;
   activateTerminal: (code: string, storeId: string) => Promise<boolean>;
+  loginWithAccount: (email: string, pass: string) => Promise<boolean>;
   loginWithPin: (pin: string) => Promise<boolean>;
   logoutBarista: () => void;
   logout: () => void;
@@ -104,6 +107,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeName, setStoreName] = useState<string | null>(null);
+  const [authMode, setAuthMode] = useState<AuthMode>(null);
   const [storeTables, setStoreTablesState] = useState<{ id: string, label: string }[]>([]);
   const [rachmaCart, setRachmaCart] = useState<Record<string, number>>({});
   const [rachmaHistory, setRachmaHistory] = useState<{ id: string, productId: string, name: string, timestamp: number, type: 'ADD' | 'REMOVE' }[]>([]);
@@ -130,6 +134,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const storedToken = await AsyncStorage.getItem('pos-auth-token');
         const storedStoreId = await AsyncStorage.getItem('pos-store-id');
         const storedStoreName = await AsyncStorage.getItem('pos-store-name');
+        const storedAuthMode = await AsyncStorage.getItem('pos-auth-mode');
         const storedStoreTables = await AsyncStorage.getItem('pos-store-tables');
         const storedBarista = await AsyncStorage.getItem('pos-current-barista');
         const storedRole = await AsyncStorage.getItem('pos-user-role');
@@ -142,6 +147,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (storedToken) setAuthToken(storedToken);
         if (storedStoreId) setStoreId(storedStoreId);
         if (storedStoreName) setStoreName(storedStoreName);
+        if (storedAuthMode) setAuthMode(storedAuthMode as AuthMode);
         if (storedStoreTables) setStoreTablesState(JSON.parse(storedStoreTables));
         if (storedBarista) setCurrentBarista(JSON.parse(storedBarista));
         if (storedRole) setUserRole(storedRole as UserRole);
@@ -176,6 +182,9 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (storeName) AsyncStorage.setItem('pos-store-name', storeName).catch(() => {});
       else AsyncStorage.removeItem('pos-store-name');
 
+      if (authMode) AsyncStorage.setItem('pos-auth-mode', authMode).catch(() => {});
+      else AsyncStorage.removeItem('pos-auth-mode');
+
       if (storeTables.length > 0) AsyncStorage.setItem('pos-store-tables', JSON.stringify(storeTables)).catch(() => {});
       else AsyncStorage.removeItem('pos-store-tables');
 
@@ -188,7 +197,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       AsyncStorage.setItem('pos-active-theme', themeName).catch(() => {});
       AsyncStorage.setItem('pos-rachma-cart', JSON.stringify(rachmaCart)).catch(() => {});
     }
-  }, [cart, tables, pendingSales, authToken, storeId, storeName, storeTables, currentBarista, userRole, themeName, rachmaCart, isReady]);
+  }, [cart, tables, pendingSales, authToken, storeId, storeName, authMode, storeTables, currentBarista, userRole, themeName, rachmaCart, isReady]);
 
   const authenticate = (token: string, store: string) => {
     setAuthToken(token);
@@ -204,6 +213,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAuthToken('terminal-token-' + data.terminalId);
         setStoreId(data.storeId);
         setStoreName(data.storeName);
+        setAuthMode('TERMINAL');
         return true;
       }
     } catch (e) {
@@ -211,6 +221,37 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     return false;
   };
+
+  const loginWithAccount = async (email: string, pass: string): Promise<boolean> => {
+    const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAuthToken(data.token);
+        setStoreId(data.user.storeId);
+        setStoreName(data.user.storeName);
+        setAuthMode('ACCOUNT');
+        
+        let role: UserRole = null;
+        const backendRole = String(data.user.role).toUpperCase();
+        if (backendRole === 'STORE_OWNER') role = 'owner';
+        else if (backendRole === 'VENDOR') role = 'vendor';
+        else if (backendRole === 'SUPERADMIN') role = 'superadmin';
+        else role = 'cashier';
+        
+        setUserRole(role);
+        return true;
+      }
+    } catch (e) {
+      console.error("❌ Erreur connexion compte:", e);
+    }
+    return false;
+  }
 
   const loginWithPin = async (pin: string): Promise<boolean> => {
     const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
@@ -578,8 +619,8 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   return (
     <POSContext.Provider value={{ 
-      cart, tables, activeTable, products, pendingSales, authToken, storeId, storeName, storeTables,
-      currentBarista, userRole, themeName, theme, rachmaCart, rachmaHistory, authenticate, activateTerminal, loginWithPin, logoutBarista, logout, deactivateTerminal, setTheme,
+      cart, tables, activeTable, products, pendingSales, authToken, storeId, storeName, authMode, storeTables,
+      currentBarista, userRole, themeName, theme, rachmaCart, rachmaHistory, authenticate, activateTerminal, loginWithAccount, loginWithPin, logoutBarista, logout, deactivateTerminal, setTheme,
       addToCart, removeFromCart, addToRachma, removeFromRachma, clearRachma, clearCart, 
       setActiveTable, checkout, checkoutTable, checkoutRachma, 
       syncSales, setProducts, setStoreTables, getTotalItems, getTableTotal, getTotalPrice, getRachmaTotal,

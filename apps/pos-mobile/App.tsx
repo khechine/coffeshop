@@ -24,30 +24,44 @@ Notifications.setNotificationHandler({
 
 // ─── LOGIN VIEW ────────────────────────────────────────────
 function LoginView() {
-  const { authenticate, activateTerminal } = usePOSStore();
+  const { activateTerminal, loginWithAccount, theme } = usePOSStore();
+  const [loginMode, setLoginMode] = useState<'terminal' | 'account'>('terminal');
+  
+  // Terminal state
   const [storeIdInput, setStoreIdInput] = useState('');
   const [activationCode, setActivationCode] = useState('');
+  
+  // Account state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  
   const [showScanner, setShowScanner] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [isLoading, setIsLoading] = useState(false);
   const { alert } = useConfirm();
-  const { theme } = usePOSStore();
   const loginStyles = useMemo(() => createLoginStyles(theme), [theme]);
   const mainStyles = useMemo(() => createMainStyles(theme), [theme]);
   
-  const handleLogin = async () => {
+  const handleTerminalLogin = async () => {
     if (!storeIdInput.trim() || !activationCode.trim()) {
       alert("Champs requis", "Veuillez entrer l'ID Boutique ET le Code d'Activation à 6 chiffres.");
       return;
     }
-    
     setIsLoading(true);
     const success = await activateTerminal(activationCode.trim(), storeIdInput.trim());
     setIsLoading(false);
+    if (!success) alert("Échec", "ID Boutique ou Code d'Activation invalide.");
+  };
 
-    if (!success) {
-      alert("Échec", "ID Boutique ou Code d'Activation invalide.");
+  const handleAccountLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      alert("Champs requis", "Email et mot de passe nécessaires.");
+      return;
     }
+    setIsLoading(true);
+    const success = await loginWithAccount(email.trim(), password.trim());
+    setIsLoading(false);
+    if (!success) alert("Échec", "Identifiants invalides.");
   };
 
   const startScan = async () => {
@@ -66,7 +80,6 @@ function LoginView() {
     try {
       const payload = JSON.parse(data);
       if (payload.type === 'coffeeshop-pair' && payload.storeId) {
-        // If QR contains both (future proofing)
         if (payload.code) {
            activateTerminal(payload.code, payload.storeId);
         } else {
@@ -112,58 +125,115 @@ function LoginView() {
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}>
         <View style={{ width: '85%', maxWidth: 400, backgroundColor: theme.colors.surface, padding: 32, borderRadius: 30, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.glassBorder }}>
           <Text style={{ fontSize: 60, marginBottom: 20 }}>🏰</Text>
-          <Text style={{ fontSize: 28, fontWeight: '900', color: theme.colors.cream, marginBottom: 8 }}>Activation Caisse</Text>
-          <Text style={{ fontSize: 16, color: theme.colors.creamMuted, textAlign: 'center', marginBottom: 32, lineHeight: 22 }}>
-            Veuillez entrer les identifiants fournis dans votre tableau de bord CoffeeShop.
+          
+          <View style={{ flexDirection: 'row', backgroundColor: theme.colors.background, borderRadius: 12, padding: 4, marginBottom: 24, width: '100%' }}>
+            <TouchableOpacity 
+              style={{ flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: loginMode === 'terminal' ? theme.colors.caramel : 'transparent', alignItems: 'center' }}
+              onPress={() => setLoginMode('terminal')}
+            >
+              <Text style={{ color: loginMode === 'terminal' ? theme.colors.background : theme.colors.cream, fontWeight: '800', fontSize: 13 }}>Caisse</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={{ flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: loginMode === 'account' ? theme.colors.caramel : 'transparent', alignItems: 'center' }}
+              onPress={() => setLoginMode('account')}
+            >
+              <Text style={{ color: loginMode === 'account' ? theme.colors.background : theme.colors.cream, fontWeight: '800', fontSize: 13 }}>Partenaire</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={{ fontSize: 24, fontWeight: '900', color: theme.colors.cream, marginBottom: 8 }}>
+            {loginMode === 'terminal' ? 'Activation Caisse' : 'Accès Partenaire'}
+          </Text>
+          <Text style={{ fontSize: 14, color: theme.colors.creamMuted, textAlign: 'center', marginBottom: 32, lineHeight: 20 }}>
+            {loginMode === 'terminal' 
+              ? 'Veuillez entrer les identifiants fournis dans votre tableau de bord.' 
+              : 'Connectez-vous à votre compte fournisseur ou propriétaire.'}
           </Text>
 
-          <View style={{ width: '100%', marginBottom: 12 }}>
-            <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>ID BOUTIQUE</Text>
-            <TextInput
-              style={{ width: '100%', backgroundColor: theme.colors.background, padding: 20, borderRadius: 16, color: theme.colors.cream, fontSize: 18, marginBottom: 20, borderWidth: 1, borderColor: theme.colors.glassBorder }}
-              placeholder="Ex: store-123"
-              placeholderTextColor="rgba(255,255,255,0.2)"
-              value={storeIdInput}
-              onChangeText={setStoreIdInput}
-              autoCapitalize="none"
-            />
-          </View>
+          {loginMode === 'terminal' ? (
+            <>
+              <View style={{ width: '100%', marginBottom: 12 }}>
+                <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>ID BOUTIQUE</Text>
+                <TextInput
+                  style={{ width: '100%', backgroundColor: theme.colors.background, padding: 18, borderRadius: 16, color: theme.colors.cream, fontSize: 16, marginBottom: 16, borderWidth: 1, borderColor: theme.colors.glassBorder }}
+                  placeholder="Ex: store-123"
+                  placeholderTextColor="rgba(255,255,255,0.2)"
+                  value={storeIdInput}
+                  onChangeText={setStoreIdInput}
+                  autoCapitalize="none"
+                />
+              </View>
+              <View style={{ width: '100%', marginBottom: 12 }}>
+                <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>CODE D'ACTIVATION</Text>
+                <TextInput
+                  style={{ width: '100%', backgroundColor: theme.colors.background, padding: 18, borderRadius: 16, color: theme.colors.cream, fontSize: 16, marginBottom: 20, borderWidth: 1, borderColor: theme.colors.glassBorder }}
+                  placeholder="Code à 6 chiffres"
+                  placeholderTextColor="rgba(255,255,255,0.2)"
+                  keyboardType="number-pad"
+                  value={activationCode}
+                  onChangeText={setActivationCode}
+                  maxLength={6}
+                />
+              </View>
+              <TouchableOpacity 
+                style={{ width: '100%', backgroundColor: theme.colors.caramel, padding: 18, borderRadius: 16, alignItems: 'center', marginBottom: 16 }} 
+                onPress={handleTerminalLogin}
+                disabled={isLoading}
+              >
+                <Text style={{ color: theme.colors.background, fontSize: 16, fontWeight: '800' }}>
+                  {isLoading ? 'Activation...' : 'Activer ce terminal'}
+                </Text>
+              </TouchableOpacity>
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 12 }}>
+                <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.glassBorder }} />
+                <Text style={{ marginHorizontal: 16, color: theme.colors.creamMuted, fontSize: 11, fontWeight: '900', letterSpacing: 1 }}>OU</Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.glassBorder }} />
+              </View>
 
-          <View style={{ width: '100%', marginBottom: 12 }}>
-            <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>CODE D'ACTIVATION</Text>
-            <TextInput
-              style={{ width: '100%', backgroundColor: theme.colors.background, padding: 20, borderRadius: 16, color: theme.colors.cream, fontSize: 18, marginBottom: 20, borderWidth: 1, borderColor: theme.colors.glassBorder }}
-              placeholder="Code à 6 chiffres"
-              placeholderTextColor="rgba(255,255,255,0.2)"
-              keyboardType="number-pad"
-              value={activationCode}
-              onChangeText={setActivationCode}
-              maxLength={6}
-            />
-          </View>
-
-          <TouchableOpacity 
-            style={{ width: '100%', backgroundColor: theme.colors.caramel, padding: 20, borderRadius: 16, alignItems: 'center' }} 
-            onPress={handleLogin}
-            disabled={isLoading}
-          >
-            <Text style={{ color: theme.colors.background, fontSize: 18, fontWeight: '800' }}>
-              {isLoading ? "VÉRIFICATION..." : "ACTIVER CET APPAREIL"}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 24 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.glassBorder }} />
-            <Text style={{ marginHorizontal: 16, color: theme.colors.creamMuted, fontSize: 11, fontWeight: '900', letterSpacing: 1 }}>OU</Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.glassBorder }} />
-          </View>
-
-          <TouchableOpacity 
-            style={{ marginTop: 0, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, backgroundColor: 'rgba(212, 132, 70, 0.1)', borderWidth: 1, borderColor: theme.colors.caramel, width: '100%', alignItems: 'center' }} 
-            onPress={startScan}
-          >
-            <Text style={{ color: theme.colors.caramel, fontSize: 13, fontWeight: '800' }}>SCANNER LE CODE QR</Text>
-          </TouchableOpacity>
+              <TouchableOpacity 
+                style={{ paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, backgroundColor: 'rgba(212, 132, 70, 0.1)', borderWidth: 1, borderColor: theme.colors.caramel, width: '100%', alignItems: 'center' }} 
+                onPress={startScan}
+              >
+                <Text style={{ color: theme.colors.caramel, fontSize: 13, fontWeight: '800' }}>SCANNER LE CODE QR</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={{ width: '100%', marginBottom: 12 }}>
+                <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>E-MAIL</Text>
+                <TextInput
+                  style={{ width: '100%', backgroundColor: theme.colors.background, padding: 18, borderRadius: 16, color: theme.colors.cream, fontSize: 16, marginBottom: 16, borderWidth: 1, borderColor: theme.colors.glassBorder }}
+                  placeholder="votre@email.com"
+                  placeholderTextColor="rgba(255,255,255,0.2)"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+              </View>
+              <View style={{ width: '100%', marginBottom: 12 }}>
+                <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>MOT DE PASSE</Text>
+                <TextInput
+                  style={{ width: '100%', backgroundColor: theme.colors.background, padding: 18, borderRadius: 16, color: theme.colors.cream, fontSize: 16, marginBottom: 20, borderWidth: 1, borderColor: theme.colors.glassBorder }}
+                  placeholder="••••••••"
+                  placeholderTextColor="rgba(255,255,255,0.2)"
+                  secureTextEntry
+                  value={password}
+                  onChangeText={setPassword}
+                />
+              </View>
+              <TouchableOpacity 
+                style={{ width: '100%', backgroundColor: theme.colors.caramel, padding: 18, borderRadius: 16, alignItems: 'center' }} 
+                onPress={handleAccountLogin}
+                disabled={isLoading}
+              >
+                <Text style={{ color: theme.colors.background, fontSize: 16, fontWeight: '800' }}>
+                  {isLoading ? 'Connexion...' : 'Se connecter'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -1247,13 +1317,13 @@ function MenuScreen({ onSelect }: { onSelect: (tab: TabId) => void }) {
   );
 }
 
-function MainApp() {
-  const { authToken, storeId, currentBarista, userRole, setActiveTable, theme, themeName, activeTable } = usePOSStore();
+// ─── POS ROOT (FORMERLY MAIN APP) ──────────────────────────
+function POSRoot() {
+  const { storeId, currentBarista, userRole, setActiveTable, theme, activeTable } = usePOSStore();
   const isOwner = userRole === 'owner';
   const initialTab: TabId = isOwner ? 'menu' : ((currentBarista?.defaultPosMode?.toLowerCase() as TabId) || 'tables');
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
 
-  if (!authToken || !storeId) return <LoginView />;
   if (!currentBarista) return <PinLoginView />;
 
   const handleSelectTable = (id: string) => {
@@ -1268,13 +1338,13 @@ function MainApp() {
       case 'bar': return <PreparateurScreen onBack={() => setActiveTab('menu')} />;
       case 'rachma': return <RachmaScreen />;
       case 'dashboard': return <DashboardScreen />;
-      case 'products': return <ProductsScreen storeId={storeId} />;
-      case 'categories': return <CategoriesScreen storeId={storeId} />;
+      case 'products': return <ProductsScreen storeId={storeId!} />;
+      case 'categories': return <CategoriesScreen storeId={storeId!} />;
       case 'stock': return <StockScreen />;
-      case 'suppliers': return <SuppliersScreen storeId={storeId} />;
-      case 'orders': return <OrdersScreen storeId={storeId} />;
+      case 'suppliers': return <SuppliersScreen storeId={storeId!} />;
+      case 'orders': return <OrdersScreen storeId={storeId!} />;
       case 'staff': return <StaffScreen />;
-      case 'notifs': return <NotificationsScreen storeId={storeId} />;
+      case 'notifs': return <NotificationsScreen storeId={storeId!} />;
       case 'caisse':
       default: return <CaisseScreen onBackToTables={() => setActiveTab('tables')} />;
     }
@@ -1287,7 +1357,6 @@ function MainApp() {
         {renderScreen()}
       </View>
       
-      {/* ─── TAB BAR (FOOTER) ─────────────────────────── */}
       <View style={{ padding: 12, paddingTop: 0, paddingBottom: Platform.OS === 'android' ? 32 : 0 }}>
         <GlassPanel intensity={60} style={{ 
           flexDirection: 'row', 
@@ -1316,7 +1385,7 @@ function MainApp() {
                   marginHorizontal: 4
                 }}
               >
-                <Text style={{ fontSize: 18, marginBottom: 1, opacity: isActive ? 1 : 0.4 }}>{isActive ? tab.icon : tab.icon}</Text>
+                <Text style={{ fontSize: 18, marginBottom: 1, opacity: isActive ? 1 : 0.4 }}>{tab.icon}</Text>
                 <Text style={{ 
                   fontSize: 8, 
                   fontWeight: '900', 
@@ -1332,6 +1401,20 @@ function MainApp() {
       </View>
     </SafeAreaView>
   );
+}
+
+import { ManagementRoot } from './src/screens/management/ManagementRoot';
+
+function MainApp() {
+  const { authToken, storeId, authMode } = usePOSStore();
+
+  if (!authToken || !storeId || !authMode) return <LoginView />;
+
+  if (authMode === 'TERMINAL') {
+    return <POSRoot />;
+  }
+
+  return <ManagementRoot />;
 }
 
 export default function App() {

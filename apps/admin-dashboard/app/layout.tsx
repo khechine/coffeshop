@@ -10,7 +10,7 @@ export const metadata = {
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
   const store = await getStore();
-  const hasMarketplace = (store as any)?.subscription?.plan?.hasMarketplace === true;
+  const hasMarketplace = (store as any)?.hasMarketplace === true;
   
   return (
     <html lang="fr">

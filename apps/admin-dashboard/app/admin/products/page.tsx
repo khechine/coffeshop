@@ -14,7 +14,10 @@ export default async function ProductsManagement() {
     orderBy: { name: 'asc' },
   });
 
-  const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
+  const categories = await prisma.category.findMany({ 
+    where: { storeId: store?.id },
+    orderBy: { name: 'asc' } 
+  });
   const stockItems = await prisma.stockItem.findMany({
     where: { storeId: store?.id },
     orderBy: { name: 'asc' },

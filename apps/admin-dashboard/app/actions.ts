@@ -27,20 +27,14 @@ export async function getStore() {
         const storeObj: any = user.store;
         const plan = storeObj?.subscription?.plan;
         
-        // If plan is found but hasMarketplace is missing or the client is stale
-        if (plan) {
-           // Force fetch updated plan data from DB directly
-           const dbPlan: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "Plan" WHERE id = $1`, plan.id);
-           if (dbPlan[0]) {
-              // Merge db fields into the plan object
-              storeObj.subscription.plan = { ...plan, ...dbPlan[0] };
-           }
-        }
+        // Combined access: from Plan OR manual override
+        const hasMarketplace = (plan?.hasMarketplace === true) || (storeObj?.forceMarketplaceAccess === true);
+        storeObj.hasMarketplace = hasMarketplace;
+        
         return storeObj;
      }
   } catch (err) {
      console.error("getStore error, trying raw fallback", err);
-     // Fallback if everything fails due to stale client
      const stores: any[] = await prisma.$queryRawUnsafe(
        `SELECT s.* FROM "Store" s JOIN "_StoreToUser" su ON s.id = su."A" WHERE su."B" = $1 LIMIT 1`,
        userId
@@ -48,6 +42,20 @@ export async function getStore() {
      if (stores[0]) return stores[0];
   }
   return null;
+}
+
+export async function toggleStoreMarketplaceAccess(storeId: string, enabled: boolean) {
+  const user = await getUser();
+  if (user?.role !== 'SUPERADMIN') {
+    throw new Error('Action non autorisée : Seuls les super-administrateurs peuvent gérer les accès.');
+  }
+
+  await prisma.store.update({
+    where: { id: storeId },
+    data: { forceMarketplaceAccess: enabled }
+  });
+
+  revalidatePath('/superadmin/cafes');
 }
 
 export async function updateStore(data: { name: string; address: string; city: string; phone: string; lat?: number; lng?: number }) {
@@ -515,6 +523,216 @@ export async function getMarketplaceData() {
   };
 }
 
+export async function getMarketplaceBenchmarkData(vendorId: string) {
+  const allProducts = await prisma.marketplaceProduct.findMany({
+    where: { category: { status: 'ACTIVE' } },
+    include: {
+      category: { include: { parent: true } },
+    }
+  });
+
+  // Group by (categoryId + unit + brand) — NOT by product name
+  // This handles the case where vendors name the same product differently
+  type GroupKey = string;
+  const grouped = new Map<GroupKey, {
+    categoryId: string | null;
+    categoryName: string;
+    parentCategoryName: string | null;
+    unit: string;
+    brand: string | null;
+    vendorPrices: Map<string, number>; // vendorId → their min price for this segment
+    myPrice: number | null;
+    allPrices: number[];
+  }>();
+
+  for (const p of allProducts) {
+    const brand = (p as any).brand ?? null;
+    const key: GroupKey = `${p.categoryId ?? 'none'}::${p.unit.toLowerCase()}::${(brand ?? '').toLowerCase()}`;
+    const price = Number(p.price);
+
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        categoryId: p.categoryId ?? null,
+        categoryName: p.category?.name ?? '—',
+        parentCategoryName: (p.category as any)?.parent?.name ?? null,
+        unit: p.unit,
+        brand,
+        vendorPrices: new Map(),
+        myPrice: null,
+        allPrices: [],
+      });
+    }
+    const entry = grouped.get(key)!;
+
+    if (p.vendorId === vendorId) {
+      // Take the lowest of our prices for this segment
+      entry.myPrice = entry.myPrice === null ? price : Math.min(entry.myPrice, price);
+    } else {
+      // One price per competitor vendor (their min)
+      const prev = entry.vendorPrices.get(p.vendorId);
+      entry.vendorPrices.set(p.vendorId, prev !== undefined ? Math.min(prev, price) : price);
+      entry.allPrices.push(price);
+    }
+  }
+
+  const benchmarks = Array.from(grouped.values())
+    .filter(g => g.myPrice !== null || g.allPrices.length > 0)
+    .map(g => {
+      const hasCompetitors = g.allPrices.length > 0;
+      const competitorCount = g.vendorPrices.size; // number of unique vendors (anonymized)
+      const min  = hasCompetitors ? Math.min(...g.allPrices) : null;
+      const max  = hasCompetitors ? Math.max(...g.allPrices) : null;
+      const avg  = hasCompetitors ? g.allPrices.reduce((a, b) => a + b, 0) / g.allPrices.length : null;
+
+      let position: 'cheapest' | 'competitive' | 'expensive' | 'exclusive' | 'unset' = 'unset';
+      if (g.myPrice !== null && avg !== null) {
+        if (g.myPrice < avg * 0.9)      position = 'cheapest';
+        else if (g.myPrice > avg * 1.1) position = 'expensive';
+        else                             position = 'competitive';
+      } else if (g.myPrice !== null && !hasCompetitors) {
+        position = 'exclusive';
+      }
+
+      return {
+        categoryId: g.categoryId,
+        categoryName: g.categoryName,
+        parentCategoryName: g.parentCategoryName,
+        displayCategory: g.parentCategoryName ? `${g.parentCategoryName} › ${g.categoryName}` : g.categoryName,
+        unit: g.unit,
+        brand: g.brand,
+        myPrice: g.myPrice,
+        min, max, avg,
+        competitorCount, // anonymized: number of unique vendors
+        position,
+      };
+    })
+    .sort((a, b) => {
+      // My products first, then by category name
+      if ((a.myPrice !== null) !== (b.myPrice !== null)) return a.myPrice !== null ? -1 : 1;
+      return a.displayCategory.localeCompare(b.displayCategory);
+    });
+
+  return benchmarks;
+}
+
+// ── Category tree (hierarchical) ──────────────────────────────────────────────
+export async function getMarketplaceCategoryTree() {
+  const all = await prisma.marketplaceCategory.findMany({
+    where: { status: 'ACTIVE' },
+    include: { children: { where: { status: 'ACTIVE' } } },
+    orderBy: { name: 'asc' }
+  });
+  return all.filter(c => c.parentId === null); // Only root nodes with their children
+}
+
+// ── Vendor proposes a new subcategory (status = PENDING → admin approves) ──────
+export async function proposeSubCategoryAction(name: string, parentId: string) {
+  const userId = (await cookies()).get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { vendorProfile: true } });
+  if (!user?.vendorProfile) throw new Error('Profil vendeur introuvable');
+
+  // Check if a category with this name already exists under this parent
+  const existing = await prisma.marketplaceCategory.findFirst({
+    where: { name: { equals: name, mode: 'insensitive' }, parentId }
+  });
+  if (existing) return { error: 'Cette sous-catégorie existe déjà.' };
+
+  await prisma.marketplaceCategory.create({
+    data: {
+      name: name.trim(),
+      parentId,
+      status: 'PENDING',
+      proposedByVendorId: user.vendorProfile.id,
+    }
+  });
+  return { success: true };
+}
+
+// ── Admin: get all pending category proposals ─────────────────────────────────
+export async function getPendingCategoryProposals() {
+  return prisma.marketplaceCategory.findMany({
+    where: { status: 'PENDING' },
+    include: { parent: true },
+    orderBy: { createdAt: 'asc' }
+  });
+}
+
+// ── User helper ───────────────────────────────────────────────────────────
+export async function getUser() {
+  const userId = (await cookies()).get('userId')?.value;
+  if (!userId) return null;
+  return prisma.user.findUnique({ where: { id: userId } });
+}
+
+// ── Admin: approve or reject a proposed subcategory ───────────────────────────
+export async function resolveCategoryProposal(id: string, action: 'approve' | 'reject', newName?: string, newParentId?: string) {
+  const user = await getUser();
+  if (user?.role !== 'SUPERADMIN') {
+    throw new Error('Action non autorisée : Seuls les super-administrateurs peuvent gérer les catégories.');
+  }
+
+  await prisma.marketplaceCategory.update({
+    where: { id },
+    data: { 
+      status: action === 'approve' ? 'ACTIVE' : 'REJECTED',
+      name: (action === 'approve' && newName) ? newName.trim() : undefined,
+      parentId: (action === 'approve' && newParentId) ? newParentId : undefined,
+    }
+  });
+  revalidatePath('/superadmin/marketplace/categories');
+  revalidatePath('/vendor/portal/catalog');
+}
+
+export async function updateMarketplaceCategoryAction(id: string, data: { name?: string, icon?: string, parentId?: string | null }) {
+  const user = await getUser();
+  if (user?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  await prisma.marketplaceCategory.update({
+    where: { id },
+    data: {
+      name: data.name?.trim(),
+      icon: data.icon?.trim(),
+      parentId: data.parentId === "" ? null : data.parentId
+    }
+  });
+  revalidatePath('/superadmin/marketplace/categories');
+  revalidatePath('/marketplace');
+}
+
+export async function deleteMarketplaceCategoryAction(id: string) {
+  const user = await getUser();
+  if (user?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  // Check if it has children or products
+  const category = await prisma.marketplaceCategory.findUnique({
+    where: { id },
+    include: { _count: { select: { children: true, products: true } } }
+  });
+
+  if (category?._count.children! > 0 || category?._count.products! > 0) {
+    throw new Error('Impossible de supprimer une catégorie non vide (contient des sous-catégories ou des produits).');
+  }
+
+  await prisma.marketplaceCategory.delete({ where: { id } });
+  revalidatePath('/superadmin/marketplace/categories');
+  revalidatePath('/marketplace');
+}
+
+export async function createMarketplaceCategoryAction(data: { name: string; icon?: string; parentId?: string | null }) {
+  const user = await getUser();
+  if (user?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  await prisma.marketplaceCategory.create({ 
+    data: {
+      ...data,
+      status: 'ACTIVE'
+    } 
+  });
+  revalidatePath('/superadmin/marketplace/categories');
+  revalidatePath('/marketplace');
+}
+
 export async function placeMarketplaceOrder(data: { vendorId: string; total: number; items: { productId: string; quantity: number; price: number; name: string }[] }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
@@ -620,7 +838,7 @@ export async function getVendorPortalData() {
     where: { id: user.vendorProfile.id },
     include: { 
       products: true,
-      categories: true,
+      activityPoles: true,
       orders: { 
         include: { items: true, store: true },
         orderBy: { createdAt: 'desc' }
@@ -643,7 +861,6 @@ export async function getVendorPortalData() {
         total: Number(o.total),
         items: o.items.map((it: any) => ({ ...it, quantity: Number(it.quantity), price: Number(it.price) }))
       })),
-      allCategories: await prisma.marketplaceCategory.findMany()
     };
   }
   return null;
@@ -671,6 +888,82 @@ export async function createMarketplaceProductAction(data: any) {
   });
   revalidatePath('/vendor/portal/catalog');
 }
+
+export async function importCsvProductsAction(rows: {
+  name: string;
+  price: number;
+  unit: string;
+  categoryName: string;
+  brand?: string | null;
+  image?: string;
+}[]) {
+  const userId = (await cookies()).get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { vendorProfile: true } });
+  if (!user?.vendorProfile) throw new Error('Profil vendeur introuvable');
+  const vendorId = user.vendorProfile.id;
+
+  // Fetch all ACTIVE categories (root + children) for name matching
+  const allCategories = await prisma.marketplaceCategory.findMany({
+    where: { status: 'ACTIVE' },
+    include: { children: { where: { status: 'ACTIVE' } } }
+  });
+  // Flat list: root + all children
+  const flatCategories = [
+    ...allCategories,
+    ...allCategories.flatMap((c: any) => c.children),
+  ];
+
+  const results = { created: 0, skipped: 0, errors: [] as string[] };
+
+  for (const row of rows) {
+    try {
+      // Match category by name (case-insensitive) — searches full hierarchy
+      const category = flatCategories.find(
+        (c: any) => c.name.toLowerCase() === (row.categoryName ?? '').toLowerCase()
+      );
+
+      const brandVal = row.brand?.trim() || null;
+
+      // Upsert: update if same name+vendor, create otherwise
+      const existing = await prisma.marketplaceProduct.findFirst({ where: { name: row.name, vendorId } });
+      if (existing) {
+        await prisma.marketplaceProduct.update({
+          where: { id: existing.id },
+          data: {
+            price: row.price,
+            unit: row.unit,
+            categoryId: category?.id ?? null,
+            brand: brandVal,
+            image: row.image || null,
+          }
+        });
+      } else {
+        await prisma.marketplaceProduct.create({
+          data: {
+            name: row.name,
+            price: row.price,
+            unit: row.unit,
+            categoryId: category?.id ?? null,
+            brand: brandVal,
+            image: row.image || null,
+            vendorId,
+            minOrderQuantity: 1,
+          }
+        });
+        results.created++;
+      }
+    } catch (e: any) {
+      results.errors.push(`${row.name}: ${e.message}`);
+      results.skipped++;
+    }
+  }
+
+  revalidatePath('/vendor/portal/catalog');
+  return results;
+}
+
 
 import { OrderStatus } from '@coffeeshop/database';
 
@@ -708,22 +1001,30 @@ export async function getMarketplaceCategories() {
   return prisma.marketplaceCategory.findMany();
 }
 
-export async function updateVendorCategoriesAction(vendorId: string, categoryIds: string[]) {
+export async function updateVendorActivityPolesAction(vendorId: string, activityPoleIds: string[]) {
   await prisma.vendorProfile.update({
     where: { id: vendorId },
     data: {
-      categories: {
-        set: categoryIds.map(id => ({ id }))
+      activityPoles: {
+        set: activityPoleIds.map(id => ({ id }))
       }
     }
   });
   revalidatePath('/vendor/portal/settings');
 }
 
-export async function updateVendorActivityPoleAction(vendorId: string, activityPoleId: string | null) {
+export async function updateVendorProfileAction(vendorId: string, data: any) {
   await prisma.vendorProfile.update({
     where: { id: vendorId },
-    data: { activityPoleId: activityPoleId || null }
+    data: {
+      companyName: data.companyName,
+      description: data.description,
+      address: data.address,
+      city: data.city,
+      phone: data.phone,
+      lat: data.lat,
+      lng: data.lng,
+    }
   });
   revalidatePath('/vendor/portal/settings');
 }
@@ -973,30 +1274,33 @@ export async function deleteActivityPole(id: string) {
 // ══════════════════════════════════════════════════════════════
 //  MARKETPLACE CATEGORIES (SuperAdmin managed)
 // ══════════════════════════════════════════════════════════════
-export async function createMarketplaceCategoryAction(data: { name: string; icon?: string }) {
-  await prisma.marketplaceCategory.create({ data });
-  revalidatePath('/superadmin/referentiels');
-  revalidatePath('/marketplace');
-}
-
-export async function deleteMarketplaceCategoryAction(id: string) {
-  await prisma.marketplaceCategory.delete({ where: { id } });
-  revalidatePath('/superadmin/referentiels');
-  revalidatePath('/marketplace');
-}
+// Categorires management moved to MarketplaceCategory actions section
 
 // ══════════════════════════════════════════════════════════════
 //  PRODUCT CATEGORIES (SuperAdmin managed, used by store products)
 // ══════════════════════════════════════════════════════════════
 export async function createProductCategoryAction(name: string) {
-  await prisma.category.create({ data: { name } });
-  revalidatePath('/superadmin/referentiels');
+  const store = await getStore();
+  if (!store) throw new Error('Action non autorisée : Aucun magasin trouvé.');
+
+  await prisma.category.create({ 
+    data: { 
+      name,
+      storeId: store.id
+    } 
+  });
   revalidatePath('/admin/products');
 }
 
 export async function deleteProductCategoryAction(id: string) {
+  const store = await getStore();
+  if (!store) throw new Error('Action non autorisée');
+
+  // Verify ownership
+  const cat = await prisma.category.findUnique({ where: { id } });
+  if (cat?.storeId !== store.id) throw new Error('Non autorisé');
+
   await prisma.category.delete({ where: { id } });
-  revalidatePath('/superadmin/referentiels');
   revalidatePath('/admin/products');
 }
 

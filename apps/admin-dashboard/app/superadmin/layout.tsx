@@ -8,6 +8,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   const sidebarItems = [
     { label: 'Vue d\'ensemble', icon: LayoutDashboard, href: '/superadmin' },
     { label: 'Vendeurs Marketplace', icon: ShieldCheck, href: '/superadmin/vendors', badge: 'Validation' },
+    { label: 'Catégories Marketplace', icon: Package, href: '/superadmin/marketplace/categories' },
     { label: 'Coffee Shops', icon: Store, href: '/superadmin/cafes' },
     { label: 'Réseau Livreurs', icon: Truck, href: '/superadmin/couriers' },
     { label: 'Catalogue & Flux', icon: Package, href: '/superadmin/marketplace' },

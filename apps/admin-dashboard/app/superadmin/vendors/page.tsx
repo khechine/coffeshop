@@ -1,5 +1,5 @@
 import { prisma } from '@coffeeshop/database';
-import SuperAdminVendorsTable from './SuperAdminVendorsTable';
+import VendorsListClient from './VendorsListClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,13 +14,13 @@ export default async function SuperAdminVendorsPage() {
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div className="flex flex-col gap-10 p-6 max-w-8xl mx-auto">
       <div>
-        <h1 style={{ fontSize: '32px', fontWeight: 900, color: '#1E293B', margin: 0 }}>Vendeurs Marketplace</h1>
-        <p style={{ margin: '8px 0 0', color: '#64748B', fontSize: '16px' }}>Validation des inscriptions et gestion des comptes fournisseurs certifiés.</p>
+        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Vendeurs Marketplace</h1>
+        <p className="mt-2 text-slate-500 font-medium tracking-tight">Validation des inscriptions et gestion des comptes fournisseurs certifiés.</p>
       </div>
 
-      <SuperAdminVendorsTable vendors={vendors} />
+      <VendorsListClient initialVendors={vendors as any} />
     </div>
   );
 }

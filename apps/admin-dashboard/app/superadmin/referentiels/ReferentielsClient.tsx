@@ -111,17 +111,13 @@ function Section({
 }
 
 export default function ReferentielsClient({
-  units, categories, marketplaceCategories, activityPoles
+  units, activityPoles
 }: {
   units: Item[];
-  categories: Item[];
-  marketplaceCategories: Item[];
   activityPoles: Item[];
 }) {
   const [isPending, startTransition] = useTransition();
   const [localUnits, setLocalUnits] = useState(units);
-  const [localCats, setLocalCats] = useState(categories);
-  const [localMktCats, setLocalMktCats] = useState(marketplaceCategories);
   const [localPoles, setLocalPoles] = useState(activityPoles);
   const [selectedIcon, setSelectedIcon] = useState('☕');
 
@@ -186,41 +182,6 @@ export default function ReferentielsClient({
           {/* Quick add chips */}
         </Section>
 
-        {/* PRODUCT CATEGORIES */}
-        <Section
-          icon={Tag}
-          title="Catégories Produits (POS)"
-          color="linear-gradient(135deg,#F59E0B,#D97706)"
-          items={localCats}
-          isPending={isPending}
-          onCreate={async (name) => {
-            await createProductCategoryAction(name);
-            const fresh = await fetch('/api/referentiels?type=categories').then(r => r.json());
-            setLocalCats(fresh);
-          }}
-          onDelete={async (id) => {
-            await deleteProductCategoryAction(id);
-            setLocalCats(c => c.filter(x => x.id !== id));
-          }}
-        />
-
-        {/* MARKETPLACE CATEGORIES */}
-        <Section
-          icon={ShoppingBag}
-          title="Catégories Marketplace B2B"
-          color="linear-gradient(135deg,#10B981,#059669)"
-          items={localMktCats}
-          isPending={isPending}
-          onCreate={async (name) => {
-            await createMarketplaceCategoryAction({ name });
-            const fresh = await fetch('/api/referentiels?type=marketplace').then(r => r.json());
-            setLocalMktCats(fresh);
-          }}
-          onDelete={async (id) => {
-            await deleteMarketplaceCategoryAction(id);
-            setLocalMktCats(c => c.filter(x => x.id !== id));
-          }}
-        />
       </div>
     </div>
   );

@@ -1,9 +1,16 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { Plus, Edit2, Trash2, Coffee, Package, Calculator, Archive, CheckCircle, Folder, Settings } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, Edit2, Trash2, Coffee, Package, Calculator, Archive, CheckCircle, Folder, Settings, Tag as TagIcon } from 'lucide-react';
 import Modal from '../../../components/Modal';
-import { createProduct, updateProduct, deleteProduct, createCategory, deleteCategory } from '../../actions';
+import { 
+  createProduct, 
+  updateProduct, 
+  deleteProduct, 
+  createProductCategoryAction as createCategory, 
+  deleteProductCategoryAction as deleteCategory 
+} from '../../actions';
 
 interface Product { 
   id: string; 
@@ -28,6 +35,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 const PACKAGING_CATEGORY = 'emballage'; // Exact name to match (case-insensitive)
 
 export default function ProductsClient({ products, categories, stockItems, globalUnits }: { products: Product[]; categories: Category[]; stockItems: StockItem[]; globalUnits: any[] }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -36,9 +44,6 @@ export default function ProductsClient({ products, categories, stockItems, globa
     name: '', price: '', unitId: '', categoryId: '', active: true, recipe: [] 
   });
 
-  const [catModal, setCatModal] = useState(false);
-  const [manageCatModal, setManageCatModal] = useState(false);
-  const [catForm, setCatForm] = useState({ name: '', parentId: '' });
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
 
   const openCreate = () => { 
@@ -110,35 +115,7 @@ export default function ProductsClient({ products, categories, stockItems, globa
     });
   };
 
-  const handleAddCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!catForm.name.trim()) return;
-    
-    let finalName = catForm.name.trim();
-    if (catForm.parentId) {
-      const parent = categories.find(c => c.id === catForm.parentId);
-      if (parent) finalName = `${parent.name} > ${finalName}`;
-    }
-
-    startTransition(async () => {
-      await createCategory(finalName);
-      setCatForm({ name: '', parentId: '' });
-      setCatModal(false);
-    });
-  };
-
-  const handleDeleteCategory = async (id: string) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie ?")) return;
-    startTransition(async () => {
-      try {
-        await deleteCategory(id);
-      } catch (e: any) {
-        alert(e.message);
-      }
-    });
-  };
-
-  const rootCategories = categories.filter(c => !c.name.includes(' > '));
+  const handleAddCategory = () => router.push('/admin/products/categories');
 
   const field: React.CSSProperties = { width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #E2E8F0', fontSize: '14px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' };
   const label: React.CSSProperties = { display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' };
@@ -149,7 +126,7 @@ export default function ProductsClient({ products, categories, stockItems, globa
         <div className="card-header">
           <span className="card-title"><Package size={16} /> Tous les Produits</span>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="btn btn-outline" style={{ fontSize: '12px' }} onClick={() => setManageCatModal(true)}><Settings size={14} style={{ marginRight: 6 }} /> Gérer catégories</button>
+            <button className="btn btn-outline" style={{ fontSize: '12px' }} onClick={handleAddCategory}><Settings size={14} style={{ marginRight: 6 }} /> Gérer catégories</button>
             <button className="btn btn-primary" onClick={openCreate}><Plus size={14} /> Nouveau Produit</button>
           </div>
         </div>
@@ -305,75 +282,6 @@ export default function ProductsClient({ products, categories, stockItems, globa
             <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={isPending}>
               {isPending ? 'Enregistrement...' : (editing ? 'Enregistrer les modifications' : 'Créer le Produit')}
             </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Manage Categories Modal */}
-      <Modal open={manageCatModal} onClose={() => setManageCatModal(false)} title="Gestion des Catégories" width={500}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '14px', color: '#64748B' }}>{categories.length} catégories configurées</div>
-              <button className="btn btn-primary" onClick={() => { setCatModal(true); setManageCatModal(false); }}>+ Nouvelle</button>
-           </div>
-
-           <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {categories.map(c => (
-                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <Folder size={16} color="#6366F1" />
-                      <span style={{ fontWeight: 600, color: '#1E293B' }}>{c.name}</span>
-                   </div>
-                   <button 
-                    className="btn btn-ghost" 
-                    style={{ color: '#EF4444', padding: '6px' }} 
-                    onClick={() => handleDeleteCategory(c.id)}
-                    disabled={isPending}
-                   >
-                    <Trash2 size={16} />
-                   </button>
-                </div>
-              ))}
-           </div>
-        </div>
-      </Modal>
-
-      {/* Create Category Modal */}
-      <Modal open={catModal} onClose={() => setCatModal(false)} title="Nouvelle Catégorie" width={420}>
-        <form onSubmit={handleAddCategory} style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '10px' }}>
-          <div>
-            <label style={label}>Nom de la Catégorie</label>
-            <input style={field} value={catForm.name} onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))} placeholder="ex: Chaud, Froid, etc." required />
-          </div>
-          
-          <div>
-            <label style={label}>Catégorie Parente (Optionnel)</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
-              <button 
-                type="button" 
-                onClick={() => setCatForm(f => ({ ...f, parentId: '' }))}
-                className={!catForm.parentId ? 'badge' : 'badge badge-outline'}
-                style={{ cursor: 'pointer', border: 'none', background: !catForm.parentId ? '#6366F1' : '#F1F5F9', color: !catForm.parentId ? '#fff' : '#64748B' }}
-              >
-                Racine
-              </button>
-              {rootCategories.map(c => (
-                <button 
-                  key={c.id}
-                  type="button" 
-                  onClick={() => setCatForm(f => ({ ...f, parentId: c.id }))}
-                  className={catForm.parentId === c.id ? 'badge' : 'badge badge-outline'}
-                  style={{ cursor: 'pointer', border: 'none', background: catForm.parentId === c.id ? '#6366F1' : '#F1F5F9', color: catForm.parentId === c.id ? '#fff' : '#64748B' }}
-                >
-                  <Folder size={10} style={{ marginRight: 4 }} /> {c.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => { setCatModal(false); setManageCatModal(true); }}>Retour</button>
-            <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={isPending}>Créer la catégorie</button>
           </div>
         </form>
       </Modal>
