@@ -27,11 +27,21 @@ echo "🔒 Syncing .env.prod to VPS..."
 scp .env.prod $ssh_server:$ssh_folder/.env
 
 # 3. SSH into VPS and run deployment commands
-echo "🐳 Updating containers on VPS..."
+echo "🐳 Updating containers and database on VPS..."
 ssh $ssh_server << EOF
   cd $ssh_folder
   git pull origin main
-  docker-compose up -d --build
+  docker compose up -d --build
+  
+  echo "🗄️ Synchronizing Prisma schema..."
+  docker compose exec -T api npx prisma db push --schema=packages/database/prisma/schema.prisma --accept-data-loss
+  
+  echo "🧹 Cleaning up unused images..."
+  docker image prune -f
+  
+  echo "📊 Services status:"
+  docker compose ps
+  
   echo "✅ Deployment Successful!"
 EOF
 
