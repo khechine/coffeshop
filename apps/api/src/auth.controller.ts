@@ -86,8 +86,7 @@ export class AuthController {
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
       include: { 
-        store: { select: { name: true } },
-        vendorProfile: { select: { id: true, companyName: true } }
+        store: { select: { name: true } }
       }
     });
 
@@ -100,6 +99,23 @@ export class AuthController {
       throw new UnauthorizedException('Mot de passe incorrect');
     }
 
+    let vendorId = null;
+    let vendorName = null;
+
+    if (user.role === 'VENDOR') {
+      try {
+        const profile = await (prisma as any).vendorProfile.findUnique({
+          where: { userId: user.id }
+        });
+        if (profile) {
+          vendorId = profile.id;
+          vendorName = profile.companyName;
+        }
+      } catch (e) {
+        console.error("❌ Erreur fetch vendorProfile:", e);
+      }
+    }
+
     // In a real app we'd use JwtService, but let's follow the established pattern or simple JWT
     return {
       token: `user-jwt-${user.id}-${Date.now()}`, // Temporary token format
@@ -110,8 +126,8 @@ export class AuthController {
         role: user.role,
         storeId: user.storeId,
         storeName: user.store?.name,
-        vendorId: user.vendorProfile?.id,
-        vendorName: user.vendorProfile?.companyName
+        vendorId,
+        vendorName
       }
     };
   }
