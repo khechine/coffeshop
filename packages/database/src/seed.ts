@@ -11,7 +11,7 @@ async function main() {
   // 1. Create SUPERADMIN
   const superadmin = await prisma.user.upsert({
     where: { email: 'superadmin@coffeeshop.tn' },
-    update: {},
+    update: { password: passwordHash },
     create: {
       email: 'superadmin@coffeeshop.tn',
       password: passwordHash,
@@ -24,7 +24,7 @@ async function main() {
   // 2. Create STORE_OWNER & Store
   const owner = await prisma.user.upsert({
     where: { email: 'admin@coffeeshop.tn' },
-    update: {},
+    update: { password: passwordHash },
     create: {
       email: 'admin@coffeeshop.tn',
       password: passwordHash,
@@ -50,7 +50,7 @@ async function main() {
   // 3. Create VENDOR & VendorProfile
   const vendorUser = await prisma.user.upsert({
     where: { email: 'vendor@distributeur.tn' },
-    update: {},
+    update: { password: passwordHash },
     create: {
       email: 'vendor@distributeur.tn',
       password: passwordHash,
