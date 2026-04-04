@@ -51,7 +51,7 @@ const createMgStyles = (theme: any) => StyleSheet.create({
   label: { fontSize: 13, fontWeight: '700', color: theme.colors.caramel, marginBottom: 6, marginTop: 4 },
 });
 
-export function CategoriesScreen({ storeId }: { storeId: string }) {
+export function CategoriesScreen({ storeId, isVendor }: { storeId: string, isVendor?: boolean }) {
   const { theme } = usePOSStore();
   const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -62,7 +62,8 @@ export function CategoriesScreen({ storeId }: { storeId: string }) {
 
   const fetchData = async () => {
     try {
-      const res = await fetch(`${API_URL}/management/categories/${storeId}`);
+      const endpoint = isVendor ? `management/marketplace/categories` : `management/categories/${storeId}`;
+      const res = await fetch(`${API_URL}/${endpoint}`);
       if (res.ok) setCategories(await res.json());
     } catch (e) {
       console.warn('Categories fetch error', e);
@@ -217,7 +218,7 @@ export function CategoriesScreen({ storeId }: { storeId: string }) {
 // ══════════════════════════════════════════════════════════════
 // PRODUCTS MANAGEMENT SCREEN
 // ══════════════════════════════════════════════════════════════
-export function ProductsScreen({ storeId }: { storeId: string }) {
+export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendor?: boolean }) {
   const { theme } = usePOSStore();
   const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   const [products, setProducts] = useState<any[]>([]);
@@ -237,9 +238,11 @@ export function ProductsScreen({ storeId }: { storeId: string }) {
 
   const fetchData = async () => {
     try {
+      const prodEndpoint = isVendor ? `sourcing/marketplace/products?vendorId=${storeId}` : `management/products/${storeId}`;
+      const catEndpoint = isVendor ? `management/marketplace/categories` : `management/categories/${storeId}`;
       const [prodRes, catRes, stockRes] = await Promise.all([
-        fetch(`${API_URL}/management/products/${storeId}`),
-        fetch(`${API_URL}/management/categories/${storeId}`),
+        fetch(`${API_URL}/${prodEndpoint}`),
+        fetch(`${API_URL}/${catEndpoint}`),
         fetch(`${API_URL}/management/stock/${storeId}`),
       ]);
       if (prodRes.ok) setProducts(await prodRes.json());
@@ -784,7 +787,7 @@ export function SuppliersScreen({ storeId }: { storeId: string }) {
 // ══════════════════════════════════════════════════════════════
 // ORDERS (Commandes) MANAGEMENT SCREEN
 // ══════════════════════════════════════════════════════════════
-export function OrdersScreen({ storeId }: { storeId: string }) {
+export function OrdersScreen({ storeId, isVendor }: { storeId: string, isVendor?: boolean }) {
   const { theme } = usePOSStore();
   const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -797,8 +800,9 @@ export function OrdersScreen({ storeId }: { storeId: string }) {
 
   const fetchData = async () => {
     try {
+      const ordEndpoint = isVendor ? `sourcing/orders?vendorId=${storeId}` : `management/orders/${storeId}`;
       const [ordRes, suppRes, stockRes] = await Promise.all([
-        fetch(`${API_URL}/management/orders/${storeId}`),
+        fetch(`${API_URL}/${ordEndpoint}`),
         fetch(`${API_URL}/management/suppliers/${storeId}`),
         fetch(`${API_URL}/management/stock/${storeId}`),
       ]);

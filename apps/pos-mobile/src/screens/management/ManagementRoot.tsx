@@ -8,19 +8,21 @@ import { ProductsScreen, CategoriesScreen, StockManagementScreen, SuppliersScree
 type ManagementTab = 'dashboard' | 'products' | 'categories' | 'stock' | 'suppliers' | 'orders' | 'notifs';
 
 export function ManagementRoot() {
-  const { userRole, theme, storeName, logout, storeId } = usePOSStore();
+  const { userRole, theme, storeName, vendorName, logout, storeId, vendorId } = usePOSStore();
   const [activeTab, setActiveTab] = useState<ManagementTab>('dashboard');
   
   const isVendor = userRole === 'vendor';
   const isOwner = userRole === 'owner' || userRole === 'superadmin';
 
+  const contextId = isVendor ? vendorId : storeId;
+
   const renderContent = () => {
     switch (activeTab) {
-      case 'products': return <ProductsScreen storeId={storeId!} />;
-      case 'categories': return <CategoriesScreen storeId={storeId!} />;
-      case 'stock': return <StockManagementScreen storeId={storeId!} />;
+      case 'products': return <ProductsScreen storeId={contextId!} isVendor={isVendor} />;
+      case 'categories': return <CategoriesScreen storeId={contextId!} isVendor={isVendor} />;
+      case 'stock': return <StockManagementScreen storeId={storeId!} />; // Stock is typically store-centric
       case 'suppliers': return <SuppliersScreen storeId={storeId!} />;
-      case 'orders': return <OrdersScreen storeId={storeId!} />;
+      case 'orders': return <OrdersScreen storeId={contextId!} isVendor={isVendor} />;
       case 'notifs': return <NotificationsScreen storeId={storeId!} />;
       default: return <DashboardView onNavigate={setActiveTab} />;
     }
@@ -37,7 +39,7 @@ export function ManagementRoot() {
                 {isVendor ? 'RÉSEAU FOURNISSEUR' : 'ADMINISTRATION'}
               </Text>
               <Text style={{ color: theme.colors.cream, fontSize: 18, fontWeight: '900' }}>
-                {activeTab === 'dashboard' ? (storeName || 'CoffeeShop') : activeTab.toUpperCase()}
+                {activeTab === 'dashboard' ? (isVendor ? (vendorName || 'Fournisseur') : (storeName || 'CoffeeShop')) : activeTab.toUpperCase()}
               </Text>
             </View>
             <TouchableOpacity onPress={logout} style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10 }}>

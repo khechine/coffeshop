@@ -49,6 +49,8 @@ export interface POSState {
     permissions?: string[], 
     defaultPosMode?: string 
   } | null;
+  vendorId: string | null;
+  vendorName: string | null;
   userRole: UserRole;
   themeName: 'antigravity' | 'neon-food';
   theme: ITheme;
@@ -107,6 +109,8 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeName, setStoreName] = useState<string | null>(null);
+  const [vendorId, setVendorId] = useState<string | null>(null);
+  const [vendorName, setVendorName] = useState<string | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode>(null);
   const [storeTables, setStoreTablesState] = useState<{ id: string, label: string }[]>([]);
   const [rachmaCart, setRachmaCart] = useState<Record<string, number>>({});
@@ -134,6 +138,8 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const storedToken = await AsyncStorage.getItem('pos-auth-token');
         const storedStoreId = await AsyncStorage.getItem('pos-store-id');
         const storedStoreName = await AsyncStorage.getItem('pos-store-name');
+        const storedVendorId = await AsyncStorage.getItem('pos-vendor-id');
+        const storedVendorName = await AsyncStorage.getItem('pos-vendor-name');
         const storedAuthMode = await AsyncStorage.getItem('pos-auth-mode');
         const storedStoreTables = await AsyncStorage.getItem('pos-store-tables');
         const storedBarista = await AsyncStorage.getItem('pos-current-barista');
@@ -147,6 +153,8 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (storedToken) setAuthToken(storedToken);
         if (storedStoreId) setStoreId(storedStoreId);
         if (storedStoreName) setStoreName(storedStoreName);
+        if (storedVendorId) setVendorId(storedVendorId);
+        if (storedVendorName) setVendorName(storedVendorName);
         if (storedAuthMode) setAuthMode(storedAuthMode as AuthMode);
         if (storedStoreTables) setStoreTablesState(JSON.parse(storedStoreTables));
         if (storedBarista) setCurrentBarista(JSON.parse(storedBarista));
@@ -182,6 +190,12 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (storeName) AsyncStorage.setItem('pos-store-name', storeName).catch(() => {});
       else AsyncStorage.removeItem('pos-store-name');
 
+      if (vendorId) AsyncStorage.setItem('pos-vendor-id', vendorId).catch(() => {});
+      else AsyncStorage.removeItem('pos-vendor-id');
+
+      if (vendorName) AsyncStorage.setItem('pos-vendor-name', vendorName).catch(() => {});
+      else AsyncStorage.removeItem('pos-vendor-name');
+
       if (authMode) AsyncStorage.setItem('pos-auth-mode', authMode).catch(() => {});
       else AsyncStorage.removeItem('pos-auth-mode');
 
@@ -197,7 +211,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       AsyncStorage.setItem('pos-active-theme', themeName).catch(() => {});
       AsyncStorage.setItem('pos-rachma-cart', JSON.stringify(rachmaCart)).catch(() => {});
     }
-  }, [cart, tables, pendingSales, authToken, storeId, storeName, authMode, storeTables, currentBarista, userRole, themeName, rachmaCart, isReady]);
+  }, [cart, tables, pendingSales, authToken, storeId, storeName, vendorId, vendorName, authMode, storeTables, currentBarista, userRole, themeName, rachmaCart, isReady]);
 
   const authenticate = (token: string, store: string) => {
     setAuthToken(token);
@@ -235,6 +249,8 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAuthToken(data.token);
         setStoreId(data.user.storeId);
         setStoreName(data.user.storeName);
+        setVendorId(data.user.vendorId || null);
+        setVendorName(data.user.vendorName || null);
         setAuthMode('ACCOUNT');
         
         let role: UserRole = null;
@@ -297,6 +313,9 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const logout = () => {
     setAuthToken(null);
     setStoreId(null);
+    setStoreName(null);
+    setVendorId(null);
+    setVendorName(null);
     setCurrentBarista(null);
     setUserRole(null);
     clearCart();
@@ -327,6 +346,8 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       'pos-auth-token',
       'pos-store-id',
       'pos-store-name',
+      'pos-vendor-id',
+      'pos-vendor-name',
       'pos-store-tables',
       'pos-current-barista',
       'pos-user-role',
@@ -619,7 +640,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   return (
     <POSContext.Provider value={{ 
-      cart, tables, activeTable, products, pendingSales, authToken, storeId, storeName, authMode, storeTables,
+      cart, tables, activeTable, products, pendingSales, authToken, storeId, storeName, vendorId, vendorName, authMode, storeTables,
       currentBarista, userRole, themeName, theme, rachmaCart, rachmaHistory, authenticate, activateTerminal, loginWithAccount, loginWithPin, logoutBarista, logout, deactivateTerminal, setTheme,
       addToCart, removeFromCart, addToRachma, removeFromRachma, clearRachma, clearCart, 
       setActiveTable, checkout, checkoutTable, checkoutRachma, 

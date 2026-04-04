@@ -1406,9 +1406,12 @@ function POSRoot() {
 import { ManagementRoot } from './src/screens/management/ManagementRoot';
 
 function MainApp() {
-  const { authToken, storeId, authMode } = usePOSStore();
+  const { authToken, storeId, authMode, userRole } = usePOSStore();
 
-  if (!authToken || !storeId || !authMode) return <LoginView />;
+  if (!authToken || !authMode) return <LoginView />;
+  
+  // Vendors don't have storeId, they have vendorId (which is used in ManagementRoot)
+  if (userRole !== 'vendor' && !storeId) return <LoginView />;
 
   if (authMode === 'TERMINAL') {
     return <POSRoot />;
