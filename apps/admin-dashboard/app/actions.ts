@@ -2,7 +2,7 @@
 
 import { prisma } from '@coffeeshop/database';
 import { revalidatePath } from 'next/cache';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 
 // ── Helpers (Updated for phone field) ──────────────────────────
