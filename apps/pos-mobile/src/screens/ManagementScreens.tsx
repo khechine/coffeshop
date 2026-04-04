@@ -238,7 +238,7 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
 
   const fetchData = async () => {
     try {
-      const prodEndpoint = isVendor ? `sourcing/marketplace/products?vendorId=${storeId}` : `management/products/${storeId}`;
+      const prodEndpoint = isVendor ? `management/marketplace/products?vendorId=${storeId}` : `management/products/${storeId}`;
       const catEndpoint = isVendor ? `management/marketplace/categories` : `management/categories/${storeId}`;
       const [prodRes, catRes, stockRes] = await Promise.all([
         fetch(`${API_URL}/${prodEndpoint}`),
@@ -800,7 +800,7 @@ export function OrdersScreen({ storeId, isVendor }: { storeId: string, isVendor?
 
   const fetchData = async () => {
     try {
-      const ordEndpoint = isVendor ? `sourcing/orders?vendorId=${storeId}` : `management/orders/${storeId}`;
+      const ordEndpoint = isVendor ? `management/vendor/orders/${storeId}` : `management/orders/${storeId}`;
       const [ordRes, suppRes, stockRes] = await Promise.all([
         fetch(`${API_URL}/${ordEndpoint}`),
         fetch(`${API_URL}/management/suppliers/${storeId}`),

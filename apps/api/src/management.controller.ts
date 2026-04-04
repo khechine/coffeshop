@@ -378,4 +378,36 @@ export class ManagementController {
 
     return notifications;
   }
+  // ═══════════════════════════════════════════════════════════
+  // MARKETPLACE / VENDOR SPECIFIC
+  // ═══════════════════════════════════════════════════════════
+
+  @Get('marketplace/categories')
+  async getMarketplaceCategories(): Promise<any> {
+    return prisma.marketplaceCategory.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  @Get('marketplace/products')
+  async getMarketplaceProducts(@Query('vendorId') vendorId: string): Promise<any> {
+    return prisma.marketplaceProduct.findMany({
+      where: vendorId ? { vendorId } : {},
+      include: { category: true },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  @Get('vendor/orders/:vendorId')
+  async getVendorOrders(@Param('vendorId') vendorId: string): Promise<any> {
+    return prisma.supplierOrder.findMany({
+      where: { vendorId },
+      include: {
+        store: { select: { name: true, city: true } },
+        items: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }
