@@ -7,12 +7,12 @@ WORKDIR /app
 
 FROM base AS builder
 RUN apt-get update && apt-get install -y libc6-dev
-ENV PRISMA_CLI_BINARY_TARGETS=linux-gnu
+ENV PRISMA_CLI_BINARY_TARGETS=debian-openssl-3.0.x
 COPY . .
 RUN rm -rf node_modules .pnpm-store pnpm-lock.yaml
 RUN pnpm install --force
-RUN rm -rf node_modules/.pnpm/@prisma+client*/node_modules/.prisma/client/libquery_engine-*.so.node
 RUN pnpm --filter "@coffeeshop/database" exec prisma generate
+RUN find /app/node_modules -name "libquery_engine-linux-musl*" -delete
 RUN pnpm build
 
 FROM base AS runner
