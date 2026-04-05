@@ -11,8 +11,9 @@ ENV PRISMA_CLI_BINARY_TARGETS="linux-musl-openssl-3.0.x,native"
 COPY . .
 RUN rm -rf node_modules .pnpm-store pnpm-lock.yaml
 RUN pnpm install --force
-# Clean old Prisma binaries before generating
+# Clean all old Prisma binaries and cache
 RUN find . -name "*.so.node" -delete
+RUN find . -name ".prisma" -type d -exec rm -rf {} + 2>/dev/null || true
 RUN pnpm --filter "@coffeeshop/database" exec prisma generate
 RUN pnpm build
 
