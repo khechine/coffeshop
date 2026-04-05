@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -6,16 +6,16 @@ RUN corepack enable
 WORKDIR /app
 
 FROM base AS builder
-RUN apk add --no-cache libc6-compat
+RUN apt-get update && apt-get install -y libc6-dev
 COPY . .
 RUN pnpm install
 RUN pnpm db:generate
 RUN pnpm build
 
 FROM base AS runner
-RUN apk add --no-cache libc6-compat openssl1.1-compat
-RUN addgroup -g 1000 -S nodejs && \
-    adduser -S nodejs -u 1000
+RUN apt-get update && apt-get install -y ca-certificates
+RUN groupadd -g 1000 nodejs && \
+    useradd -s /bin/bash -u 1000 -g nodejs nodejs
 
 WORKDIR /app
 ENV NODE_ENV production
