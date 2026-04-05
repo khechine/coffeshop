@@ -13,7 +13,7 @@ RUN pnpm db:generate
 RUN pnpm build
 
 FROM base AS runner
-RUN apt-get update && apt-get install -y ca-certificates
+RUN apt-get update && apt-get install -y ca-certificates libssl1.1
 RUN groupadd -g 1000 nodejs && \
     useradd -s /bin/bash -u 1000 -g nodejs nodejs
 
