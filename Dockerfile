@@ -15,8 +15,8 @@ RUN pnpm build
 
 FROM base AS runner
 RUN apk add --no-cache libc6-compat ca-certificates
-RUN addgroup -g 1000 nodejs && \
-    adduser -S nodejs -u 1000
+RUN addgroup -g 1001 nodejs && \
+    adduser -S nodejs -u 1001
 
 WORKDIR /app
 ENV NODE_ENV production
