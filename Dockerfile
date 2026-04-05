@@ -7,10 +7,12 @@ WORKDIR /app
 
 FROM base AS builder
 RUN apk add --no-cache libc6-compat python3 make g++
-ENV PRISMA_CLI_BINARY_TARGETS="linux-musl,native"
+ENV PRISMA_CLI_BINARY_TARGETS="linux-musl-openssl-3.0.x,native"
 COPY . .
 RUN rm -rf node_modules .pnpm-store pnpm-lock.yaml
 RUN pnpm install --force
+# Clean old Prisma binaries before generating
+RUN find . -name "*.so.node" -delete
 RUN pnpm --filter "@coffeeshop/database" exec prisma generate
 RUN pnpm build
 
