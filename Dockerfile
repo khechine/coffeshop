@@ -14,7 +14,7 @@ RUN pnpm --filter "@coffeeshop/database" exec prisma generate
 RUN pnpm build
 
 FROM base AS runner
-RUN apk add --no-cache libc6-compat ca-certificates libssl1.1
+RUN apk add --no-cache libc6-compat ca-certificates openssl
 RUN addgroup -g 1001 nodejs && \
     adduser -S nodejs -u 1001
 
