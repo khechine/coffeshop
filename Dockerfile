@@ -8,7 +8,8 @@ WORKDIR /app
 FROM base AS builder
 RUN apt-get update && apt-get install -y libc6-dev
 COPY . .
-RUN pnpm install
+RUN rm -rf node_modules .pnpm-store
+RUN pnpm install --force
 RUN pnpm db:generate
 RUN pnpm build
 
