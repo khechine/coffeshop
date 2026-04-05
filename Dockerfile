@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -6,8 +6,8 @@ RUN corepack enable
 WORKDIR /app
 
 FROM base AS builder
-RUN apk add --no-cache libc6-compat python3 make g++
-ENV PRISMA_CLI_BINARY_TARGETS="linux-musl-openssl-3.0.x,native"
+RUN apt-get update && apt-get install -y libc6-dev python3 make g++ && rm -rf /var/lib/apt/lists/*
+ENV PRISMA_CLI_BINARY_TARGETS="debian-openssl-3.0.x,native"
 COPY . .
 RUN rm -rf node_modules .pnpm-store pnpm-lock.yaml
 RUN pnpm install --force
@@ -18,9 +18,9 @@ RUN pnpm --filter "@coffeeshop/database" exec prisma generate
 RUN pnpm build
 
 FROM base AS runner
-RUN apk add --no-cache libc6-compat ca-certificates openssl
-RUN addgroup -g 1001 nodejs && \
-    adduser -S nodejs -u 1001
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN groupadd -g 1001 nodejs && \
+    useradd -s /bin/bash -u 1001 -g nodejs nodejs
 
 WORKDIR /app
 ENV NODE_ENV production
