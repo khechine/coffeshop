@@ -7,14 +7,18 @@ WORKDIR /app
 
 FROM base AS builder
 RUN apt-get update && apt-get install -y libc6-dev
+ENV PRISMA_CLI_BINARY_TARGETS=linux-gnu
 COPY . .
-RUN rm -rf node_modules .pnpm-store
+RUN rm -rf node_modules .pnpm-store pnpm-lock.yaml
 RUN pnpm install --force
-RUN pnpm db:generate
+RUN rm -rf node_modules/.pnpm/@prisma+client*/node_modules/.prisma/client/libquery_engine-*.so.node
+RUN pnpm --filter "@coffeeshop/database" exec prisma generate
 RUN pnpm build
 
 FROM base AS runner
-RUN apt-get update && apt-get install -y ca-certificates openssl
+RUN apt-get update && \
+    apt-get install -y ca-certificates openssl && \
+    apt-get install -y --no-install-recommends libssl1.1 || apt-get install -y --no-install-recommends libssl3
 RUN groupadd -g 1000 nodejs && \
     useradd -s /bin/bash -u 1000 -g nodejs nodejs
 
