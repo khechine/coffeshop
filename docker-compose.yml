@@ -44,7 +44,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@coffeeshop_db:5432/${POSTGRES_DB:-coffeeshop}?schema=public
       JWT_SECRET: ${JWT_SECRET:-supers3cr3tc0ffeesh0p}
       PORT: 3001
-      PRISMA_CLI_BINARY_TARGETS: "native"
+      PRISMA_CLI_BINARY_TARGETS: "debian-openssl-3.0.x"
     depends_on:
       - coffeeshop_db
     networks:

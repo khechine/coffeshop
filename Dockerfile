@@ -7,14 +7,14 @@ WORKDIR /app
 
 FROM base AS builder
 RUN apt-get update && apt-get install -y libc6-dev python3 make g++ && rm -rf /var/lib/apt/lists/*
-ENV PRISMA_CLI_BINARY_TARGETS="debian-openssl-3.0.x,native"
+ENV PRISMA_CLI_BINARY_TARGETS="debian-openssl-3.0.x"
 COPY . .
 RUN rm -rf node_modules .pnpm-store pnpm-lock.yaml
 RUN pnpm install --force
 # Clean all old Prisma binaries and cache
 RUN find . -name "*.so.node" -delete
 RUN find . -name ".prisma" -type d -exec rm -rf {} + 2>/dev/null || true
-RUN pnpm --filter "@coffeeshop/database" exec prisma generate
+RUN pnpm --filter "@coffeeshop/database" exec prisma generate --schema packages/database/prisma/schema.prisma
 RUN pnpm build
 
 FROM base AS runner
