@@ -7,6 +7,7 @@ WORKDIR /app
 
 FROM base AS builder
 RUN apk add --no-cache libc6-compat python3 make g++
+ENV PRISMA_CLI_BINARY_TARGETS="linux-musl,native"
 COPY . .
 RUN rm -rf node_modules .pnpm-store pnpm-lock.yaml
 RUN pnpm install --force
