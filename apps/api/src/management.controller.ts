@@ -1,6 +1,15 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { prisma } from '@coffeeshop/database';
 
+interface CreateMarketplaceProductDto {
+  name: string;
+  price: number;
+  categoryId: string;
+  vendorId: string;
+  minOrderQuantity?: number;
+  image?: string;
+}
+
 @Controller('management')
 export class ManagementController {
 
@@ -396,6 +405,46 @@ export class ManagementController {
       where: vendorId ? { vendorId } : {},
       include: { category: true },
       orderBy: { name: 'asc' },
+    });
+  }
+
+  @Post('marketplace/products')
+  async createMarketplaceProduct(@Body() body: CreateMarketplaceProductDto): Promise<any> {
+    return prisma.marketplaceProduct.create({
+      data: {
+        name: body.name,
+        price: body.price,
+        categoryId: body.categoryId || null,
+        vendorId: body.vendorId,
+        minOrderQuantity: body.minOrderQuantity || 1,
+        unit: 'pièce', // Valeur par défaut
+        image: body.image || null,
+      },
+      include: { category: true },
+    });
+  }
+
+  @Put('marketplace/products/:id')
+  async updateMarketplaceProduct(@Param('id') id: string, @Body() body: {
+    name?: string; price?: number; categoryId?: string; minOrderQuantity?: number; image?: string; active?: boolean;
+  }): Promise<any> {
+    return prisma.marketplaceProduct.update({
+      where: { id },
+      data: {
+        ...(body.name && { name: body.name }),
+        ...(body.price !== undefined && { price: body.price }),
+        ...(body.categoryId && { categoryId: body.categoryId }),
+        ...(body.minOrderQuantity !== undefined && { minOrderQuantity: body.minOrderQuantity }),
+        ...(body.image !== undefined && { image: body.image }),
+      },
+      include: { category: true },
+    });
+  }
+
+  @Delete('marketplace/products/:id')
+  async deleteMarketplaceProduct(@Param('id') id: string): Promise<any> {
+    return prisma.marketplaceProduct.delete({
+      where: { id }
     });
   }
 
