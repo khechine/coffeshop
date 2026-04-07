@@ -1,0 +1,217 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: marketplace-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-marketplace}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: marketplace-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  typesense:
+    image: typesense/typesense:0.25.2
+    container_name: marketplace-typesense
+    restart: unless-stopped
+    volumes:
+      - typesense_data:/data
+    command: '--data-dir /data --api-key=xyz --enable-cors'
+
+  directus:
+    image: directus/directus:10.10
+    container_name: marketplace-directus
+    restart: unless-stopped
+    ports:
+      - "8056:8055"
+    volumes:
+      - directus_uploads:/directus/uploads
+      - directus_extensions:/directus/extensions
+      - ./docker/directus/snapshots:/directus/snapshots
+    env_file:
+      - .env
+    environment:
+      KEY: ${DIRECTUS_KEY:-directus-key-change-me}
+      SECRET: ${DIRECTUS_SECRET:-directus-secret-change-me}
+      DB_CLIENT: pg
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-marketplace}
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      CACHE_ENABLED: "true"
+      CACHE_STORE: redis
+      REDIS: redis://redis:6379
+      PUBLIC_URL: ${DIRECTUS_PUBLIC_URL:-http://localhost:8056}
+      CORS_ENABLED: "true"
+      CORS_ORIGIN: "true"
+      ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL:-admin@marketplace.tn}
+      ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD:-change_me}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: marketplace-api
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: ${API_DATABASE_URL}
+      REDIS_URL: redis://redis:6379
+      TYPESENSE_HOST: typesense
+      TYPESENSE_PORT: 8108
+      TYPESENSE_API_KEY: ${TYPESENSE_API_KEY:-xyz}
+      DIRECTUS_URL: http://directus:8055
+      NODE_ENV: production
+      PRISMA_CLIENT_ENGINE_TYPE: wasm
+      SEED_DATABASE: ${SEED_DATABASE:-false}
+    volumes:
+      - ./apps/api/public/uploads:/workspace/apps/api/public/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      typesense:
+        condition: service_started
+    ports:
+      - "3001:3001"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: marketplace-web
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    volumes:
+      - ./apps/web/public/downloads:/workspace/apps/web/apps/web/public/downloads
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "3000:3000"
+
+  vendor-portal:
+    build:
+      context: .
+      dockerfile: apps/vendor-portal/Dockerfile
+    container_name: marketplace-vendor
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_VENDOR_URL:-${NEXT_PUBLIC_API_URL}}
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "3002:3002"
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    container_name: marketplace-admin
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_ADMIN_URL:-${NEXT_PUBLIC_API_URL}}
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "3004:3004"
+
+  repair-app:
+    build:
+      context: .
+      dockerfile: apps/repair-app/Dockerfile
+    container_name: marketplace-repair-app
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      VITE_MARKETPLACE_API_URL: ${VITE_MARKETPLACE_API_URL:-${NEXT_PUBLIC_APP_URL}}
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "3006:80"
+
+  courier-app:
+    build:
+      context: .
+      dockerfile: apps/courier-app/Dockerfile
+    container_name: marketplace-courier-app
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      VITE_MARKETPLACE_API_URL: ${VITE_MARKETPLACE_API_URL:-${NEXT_PUBLIC_APP_URL}}
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "3008:80"
+
+  nginx:
+    image: nginx:alpine
+    container_name: marketplace-nginx
+    restart: unless-stopped
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./apps/api/public/uploads:/var/www/uploads:ro
+    depends_on:
+      - web
+      - vendor-portal
+      - admin
+      - api
+      - repair-app
+#    ports:
+#      - "80:80"
+#      - "443:443"
+
+volumes:
+  postgres_data:
+  redis_data:
+  typesense_data:
+  directus_uploads:
+  directus_extensions:
+

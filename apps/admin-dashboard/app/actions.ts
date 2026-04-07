@@ -320,7 +320,7 @@ export async function createStaffMember(data: { name: string; email: string; pho
       defaultPosMode: data.defaultPosMode || 'tables',
       permissions: data.permissions || ['POS'],
       assignedTables: data.assignedTables || [],
-      password: 'changeme123',   // must be reset by the user
+      password: await bcrypt.hash('changeme123', 10), // must be reset by the user
       storeId: store.id,
     },
   });
@@ -379,14 +379,15 @@ export async function deleteCategory(id: string) {
 export async function registerStoreAction(data: any) {
   const { email, password, name, storeName, address, city, phone, rne, cin } = data;
   
-  // Hash password in real app
+  // Hash password before saving
+  const hashedPassword = await bcrypt.hash(password, 10);
   const trialEndsAt = new Date();
   trialEndsAt.setDate(trialEndsAt.getDate() + 30);
 
   const user = await prisma.user.create({
     data: {
       email,
-      password,
+      password: hashedPassword,
       name,
       role: 'STORE_OWNER',
       emailVerified: false,
@@ -410,10 +411,11 @@ export async function registerStoreAction(data: any) {
 }
 
 export async function updateUserPasswordAction(userId: string, newPassword: string) {
-  // In real app, hash password!
+  // Always hash before saving — login uses bcrypt.compare()
+  const hashed = await bcrypt.hash(newPassword, 10);
   await prisma.user.update({
     where: { id: userId },
-    data: { password: newPassword }
+    data: { password: hashed }
   });
   revalidatePath('/superadmin/users');
   return { success: true };
@@ -800,10 +802,11 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
 }
 
 export async function registerVendorAction(data: any) {
+  const hashedPassword = await bcrypt.hash(data.password, 10);
   const user = await prisma.user.create({
     data: {
       email: data.email,
-      password: data.password,
+      password: hashedPassword,
       name: data.name,
       role: 'VENDOR'
     }

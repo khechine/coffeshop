@@ -1,0 +1,517 @@
+{
+  "audit_metadata": {
+    "project": "CoffeeShop B2B API",
+    "audit_date": "2026-04-05",
+    "target_path": "/apps/api/src",
+    "audit_type": "Security Audit for RCE/Command Injection Vulnerabilities",
+    "incident_context": "Cryptocurrency miner malware discovered running as user 999 in PostgreSQL container",
+    "total_vulnerabilities_identified": 41,
+    "critical_vulnerabilities": 5,
+    "high_vulnerabilities": 22,
+    "medium_vulnerabilities": 0,
+    "moderate_vulnerabilities": 16,
+    "low_vulnerabilities": 3
+  },
+  "vulnerability_summary": {
+    "dependency_vulnerabilities": {
+      "count": 41,
+      "severity_breakdown": {
+        "CRITICAL": 5,
+        "HIGH": 22,
+        "MODERATE": 16,
+        "LOW": 3
+      }
+    },
+    "code_vulnerabilities": {
+      "count": 4,
+      "severity_breakdown": {
+        "HIGH": 2,
+        "MEDIUM": 2
+      }
+    },
+    "docker_vulnerabilities": {
+      "count": 3,
+      "severity_breakdown": {
+        "HIGH": 1,
+        "MEDIUM": 2
+      }
+    }
+  },
+  "critical_vulnerabilities_by_category": {
+    "command_injection": [
+      {
+        "id": "CV-001",
+        "vulnerability_type": "Command Injection via glob CLI (Dependency)",
+        "severity": "CRITICAL",
+        "cvss_score": 9.1,
+        "affected_package": "glob@10.4.5",
+        "vulnerable_range": ">=10.2.0 <10.5.0",
+        "patched_version": ">=10.5.0",
+        "dependency_chain": "apps/api > @nestjs/cli@10.4.9 > glob@10.4.5",
+        "vulnerability_description": "The glob CLI has a command injection vulnerability via the -c/--cmd parameter when shell:true is used. This allows arbitrary shell command execution.",
+        "cve_reference": "GHSA-5j98-mcp5-4vw2",
+        "attack_vector": "If the API internally uses glob with shell commands based on user input, attackers could inject arbitrary shell commands",
+        "remediation": {
+          "immediate": "Update @nestjs/cli to >=10.5.0 which includes patched glob",
+          "command": "pnpm update @nestjs/cli@^10.5.0"
+        },
+        "impact": "Remote Code Execution with Node.js process privileges"
+      }
+    ],
+    "file_operations": [
+      {
+        "id": "CV-002",
+        "vulnerability_type": "Arbitrary File Operations via tar (Dependency)",
+        "severity": "CRITICAL",
+        "cvss_score": 8.8,
+        "affected_packages": [
+          "tar@6.2.1"
+        ],
+        "vulnerable_range": "<7.5.8",
+        "patched_version": ">=7.5.8",
+        "dependency_chain": "apps/api > @coffeeshop/database > bcrypt@5.1.1 > @mapbox/node-pre-gyp@1.0.11 > tar@6.2.1 | apps/api > bcrypt@5.1.1 > @mapbox/node-pre-gyp@1.0.11 > tar@6.2.1",
+        "vulnerabilities": [
+          {
+            "cve": "GHSA-34x7-hfp2-rc4v",
+            "description": "Vulnerable to Arbitrary File Creation/Overwrite via Hardlink Path Traversal"
+          },
+          {
+            "cve": "GHSA-8qq5-rm4j-mr97",
+            "description": "Vulnerable to Arbitrary File Overwrite and Symlink Poisoning via Insufficient Path Sanitization"
+          },
+          {
+            "cve": "GHSA-h25m-26qc-wcjf (Related)",
+            "description": "Target Escape Through Symlink Chain in tar Extraction"
+          }
+        ],
+        "attack_vector": "If bcrypt (used for password hashing) is exploited during installation or binary compilation, attackers could extract tar archives with crafted symlinks/hardlinks to write arbitrary files to filesystem",
+        "remediation": {
+          "immediate": "Update bcrypt package and rebuild",
+          "command": "pnpm update bcrypt@^5.1.1"
+        },
+        "impact": "Arbitrary file write, potential code execution if written to executable locations, container filesystem compromise"
+      }
+    ],
+    "deserialization": [
+      {
+        "id": "CV-003",
+        "vulnerability_type": "HTTP Request Deserialization DoS (Dependency)",
+        "severity": "CRITICAL",
+        "cvss_score": 7.5,
+        "affected_package": "next@14.2.35",
+        "vulnerable_range": ">=13.0.0 <15.0.8",
+        "patched_version": ">=15.0.8",
+        "dependency_chain": "apps/admin-dashboard > next@14.2.35",
+        "vulnerability_description": "Next.js HTTP request deserialization can lead to DoS when using insecure React Server Components with untrusted payload deserialization",
+        "cve_reference": "GHSA-h25m-26qc-wcjf",
+        "attack_vector": "Malicious HTTP requests with crafted payloads during deserialization could crash the admin dashboard or expose memory",
+        "remediation": {
+          "immediate": "This is in admin-dashboard, not active API but affects admin connectivity",
+          "command": "pnpm update next@^15.0.8 -w"
+        },
+        "impact": "Denial of Service, potential information disclosure"
+      }
+    ]
+  },
+  "high_severity_vulnerabilities": [
+    {
+      "id": "HV-001",
+      "vulnerability_type": "Lodash Prototype Pollution (Dependency)",
+      "severity": "HIGH",
+      "affected_package": "lodash@4.17.23",
+      "vulnerable_range": "<=4.17.23",
+      "patched_version": ">=4.18.0",
+      "dependency_chain": "apps/api > @nestjs/cli@10.4.9 > [inquirer@8.2.6, @angular-devkit/schematics-cli@17.3.11, node-emoji@1.11.0] > lodash@4.17.23",
+      "cve": "GHSA-f23m-r3pf-42rh",
+      "vulnerability_description": "Lodash _.unset and _.omit functions are vulnerable to prototype pollution via array path bypass. An attacker with control over the path parameter could pollute Object prototypes.",
+      "attack_vector": "If API processes user input through lodash utility functions in @nestjs/cli tools, prototype pollution could occur",
+      "remediation": {
+        "immediate": "Update @nestjs/cli which depends on lodash",
+        "command": "pnpm update @nestjs/cli@^10.4.0"
+      },
+      "impact": "Prototype pollution could affect all objects in Node process, potential code execution"
+    },
+    {
+      "id": "HV-002",
+      "vulnerability_type": "brace-expansion ReDoS Attack (Dependency)",
+      "severity": "HIGH",
+      "affected_packages": [
+        "brace-expansion@1.1.12",
+        "brace-expansion@2.0.2"
+      ],
+      "vulnerable_ranges": [
+        ">=1.3.0 <1.3.1 (for v1)",
+        ">=2.0.0 <2.0.3 (for v2)"
+      ],
+      "cve": "GHSA-3xac-9lxj-fc05",
+      "vulnerability_description": "Multiple ReDoS (Regular Expression Denial of Service) vulnerabilities in brace-expansion and zero-step sequence causing process hang and memory exhaustion",
+      "dependency_chain": "apps/api > @nestjs/cli@10.4.9 > glob@10.4.5 > minimatch@9.0.9 > brace-expansion@2.0.2",
+      "attack_vector": "Crafted glob patterns with specific brace expansion syntax could cause CPU exhaustion and DoS",
+      "remediation": {
+        "immediate": "Update packages that depend on brace-expansion",
+        "command": "pnpm update @nestjs/cli@^10.4.0"
+      },
+      "impact": "Denial of Service during application startup or API usage"
+    },
+    {
+      "id": "HV-003",
+      "vulnerability_type": "Picomatch POSIX Character Class Injection (Dependency)",
+      "severity": "HIGH",
+      "affected_packages": [
+        "picomatch@2.3.1",
+        "picomatch@4.0.3"
+      ],
+      "vulnerable_ranges": [
+        "<2.3.2 (for v2)",
+        ">=4.0.0 <4.0.4 (for v4)"
+      ],
+      "cve": "GHSA-3v7f-55p6-f55p",
+      "vulnerability_description": "Method Injection in POSIX Character Classes causes incorrect glob pattern matching. An attacker could craft patterns that bypass security checks or match unintended files.",
+      "dependency_chain": "apps/admin-dashboard > tailwindcss@3.4.19 > chokidar@3.6.0 > [anymatch@3.1.3, readdirp@3.6.0] > picomatch@2.3.1",
+      "attack_vector": "If file watching or pattern matching is done on user-controlled paths, malicious patterns could match sensitive files",
+      "remediation": {
+        "immediate": "Update tailwindcss and eslint dependencies",
+        "command": "pnpm update tailwindcss@^3.4.0 eslint-config-next@^16.2.0"
+      },
+      "impact": "Incorrect glob matching, potential file traversal or unintended file operations"
+    }
+  ],
+  "code_level_vulnerabilities": [
+    {
+      "id": "APP-001",
+      "file_path": "apps/api/src/auth.controller.ts",
+      "line_number": 14,
+      "vulnerability_type": "SQL Injection via Prisma (Low risk due to parameterization)",
+      "severity": "MEDIUM",
+      "code_snippet": "const user = await prisma.user.findFirst({\n  where: {\n    storeId: storeId.trim(),\n    pinCode: pin.trim(),\n  },",
+      "description": "While using Prisma ORM which provides parameterized queries, the endpoint accepts raw pin/storeId from query parameters without strict validation. trim() is not sufficient.",
+      "potential_exploit": "Although Prisma prevents SQL injection, lack of input validation could allow bypass attacks or type confusion",
+      "remediation": {
+        "step1": "Add class-validator decorators",
+        "step2": "Implement @IsUUID() or @IsString() with specific patterns",
+        "step3": "Add rate limiting on PIN verification endpoint to prevent brute force",
+        "example_code": "import { Query, BadRequestException } from '@nestjs/common';\nimport { IsString, Length } from 'class-validator';\n\n@Get('verify-staff-pin')\nasync verifyStaffPin(\n  @Query('pin') pin: string,\n  @Query('storeId') storeId: string\n) {\n  if (!pin || pin.length !== 6 || !/^\\d{6}$/.test(pin)) {\n    throw new BadRequestException('Invalid PIN format');\n  }\n  // ... rest of code"
+      }
+    },
+    {
+      "id": "APP-002",
+      "file_path": "apps/api/src/whatsapp/whatsapp.service.ts",
+      "line_number": 18,
+      "vulnerability_type": "Potential Server-Side Template Injection (SSTI)",
+      "severity": "MEDIUM",
+      "code_snippet": "const message = `\n☕ *Nouvelle Commande B2B - ${storeName}* ☕\nBonjour ${supplierName},\n\nVous avez une nouvelle suggestion de commande (Réf: #${orderId.slice(-6)}).\nVoici les articles critiques à livrer :\n\n${itemsDescription}\n\n👉 Répondez *CONFIRMER* à ce message pour valider la livraison.\n`;",
+      "description": "While this is JavaScript template literals (not SSTI), the message content includes unsanitized user inputs (supplierName, storeName, itemsDescription) that are sent to WhatsApp. If WhatsApp API processes special formatting, this could be exploited.",
+      "potential_exploit": "Attackers could inject WhatsApp formatting codes or special characters through supplier/store names to manipulate message display or inject content",
+      "remediation": {
+        "step1": "Sanitize all user inputs before inserting into messages",
+        "step2": "Use a messaging template library with escaping",
+        "example_code": "import * as sanitizeHtml from 'sanitize-html';\n\nconst safeName = sanitizeHtml(supplierName, { \n  allowedTags: [], \n  allowedAttributes: {} \n});\n\nconst message = `\n☕ *Nouvelle Commande B2B - ${safeName}* ☕`;"
+      }
+    }
+  ],
+  "docker_and_deployment_vulnerabilities": [
+    {
+      "id": "DOCKER-001",
+      "file": "Dockerfile",
+      "line_range": "1-20",
+      "vulnerability_type": "Running as Root in Multi-stage Build",
+      "severity": "HIGH",
+      "description": "The runner stage sets WORKDIR /app but doesn't specify a non-root user. Container runs as root by default.",
+      "code_snippet": "FROM base AS runner\nWORKDIR /app\nENV NODE_ENV production\nCOPY --from=builder /app /app\nEXPOSE 3000 3001\n\nCMD [\"pnpm\", \"start\"]",
+      "potential_exploit": "If container is compromised, attacker has root-level access. This likely enabled the cryptocurrency miner to: 1) Download binaries to /tmp/, 2) Execute with postgres user (999) permissions via PostgreSQL database commands, 3) Auto-restart via container orchestration",
+      "attack_flow": "1. Attacker exploits API vulnerability → RCE in Node container (user: node)\n2. Attacker escalates to root (if possible) or uses existing database connection\n3. Places malware binaries in /tmp with postgres owner (user 999)\n4. Malware executes with container restart persistence mechanism",
+      "remediation": {
+        "step1": "Create non-root user in runner stage",
+        "step2": "Set explicit USER directive",
+        "step3": "Ensure /app has correct ownership",
+        "example_code": "FROM base AS runner\nRUN addgroup -g 1000 -S nodejs\nRUN adduser -S nodejs -u 1000\nWORKDIR /app\nENV NODE_ENV production\nCOPY --from=builder --chown=nodejs:nodejs /app /app\nUSER nodejs\nEXPOSE 3000 3001\nCMD [\"pnpm\", \"start\"]"
+      }
+    },
+    {
+      "id": "DOCKER-002",
+      "file": "docker-compose.yml",
+      "line_range": "35-55",
+      "vulnerability_type": "Default/Weak Database Credentials",
+      "severity": "MEDIUM",
+      "description": "PostgreSQL service uses weak default credentials: postgres:postgres",
+      "code_snippet": "coffeeshop_db:\n  image: postgres:15\n  environment:\n    POSTGRES_USER: ${POSTGRES_USER:-postgres}\n    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}\n    POSTGRES_DB: ${POSTGRES_DB:-coffeeshop}",
+      "potential_exploit": "Default credentials allow attackers who gain network access to the database to execute queries. From database, attackers can: 1) Read sensitive data, 2) Modify tables, 3) Potentially execute system commands if PostgreSQL extensions are available",
+      "remediation": {
+        "step1": "Don't use default fallback credentials",
+        "step2": "Require strong passwords in .env.prod",
+        "step3": "Use secrets management for production",
+        "example_code": "coffeeshop_db:\n  image: postgres:15\n  environment:\n    POSTGRES_USER: ${POSTGRES_USER:?Database user must be set}\n    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password must be set}\n    POSTGRES_DB: ${POSTGRES_DB:?Database name must be set}\n  # In docker-compose.yml, use external secrets\n  secrets:\n    - db_password"
+      }
+    },
+    {
+      "id": "DOCKER-003",
+      "file": "docker-compose.yml",
+      "line_range": "35-44",
+      "vulnerability_type": "Database Exposed on Host Network",
+      "severity": "MEDIUM",
+      "description": "PostgreSQL service exposes port 5433 on host machine, making database accessible from outside container network",
+      "code_snippet": "ports:\n  - '5433:5432'",
+      "potential_exploit": "If VPS firewall isn't properly configured, database is accessible from internet. Brute force attacks against database credentials possible. The cryptocurrency miner may have: 1) Connected to exposed database port, 2) Executed admin commands, 3) Used database to deploy malware or schedule jobs",
+      "remediation": {
+        "step1": "Remove port exposure from docker-compose.yml or restrict in production",
+        "step2": "Only expose if necessary for development",
+        "step3": "Add firewall rules to restrict access",
+        "example_code": "# For production: don't expose the port\n# For development only:\nports:\n  - '127.0.0.1:5433:5432'  # Only accessible from localhost"
+      }
+    }
+  ],
+  "environmental_and_configuration_vulnerabilities": [
+    {
+      "id": "ENV-001",
+      "issue": "Hardcoded JWT_SECRET in docker-compose.yml",
+      "severity": "HIGH",
+      "location": "docker-compose.yml line 42, 52",
+      "code": "JWT_SECRET: ${JWT_SECRET:-supers3cr3tc0ffeesh0p}",
+      "problem": "Default JWT secret 'supers3cr3tc0ffeesh0p' is hardcoded. If .env file is missing or on production VPS, this weak secret is used.",
+      "impact": "Attackers can forge valid JWT tokens, impersonate any user, bypass authentication",
+      "remediation": "1) Remove default value and require .env setting\n2) Use strong random 32+ character secret\n3) Rotate secret regularly"
+    },
+    {
+      "id": "ENV-002",
+      "issue": "Environment Variables Exposed via Process Inspection",
+      "severity": "MEDIUM",
+      "location": "Multiple files access process.env",
+      "problem": "DATABASE_URL with plaintext credentials is passed as environment variable to container",
+      "impact": "If Node.js process is compromised, $: ps aux | grep NODE shows DATABASE_URL in environment\nMalware running as postgres user (999) could read process environment of Node process",
+      "remediation": "1) Use Docker secrets instead of environment variables for sensitive data\n2) Use Node.js dotenv with .env.local not exposed in docker-compose\n3) Implement credential rotation"
+    },
+    {
+      "id": "ENV-003",
+      "issue": "Debug Logging Enabled in Production",
+      "severity": "LOW",
+      "location": "packages/database/src/client.ts line 9",
+      "code": "log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error']",
+      "problem": "Even though only ['error'] is logged in production, large errors could be logged that contain sensitive data",
+      "impact": "Application errors logged could contain database queries or user data",
+      "remediation": "1) Implement proper error handling with sanitization\n2) Use structured logging with log levels\n3) Forward logs to secure logging service (not stdout)"
+    }
+  ],
+  "likely_attack_vectors_that_enabled_malware": [
+    {
+      "vector_id": "AV-001",
+      "name": "SQL Injection or Command Injection via API",
+      "likelihood": "MEDIUM-HIGH",
+      "description": "Although Prisma prevents SQL injection, if there are any raw SQL queries or dynamic query building, attackers could execute shell commands via PostgreSQL extensions.",
+      "how_it_worked": "1. Attacker sends malicious request to API endpoint\n2. API constructs query with user input\n3. Query executes system command via PostgreSQL (if enabled)\n4. Command downloads/executes /tmp/mysql binary\n5. Binary runs as postgres user (999) inside container",
+      "evidence_from_incident": "Malware was found running as user 999 (postgres) in coffeeshop_postgres container"
+    },
+    {
+      "vector_id": "AV-002",
+      "name": "Supply Chain Attack via Dependencies",
+      "likelihood": "HIGH",
+      "description": "Multiple high/critical CVEs in dependencies could have been exploited during installation or runtime",
+      "dependencies": [
+        "glob@10.4.5 (command injection)",
+        "tar@6.2.1 (arbitrary file operations)",
+        "bcrypt@5.1.1 (via tar vulnerabilities)"
+      ],
+      "how_it_worked": "1. Attacker publishes malicious npm package version\n2. pnpm install runs during Docker build\n3. Malicious package extracts files to /tmp/ with execute permissions\n4. Application startup triggers malware execution\n5. Persistence mechanism (cron/watchdog) keeps malware running",
+      "evidence_from_incident": "Malware respawned automatically within 2 seconds after kill - indicates persistence mechanism"
+    },
+    {
+      "vector_id": "AV-003",
+      "name": "Environment Variable Injection or File Upload",
+      "likelihood": "MEDIUM",
+      "description": "If there are any file upload endpoints or environment variable processing, attackers could inject malicious executables",
+      "how_it_worked": "1. Attacker uploads file or injects env var\n2. Application processes it without proper validation\n3. File placed in /tmp/ with execute permissions\n4. Application or external process (postgres via extension) executes file\n5. Malware achieves RCE as postgres user",
+      "note": "No explicit file upload endpoints found in code review, but /tmp is writeable by all users"
+    },
+    {
+      "vector_id": "AV-004",
+      "name": "PostgreSQL Extension/Function Exploitation",
+      "likelihood": "MEDIUM",
+      "description": "PostgreSQL can execute system commands via functions like pg_exec or creating custom extensions",
+      "how_it_worked": "1. Attacker gains database access (via API or exposed port 5433)\n2. Creates malicious PostgreSQL function: CREATE FUNCTION ... AS 'exec('\n3. Function downloads malware to /tmp/\n4. Function executes malware with postgres user privileges\n5. Malware becomes cryptocurrency miner consuming CPU",
+      "evidence_from_incident": "Malware running as postgres user (999) suggests database-level execution"
+    },
+    {
+      "vector_id": "AV-005",
+      "name": "Weak/Default Credentials on Exposed Database",
+      "likelihood": "MEDIUM",
+      "description": "PostgreSQL port 5433 exposed on host with default credentials postgres:postgres",
+      "how_it_worked": "1. Attacker scans VPS ports and finds 5433 open\n2. Connects to PostgreSQL with default credentials\n3. Executes CREATE EXTENSION pg_execute_sql or similar\n4. Downloads/executes malware binary\n5. Achieves RCE with postgres user privileges",
+      "evidence_from_incident": "Docker logs and configuration show port 5433:5432 exposed"
+    }
+  ],
+  "remediation_priority_matrix": {
+    "IMMEDIATE_CRITICAL": [
+      {
+        "action": "Update @nestjs/cli to patch glob CVE (CV-001)",
+        "command": "pnpm update @nestjs/cli@latest",
+        "timeline": "Within 24 hours",
+        "impact": "Prevents command injection attacks via glob patterns"
+      },
+      {
+        "action": "Update bcrypt and patch tar vulnerabilities (CV-002)",
+        "command": "pnpm update bcrypt@latest",
+        "timeline": "Within 24 hours",
+        "impact": "Prevents arbitrary file operations"
+      },
+      {
+        "action": "Add non-root user to Dockerfile (DOCKER-001)",
+        "command": "See remediation code in DOCKER-001",
+        "timeline": "Within 48 hours",
+        "impact": "Restricts container compromise damage"
+      }
+    ],
+    "HIGH_PRIORITY": [
+      {
+        "action": "Restrict database port exposure (DOCKER-003)",
+        "command": "Change ports section or remove it, add firewall rules",
+        "timeline": "Within 48 hours",
+        "impact": "Prevents direct database access from internet"
+      },
+      {
+        "action": "Remove default JWT_SECRET (ENV-001)",
+        "command": "Update docker-compose.yml to require .env setting",
+        "timeline": "Within 48 hours",
+        "impact": "Prevents JWT token forgery"
+      },
+      {
+        "action": "Add input validation to controllers",
+        "command": "Implement DTO validation on all endpoints",
+        "timeline": "Within 1 week",
+        "impact": "Reduces injection attack surface"
+      }
+    ],
+    "MEDIUM_PRIORITY": [
+      {
+        "action": "Implement rate limiting on authentication endpoints",
+        "command": "Add @nestjs/throttler package",
+        "timeline": "Within 1 week",
+        "impact": "Prevents brute force attacks on PIN/password endpoints"
+      },
+      {
+        "action": "Implement structured logging and monitoring",
+        "command": "Add Winston or Pino logger with log sanitization",
+        "timeline": "Within 2 weeks",
+        "impact": "Better incident detection and forensics"
+      },
+      {
+        "action": "Sanitize WhatsApp message content (APP-002)",
+        "command": "Add sanitization function for supplier/store names",
+        "timeline": "Within 2 weeks",
+        "impact": "Prevents message injection attacks"
+      }
+    ]
+  },
+  "forensic_analysis_of_incident": {
+    "incident_summary": "Cryptocurrency miner executed with postgres user (999) privileges inside PostgreSQL container",
+    "timeline": {
+      "t_minus_unknown": "Attacker exploits vulnerability to gain initial access",
+      "t_minus_10_min": "Malware process /tmp/mysql spawned and starts consuming CPU",
+      "t_0_min": "Administrator detects 392% CPU usage via monitoring",
+      "t_plus_0": "Process killed with kill -9 66970",
+      "t_plus_2_sec": "Process respawns as PID 67839 - indicates persistence mechanism",
+      "t_plus_5_min": "Files cleaned from /tmp directory:\n- /tmp/mysql (2.0MB) - main malware binary\n- /tmp/init (2.7MB) - initialization/dropper script",
+      "t_plus_10_min": "Container restarted to clear process table"
+    },
+    "forensic_findings": {
+      "process_user": "999 (postgres user inside container)",
+      "process_name": "/tmp/mysql (masqueraded as database process)",
+      "process_memory": "2.4GB (consistent with cryptocurrency miner using RAM for mining)",
+      "cpu_usage": "392% (4+ CPU cores at 100%)",
+      "binary_sizes": {
+        "mysql": "2017428 bytes (~2.0MB)",
+        "init": "2765512 bytes (~2.7MB)"
+      },
+      "file_permissions": "rwx------ (only owner could view/execute)",
+      "permissions_mask": "700 (restrictive, intentional hiding)"
+    },
+    "attack_flow_hypothesis": {
+      "stage_1_exploit": "Attacker exploits unidentified vulnerability in NestJS API to achieve RCE",
+      "stage_2_lateral_movement": "From Node.js container (user: node), attacker establishes connection to PostgreSQL database",
+      "stage_3_privilege_escalation": "Attacker uses PostgreSQL to download/execute malware binary:\n  - CREATE FUNCTION with plpgsql or untrusted language\n  - Execute shell commands with postgres user privileges\n  - Or: SQL injection providing db command execution",
+      "stage_4_persistence": "Malware placed in /tmp with persistence mechanism:\n  - Crontab entry running malware at intervals\n  - Init script or systemd service\n  - Watchdog process that respawns on kill",
+      "stage_5_obfuscation": "Binary named /tmp/mysql to blend with PostgreSQL context",
+      "stage_6_execution": "Cryptocurrency miner starts, begins consuming CPU for crypto mining"
+    },
+    "why_postgres_user": {
+      "reason_1": "PostgreSQL can execute OS commands via contrib modules (pg_execute_sql, etc.)",
+      "reason_2": "User 999 is the postgres service user inside container - hardcoded in PostgreSQL Dockerfile",
+      "reason_3": "Lateral movement from Node.js → Database → OS command execution pathway",
+      "reason_4": "Postgres user has /tmp write access within container"
+    },
+    "respawn_mechanism_analysis": {
+      "observation": "Process respawned as PID 67839 within 2 seconds after kill -9",
+      "possible_causes": [
+        "Cron job running every 1-5 seconds checking and respawning /tmp/mysql",
+        "PostgreSQL function/trigger that spawns process on schedule",
+        "Init script or systemd timer executing malware",
+        "Watchdog daemon (inotify-based) monitoring /tmp/mysql and respawning if deleted"
+      ],
+      "container_context": "Standard PostgreSQL 15 Docker image doesn't have obvious cron/init mechanisms, suggesting attacker added custom persistence"
+    }
+  },
+  "detection_evasion_techniques_used": [
+    {
+      "technique": "Process Masquerading",
+      "explanation": "Named /tmp/mysql to appear as database-related process, not obviously malicious",
+      "detection_bypass": "Simple ps aux would show suspicious process, but name helps obfuscate intent"
+    },
+    {
+      "technique": "Ephemeral Artifacts",
+      "explanation": "Placed in /tmp (temporary filesystem) not persistent volumes - leaves no trace after restart",
+      "detection_bypass": "No forensic evidence persists after container restart"
+    },
+    {
+      "technique": "Restrictive File Permissions",
+      "explanation": "Files owned by postgres:postgres with 700 permissions - only owner can read",
+      "detection_bypass": "Admin viewing files as root could read, but non-root users could not"
+    },
+    {
+      "technique": "Quick Execution",
+      "explanation": "Malware runs in background, doesn't interact with tty/stdout",
+      "detection_bypass": "Silent execution, CPU usage is the only obvious indicator"
+    }
+  ],
+  "recommendations_summary": {
+    "immediate_actions_0_to_24_hours": [
+      "Patch all CRITICAL CVEs in dependencies",
+      "Rebuild container image with non-root user",
+      "Add firewall rules to restrict database port access",
+      "Rotate all credentials (JWT_SECRET, database password)",
+      "Review API access logs for exploitation attempts"
+    ],
+    "short_term_0_to_1_week": [
+      "Complete input validation on all endpoints",
+      "Implement rate limiting on authentication endpoints",
+      "Add security headers (CSP, HSTS, X-Frame-Options)",
+      "Implement secrets management (Docker Secrets or external vault)",
+      "Set up monitoring/alerting for resource exhaustion"
+    ],
+    "medium_term_1_to_4_weeks": [
+      "Implement Web Application Firewall (WAF)",
+      "Add database activity monitoring (DAM)",
+      "Conduct penetration testing on API",
+      "Implement SIEM/logging solution",
+      "Regular dependency scanning and updates",
+      "Database query logging and audit trails"
+    ],
+    "long_term_ongoing": [
+      "Security code review process",
+      "Automated dependency scanning in CI/CD",
+      "Runtime application security monitoring (RASP)",
+      "Container image scanning",
+      "Regular security architecture reviews"
+    ]
+  },
+  "conclusion": {
+    "security_posture": "HIGH RISK - Multiple critical vulnerabilities present that could enable RCE similar to the cryptocurrency miner incident",
+    "primary_concerns": [
+      "Unpatched dependencies with command injection vulnerabilities",
+      "Container running with insufficient security restrictions",
+      "Database credentials exposed and port accessible from internet",
+      "Lack of input validation on API endpoints",
+      "No apparent monitoring or rate limiting on sensitive endpoints"
+    ],
+    "attack_surface": "Very High - Exposed database port, unpatched dependencies, and weak authentication on PIN endpoints create multiple exploitation paths",
+    "likelihood_of_similar_attack": "HIGH - Same vulnerabilities that allowed cryptocurrency miner installation remain present",
+    "recommendation": "Deploy all HIGH and CRITICAL fixes immediately. The application is vulnerable to the same attack vectors that led to the cryptocurrency miner incident."
+  }
+}

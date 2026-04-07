@@ -24,7 +24,7 @@ export function ManagementRoot() {
       case 'suppliers': return <SuppliersScreen storeId={storeId!} />;
       case 'orders': return <OrdersScreen storeId={contextId!} isVendor={isVendor} />;
       case 'notifs': return <NotificationsScreen storeId={storeId!} />;
-      default: return <DashboardView onNavigate={setActiveTab} />;
+      default: return isVendor ? <VendorDashboardView onNavigate={setActiveTab} /> : <OwnerDashboardView onNavigate={setActiveTab} />;
     }
   };
 
@@ -93,9 +93,8 @@ function SummaryCard({ title, value, theme }: any) {
   );
 }
 
-function DashboardView({ onNavigate }: { onNavigate: (tab: ManagementTab) => void }) {
-  const { theme, userRole } = usePOSStore();
-  const isVendor = userRole === 'vendor';
+function OwnerDashboardView({ onNavigate }: { onNavigate: (tab: ManagementTab) => void }) {
+  const { theme } = usePOSStore();
 
   return (
     <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -114,6 +113,31 @@ function DashboardView({ onNavigate }: { onNavigate: (tab: ManagementTab) => voi
         <MenuCard icon="👥" label="Fournisseurs" onPress={() => onNavigate('suppliers')} />
         <MenuCard icon="🔔" label="Alertes" onPress={() => onNavigate('notifs')} />
         <MenuCard icon="⚙️" label="Paramètres" onPress={() => {}} />
+      </View>
+    </ScrollView>
+  );
+}
+
+function VendorDashboardView({ onNavigate }: { onNavigate: (tab: ManagementTab) => void }) {
+  const { theme } = usePOSStore();
+
+  return (
+    <ScrollView contentContainerStyle={{ padding: 20 }}>
+      <Text style={{ color: theme.colors.cream, fontSize: 24, fontWeight: '900', marginBottom: 4 }}>Espace Fournisseur,</Text>
+      <Text style={{ color: theme.colors.caramel, fontSize: 13, marginBottom: 24 }}>Gérez votre catalogue et préparez vos expéditions B2B.</Text>
+
+      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+        <SummaryCard title="À TRAITER" value="0 cmd" theme={theme} />
+        <SummaryCard title="PRODUITS" value="0 actifs" theme={theme} />
+      </View>
+
+      <Text style={{ color: theme.colors.cream, fontSize: 16, fontWeight: '800', marginTop: 20, marginBottom: 12 }}>Raccourcis Rapides</Text>
+      
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+        <MenuCard icon="📋" label="Catalogue" onPress={() => onNavigate('products')} />
+        <MenuCard icon="🏷️" label="Catégories" onPress={() => onNavigate('categories')} />
+        <MenuCard icon="📦" label="Commandes" onPress={() => onNavigate('orders')} />
+        <MenuCard icon="🔔" label="Alertes" onPress={() => onNavigate('notifs')} />
       </View>
     </ScrollView>
   );

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Platform, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useConfirm } from '../context/ConfirmContext';
 import { usePOSStore } from '../store/posStore';
 
@@ -48,6 +49,10 @@ const createMgStyles = (theme: any) => StyleSheet.create({
   pickerChipActive: { backgroundColor: theme.colors.caramel, borderColor: theme.colors.caramel },
   pickerChipText: { fontSize: 13, fontWeight: '600', color: theme.colors.cream },
   pickerChipTextActive: { color: theme.colors.background },
+  checkbox: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.glassBorder },
+  checkboxActive: { backgroundColor: theme.colors.caramel, borderColor: theme.colors.caramel },
+  checkboxText: { fontSize: 12, fontWeight: '600', color: theme.colors.cream },
+  checkboxTextActive: { color: theme.colors.background },
   label: { fontSize: 13, fontWeight: '700', color: theme.colors.caramel, marginBottom: 6, marginTop: 4 },
 });
 
@@ -89,10 +94,14 @@ export function CategoriesScreen({ storeId, isVendor }: { storeId: string, isVen
     }
 
     try {
+      const payload = isVendor 
+        ? { name: finalName, type: 'MARKETPLACE' } // Assume backend creates marketplace categories generally or linked to vendor if needed
+        : { name: finalName, storeId };
+
       const res = await fetch(`${API_URL}/management/categories`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: finalName, storeId }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         setShowModal(false);
@@ -231,7 +240,9 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
     name: '', 
     price: '', 
     categoryId: '',
+    minOrderQuantity: '1',
     active: true,
+    image: '',
     recipe: [] as { stockItemId: string; quantity: string }[] 
   });
   const { alert, confirm } = useConfirm();
@@ -240,14 +251,16 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
     try {
       const prodEndpoint = isVendor ? `management/marketplace/products?vendorId=${storeId}` : `management/products/${storeId}`;
       const catEndpoint = isVendor ? `management/marketplace/categories` : `management/categories/${storeId}`;
-      const [prodRes, catRes, stockRes] = await Promise.all([
+      const responses = await Promise.all([
         fetch(`${API_URL}/${prodEndpoint}`),
         fetch(`${API_URL}/${catEndpoint}`),
-        fetch(`${API_URL}/management/stock/${storeId}`),
+        ...(isVendor ? [] : [
+          fetch(`${API_URL}/management/stock/${storeId}`)
+        ])
       ]);
-      if (prodRes.ok) setProducts(await prodRes.json());
-      if (catRes.ok) setCategories(await catRes.json());
-      if (stockRes.ok) setStockItems(await stockRes.json());
+      if (responses[0].ok) setProducts(await responses[0].json());
+      if (responses[1].ok) setCategories(await responses[1].json());
+      if (!isVendor && responses[2] && responses[2].ok) setStockItems(await responses[2].json());
     } catch (e) { console.warn('Products fetch error', e); }
     finally { setLoading(false); }
   };
@@ -256,7 +269,19 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
 
   const openCreate = () => {
     setEditItem(null);
-    setForm({ name: '', price: '', categoryId: categories[0]?.id || '', active: true, recipe: [] });
+    setForm({ 
+      name: '', 
+      price: '', 
+      categoryId: categories[0]?.id || '', 
+      unit: 'kg',
+      minOrderQuantity: '1', 
+      brand: '',
+      image: '', 
+      isFeatured: false,
+      isFlashSale: false,
+      active: true, 
+      recipe: [] 
+    });
     setShowModal(true);
   };
 
@@ -266,6 +291,12 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
       name: item.name, 
       price: String(Number(item.price)), 
       categoryId: item.categoryId,
+      unit: item.unit || 'kg',
+      minOrderQuantity: String(item.minOrderQuantity || 1),
+      brand: item.brand || '',
+      image: item.image || '',
+      isFeatured: item.isFeatured || false,
+      isFlashSale: item.isFlashSale || false,
       active: item.active ?? true,
       recipe: (item.recipe || []).map((r: any) => ({ 
         stockItemId: r.stockItemId, 
@@ -275,15 +306,34 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
     setShowModal(true);
   };
 
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Permission', 'Permission de la caméra refusée.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets && result.assets[0].base64) {
+      setForm({ ...form, image: `data:image/jpeg;base64,${result.assets[0].base64}` });
+    }
+  };
+
   const handleSave = async () => {
     if (!form.name || !form.price || !form.categoryId) {
       alert('Erreur', 'Remplissez tous les champs');
       return;
     }
     try {
-      const url = editItem
-        ? `${API_URL}/management/products/${editItem.id}`
-        : `${API_URL}/management/products`;
+      const baseUrl = isVendor ? `${API_URL}/management/marketplace/products` : `${API_URL}/management/products`;
+      const url = editItem ? `${baseUrl}/${editItem.id}` : baseUrl;
+      
       const res = await fetch(url, {
         method: editItem ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -291,8 +341,19 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
           name: form.name,
           price: parseFloat(form.price),
           categoryId: form.categoryId,
+          ...(isVendor && {
+            unit: form.unit,
+            brand: form.brand || undefined,
+            isFeatured: form.isFeatured,
+            isFlashSale: form.isFlashSale,
+          }),
+          minOrderQuantity: parseInt(form.minOrderQuantity) || 1,
           active: form.active,
-          ...(!editItem && { storeId }),
+          image: form.image || undefined,
+          ...(!editItem && { 
+            storeId: isVendor ? undefined : storeId,
+            vendorId: isVendor ? storeId : undefined
+          }),
         }),
       });
       if (res.ok) {
@@ -412,51 +473,107 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
                 ))}
               </View>
 
-              <Text style={mgStyles.label}>Recette (Ingredients)</Text>
-              {form.recipe.map((r, idx) => (
-                <View key={idx} style={{ flexDirection: 'row', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                  <View style={{ flex: 2 }}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
-                      {stockItems.map(si => (
-                        <TouchableOpacity 
-                          key={si.id} 
-                          style={[mgStyles.pickerChip, { marginRight: 4, paddingVertical: 4 }, r.stockItemId === si.id && mgStyles.pickerChipActive]} 
-                          onPress={() => {
-                            const newRecipe = [...form.recipe];
-                            newRecipe[idx].stockItemId = si.id;
-                            setForm({ ...form, recipe: newRecipe });
-                          }}
-                        >
-                          <Text style={[mgStyles.pickerChipText, { fontSize: 11 }, r.stockItemId === si.id && mgStyles.pickerChipTextActive]}>{si.name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                  <TextInput 
-                    style={[mgStyles.input, { flex: 1, marginBottom: 0, paddingVertical: 8 }]} 
-                    placeholder="Qte" 
-                    keyboardType="decimal-pad" 
-                    value={r.quantity} 
-                    onChangeText={v => {
-                      const newRecipe = [...form.recipe];
-                      newRecipe[idx].quantity = v;
-                      setForm({ ...form, recipe: newRecipe });
-                    }} 
-                  />
-                  <TouchableOpacity onPress={() => {
-                    const newRecipe = form.recipe.filter((_, i) => i !== idx);
-                    setForm({ ...form, recipe: newRecipe });
-                  }}>
-                    <Text style={{ fontSize: 18 }}>🗑️</Text>
+              {!isVendor && (
+                <>
+                  <Text style={mgStyles.label}>Recette (Ingredients)</Text>
+                  {form.recipe.map((r, idx) => (
+                    <View key={idx} style={{ flexDirection: 'row', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                      <View style={{ flex: 2 }}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
+                          {stockItems.map(si => (
+                            <TouchableOpacity 
+                              key={si.id} 
+                              style={[mgStyles.pickerChip, { marginRight: 4, paddingVertical: 4 }, r.stockItemId === si.id && mgStyles.pickerChipActive]} 
+                              onPress={() => {
+                                const newRecipe = [...form.recipe];
+                                newRecipe[idx].stockItemId = si.id;
+                                setForm({ ...form, recipe: newRecipe });
+                              }}
+                            >
+                              <Text style={[mgStyles.pickerChipText, { fontSize: 11 }, r.stockItemId === si.id && mgStyles.pickerChipTextActive]}>{si.name}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                      <TextInput 
+                        style={[mgStyles.input, { flex: 1, marginBottom: 0, paddingVertical: 8 }]} 
+                        placeholder="Qte" 
+                        keyboardType="decimal-pad" 
+                        value={r.quantity} 
+                        onChangeText={v => {
+                          const newRecipe = [...form.recipe];
+                          newRecipe[idx].quantity = v;
+                          setForm({ ...form, recipe: newRecipe });
+                        }} 
+                      />
+                      <TouchableOpacity onPress={() => {
+                        const newRecipe = form.recipe.filter((_, i) => i !== idx);
+                        setForm({ ...form, recipe: newRecipe });
+                      }}>
+                        <Text style={{ fontSize: 18 }}>🗑️</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  
+                  <TouchableOpacity style={{ alignItems: 'center', padding: 10, marginBottom: 12 }} onPress={() => setForm({ ...form, recipe: [...form.recipe, { stockItemId: '', quantity: '1' }] })}>
+                    <Text style={{ color: '#4F46E5', fontWeight: '700' }}>+ Ajouter un ingredient</Text>
                   </TouchableOpacity>
-                </View>
-              ))}
-              <TouchableOpacity 
-                style={{ padding: 8, alignItems: 'center', backgroundColor: theme.colors.surfaceLight, borderRadius: 8, marginBottom: 16 }}
-                onPress={() => setForm({ ...form, recipe: [...form.recipe, { stockItemId: '', quantity: '0' }] })}
-              >
-                <Text style={{ color: '#4F46E5', fontWeight: '700' }}>+ Ajouter un ingredient</Text>
-              </TouchableOpacity>
+                </>
+              )}
+
+              {isVendor && (
+                <>
+                  <Text style={mgStyles.label}>Unité</Text>
+                  <View style={mgStyles.pickerRow}>
+                    {['kg', 'pièce', 'litre', 'gramme', 'boîte', 'paquet'].map(unit => (
+                      <TouchableOpacity key={unit} style={[mgStyles.pickerChip, form.unit === unit && mgStyles.pickerChipActive]} onPress={() => setForm({ ...form, unit })}>
+                        <Text style={[mgStyles.pickerChipText, form.unit === unit && mgStyles.pickerChipTextActive]}>{unit}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={mgStyles.label}>Quantité min. de commande</Text>
+                  <TextInput 
+                    style={[mgStyles.input, { marginBottom: 16 }]} 
+                    placeholder="1" 
+                    keyboardType="number-pad" 
+                    value={form.minOrderQuantity} 
+                    onChangeText={v => setForm({ ...form, minOrderQuantity: v })} 
+                  />
+
+                  <Text style={mgStyles.label}>Marque (optionnel)</Text>
+                  <TextInput 
+                    style={[mgStyles.input, { marginBottom: 16 }]} 
+                    placeholder="ex: Al Fakher, Fumari, Tangiers" 
+                    value={form.brand} 
+                    onChangeText={v => setForm({ ...form, brand: v })} 
+                  />
+
+                  <Text style={mgStyles.label}>Image (URL)</Text>
+                  <TextInput 
+                    style={[mgStyles.input, { marginBottom: 16 }]} 
+                    placeholder="https://..." 
+                    value={form.image} 
+                    onChangeText={v => setForm({ ...form, image: v })} 
+                  />
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <TouchableOpacity 
+                      style={[mgStyles.checkbox, form.isFeatured && mgStyles.checkboxActive]} 
+                      onPress={() => setForm({ ...form, isFeatured: !form.isFeatured })}
+                    >
+                      <Text style={[mgStyles.checkboxText, form.isFeatured && mgStyles.checkboxTextActive]}>🔥 Produit Vedette</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[mgStyles.checkbox, form.isFlashSale && mgStyles.checkboxActive]} 
+                      onPress={() => setForm({ ...form, isFlashSale: !form.isFlashSale })}
+                    >
+                      <Text style={[mgStyles.checkboxText, form.isFlashSale && mgStyles.checkboxTextActive]}>⚡ Vente Flash</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
 
               <View style={mgStyles.btnRow}>
                 <TouchableOpacity style={mgStyles.btnCancel} onPress={() => setShowModal(false)}>
@@ -801,14 +918,18 @@ export function OrdersScreen({ storeId, isVendor }: { storeId: string, isVendor?
   const fetchData = async () => {
     try {
       const ordEndpoint = isVendor ? `management/vendor/orders/${storeId}` : `management/orders/${storeId}`;
-      const [ordRes, suppRes, stockRes] = await Promise.all([
+      const responses = await Promise.all([
         fetch(`${API_URL}/${ordEndpoint}`),
-        fetch(`${API_URL}/management/suppliers/${storeId}`),
-        fetch(`${API_URL}/management/stock/${storeId}`),
+        ...(isVendor ? [] : [
+          fetch(`${API_URL}/management/suppliers/${storeId}`),
+          fetch(`${API_URL}/management/stock/${storeId}`)
+        ])
       ]);
-      if (ordRes.ok) setOrders(await ordRes.json());
-      if (suppRes.ok) setSuppliers(await suppRes.json());
-      if (stockRes.ok) setStockItems(await stockRes.json());
+      if (responses[0].ok) setOrders(await responses[0].json());
+      if (!isVendor) {
+        if (responses[1] && responses[1].ok) setSuppliers(await responses[1].json());
+        if (responses[2] && responses[2].ok) setStockItems(await responses[2].json());
+      }
     } catch (e) { console.warn('Orders fetch error', e); }
     finally { setLoading(false); }
   };
@@ -943,65 +1064,69 @@ export function OrdersScreen({ storeId, isVendor }: { storeId: string, isVendor?
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      <TouchableOpacity style={mgStyles.fab} onPress={() => {
-        setForm({ supplierId: '', items: [{ stockItemId: '', name: '', quantity: '1', price: '0' }] });
-        setShowModal(true);
-      }}>
-        <Text style={mgStyles.fabText}>+</Text>
-      </TouchableOpacity>
+      {!isVendor && (
+        <>
+          <TouchableOpacity style={mgStyles.fab} onPress={() => {
+            setForm({ supplierId: '', items: [{ stockItemId: '', name: '', quantity: '1', price: '0' }] });
+            setShowModal(true);
+          }}>
+            <Text style={mgStyles.fabText}>+</Text>
+          </TouchableOpacity>
 
-      <Modal visible={showModal} transparent animationType="slide">
-        <ScrollView contentContainerStyle={mgStyles.modalOverlay}>
-          <View style={mgStyles.modalContent}>
-            <Text style={mgStyles.modalTitle}>Nouvelle commande</Text>
+          <Modal visible={showModal} transparent animationType="slide">
+            <ScrollView contentContainerStyle={mgStyles.modalOverlay}>
+              <View style={mgStyles.modalContent}>
+                <Text style={mgStyles.modalTitle}>Nouvelle commande</Text>
 
-            {suppliers.length > 0 && (<>
-              <Text style={mgStyles.label}>Fournisseur</Text>
-              <View style={mgStyles.pickerRow}>
-                <TouchableOpacity style={[mgStyles.pickerChip, !form.supplierId && mgStyles.pickerChipActive]} onPress={() => setForm({ ...form, supplierId: '' })}>
-                  <Text style={[mgStyles.pickerChipText, !form.supplierId && mgStyles.pickerChipTextActive]}>Libre</Text>
-                </TouchableOpacity>
-                {suppliers.map(s => (
-                  <TouchableOpacity key={s.id} style={[mgStyles.pickerChip, form.supplierId === s.id && mgStyles.pickerChipActive]} onPress={() => setForm({ ...form, supplierId: s.id })}>
-                    <Text style={[mgStyles.pickerChipText, form.supplierId === s.id && mgStyles.pickerChipTextActive]}>{s.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </>)}
-
-            <Text style={mgStyles.label}>Articles</Text>
-            {form.items.map((item, idx) => (
-              <View key={idx} style={{ backgroundColor: theme.colors.surfaceLight, padding: 12, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: theme.colors.glassBorder }}>
-                <Text style={[mgStyles.label, { marginTop: 0 }]}>Matiere premiere</Text>
-                <View style={mgStyles.pickerRow}>
-                  {stockItems.slice(0, 10).map(si => (
-                    <TouchableOpacity key={si.id} style={[mgStyles.pickerChip, item.stockItemId === si.id && mgStyles.pickerChipActive]} onPress={() => updateItem(idx, 'stockItemId', si.id)}>
-                      <Text style={[mgStyles.pickerChipText, item.stockItemId === si.id && mgStyles.pickerChipTextActive]}>{si.name}</Text>
+                {suppliers.length > 0 && (<>
+                  <Text style={mgStyles.label}>Fournisseur</Text>
+                  <View style={mgStyles.pickerRow}>
+                    <TouchableOpacity style={[mgStyles.pickerChip, !form.supplierId && mgStyles.pickerChipActive]} onPress={() => setForm({ ...form, supplierId: '' })}>
+                      <Text style={[mgStyles.pickerChipText, !form.supplierId && mgStyles.pickerChipTextActive]}>Libre</Text>
                     </TouchableOpacity>
-                  ))}
-                </View>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <TextInput style={[mgStyles.input, { flex: 1 }]} placeholder="Qte" keyboardType="decimal-pad" value={item.quantity} onChangeText={v => updateItem(idx, 'quantity', v)} />
-                  <TextInput style={[mgStyles.input, { flex: 1 }]} placeholder="Prix" keyboardType="decimal-pad" value={item.price} onChangeText={v => updateItem(idx, 'price', v)} />
+                    {suppliers.map(s => (
+                      <TouchableOpacity key={s.id} style={[mgStyles.pickerChip, form.supplierId === s.id && mgStyles.pickerChipActive]} onPress={() => setForm({ ...form, supplierId: s.id })}>
+                        <Text style={[mgStyles.pickerChipText, form.supplierId === s.id && mgStyles.pickerChipTextActive]}>{s.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>)}
+
+                <Text style={mgStyles.label}>Articles</Text>
+                {form.items.map((item, idx) => (
+                  <View key={idx} style={{ backgroundColor: theme.colors.surfaceLight, padding: 12, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: theme.colors.glassBorder }}>
+                    <Text style={[mgStyles.label, { marginTop: 0 }]}>Matiere premiere</Text>
+                    <View style={mgStyles.pickerRow}>
+                      {stockItems.slice(0, 10).map(si => (
+                        <TouchableOpacity key={si.id} style={[mgStyles.pickerChip, item.stockItemId === si.id && mgStyles.pickerChipActive]} onPress={() => updateItem(idx, 'stockItemId', si.id)}>
+                          <Text style={[mgStyles.pickerChipText, item.stockItemId === si.id && mgStyles.pickerChipTextActive]}>{si.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TextInput style={[mgStyles.input, { flex: 1 }]} placeholder="Qte" keyboardType="decimal-pad" value={item.quantity} onChangeText={v => updateItem(idx, 'quantity', v)} />
+                      <TextInput style={[mgStyles.input, { flex: 1 }]} placeholder="Prix" keyboardType="decimal-pad" value={item.price} onChangeText={v => updateItem(idx, 'price', v)} />
+                    </View>
+                  </View>
+                ))}
+
+                <TouchableOpacity style={{ alignItems: 'center', padding: 10 }} onPress={addItem}>
+                  <Text style={{ color: '#4F46E5', fontWeight: '700' }}>+ Ajouter un article</Text>
+                </TouchableOpacity>
+
+                <View style={mgStyles.btnRow}>
+                  <TouchableOpacity style={mgStyles.btnCancel} onPress={() => setShowModal(false)}>
+                    <Text style={mgStyles.btnTextDark}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={mgStyles.btnPrimary} onPress={handleCreate}>
+                    <Text style={mgStyles.btnText}>Commander</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-            ))}
-
-            <TouchableOpacity style={{ alignItems: 'center', padding: 10 }} onPress={addItem}>
-              <Text style={{ color: '#4F46E5', fontWeight: '700' }}>+ Ajouter un article</Text>
-            </TouchableOpacity>
-
-            <View style={mgStyles.btnRow}>
-              <TouchableOpacity style={mgStyles.btnCancel} onPress={() => setShowModal(false)}>
-                <Text style={mgStyles.btnTextDark}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={mgStyles.btnPrimary} onPress={handleCreate}>
-                <Text style={mgStyles.btnText}>Commander</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
-      </Modal>
+            </ScrollView>
+          </Modal>
+        </>
+      )}
     </View>
   );
 }

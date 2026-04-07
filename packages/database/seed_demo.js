@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const bcrypt = require('bcryptjs');
 
 async function main() {
   console.log('--- SEEDING SYSTEM ---');
@@ -30,7 +31,7 @@ async function main() {
     update: {},
     create: {
       email: 'gunther@centralperk.com',
-      password: 'password123',
+      password: await bcrypt.hash('password123', 10),
       name: 'Gunther',
       role: 'STORE_OWNER',
       storeId: store.id
@@ -56,7 +57,7 @@ async function main() {
     update: {},
     create: {
       email: 'contact@benyaghlane.tn',
-      password: 'password123',
+      password: await bcrypt.hash('password123', 10),
       name: 'Ahmed Ben Yaghlane',
       role: 'VENDOR'
     }
