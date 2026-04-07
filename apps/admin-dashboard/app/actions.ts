@@ -881,7 +881,7 @@ export async function getVendorPortalData() {
     return {
       ...vendor,
       products: vendor.products.map(mapProduct),
-      orders: vendor.orders.map(o => ({
+      orders: vendor.orders.map((o: any) => ({
         ...o,
         total: Number(o.total),
         items: o.items.map((it: any) => ({ ...it, quantity: Number(it.quantity), price: Number(it.price) }))
