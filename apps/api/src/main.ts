@@ -2,9 +2,15 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { json } from 'express';
+import * as p2r from 'path-to-regexp';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  console.log('--- DIAGNOSTIC path-to-regexp ---');
+  console.log('Type of path-to-regexp:', typeof p2r);
+  console.log('Contents of path-to-regexp object:', p2r);
+  console.log('--- END DIAGNOSTIC ---');
+  
   const app = await NestFactory.create(AppModule);
   app.enableCors(); // Autoriser les requêtes depuis l'application mobile
 
