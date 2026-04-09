@@ -153,7 +153,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
   const newProductsList = useMemo(() => initialData.products.slice(0, 10), [initialData.products]);
 
   const ProductCardHorizontal = ({ p }: { p: any }) => (
-    <div key={p.id} className={`product-card ${p.isFeatured ? 'featured' : ''}`} style={{ minWidth: '240px', maxWidth: '240px', scrollSnapAlign: 'start' }}>
+    <div key={p.id} className={`premium-card ${p.isFeatured ? 'featured' : ''}`} style={{ minWidth: '240px', maxWidth: '240px', scrollSnapAlign: 'start' }}>
       <div className="product-image-container">
         <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} className="product-image" />
         {p.isFlashSale && (
@@ -183,22 +183,50 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
   return (
     <div style={{ background: '#fff', minHeight: '100vh', position: 'relative' }}>
       <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .motta-grid { animation: fadeIn 0.5s ease-out; }
-        .product-card { transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); border: 1px solid #F1F5F9; border-radius: 20px; overflow: hidden; position: relative; background: #fff; }
-        .product-card:hover { border-color: #4F46E5; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1); transform: translateY(-4px); }
-        .product-card.featured { border: 2px solid #FCD34D; }
+        @keyframes mesh {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        .motta-grid { animation: slideIn 0.5s ease-out; }
+        .premium-card { 
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+          border: 1px solid rgba(226, 232, 240, 0.6); 
+          border-radius: 24px; 
+          overflow: hidden; 
+          position: relative; 
+          background: #fff;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+        }
+        .premium-card:hover { 
+          transform: translateY(-10px) scale(1.01);
+          border-color: #4F46E5; 
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08); 
+        }
+        .premium-card.featured { border: 2px solid #FCD34D; }
         .product-image-container { position: relative; overflow: hidden; aspect-ratio: 1/1; background: #f8fafc; }
         .product-image { width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1); }
-        .product-card:hover .product-image { transform: scale(1.1); }
-        .add-to-cart-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); background: linear-gradient(to top, rgba(255,255,255,0.98), transparent); display: flex; justify-content: center; z-index: 10; }
-        .product-card:hover .add-to-cart-overlay { transform: translateY(0); }
+        .premium-card:hover .product-image { transform: scale(1.15); }
+        .add-to-cart-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; transform: translateY(105%); transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); background: linear-gradient(to top, rgba(255,255,255,0.98), transparent); display: flex; justify-content: center; z-index: 10; }
+        .premium-card:hover .add-to-cart-overlay { transform: translateY(0); }
         .badge-flash { background: linear-gradient(135deg, #EF4444, #F97316); color: #fff; }
         .badge-featured { background: linear-gradient(135deg, #F59E0B, #FCD34D); color: #78350F; }
-        .badge-base { position: absolute; top: 12px; font-size: 10px; font-weight: 900; padding: 4px 8px; border-radius: 6px; display: flex; align-items: center; gap: 4px; z-index: 5; text-transform: uppercase; }
-        .category-pill { white-space: nowrap; padding: 8px 20px; border-radius: 12px; border: 1px solid #E2E8F0; background: transparent; color: #64748B; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s; }
-        .category-pill.active { background: #1E1B4B; color: #fff; border-color: #1E1B4B; }
-        .subcategory-pill { white-space: nowrap; padding: 6px 14px; border-radius: 10px; border: 1px solid #F1F5F9; background: #F8FAFC; color: #94A3B8; font-weight: 800; font-size: 11px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.2s; }
+        .badge-base { position: absolute; top: 12px; font-size: 10px; font-weight: 900; padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; gap: 4px; z-index: 5; text-transform: uppercase; }
+        .mesh-gradient {
+          background: linear-gradient(-45deg, #1E1B4B, #4F46E5, #312E81, #4338CA);
+          background-size: 400% 400%;
+          animation: mesh 15s ease infinite;
+        }
+        .glass-nav { 
+          background: rgba(255, 255, 255, 0.8); 
+          backdrop-filter: blur(12px); 
+          border-bottom: 1px solid rgba(226, 232, 240, 0.5); 
+        }
+        .category-pill { white-space: nowrap; padding: 10px 24px; border-radius: 14px; border: 1px solid #E2E8F0; background: #fff; color: #64748B; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .category-pill:hover { border-color: #4F46E5; color: #4F46E5; transform: translateY(-2px); }
+        .category-pill.active { background: #1E1B4B; color: #fff; border-color: #1E1B4B; box-shadow: 0 10px 15px -3px rgba(30, 27, 75, 0.2); }
+        .subcategory-pill { white-space: nowrap; padding: 8px 16px; border-radius: 12px; border: 1px solid #F1F5F9; background: #F8FAFC; color: #94A3B8; font-weight: 800; font-size: 11px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.2s; }
         .subcategory-pill.active { background: #6366F1; color: #fff; border-color: #6366F1; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -207,7 +235,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
       `}</style>
 
       {/* --- HEADER --- */}
-      <div style={{ borderBottom: '1px solid #F1F5F9', padding: '16px 32px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', position: 'sticky', top: '0', zIndex: 100 }}>
+      <div className="glass-nav" style={{ padding: '16px 32px', position: 'sticky', top: '0', zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', maxWidth: '1400px', margin: '0 auto' }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} size={16} />
@@ -305,21 +333,22 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
           {/* --- HOME PAGE SECTIONS --- */}
           {activeCategory === 'all' && activeSubcategory === 'all' && !searchQuery && !showFilters && (
             <>
-              {/* Flash Sales Horiz Section */}
+              {/* Flash Sales Section */}
               {flashProductsList.length > 0 && (
-                <section style={{ marginBottom: '56px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '40px', height: '40px', background: '#FEE2E2', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.1)' }}>
-                        <Zap size={22} fill="currentColor" />
-                      </div>
-                      <div>
-                        <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#1E293B', letterSpacing: '-0.02em', margin: 0 }}>Ventes Flash</h2>
-                        <p style={{ margin: 0, fontSize: '13px', color: '#64748B', fontWeight: 500 }}>Offres limitées à ne pas manquer</p>
+                <section style={{ marginBottom: '56px', position: 'relative', padding: '40px', borderRadius: '32px', overflow: 'hidden' }} className="mesh-gradient">
+                  <div style={{ position: 'relative', zIndex: 2 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ width: '48px', height: '48px', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FCD34D' }}>
+                          <Zap size={28} fill="currentColor" />
+                        </div>
+                        <div>
+                          <h2 style={{ fontSize: '32px', fontWeight: 950, color: '#fff', letterSpacing: '-0.02em', margin: 0 }}>Ventes Flash</h2>
+                          <p style={{ margin: 0, fontSize: '15px', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>Offres exclusives à durée limitée</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '24px', overflowX: 'auto', paddingBottom: '16px', scrollSnapType: 'x mandatory' }} className="no-scrollbar">
+                    <div style={{ display: 'flex', gap: '24px', overflowX: 'auto', paddingBottom: '16px', scrollSnapType: 'x mandatory' }} className="no-scrollbar">
                     {flashProductsList.map(p => <ProductCardHorizontal p={p} key={p.id} />)}
                   </div>
                 </section>
