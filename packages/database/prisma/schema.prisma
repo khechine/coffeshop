@@ -16,6 +16,33 @@ enum UserRole {
   COURIER
 }
 
+enum CategoryStatus {
+  ACTIVE
+  HIDDEN
+  ARCHIVED
+}
+
+enum SubcategoryStatus {
+  ACTIVE
+  PENDING
+  REJECTED
+  ARCHIVED
+}
+
+enum StockStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+  DISCONTINUED
+}
+
+enum TagType {
+  GENERAL
+  BRAND
+  DIET
+  ORIGIN
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -147,10 +174,146 @@ model Subscription {
 model ActivityPole {
   id        String   @id @default(cuid())
   name      String   @unique
-  icon      String?  // emoji or icon name
+  icon      String?
   stores    Store[]
   vendors   VendorProfile[]
   createdAt DateTime @default(now())
+}
+
+// ============================================
+// MARKETPLACE CATEGORIES SYSTEM
+// ============================================
+
+model MktCategory {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  icon        String?
+  description String?
+  sortOrder   Int      @default(0)
+  
+  // Governance
+  status      CategoryStatus @default(ACTIVE)
+  isGlobal    Boolean  @default(true)
+  
+  subcategories MktSubcategory[]
+  vendors       VendorProfile[] @relation("VendorSectors")
+  createdAt   DateTime @default(now())
+
+  @@index([status])
+}
+
+model MktSubcategory {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  
+  categoryId  String
+  category    MktCategory @relation(fields: [categoryId], references: [id])
+  
+  // Validation workflow
+  status      SubcategoryStatus @default(ACTIVE)
+  proposedBy  String?
+  validatedBy String?
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([name, categoryId])
+  @@index([categoryId])
+  @@index([status])
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  type      TagType  @default(GENERAL)
+  usageCount Int     @default(0)
+  
+  createdAt  DateTime @default(now())
+  
+  @@index([type])
+}
+
+model ProductStandard {
+  id              String   @id @default(cuid())
+  name            String
+  sku             String?  @unique
+  
+  categoryId      String
+  subcategoryId  String?
+  
+  // Specs standardisées
+  unit            String   // "kg", "L", "piece", "pack"
+  defaultPrice    Decimal?
+  
+  brand           String?
+  tags            String[] // Tags libres
+  
+  // Metadata
+  isStandard      Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  
+  // Relation vers VendorProduct
+  vendorProducts  VendorProduct[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([categoryId])
+  @@index([subcategoryId])
+}
+
+model VendorProduct {
+  id              String   @id @default(cuid())
+  
+  // Référence produit standard (optionnel - peut être produit libre)
+  productStandardId String?
+  productStandard   ProductStandard? @relation(fields: [productStandardId], references: [id])
+  
+  // Produit libre (si pas de standard)
+  name            String?
+  unit            String?
+  
+  // Catégorie associée
+  categoryId      String?
+  
+  // Sous-catégorie associée
+  subcategoryId  String?
+  
+  // Vendeur spécifique
+  vendorId        String
+  vendor          VendorProfile @relation(fields: [vendorId], references: [id])
+  
+  // Données spécifiques vendeur
+  price           Decimal
+  minOrderQty     Decimal  @default(1)
+  stockStatus     StockStatus @default(IN_STOCK)
+  
+  // Offre
+  isFeatured      Boolean  @default(false)
+  isFlashSale     Boolean  @default(false)
+  discountPrice   Decimal?
+  flashStart      DateTime?
+  flashEnd        DateTime?
+  
+  image           String?
+  description     String?
+  
+  // Tags (libres)
+  tags            String[]
+  
+  // Zone livraison
+  deliveryAreas   String[] // Villeslivrables
+  
+  // Métadonnées
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([productStandardId, vendorId])
+  @@index([vendorId])
+  @@index([stockStatus])
+  @@index([categoryId])
 }
 
 model Category {
@@ -159,9 +322,13 @@ model Category {
   storeId   String?
   store     Store?    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   products  Product[]
+  parentId  String?
+  parent    Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
   createdAt DateTime  @default(now())
 
   @@index([storeId])
+  @@index([parentId])
 }
 
 model Product {
@@ -282,73 +449,27 @@ model VendorProfile {
   lat         Float?
   lng         Float?
 
-  status      String   @default("PENDING") // PENDING, ACTIVE, REJECTED
+  status      String   @default("PENDING")
   createdAt   DateTime @default(now())
 
   activityPoles ActivityPole[]
+  mktSectors    MktCategory[]  @relation("VendorSectors")
 
-  categories MarketplaceCategory[]
-  products   MarketplaceProduct[]
-  orders     SupplierOrder[]
-  stockItems StockItem[]
+  vendorProducts VendorProduct[]
+  orders         SupplierOrder[]
+  stockItems     StockItem[]
 }
 
 model CourierProfile {
   id          String          @id @default(cuid())
   userId      String          @unique
   user        User            @relation(fields: [userId], references: [id])
-  vehicleType String // Car, Bike, Truck
-  status      String          @default("AVAILABLE") // AVAILABLE, BUSY, OFFLINE
+  vehicleType String
+  status      String          @default("AVAILABLE")
   currentLat  Float?
   currentLng  Float?
   orders      SupplierOrder[]
   createdAt   DateTime        @default(now())
-}
-
-model MarketplaceCategory {
-  id       String               @id @default(cuid())
-  name     String
-  icon     String?
-  slug     String?              @unique
-
-  // Hierarchy: null = root category, set = subcategory
-  parentId String?
-  parent   MarketplaceCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
-  children MarketplaceCategory[] @relation("CategoryTree")
-
-  // Approval workflow for vendor-proposed subcategories
-  status            String  @default("ACTIVE") // ACTIVE | PENDING | REJECTED
-  proposedByVendorId String? // vendorId who proposed this subcategory
-
-  products  MarketplaceProduct[]
-  vendors   VendorProfile[]
-  createdAt DateTime             @default(now())
-}
-
-model MarketplaceProduct {
-  id    String  @id @default(cuid())
-  name  String
-  price Decimal
-  unit  String
-
-  categoryId String?
-  category   MarketplaceCategory? @relation(fields: [categoryId], references: [id])
-
-  brand    String?   // ex: "Al Fakher", "Fumari" — null if generic
-  tags     String[]  @default([]) // free tags for search/grouping
-
-  isFeatured  Boolean   @default(false)
-  isFlashSale Boolean   @default(false)
-  discount    Decimal?
-  flashStart  DateTime?
-  flashEnd    DateTime?
-  image       String?
-  upsellIds   String[]  @default([])
-
-  vendorId         String
-  vendor           VendorProfile @relation(fields: [vendorId], references: [id])
-  minOrderQuantity Decimal       @default(1)
-  createdAt        DateTime      @default(now())
 }
 
 enum OrderStatus {

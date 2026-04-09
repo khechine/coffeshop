@@ -34,7 +34,8 @@ ssh $ssh_server << EOF
   docker compose up -d --build
   
   echo "🔑 Resetting database credentials..."
-  docker compose exec -T postgres psql -U postgres -d coffeeshop -c "SET password_encryption = 'scram-sha-256'; ALTER USER postgres WITH PASSWORD 'postgres';"
+  # Use the password from .env synced earlier on the VPS
+  docker compose exec -T postgres psql -U postgres -d coffeeshop -c "ALTER USER postgres WITH PASSWORD '$POSTGRES_PASSWORD';"
 
   echo "🗄️ Synchronizing Prisma schema..."
   docker compose exec -T api npx prisma@5.14.0 db push --schema=packages/database/prisma/schema.prisma --accept-data-loss

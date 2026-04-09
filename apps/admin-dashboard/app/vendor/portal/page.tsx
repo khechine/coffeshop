@@ -1,5 +1,5 @@
 import { getVendorPortalData } from '../../actions';
-import { ShoppingBag, Package, TrendingUp, Clock } from 'lucide-react';
+import { ShoppingBag, Package, TrendingUp, Clock, ChevronRight, MapPin, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -10,128 +10,130 @@ export default async function VendorDashboardPage() {
   if (!portalData) return <div style={{ padding: '40px' }}>Chargement ou Profil non trouvé...</div>;
 
   return (
-    <div className="w-full space-y-10">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Tableau de Bord</h2>
-          <p className="text-slate-500 font-medium mt-2 flex items-center gap-2">
-            <span className="text-indigo-600 dark:text-indigo-400 font-black">{portalData.companyName}</span>
-            <span className="w-1 h-1 rounded-full bg-slate-200 dark:bg-slate-800" />
-            Marketplace B2B
-          </p>
+    <div className="w-full max-w-4xl mx-auto space-y-6">
+      {/* Travel-Style Header */}
+      <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-3xl p-6 text-white shadow-lg">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <p className="text-blue-100 text-sm font-medium mb-1">Bonjour,</p>
+            <h2 className="text-2xl font-black">{portalData.companyName}</h2>
+          </div>
+          <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+            <Package size={20} className="text-white" />
+          </div>
         </div>
-        <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-2xl flex items-center gap-3 shadow-sm dark:shadow-none">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Connecté en direct</span>
+        
+        {/* Quick Stats Row */}
+        <div className="grid grid-cols-3 gap-3 mt-6">
+          <div className="bg-white/10 rounded-2xl p-3 text-center backdrop-blur-sm">
+            <div className="text-2xl font-black">{portalData.orders.length}</div>
+            <div className="text-blue-100 text-xs">Commandes</div>
+          </div>
+          <div className="bg-white/10 rounded-2xl p-3 text-center backdrop-blur-sm">
+            <div className="text-2xl font-black">{portalData.products.length}</div>
+            <div className="text-blue-100 text-xs">Produits</div>
+          </div>
+          <div className="bg-white/10 rounded-2xl p-3 text-center backdrop-blur-sm">
+            <div className="text-2xl font-black">{portalData.orders.filter((o: any) => o.status === 'PENDING').length}</div>
+            <div className="text-blue-100 text-xs">En attente</div>
+          </div>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-slate-900/40 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800/50 backdrop-blur-md relative overflow-hidden group hover:border-indigo-500/30 transition-all duration-300 shadow-sm dark:shadow-none">
-          <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/5 blur-3xl group-hover:bg-indigo-500/10 transition-colors" />
-          <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4">Chiffre d'Affaires</div>
-          <div className="flex items-baseline gap-2">
-            <div className="text-4xl font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-              {portalData.orders.reduce((acc: number, o: any) => acc + Number(o.total), 0).toFixed(3)}
+      {/* Quick Actions - Travel Style Cards */}
+      <div className="grid grid-cols-2 gap-4">
+        <Link href="/vendor/portal/catalog" className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all group">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+              <Package size={24} className="text-blue-600" />
             </div>
-            <span className="text-sm font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">DT</span>
+            <div className="flex-1">
+              <h3 className="font-bold text-slate-900">Mon Catalogue</h3>
+              <p className="text-slate-500 text-sm">{portalData.products.length} produits</p>
+            </div>
+            <ChevronRight size={20} className="text-slate-300" />
           </div>
-          <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-            <TrendingUp size={12} /> +12.5% ce mois
-          </div>
-        </div>
+        </Link>
 
-        <div className="bg-white dark:bg-slate-900/40 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800/50 backdrop-blur-md relative overflow-hidden group hover:border-amber-500/30 transition-all duration-300 shadow-sm dark:shadow-none">
-          <div className="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/5 blur-3xl group-hover:bg-amber-500/10 transition-colors" />
-          <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4">Commandes actives</div>
-          <div className="text-4xl font-black text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-            {portalData.orders.filter((o: any) => o.status === 'PENDING').length}
+        <Link href="/vendor/portal/orders" className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all group">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+              <ShoppingBag size={24} className="text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-slate-900">Commandes</h3>
+              <p className="text-slate-500 text-sm">
+                {portalData.orders.filter((o: any) => o.status === 'PENDING').length} en attente
+              </p>
+            </div>
+            <ChevronRight size={20} className="text-slate-300" />
           </div>
-          <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-            <Clock size={12} /> À traiter rapidement
-          </div>
-        </div>
+        </Link>
+      </div>
 
-        <div className="bg-white dark:bg-slate-900/40 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800/50 backdrop-blur-md relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-300 shadow-sm dark:shadow-none">
-          <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/5 blur-3xl group-hover:bg-emerald-500/10 transition-colors" />
-          <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4">Produits en ligne</div>
-          <div className="text-4xl font-black text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-            {portalData.products.length}
-          </div>
-          <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-            <Package size={12} /> Visibles sur le market
-          </div>
+      {/* Revenue Card - Travel Style */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-slate-900 text-lg">Chiffre d'Affaires</h3>
+          <span className="text-emerald-600 text-sm font-medium flex items-center gap-1">
+            <TrendingUp size={14} /> +12.5%
+          </span>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <span className="text-4xl font-black text-slate-900">
+            {portalData.orders.reduce((acc: number, o: any) => acc + Number(o.total), 0).toFixed(3)}
+          </span>
+          <span className="text-slate-500 font-medium">DT</span>
         </div>
       </div>
 
-      {portalData.orders.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900/20 border-2 border-dashed border-slate-200 dark:border-slate-800/50 rounded-[60px] p-20 text-center flex flex-col items-center shadow-sm dark:shadow-none">
-          <div className="w-24 h-24 bg-slate-50 dark:bg-slate-900/50 rounded-[32px] flex items-center justify-center text-slate-300 dark:text-slate-700 mb-8 border border-slate-100 dark:border-slate-800">
-            <ShoppingBag size={48} />
-          </div>
-          <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">Attente d'activation</h3>
-          <p className="text-slate-500 max-w-md font-medium leading-relaxed mb-10">
-            Une fois votre compte validé, vos produits seront visibles sur le marketplace. Profitez-en pour préparer votre catalogue dès maintenant.
-          </p>
-          <Link 
-            href="/vendor/portal/catalog" 
-            className="px-10 py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 uppercase tracking-widest"
-          >
-            Gérer le catalogue
+      {/* Recent Orders - Travel Style List */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+          <h3 className="font-bold text-slate-900">Transactions Récentes</h3>
+          <Link href="/vendor/portal/orders" className="text-blue-600 text-sm font-medium">
+            Voir tout
           </Link>
         </div>
-      ) : (
-        <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 rounded-[40px] overflow-hidden backdrop-blur-md shadow-sm dark:shadow-none">
-          <div className="p-8 border-b border-slate-100 dark:border-slate-800/50 flex justify-between items-center bg-slate-50/50 dark:bg-white/[0.02]">
-            <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-3">
-              <div className="w-1.5 h-6 bg-indigo-500 rounded-full" />
-              Dernières Transactions
-            </h3>
-            <Link href="/vendor/portal/orders" className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors">
-              Voir tout l'historique
-            </Link>
+        
+        {portalData.orders.length === 0 ? (
+          <div className="p-8 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShoppingBag size={24} className="text-slate-400" />
+            </div>
+            <p className="text-slate-500">Aucune commande pour le moment</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-950/40">
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800/50">Point de Vente</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800/50">Ville</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800/50">Total Net</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800/50 text-center">Statut</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/30">
-                {portalData.orders.map((o: any) => (
-                  <tr key={o.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors group">
-                    <td className="px-8 py-6">
-                      <div className="text-sm font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{o.store.name}</div>
-                      <div className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-wider mt-1">
-                        {new Date(o.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-                      </div>
-                    </td>
-                    <td className="px-8 py-6 text-sm text-slate-500 dark:text-slate-400 font-bold">{o.store.city}</td>
-                    <td className="px-8 py-6">
-                      <span className="text-lg font-black text-slate-900 dark:text-white">{Number(o.total).toFixed(3)}</span>
-                      <span className="text-xs font-bold text-slate-400 dark:text-slate-600 ml-1.5 uppercase">DT</span>
-                    </td>
-                    <td className="px-8 py-6 text-center">
-                      <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border inline-block min-w-[100px] ${
-                        o.status === 'PENDING' 
-                          ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-100 dark:border-amber-500/20' 
-                          : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20'
-                      }`}>
-                        {o.status === 'PENDING' ? 'En attente' : 'Terminée'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {portalData.orders.slice(0, 5).map((o: any) => (
+              <div key={o.id} className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
+                <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
+                  <MapPin size={18} className="text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-slate-900">{o.store.name}</p>
+                  <p className="text-slate-500 text-sm flex items-center gap-1">
+                    <MapPin size={12} /> {o.store.city}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-slate-900">{Number(o.total).toFixed(3)} DT</p>
+                  <p className="text-slate-500 text-xs flex items-center gap-1 justify-end">
+                    <Calendar size={12} /> {new Date(o.createdAt).toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  o.status === 'PENDING' 
+                    ? 'bg-amber-100 text-amber-700' 
+                    : 'bg-emerald-100 text-emerald-700'
+                }`}>
+                  {o.status === 'PENDING' ? 'En attente' : 'Terminée'}
+                </span>
+              </div>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

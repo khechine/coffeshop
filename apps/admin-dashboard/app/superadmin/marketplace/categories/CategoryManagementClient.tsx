@@ -2,26 +2,32 @@
 
 import React, { useTransition, useState } from 'react';
 import { 
-  CheckCircle2, XCircle, Package, ChevronRight, 
-  Clock, Sparkles, Pencil, Trash2, Plus, 
-  Save, X, FolderTree, Tag, Info
+  CheckCircle2, XCircle, Clock, Sparkles, Pencil, Trash2, Plus, 
+  Save, X, FolderTree, Info, ChevronRight, ArrowRightCircle
 } from 'lucide-react';
 import { 
   resolveCategoryProposal, 
   updateMarketplaceCategoryAction, 
   deleteMarketplaceCategoryAction,
-  createMarketplaceCategoryAction
+  createMarketplaceCategoryAction,
+  migrateSubcategoryAction
 } from '../../../actions';
 
 type Category = {
   id: string;
   name: string;
+  slug: string;
   icon?: string | null;
   status: string;
-  parentId?: string | null;
-  parent?: { name: string } | null;
+  subcategories?: Category[];
   createdAt: Date;
-  children?: Category[];
+};
+
+type Proposal = {
+  id: string;
+  name: string;
+  categoryId?: string | null;
+  status: string;
 };
 
 export default function CategoryManagementClient({
@@ -30,37 +36,35 @@ export default function CategoryManagementClient({
   userRole,
 }: {
   categoryTree: Category[];
-  pendingProposals: Category[];
+  pendingProposals: Proposal[];
   userRole: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const [resolved, setResolved] = useState<Set<string>>(new Set());
   
-  // Pending Proposals States
   const [proposalNames, setProposalNames] = useState<Record<string, string>>(
     Object.fromEntries(pendingProposals.map(p => [p.id, p.name]))
   );
-  const [proposalParents, setProposalParents] = useState<Record<string, string>>(
-    Object.fromEntries(pendingProposals.map(p => [p.id, p.parentId || '']))
+  const [proposalCategoryIds, setProposalCategoryIds] = useState<Record<string, string>>(
+    Object.fromEntries(pendingProposals.map(p => [p.id, p.categoryId || '']))
   );
 
-  // Management States
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editIcon, setEditIcon] = useState('');
-  const [editParentId, setEditParentId] = useState<string | null>(null);
   
-  // Creation States
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [newIcon, setNewIcon] = useState('📦');
-  const [newParentId, setNewParentId] = useState<string | null>(null);
+
+  const [migratingSubId, setMigratingSubId] = useState<string | null>(null);
+  const [targetCategoryId, setTargetCategoryId] = useState('');
 
   const handleResolve = (id: string, action: 'approve' | 'reject') => {
     if (userRole !== 'SUPERADMIN') return;
     startTransition(async () => {
       try {
-        await resolveCategoryProposal(id, action, proposalNames[id], proposalParents[id]);
+        await resolveCategoryProposal(id, action, proposalNames[id], proposalCategoryIds[id] || undefined);
         setResolved(prev => new Set(Array.from(prev).concat(id)));
       } catch (err: any) {
         alert(err.message);
@@ -72,7 +76,6 @@ export default function CategoryManagementClient({
     setEditingId(cat.id);
     setEditName(cat.name);
     setEditIcon(cat.icon || '');
-    setEditParentId(cat.parentId || null);
   };
 
   const handleUpdate = () => {
@@ -81,8 +84,7 @@ export default function CategoryManagementClient({
       try {
         await updateMarketplaceCategoryAction(editingId, {
           name: editName,
-          icon: editIcon,
-          parentId: editParentId
+          icon: editIcon
         });
         setEditingId(null);
       } catch (err: any) {
@@ -107,13 +109,29 @@ export default function CategoryManagementClient({
       try {
         await createMarketplaceCategoryAction({
           name: newName,
-          icon: newIcon,
-          parentId: newParentId === "" ? null : newParentId
+          icon: newIcon
         });
         setIsCreating(false);
         setNewName('');
         setNewIcon('📦');
-        setNewParentId(null);
+      } catch (err: any) {
+        alert(err.message);
+      }
+    });
+  };
+
+  const startMigrating = (subId: string) => {
+    setMigratingSubId(subId);
+    setTargetCategoryId('');
+  };
+
+  const handleMigrate = () => {
+    if (!migratingSubId || !targetCategoryId) return;
+    startTransition(async () => {
+      try {
+        await migrateSubcategoryAction(migratingSubId, targetCategoryId);
+        setMigratingSubId(null);
+        setTargetCategoryId('');
       } catch (err: any) {
         alert(err.message);
       }
@@ -144,7 +162,7 @@ export default function CategoryManagementClient({
             <h3 className="text-xl font-black text-indigo-900 dark:text-indigo-400">Ajouter une nouvelle catégorie</h3>
             <button onClick={() => setIsCreating(false)} className="text-indigo-400 hover:text-indigo-600"><X /></button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Nom</label>
               <input 
@@ -164,17 +182,6 @@ export default function CategoryManagementClient({
                 placeholder="📦"
                 className="w-full px-5 py-3 rounded-2xl bg-white dark:bg-slate-950 border-none font-bold text-sm focus:ring-2 focus:ring-indigo-500"
               />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Parent (Optionnel)</label>
-              <select 
-                value={newParentId || ''} 
-                onChange={e => setNewParentId(e.target.value || null)}
-                className="w-full px-5 py-3 rounded-2xl bg-white dark:bg-slate-950 border-none font-bold text-sm focus:ring-2 focus:ring-indigo-500 appearance-none"
-              >
-                <option value="">-- Catégorie Racine --</option>
-                {categoryTree.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-              </select>
             </div>
           </div>
           <div className="mt-8 flex justify-end gap-4">
@@ -211,8 +218,8 @@ export default function CategoryManagementClient({
                 <div className="flex-1 min-w-0 space-y-2">
                   <div className="flex items-center gap-2">
                     <select 
-                      value={proposalParents[p.id]}
-                      onChange={e => setProposalParents({...proposalParents, [p.id]: e.target.value})}
+                      value={proposalCategoryIds[p.id]}
+                      onChange={e => setProposalCategoryIds({...proposalCategoryIds, [p.id]: e.target.value})}
                       className="bg-slate-50 dark:bg-slate-950 border-none rounded-xl text-[10px] font-black uppercase text-slate-400 px-3 py-1 outline-none"
                     >
                       {categoryTree.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -268,35 +275,25 @@ export default function CategoryManagementClient({
                     <span className="text-2xl drop-shadow-sm">{root.icon || '📦'}</span>
                     <div className="flex-1">
                       <span className="font-black text-slate-900 dark:text-white text-lg tracking-tight">{root.name}</span>
-                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{root.children?.length || 0} sous-catégories</div>
-                    </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {/* Note: using a trick to always show buttons for root categories for better UX */}
+                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{(root.subcategories as any[])?.length || 0} sous-catégories</div>
                     </div>
                     <div className="flex gap-2">
-                       <button onClick={() => startEditing(root)} className="p-2.5 bg-white dark:bg-slate-800 text-slate-400 hover:text-indigo-600 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm"><Pencil size={16} /></button>
-                       <button onClick={() => handleDelete(root.id)} className="p-2.5 bg-white dark:bg-slate-800 text-slate-400 hover:text-rose-500 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm"><Trash2 size={16} /></button>
+                      <button onClick={() => startEditing(root)} className="p-2.5 bg-white dark:bg-slate-800 text-slate-400 hover:text-indigo-600 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm"><Pencil size={16} /></button>
+                      <button onClick={() => handleDelete(root.id)} className="p-2.5 bg-white dark:bg-slate-800 text-slate-400 hover:text-rose-500 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm"><Trash2 size={16} /></button>
                     </div>
                   </>
                 )}
               </div>
 
-              {/* Children List */}
+              {/* Subcategories List */}
               <div className="px-8 bg-white dark:bg-slate-900 divide-y divide-slate-50 dark:divide-slate-800/50">
-                {root.children?.map(child => (
+                {(root.subcategories as any[])?.map(child => (
                   <div key={child.id} className="flex items-center gap-4 py-4 group">
                     <ChevronRight size={14} className="text-slate-200 dark:text-slate-700 shrink-0" />
                     
                     {editingId === child.id ? (
                       <div className="flex-1 flex gap-4 items-center">
                         <input value={editName} onChange={e => setEditName(e.target.value)} className="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm font-bold" />
-                        <select 
-                          value={editParentId || ''} 
-                          onChange={e => setEditParentId(e.target.value)}
-                          className="bg-slate-50 dark:bg-slate-950 rounded-xl text-[10px] font-black uppercase px-3 py-2 outline-none"
-                        >
-                          {categoryTree.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
                         <button onClick={handleUpdate} className="p-2 bg-indigo-600 text-white rounded-xl"><Save size={16} /></button>
                         <button onClick={() => setEditingId(null)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl"><X size={16} /></button>
                       </div>
@@ -308,15 +305,33 @@ export default function CategoryManagementClient({
                             <span className="text-[8px] font-black uppercase tracking-widest bg-amber-50 dark:bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full">En attente</span>
                           )}
                         </div>
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => startEditing(child)} title="Editer ou Réaffecter" className="p-2 text-slate-300 hover:text-indigo-600 transition-colors"><Pencil size={14} /></button>
-                          <button onClick={() => handleDelete(child.id)} title="Supprimer" className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
-                        </div>
+                        {migratingSubId === child.id ? (
+                          <div className="flex items-center gap-2">
+                            <select 
+                              value={targetCategoryId}
+                              onChange={e => setTargetCategoryId(e.target.value)}
+                              className="text-xs bg-slate-100 dark:bg-slate-800 rounded-lg px-2 py-1"
+                            >
+                              <option value="">Choisir...</option>
+                              {categoryTree.map(c => (
+                                <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                              ))}
+                            </select>
+                            <button onClick={handleMigrate} className="p-1.5 bg-indigo-600 text-white rounded-lg"><ArrowRightCircle size={14} /></button>
+                            <button onClick={() => setMigratingSubId(null)} className="p-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg"><X size={14} /></button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => startMigrating(child.id)} title="Migrer vers une autre catégorie" className="p-2 text-slate-300 hover:text-indigo-600 transition-colors"><ArrowRightCircle size={14} /></button>
+                            <button onClick={() => startEditing(child)} title="Editer" className="p-2 text-slate-300 hover:text-indigo-600 transition-colors"><Pencil size={14} /></button>
+                            <button onClick={() => handleDelete(child.id)} title="Supprimer" className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
                 ))}
-                {(!root.children || root.children.length === 0) && !editingId && (
+                {(!root.subcategories || (root.subcategories as any[]).length === 0) && !editingId && (
                   <div className="py-4 text-xs text-slate-300 italic flex items-center gap-2">
                     <Info size={12} /> Aucune sous-catégorie pour le moment
                   </div>

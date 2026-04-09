@@ -10,7 +10,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(data);
   }
   if (type === 'marketplace') {
-    const data = await prisma.marketplaceCategory.findMany({ orderBy: { name: 'asc' } });
+    const data = await prisma.mktCategory.findMany({ 
+      where: { status: 'ACTIVE' },
+      orderBy: { name: 'asc' } 
+    });
     return NextResponse.json(data);
   }
   if (type === 'poles') {

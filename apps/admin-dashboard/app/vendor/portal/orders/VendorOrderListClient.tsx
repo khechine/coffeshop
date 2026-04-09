@@ -25,7 +25,17 @@ export default function VendorOrderListClient({ orders }: { orders: any[] }) {
   };
 
   const handleContact = (phone: string) => {
+    if (!phone) return;
     window.open(`https://wa.me/${phone?.replace(/\D/g, '')}`, '_blank');
+  };
+  
+  const handleDirections = (store: any) => {
+    if (store.lat && store.lng) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${store.lat},${store.lng}`, '_blank');
+    } else {
+      const query = encodeURIComponent(`${store.address || ''} ${store.city || ''}`);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+    }
   };
 
   return (
@@ -56,14 +66,22 @@ export default function VendorOrderListClient({ orders }: { orders: any[] }) {
                   </h3>
                   <div className="flex flex-wrap gap-5">
                     <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
-                      <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                        <MapPin size={12} className="text-indigo-600 dark:text-indigo-400" /> 
+                      <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                        <MapPin size={12} /> 
                       </div>
-                      {order.store.city}
+                      {order.store.address ? `${order.store.address}, ${order.store.city}` : order.store.city}
                     </div>
+                    {order.store.phone && (
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                        <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                          <Phone size={12} /> 
+                        </div>
+                        {order.store.phone}
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
-                      <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                        <Calendar size={12} className="text-indigo-600 dark:text-indigo-400" /> 
+                      <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                        <Calendar size={12} /> 
                       </div>
                       {new Date(order.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
                     </div>
@@ -135,6 +153,7 @@ export default function VendorOrderListClient({ orders }: { orders: any[] }) {
                   </button>
                   
                   <button 
+                    onClick={() => handleDirections(order.store)}
                     className="flex flex-col items-center justify-center gap-2 p-4 rounded-3xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-white transition-all shadow-sm dark:shadow-none"
                   >
                     <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-white transition-transform">

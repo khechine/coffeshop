@@ -26,11 +26,12 @@ export default async function VendorCatalogPage() {
       </div>
 
       <VendorCatalogClient
-        initialProducts={portalData?.products || []}
-        categoryTree={categoryTree}
-        globalUnits={globalUnits}
-        benchmarkData={benchmarkData}
+        initialProducts={JSON.parse(JSON.stringify(portalData?.products || []))}
+        categoryTree={JSON.parse(JSON.stringify(categoryTree))}
+        globalUnits={JSON.parse(JSON.stringify(globalUnits))}
+        benchmarkData={JSON.parse(JSON.stringify(benchmarkData))}
         vendorId={portalData?.id || ''}
+        mktSectors={JSON.parse(JSON.stringify(portalData?.mktSectors || []))}
       />
     </div>
   );

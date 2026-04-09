@@ -508,22 +508,45 @@ export async function recordSale(data: {
 // ══════════════════════════════════════════════════════════════
 export async function getMarketplaceData() {
   const [categories, featuredRaw, flashSalesRaw, productsRaw] = await Promise.all([
-    prisma.marketplaceCategory.findMany(),
-    prisma.marketplaceProduct.findMany({ where: { isFeatured: true }, include: { vendor: true } }),
-    prisma.marketplaceProduct.findMany({ where: { isFlashSale: true }, include: { vendor: true } }),
-    prisma.marketplaceProduct.findMany({ include: { vendor: true } })
+    (prisma as any).mktCategory.findMany({ include: { subcategories: true } }),
+    (prisma as any).vendorProduct.findMany({ where: { isFeatured: true }, include: { vendor: true }, orderBy: { createdAt: 'desc' } }),
+    (prisma as any).vendorProduct.findMany({ where: { isFlashSale: true }, include: { vendor: true }, orderBy: { createdAt: 'desc' } }),
+    (prisma as any).vendorProduct.findMany({ include: { vendor: true }, orderBy: { createdAt: 'desc' } })
   ]);
 
-  const mapProduct = (p: any) => ({
-    ...p,
-    price: Number(p.price),
-    discount: p.discount ? Number(p.discount) : null,
-    vendor: p.vendor ? {
+  const mapProduct = (p: any) => {
+    const vendorData = p.vendor ? {
       ...p.vendor,
       lat: p.vendor.lat ? Number(p.vendor.lat) : null,
       lng: p.vendor.lng ? Number(p.vendor.lng) : null
-    } : null
-  });
+    } : null;
+    
+    const result: any = {
+      id: p.id,
+      name: p.name,
+      unit: p.unit,
+      categoryId: p.categoryId,
+      subcategoryId: p.subcategoryId,
+      vendorId: p.vendorId,
+      price: Number(p.price),
+      minOrderQty: p.minOrderQty ? Number(p.minOrderQty) : 1,
+      stockStatus: p.stockStatus,
+      isFeatured: p.isFeatured,
+      isFlashSale: p.isFlashSale,
+      discountPrice: p.discountPrice ? Number(p.discountPrice) : null,
+      discount: p.discountPrice ? Number(p.discountPrice) : null,
+      flashStart: p.flashStart,
+      flashEnd: p.flashEnd,
+      image: p.image,
+      description: p.description,
+      tags: p.tags,
+      deliveryAreas: p.deliveryAreas,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      vendor: vendorData,
+    };
+    return result;
+  };
 
   return { 
     categories, 
@@ -534,38 +557,45 @@ export async function getMarketplaceData() {
 }
 
 export async function getMarketplaceBenchmarkData(vendorId: string) {
-  const allProducts = await prisma.marketplaceProduct.findMany({
-    where: { category: { status: 'ACTIVE' } },
+  const allProducts = await (prisma as any).vendorProduct.findMany({
     include: {
-      category: { include: { parent: true } },
+      productStandard: true,
     }
   });
 
-  // Group by (categoryId + unit + brand) — NOT by product name
-  // This handles the case where vendors name the same product differently
+  const categoryIdSet = new Set<string>();
+  allProducts.forEach((p: any) => { if (p.categoryId) categoryIdSet.add(p.categoryId); });
+  const categoryIds: string[] = [];
+  categoryIdSet.forEach(id => categoryIds.push(id));
+  const categories = categoryIds.length > 0 
+    ? await (prisma as any).mktCategory.findMany({ where: { id: { in: categoryIds } } })
+    : [];
+
+  const categoryMap = new Map<any, any>(categories.map((c: any) => [c.id, c]));
+
   type GroupKey = string;
   const grouped = new Map<GroupKey, {
     categoryId: string | null;
     categoryName: string;
-    parentCategoryName: string | null;
     unit: string;
     brand: string | null;
-    vendorPrices: Map<string, number>; // vendorId → their min price for this segment
+    vendorPrices: Map<string, number>;
     myPrice: number | null;
     allPrices: number[];
   }>();
 
   for (const p of allProducts) {
     const brand = (p as any).brand ?? null;
-    const key: GroupKey = `${p.categoryId ?? 'none'}::${p.unit.toLowerCase()}::${(brand ?? '').toLowerCase()}`;
+    const unit = p.unit || 'piece';
+    const key: GroupKey = `${p.categoryId ?? 'none'}::${unit.toLowerCase()}::${(brand ?? '').toLowerCase()}`;
     const price = Number(p.price);
+    const categoryName = p.categoryId && categoryMap.has(p.categoryId) ? (categoryMap.get(p.categoryId) as any)?.name ?? '—' : '—';
 
     if (!grouped.has(key)) {
       grouped.set(key, {
         categoryId: p.categoryId ?? null,
-        categoryName: p.category?.name ?? '—',
-        parentCategoryName: (p.category as any)?.parent?.name ?? null,
-        unit: p.unit,
+        categoryName,
+        unit,
         brand,
         vendorPrices: new Map(),
         myPrice: null,
@@ -575,10 +605,8 @@ export async function getMarketplaceBenchmarkData(vendorId: string) {
     const entry = grouped.get(key)!;
 
     if (p.vendorId === vendorId) {
-      // Take the lowest of our prices for this segment
       entry.myPrice = entry.myPrice === null ? price : Math.min(entry.myPrice, price);
     } else {
-      // One price per competitor vendor (their min)
       const prev = entry.vendorPrices.get(p.vendorId);
       entry.vendorPrices.set(p.vendorId, prev !== undefined ? Math.min(prev, price) : price);
       entry.allPrices.push(price);
@@ -589,7 +617,7 @@ export async function getMarketplaceBenchmarkData(vendorId: string) {
     .filter(g => g.myPrice !== null || g.allPrices.length > 0)
     .map(g => {
       const hasCompetitors = g.allPrices.length > 0;
-      const competitorCount = g.vendorPrices.size; // number of unique vendors (anonymized)
+      const competitorCount = g.vendorPrices.size;
       const min  = hasCompetitors ? Math.min(...g.allPrices) : null;
       const max  = hasCompetitors ? Math.max(...g.allPrices) : null;
       const avg  = hasCompetitors ? g.allPrices.reduce((a, b) => a + b, 0) / g.allPrices.length : null;
@@ -606,18 +634,17 @@ export async function getMarketplaceBenchmarkData(vendorId: string) {
       return {
         categoryId: g.categoryId,
         categoryName: g.categoryName,
-        parentCategoryName: g.parentCategoryName,
-        displayCategory: g.parentCategoryName ? `${g.parentCategoryName} › ${g.categoryName}` : g.categoryName,
+        parentCategoryName: null,
+        displayCategory: g.categoryName,
         unit: g.unit,
         brand: g.brand,
         myPrice: g.myPrice,
         min, max, avg,
-        competitorCount, // anonymized: number of unique vendors
+        competitorCount,
         position,
       };
     })
     .sort((a, b) => {
-      // My products first, then by category name
       if ((a.myPrice !== null) !== (b.myPrice !== null)) return a.myPrice !== null ? -1 : 1;
       return a.displayCategory.localeCompare(b.displayCategory);
     });
@@ -625,22 +652,20 @@ export async function getMarketplaceBenchmarkData(vendorId: string) {
   return benchmarks;
 }
 
-// ── Category tree (hierarchical) ──────────────────────────────────────────────
 export async function getMarketplaceCategoryTree() {
-  const all = await prisma.marketplaceCategory.findMany({
+  const all = await (prisma as any).mktCategory.findMany({
     where: { status: 'ACTIVE' },
-    include: { children: { where: { status: 'ACTIVE' } } },
+    include: { subcategories: true },
     orderBy: { name: 'asc' }
   });
-  return all.filter(c => c.parentId === null); // Only root nodes with their children
+  return all;
 }
 
 // ── Vendor proposes a new subcategory (status = PENDING → admin approves) ──────
-export async function proposeSubCategoryAction(name: string, parentId: string) {
+export async function proposeSubCategoryAction(name: string, categoryId: string) {
   const userId = (await cookies()).get('userId')?.value;
   if (!userId) throw new Error('Non authentifié');
 
-  // Robust fetch for user and vendor profile separately
   const user = await (prisma as any).user.findUnique({ where: { id: userId } });
   if (!user) throw new Error('Utilisateur non trouvé');
 
@@ -649,18 +674,18 @@ export async function proposeSubCategoryAction(name: string, parentId: string) {
   });
   if (!vendorProfile) throw new Error('Profil vendeur introuvable');
 
-  // Check if a category with this name already exists under this parent
-  const existing = await prisma.marketplaceCategory.findFirst({
-    where: { name: { equals: name, mode: 'insensitive' }, parentId }
+  const existing = await (prisma as any).mktSubcategory.findFirst({
+    where: { name: { equals: name, mode: 'insensitive' }, categoryId }
   });
   if (existing) return { error: 'Cette sous-catégorie existe déjà.' };
 
-  await prisma.marketplaceCategory.create({
+  await (prisma as any).mktSubcategory.create({
     data: {
       name: name.trim(),
-      parentId,
+      slug: name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+      categoryId,
       status: 'PENDING',
-      proposedByVendorId: vendorProfile.id,
+      proposedBy: vendorProfile.id,
     }
   });
   return { success: true };
@@ -668,81 +693,149 @@ export async function proposeSubCategoryAction(name: string, parentId: string) {
 
 // ── Admin: get all pending category proposals ─────────────────────────────────
 export async function getPendingCategoryProposals() {
-  return prisma.marketplaceCategory.findMany({
+  return (prisma as any).mktSubcategory.findMany({
     where: { status: 'PENDING' },
-    include: { parent: true },
+    include: { category: true },
     orderBy: { createdAt: 'asc' }
   });
 }
 
 // ── User helper ───────────────────────────────────────────────────────────
 export async function getUser() {
+  // Check cookie first (server-side)
   const userId = (await cookies()).get('userId')?.value;
-  if (!userId) return null;
-  return (prisma as any).user.findUnique({ where: { id: userId } });
+  if (userId) {
+    return (prisma as any).user.findUnique({ where: { id: userId } });
+  }
+  return null;
 }
 
 // ── Admin: approve or reject a proposed subcategory ───────────────────────────
-export async function resolveCategoryProposal(id: string, action: 'approve' | 'reject', newName?: string, newParentId?: string) {
-  const user = await getUser();
-  if (user?.role !== 'SUPERADMIN') {
+export async function resolveCategoryProposal(id: string, action: 'approve' | 'reject', newName?: string, newCategoryId?: string) {
+  const cookieStore = await cookies();
+  const userId = cookieStore.get('userId')?.value;
+  
+  if (!userId) {
+    throw new Error('Session expirée. Veuillez vous reconnecter.');
+  }
+
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user || user.role !== 'SUPERADMIN') {
     throw new Error('Action non autorisée : Seuls les super-administrateurs peuvent gérer les catégories.');
   }
 
-  await prisma.marketplaceCategory.update({
+  await (prisma as any).mktSubcategory.update({
     where: { id },
     data: { 
       status: action === 'approve' ? 'ACTIVE' : 'REJECTED',
       name: (action === 'approve' && newName) ? newName.trim() : undefined,
-      parentId: (action === 'approve' && newParentId) ? newParentId : undefined,
+      categoryId: (action === 'approve' && newCategoryId) ? newCategoryId : undefined,
     }
   });
   revalidatePath('/superadmin/marketplace/categories');
   revalidatePath('/vendor/portal/catalog');
 }
 
-export async function updateMarketplaceCategoryAction(id: string, data: { name?: string, icon?: string, parentId?: string | null }) {
-  const user = await getUser();
-  if (user?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+export async function updateMarketplaceCategoryAction(id: string, data: { name?: string; icon?: string }) {
+  const cookieStore = await cookies();
+  const userId = cookieStore.get('userId')?.value;
+  
+  if (!userId) {
+    throw new Error('Session expirée. Veuillez vous reconnecter.');
+  }
 
-  await prisma.marketplaceCategory.update({
-    where: { id },
-    data: {
-      name: data.name?.trim(),
-      icon: data.icon?.trim(),
-      parentId: data.parentId === "" ? null : data.parentId
-    }
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  const isSubcategory = id.startsWith('sub_');
+  if (isSubcategory) {
+    const subId = id.replace('sub_', '');
+    await (prisma as any).mktSubcategory.update({
+      where: { id: subId },
+      data: {
+        name: data.name?.trim(),
+        icon: data.icon?.trim(),
+      }
+    });
+  } else {
+    await (prisma as any).mktCategory.update({
+      where: { id },
+      data: {
+        name: data.name?.trim(),
+        icon: data.icon?.trim(),
+      }
+    });
+  }
+  revalidatePath('/superadmin/marketplace/categories');
+  revalidatePath('/marketplace');
+}
+
+export async function migrateSubcategoryAction(subcategoryId: string, newCategoryId: string) {
+  const cookieStore = await cookies();
+  const userId = cookieStore.get('userId')?.value;
+  
+  if (!userId) {
+    throw new Error('Session expirée. Veuillez vous reconnecter.');
+  }
+
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  await (prisma as any).mktSubcategory.update({
+    where: { id: subcategoryId },
+    data: { categoryId: newCategoryId }
   });
   revalidatePath('/superadmin/marketplace/categories');
   revalidatePath('/marketplace');
 }
 
 export async function deleteMarketplaceCategoryAction(id: string) {
-  const user = await getUser();
-  if (user?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
-
-  // Check if it has children or products
-  const category = await prisma.marketplaceCategory.findUnique({
-    where: { id },
-    include: { _count: { select: { children: true, products: true } } }
-  });
-
-  if (category?._count.children! > 0 || category?._count.products! > 0) {
-    throw new Error('Impossible de supprimer une catégorie non vide (contient des sous-catégories ou des produits).');
+  const cookieStore = await cookies();
+  const userId = cookieStore.get('userId')?.value;
+  
+  if (!userId) {
+    throw new Error('Session expirée. Veuillez vous reconnecter.');
   }
 
-  await prisma.marketplaceCategory.delete({ where: { id } });
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  const isSubcategory = id.startsWith('sub_');
+  if (isSubcategory) {
+    const subId = id.replace('sub_', '');
+    await (prisma as any).mktSubcategory.delete({ where: { id: subId } });
+  } else {
+    const category = await (prisma as any).mktCategory.findUnique({
+      where: { id },
+      include: { _count: { select: { subcategories: true, products: true } } }
+    });
+
+    if (category?._count.subcategories! > 0 || category?._count.products! > 0) {
+      throw new Error('Impossible de supprimer une catégorie non vide (contient des sous-catégories ou des produits).');
+    }
+
+    await (prisma as any).mktCategory.delete({ where: { id } });
+  }
   revalidatePath('/superadmin/marketplace/categories');
   revalidatePath('/marketplace');
 }
 
-export async function createMarketplaceCategoryAction(data: { name: string; icon?: string; parentId?: string | null }) {
-  const user = await getUser();
-  if (user?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+export async function createMarketplaceCategoryAction(data: { name: string; icon?: string }) {
+  const cookieStore = await cookies();
+  const userId = cookieStore.get('userId')?.value;
+  
+  if (!userId) {
+    throw new Error('Session expirée. Veuillez vous reconnecter.');
+  }
 
-  await prisma.marketplaceCategory.create({ 
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  await (prisma as any).mktCategory.create({ 
     data: {
-      ...data,
+      name: data.name,
+      slug: data.name.toLowerCase().replace(/ /g, '-'),
+      icon: data.icon,
       status: 'ACTIVE'
     } 
   });
@@ -862,8 +955,9 @@ export async function getVendorPortalData() {
   const vendor = await (prisma as any).vendorProfile.findUnique({
     where: { id: vendorProfile.id },
     include: { 
-      products: true,
+      vendorProducts: true,
       activityPoles: true,
+      mktSectors: true,
       orders: { 
         include: { items: true, store: true },
         orderBy: { createdAt: 'desc' }
@@ -872,15 +966,35 @@ export async function getVendorPortalData() {
   });
 
   if (vendor) {
-    const mapProduct = (p: any) => ({
-      ...p,
-      price: Number(p.price),
-      discount: p.discount ? Number(p.discount) : null
-    });
+    const mapProduct = (p: any) => {
+      return {
+        id: p.id,
+        productStandardId: p.productStandardId,
+        name: p.name,
+        unit: p.unit,
+        categoryId: p.categoryId,
+        subcategoryId: p.subcategoryId,
+        vendorId: p.vendorId,
+        price: Number(p.price),
+        minOrderQty: Number(p.minOrderQty),
+        stockStatus: p.stockStatus,
+        isFeatured: p.isFeatured,
+        isFlashSale: p.isFlashSale,
+        discount: p.discountPrice ? Number(p.discountPrice) : null,
+        flashStart: p.flashStart,
+        flashEnd: p.flashEnd,
+        image: p.image,
+        description: p.description,
+        tags: p.tags || [],
+        deliveryAreas: p.deliveryAreas || [],
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      };
+    };
     
     return {
       ...vendor,
-      products: vendor.products.map(mapProduct),
+      products: (vendor.vendorProducts || []).map(mapProduct),
       orders: vendor.orders.map((o: any) => ({
         ...o,
         total: Number(o.total),
@@ -892,23 +1006,33 @@ export async function getVendorPortalData() {
 }
 
 export async function createMarketplaceProductAction(data: any) {
-  // In real app use session to get vendorId
-  const vendor = await prisma.vendorProfile.findFirst(); 
-  if (!vendor) throw new Error('Vendor profile not found');
+  const userId = (await cookies()).get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
 
-  await prisma.marketplaceProduct.create({
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('Utilisateur non trouvé');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({
+    where: { userId: user.id }
+  });
+  if (!vendor) throw new Error('Profil vendeur introuvable');
+
+  // Handle image: use preview (base64) if available, otherwise use URL
+  const image = data.imagePreview || data.image || null;
+
+  await (prisma as any).vendorProduct.create({
     data: {
       name: data.name,
       price: data.price,
       unit: data.unit,
       categoryId: data.categoryId,
+      subcategoryId: data.subcategoryId || null,
       vendorId: vendor.id,
-      image: data.image,
+      image: image,
       isFeatured: data.isFeatured || false,
       isFlashSale: data.isFlashSale || false,
-      discount: data.discount || null,
-      upsellIds: data.upsellIds || [],
-      minOrderQuantity: data.minOrderQuantity || 1
+      discountPrice: data.discount || null,
+      minOrderQty: data.minOrderQuantity || 1
     }
   });
   revalidatePath('/vendor/portal/catalog');
@@ -919,8 +1043,12 @@ export async function importCsvProductsAction(rows: {
   price: number;
   unit: string;
   categoryName: string;
+  subcategoryName?: string;
   brand?: string | null;
   image?: string;
+  minOrderQty?: number;
+  description?: string;
+  stockStatus?: string;
 }[]) {
   const userId = (await cookies()).get('userId')?.value;
   if (!userId) throw new Error('Non authentifié');
@@ -934,52 +1062,110 @@ export async function importCsvProductsAction(rows: {
   if (!vendorProfile) throw new Error('Profil vendeur introuvable');
   const vendorId = vendorProfile.id;
 
-  // Fetch all ACTIVE categories (root + children) for name matching
-  const allCategories = await prisma.marketplaceCategory.findMany({
+  const allCategories = await (prisma as any).mktCategory.findMany({
     where: { status: 'ACTIVE' },
-    include: { children: { where: { status: 'ACTIVE' } } }
+    include: { subcategories: true }
   });
-  // Flat list: root + all children
-  const flatCategories = [
-    ...allCategories,
-    ...allCategories.flatMap((c: any) => c.children),
-  ];
+  const allSubcategories = await (prisma as any).mktSubcategory.findMany({
+    where: { status: 'ACTIVE' }
+  });
 
-  const results = { created: 0, skipped: 0, errors: [] as string[] };
+  const results = { created: 0, updated: 0, skipped: 0, errors: [] as string[], newCategories: [] as string[] };
 
   for (const row of rows) {
     try {
-      // Match category by name (case-insensitive) — searches full hierarchy
-      const category = flatCategories.find(
-        (c: any) => c.name.toLowerCase() === (row.categoryName ?? '').toLowerCase()
-      );
+      let categoryId: string | null = null;
+      let subcategoryId: string | null = null;
+
+      if (row.categoryName) {
+        const catName = row.categoryName.trim();
+        
+        // Try to find category first (case-insensitive)
+        let category = allCategories.find((c: any) => c.name.toLowerCase() === catName.toLowerCase());
+        
+        // If not found, try to find as subcategory
+        if (!category) {
+          const subcat = allSubcategories.find((s: any) => s.name.toLowerCase() === catName.toLowerCase());
+          if (subcat) {
+            categoryId = subcat.categoryId;
+            subcategoryId = subcat.id;
+          }
+        } else {
+          categoryId = category.id;
+          
+          // If subcategory name provided, try to match it within the category
+          if (row.subcategoryName) {
+            const subName = row.subcategoryName.trim();
+            const subcat = (category.subcategories || []).find((s: any) => s.name.toLowerCase() === subName.toLowerCase());
+            if (subcat) {
+              subcategoryId = subcat.id;
+            } else {
+            // Create new subcategory as HIDDEN
+            const newSub = await (prisma as any).mktSubcategory.create({
+              data: {
+                name: subName,
+                slug: subName.toLowerCase().replace(/ /g, '-'),
+                categoryId: category.id,
+                status: 'HIDDEN',
+              }
+            });
+            subcategoryId = newSub.id;
+            results.newCategories.push(`Sous-catégorie "${subName}" créée (masquée, en attente d'approbation)`);
+            }
+          }
+        }
+        
+        // If category still not found, create it as HIDDEN (needs approval)
+        if (!category && catName) {
+          const newCat = await (prisma as any).mktCategory.create({
+            data: {
+              name: catName,
+              slug: catName.toLowerCase().replace(/ /g, '-'),
+              status: 'HIDDEN',
+            }
+          });
+          categoryId = newCat.id;
+          results.newCategories.push(`Catégorie "${catName}" créée (masquée, en attente d'approbation)`);
+        }
+      }
 
       const brandVal = row.brand?.trim() || null;
+      const minQty = row.minOrderQty && row.minOrderQty > 0 ? row.minOrderQty : 1;
 
-      // Upsert: update if same name+vendor, create otherwise
-      const existing = await prisma.marketplaceProduct.findFirst({ where: { name: row.name, vendorId } });
+      const existing = await (prisma as any).vendorProduct.findFirst({ 
+        where: { name: row.name, vendorId } 
+      });
+
       if (existing) {
-        await prisma.marketplaceProduct.update({
+        await (prisma as any).vendorProduct.update({
           where: { id: existing.id },
           data: {
             price: row.price,
             unit: row.unit,
-            categoryId: category?.id ?? null,
-            brand: brandVal,
+            categoryId,
+            subcategoryId,
+            tags: brandVal ? [brandVal] : [],
             image: row.image || null,
+            minOrderQty: minQty,
+            description: row.description || null,
+            stockStatus: row.stockStatus || 'IN_STOCK',
           }
         });
+        results.updated++;
       } else {
-        await prisma.marketplaceProduct.create({
+        await (prisma as any).vendorProduct.create({
           data: {
             name: row.name,
             price: row.price,
             unit: row.unit,
-            categoryId: category?.id ?? null,
-            brand: brandVal,
+            categoryId,
+            subcategoryId,
+            tags: brandVal ? [brandVal] : [],
             image: row.image || null,
             vendorId,
-            minOrderQuantity: 1,
+            minOrderQty: minQty,
+            description: row.description || null,
+            stockStatus: row.stockStatus || 'IN_STOCK',
           }
         });
         results.created++;
@@ -1007,28 +1193,43 @@ export async function updateSupplierOrderStatus(orderId: string, status: OrderSt
 }
 
 export async function updateMarketplaceProductAction(id: string, data: any) {
-  await prisma.marketplaceProduct.update({
+  // Handle image: use preview (base64) if available, otherwise use URL
+  const image = data.imagePreview || data.image || null;
+
+  await (prisma as any).vendorProduct.update({
     where: { id },
     data: {
       name: data.name,
       price: data.price,
       unit: data.unit,
       categoryId: data.categoryId,
-      image: data.image,
+      subcategoryId: data.subcategoryId || null,
+      image: image,
       isFeatured: data.isFeatured,
       isFlashSale: data.isFlashSale,
-      discount: data.discount,
+      discountPrice: data.discount,
       flashStart: data.flashStart ? new Date(data.flashStart) : null,
       flashEnd: data.flashEnd ? new Date(data.flashEnd) : null,
-      upsellIds: data.upsellIds || [],
-      minOrderQuantity: data.minOrderQuantity || 1
+      minOrderQty: data.minOrderQuantity || 1
     }
   });
   revalidatePath('/vendor/portal/catalog');
 }
 
 export async function getMarketplaceCategories() {
-  return prisma.marketplaceCategory.findMany();
+  return (prisma as any).mktCategory.findMany();
+}
+
+export async function updateVendorSectorsAction(vendorId: string, sectorIds: string[]) {
+  await (prisma as any).vendorProfile.update({
+    where: { id: vendorId },
+    data: {
+      mktSectors: {
+        set: sectorIds.map((id: string) => ({ id }))
+      }
+    }
+  });
+  revalidatePath('/vendor/portal/settings');
 }
 
 export async function updateVendorActivityPolesAction(vendorId: string, activityPoleIds: string[]) {
@@ -1060,7 +1261,7 @@ export async function updateVendorProfileAction(vendorId: string, data: any) {
 }
 
 export async function deleteMarketplaceProductAction(id: string) {
-  await prisma.marketplaceProduct.delete({ where: { id } });
+  await (prisma as any).vendorProduct.delete({ where: { id } });
   revalidatePath('/vendor/portal/catalog');
 }
 

@@ -29,19 +29,29 @@ export default async function SuperAdminCafesPage() {
   const stores = basicStores.map((store: any) => {
     const sub = subscriptions.find((s: any) => s.storeId === store.id);
     const pole = poles.find((p: any) => p.id === store.activityPoleId);
-    const storeSales = allSales.filter((s: any) => s.storeId === store.id);
+    const storeSales = allSales.filter((s: any) => s.storeId === store.id).map((s: any) => ({
+      ...s,
+      total: Number(s.total || 0)
+    }));
     
+    // Convert Decimal fields to numbers
+    const plan = sub?.plan ? {
+      id: sub.plan.id,
+      name: sub.plan.name,
+      price: Number(sub.plan.price),
+      maxStores: Number(sub.plan.maxStores),
+      maxProducts: Number(sub.plan.maxProducts),
+      hasMarketplace: sub.plan.hasMarketplace,
+      status: sub.plan.status,
+    } : null;
+
     return {
       ...store,
-      subscription: sub,
+      subscription: sub ? { ...sub, plan } : null,
       activityPole: pole,
       sales: storeSales,
-      // Manual counts to avoid buggy _count implementation on VPS
       _count: {
         sales: storeSales.length,
-        // For these we would need more queries if we want absolute accuracy, 
-        // but for the dashboard view, 0 is a safe fallback if not critical.
-        // Let's add them as 0 for now as the dashboard mostly uses sales/sub.
         stockItems: 0,
         owners: 0,
         terminals: 0,

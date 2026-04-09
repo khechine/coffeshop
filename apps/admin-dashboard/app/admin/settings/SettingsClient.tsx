@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition, useEffect, useRef } from 'react';
 import { updateStore } from '../../actions';
-import { Building2, MapPin, Store, Crosshair, Save, Clock, CheckCircle2, FileCheck, AlertCircle, ShieldCheck, FileUp } from 'lucide-react';
+import { Building2, MapPin, Store, Crosshair, Save, Clock, CheckCircle2, FileCheck, AlertCircle, ShieldCheck, FileUp, Eye, Upload, X, ShoppingCart } from 'lucide-react';
 
 import 'leaflet/dist/leaflet.css';
 
@@ -17,6 +17,8 @@ interface StoreProps {
   status: string;
   trialEndsAt: Date | null;
   isVerified: boolean;
+  officialDocs: any[] | null;
+  forceMarketplaceAccess: boolean;
 }
 
 export default function SettingsClient({ store }: { store: StoreProps }) {
@@ -270,6 +272,66 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
             {isPending ? 'Enregistrement...' : <><Save size={18} /> Sauvegarder</>}
           </button>
         </form>
+      </div>
+
+      {/* Marketplace Access Toggle */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title"><ShoppingCart size={16} /> Accès Marketplace B2B</span>
+        </div>
+        <div style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: store.forceMarketplaceAccess ? '#ECFDF5' : '#FEF2F2', borderRadius: '12px' }}>
+            <div>
+              <div style={{ fontWeight: 800, color: store.forceMarketplaceAccess ? '#065F46' : '#991B1B' }}>
+                {store.forceMarketplaceAccess ? 'Activé' : 'Désactivé'}
+              </div>
+              <div style={{ fontSize: '13px', color: store.forceMarketplaceAccess ? '#047857' : '#B91C1C' }}>
+                {store.forceMarketplaceAccess 
+                  ? 'Vous avez accès au marketplace fournisseurs.' 
+                  : 'Votre forfait n\'inclut pas l\'accès marketplace.'}
+              </div>
+            </div>
+            <div style={{ width: '48px', height: '28px', background: store.forceMarketplaceAccess ? '#10B981' : '#E5E7EB', borderRadius: '14px', position: 'relative', cursor: 'not-allowed', opacity: 0.6 }}>
+              <div style={{ width: '24px', height: '24px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: store.forceMarketplaceAccess ? '22px' : '2px', transition: '0.2s' }} />
+            </div>
+          </div>
+          {!store.forceMarketplaceAccess && (
+            <p style={{ fontSize: '12px', color: '#64748B', marginTop: '12px' }}>Contactez l'administrateur pour activer l'accès marketplace.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Documents Officiels */}
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title"><FileCheck size={16} /> Documents Officiels</span>
+        </div>
+        <div style={{ padding: '20px' }}>
+          {(store.officialDocs as any[])?.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {(store.officialDocs as any[]).map((doc: any, idx: number) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <FileCheck size={18} className="text-emerald-500" />
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '14px' }}>{doc.name}</div>
+                      <div style={{ fontSize: '12px', color: '#64748B' }}>{doc.type} · {doc.status}</div>
+                    </div>
+                  </div>
+                  <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ padding: '8px 12px', background: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '12px', fontWeight: 700, color: '#4F46E5', textDecoration: 'none' }}>
+                    <Eye size={14} style={{ marginRight: '4px' }} /> Voir
+                  </a>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '30px', color: '#94A3B8' }}>
+              <FileCheck size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+              <p style={{ fontSize: '14px', fontWeight: 600 }}>Aucun document上传é</p>
+              <p style={{ fontSize: '12px', marginTop: '4px' }}>Les documents officiels seront demandés lors de la vérification.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

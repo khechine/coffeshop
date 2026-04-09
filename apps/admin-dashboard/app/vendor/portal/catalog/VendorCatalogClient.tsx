@@ -15,7 +15,7 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type SubCategory = { id: string; name: string; icon?: string | null };
-type RootCategory = SubCategory & { children: SubCategory[] };
+type RootCategory = SubCategory & { subcategories?: SubCategory[] };
 type BenchmarkRow = {
   categoryId: string | null;
   categoryName: string;
@@ -44,58 +44,82 @@ function CategorySelector({
 }: {
   categoryTree: RootCategory[];
   value: string;
-  onChange: (catId: string) => void;
+  onChange: (catId: string, subcatId?: string) => void;
   onPropose: () => void;
   inputClass: string;
 }) {
   const [parentId, setParentId] = useState<string>('');
 
   const selectedParent = categoryTree.find(c => c.id === parentId);
-  const hasChildren = selectedParent && selectedParent.children.length > 0;
+  const hasSubcategories = selectedParent && (selectedParent.subcategories?.length || 0) > 0;
 
   const handleParentChange = (id: string) => {
     setParentId(id);
     onChange(id); // select parent if no sub-cat
   };
-  const handleChildChange = (id: string) => onChange(id);
+  const handleSubcategoryChange = (id: string) => onChange(parentId, id);
 
   return (
-    <div className="space-y-2">
-      {/* Parent category */}
-      <select
-        className={`${inputClass} appearance-none cursor-pointer`}
-        value={parentId}
-        onChange={e => handleParentChange(e.target.value)}
-        required
-      >
-        <option value="">Catégorie principale...</option>
-        {categoryTree.map(c => (
-          <option key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ''}{c.name}</option>
-        ))}
-      </select>
+    <div className="space-y-3">
+      {/* Catégorie parente (niveau 1) */}
+      <div>
+        <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+          Catégorie parente
+        </label>
+        <select
+          className={`${inputClass} appearance-none cursor-pointer bg-white dark:bg-slate-900`}
+          value={parentId}
+          onChange={e => handleParentChange(e.target.value)}
+          required
+        >
+          <option value="">Sélectionner...</option>
+          {categoryTree.map(c => (
+            <option key={c.id} value={c.id}>
+              {c.icon ? `${c.icon} ` : ''}{c.name}
+              {(c.subcategories?.length || 0) > 0 ? ` ›${c.subcategories?.length} sous-catégories` : ''}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      {/* Sub-category (only if parent has children) */}
-      {selectedParent && (
-        <div className="flex gap-2">
-          <select
-            className={`${inputClass} flex-1 appearance-none cursor-pointer`}
-            value={value === parentId ? '' : value}
-            onChange={e => handleChildChange(e.target.value || parentId)}
-          >
-            <option value="">Toute la catégorie (pas de sous-cat.)</option>
-            {selectedParent.children.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+      {/* Sous-catégorie (niveau 2) */}
+      {selectedParent && hasSubcategories && (
+        <div className="flex gap-2 items-start">
+          <div className="flex-1">
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+              Sous-catégorie
+            </label>
+            <select
+              className={`${inputClass} appearance-none cursor-pointer bg-white dark:bg-slate-900`}
+              value={value && value !== parentId ? value : ''}
+              onChange={e => handleSubcategoryChange(e.target.value || parentId)}
+            >
+              <option value="">Toute la catégorie</option>
+              {(selectedParent.subcategories || []).map((c: any) => (
+                <option key={c.id} value={c.id}>→ {c.name}</option>
+              ))}
+            </select>
+          </div>
           <button
             type="button"
             onClick={onPropose}
             title="Proposer une nouvelle sous-catégorie"
-            className="shrink-0 px-3 py-2 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-700 text-indigo-500 text-xs font-black hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+            className="shrink-0 mt-5 px-3 py-2 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-700 text-indigo-500 text-xs font-black hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
           >
             + Proposer
           </button>
         </div>
+      )}
+
+      {/* Si pas de sous-catégories, montrer bouton proposer sous la catégorie parente */}
+      {selectedParent && !hasSubcategories && (
+        <button
+          type="button"
+          onClick={onPropose}
+          className="text-xs text-indigo-500 font-medium hover:underline"
+        >
+          + Proposer une sous-catégorie pour "{selectedParent.name}"
+        </button>
       )}
     </div>
   );
@@ -103,13 +127,14 @@ function CategorySelector({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function VendorCatalogClient({
-  initialProducts, categoryTree, globalUnits, benchmarkData = [], vendorId,
+  initialProducts, categoryTree, globalUnits, benchmarkData = [], vendorId, mktSectors = [],
 }: {
   initialProducts: any[];
   categoryTree: RootCategory[];
   globalUnits: any[];
   benchmarkData?: BenchmarkRow[];
   vendorId: string;
+  mktSectors?: any[];
 }) {
   const [activeTab, setActiveTab]           = useState<'catalog' | 'benchmark'>('catalog');
   const [modalOpen, setModalOpen]           = useState(false);
@@ -125,7 +150,7 @@ export default function VendorCatalogClient({
   const [csvStep, setCsvStep]   = useState<'upload' | 'preview' | 'importing' | 'done'>('upload');
   const [csvRows, setCsvRows]   = useState<any[]>([]);
   const [csvErrors, setCsvErrors] = useState<string[]>([]);
-  const [csvResult, setCsvResult] = useState<{ created: number; skipped: number; errors: string[] } | null>(null);
+  const [csvResult, setCsvResult] = useState<{ created: number; updated: number; skipped: number; errors: string[]; newCategories: string[] } | null>(null);
 
   // Propose subcategory state
   const [proposeParentId, setProposeParentId]   = useState('');
@@ -137,12 +162,18 @@ export default function VendorCatalogClient({
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Flat list of all categories (root + children) for display
+  const filteredCategoryTree = useMemo(() => {
+    if (!mktSectors || mktSectors.length === 0) return categoryTree;
+    const sectorIds = mktSectors.map(s => s.id);
+    return categoryTree.filter(cat => sectorIds.includes(cat.id));
+  }, [categoryTree, mktSectors]);
+
+  // Flat list of all categories (root + subcategories) for display
   const allCategories = useMemo(() => {
     const flat: { id: string; name: string; parentName?: string }[] = [];
     for (const root of categoryTree) {
       flat.push({ id: root.id, name: root.name });
-      for (const child of root.children) {
+      for (const child of (root.subcategories || [])) {
         flat.push({ id: child.id, name: child.name, parentName: root.name });
       }
     }
@@ -156,16 +187,23 @@ export default function VendorCatalogClient({
     return cat.parentName ? `${cat.parentName} › ${cat.name}` : cat.name;
   };
 
+  const getSubcategoryLabel = (id?: string | null) => {
+    if (!id) return '';
+    const cat = allCategories.find(c => c.id === id);
+    if (!cat) return '';
+    return cat.name;
+  };
+
   const [form, setForm] = useState<any>({
-    name: '', price: '', unit: 'kg', categoryId: '', brand: '', image: '',
+    name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', showUrlInput: false,
     isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQuantity: '1',
   });
 
   const handleEdit = (p: any) => {
     setEditingId(p.id);
     setForm({
-      name: p.name, price: p.price.toString(), unit: p.unit, categoryId: p.categoryId || '',
-      brand: (p as any).brand || '', image: p.image || '',
+      name: p.name, price: p.price.toString(), unit: p.unit, categoryId: p.categoryId || '', subcategoryId: (p as any).subcategoryId || '',
+      brand: (p as any).brand || '', image: p.image || '', imagePreview: p.image || '', showUrlInput: false,
       isFeatured: p.isFeatured, isFlashSale: p.isFlashSale,
       discount: p.discount ? p.discount.toString() : '',
       flashStart: p.flashStart ? new Date(p.flashStart).toISOString().slice(0, 16) : '',
@@ -177,15 +215,16 @@ export default function VendorCatalogClient({
 
   const handleCreateNew = () => {
     setEditingId(null);
-    setForm({ name: '', price: '', unit: 'kg', categoryId: '', brand: '', image: '', isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQuantity: '1' });
+    setForm({ name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', showUrlInput: false, isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQuantity: '1' });
     setModalOpen(true);
   };
 
   const handleExportCsv = () => {
-    const header = 'Nom,Prix,Unite,Categorie,Marque,ImageURL';
+    const header = 'Nom,Prix,Unite,Categorie,SousCategorie,QteMin,Marque,ImageURL,Description,Stock';
     const rows = initialProducts.map(p => {
       const catLabel = getCategoryLabel(p.categoryId);
-      return `"${p.name}",${Number(p.price).toFixed(3)},${p.unit},"${catLabel}","${(p as any).brand || ''}","${p.image || ''}"`;
+      const subLabel = (p as any).subcategoryId ? getSubcategoryLabel((p as any).subcategoryId) : '';
+      return `"${p.name}",${Number(p.price).toFixed(3)},${p.unit},"${catLabel}","${subLabel}",${Number(p.minOrderQty || 1)},"${(p as any).brand || ''}","${p.image || ''}","${(p.description || '').replace(/"/g, '""')}","${(p.stockStatus || 'IN_STOCK')}"`;
     }).join('\n');
     const blob = new Blob([`${header}\n${rows}`], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -206,20 +245,55 @@ export default function VendorCatalogClient({
       if (missing.length > 0) { setCsvErrors([`Colonnes manquantes : ${missing.join(', ')}`]); setCsvStep('preview'); return; }
       const parsed: any[] = [];
       const errors: string[] = [];
+      
+      const getIdx = (name: string) => headers.indexOf(name);
+      
       lines.slice(1).forEach((line, i) => {
-        const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-        const name = cols[headers.indexOf('nom')] || '';
-        const priceRaw = cols[headers.indexOf('prix')] || '';
-        const unit = cols[headers.indexOf('unite')] || '';
-        const categoryName = cols[headers.indexOf('categorie')] || '';
-        const brand = headers.indexOf('marque') >= 0 ? cols[headers.indexOf('marque')] : '';
-        const imageIdx = headers.indexOf('imageurl');
+        // Handle commas inside quoted strings
+        const cols: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          if (char === '"') { inQuotes = !inQuotes; }
+          else if (char === ',' && !inQuotes) { cols.push(current.trim().replace(/^"|"$/g, '')); current = ''; }
+          else { current += char; }
+        }
+        cols.push(current.trim().replace(/^"|"$/g, ''));
+        
+        const name = cols[getIdx('nom')] || '';
+        const priceRaw = cols[getIdx('prix')] || '';
+        const unit = cols[getIdx('unite')] || '';
+        const categoryName = cols[getIdx('categorie')] || '';
+        const subcategoryName = getIdx('souscategorie') >= 0 ? cols[getIdx('souscategorie')] : '';
+        const minOrderQtyRaw = getIdx('qtemin') >= 0 ? cols[getIdx('qtemin')] : '';
+        const brand = getIdx('marque') >= 0 ? cols[getIdx('marque')] : '';
+        const imageIdx = getIdx('imageurl');
         const image = imageIdx >= 0 ? cols[imageIdx] : '';
+        const descIdx = getIdx('description');
+        const description = descIdx >= 0 ? cols[descIdx] : '';
+        const stockIdx = getIdx('stock');
+        const stockStatus = stockIdx >= 0 ? cols[stockIdx] : 'IN_STOCK';
+        
         const price = parseFloat(priceRaw.replace(',', '.'));
+        const minOrderQty = minOrderQtyRaw ? parseFloat(minOrderQtyRaw.replace(',', '.')) : 1;
+        
         if (!name) { errors.push(`Ligne ${i + 2}: Nom manquant`); return; }
         if (isNaN(price) || price <= 0) { errors.push(`Ligne ${i + 2} (${name}): Prix invalide "${priceRaw}"`); return; }
         if (!unit) { errors.push(`Ligne ${i + 2} (${name}): Unité manquante`); return; }
-        parsed.push({ name, price, unit, categoryName, brand: brand || null, image: image?.startsWith('http') ? image : '' });
+        
+        parsed.push({ 
+          name, 
+          price, 
+          unit, 
+          categoryName, 
+          subcategoryName: subcategoryName || undefined,
+          brand: brand || null, 
+          image: image?.startsWith('http') ? image : '',
+          minOrderQty: isNaN(minOrderQty) ? 1 : minOrderQty,
+          description: description || undefined,
+          stockStatus: stockStatus || 'IN_STOCK'
+        });
       });
       setCsvRows(parsed); setCsvErrors(errors); setCsvStep('preview');
     };
@@ -281,33 +355,33 @@ export default function VendorCatalogClient({
     return true;
   }), [benchmarkData, filterCategory, filterBrand]);
 
-  const inputClass = "w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400";
-  const labelClass = "block text-[11px] font-black text-slate-500 mb-1.5 uppercase tracking-wider";
+  const inputClass = "w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-400";
+  const labelClass = "block text-xs font-semibold text-slate-600 mb-2";
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
 
       {/* ── TOOLBAR ── */}
-      <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900/40 backdrop-blur-md p-4 rounded-3xl border border-slate-200 dark:border-slate-800/50 gap-4 shadow-sm">
-        <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/50 rounded-2xl shrink-0">
-          <button onClick={() => setActiveTab('catalog')} className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-sm transition-all ${activeTab === 'catalog' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-            <Package size={15} /> Mon Catalogue
+      <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 gap-4 shadow-sm">
+        <div className="flex gap-1 p-1 bg-slate-100 rounded-xl shrink-0">
+          <button onClick={() => setActiveTab('catalog')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'catalog' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            <Package size={16} /> Catalogue
           </button>
-          <button onClick={() => setActiveTab('benchmark')} className={`flex items-center gap-2 px-5 py-2 rounded-xl font-black text-sm transition-all ${activeTab === 'benchmark' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-            <BarChart3 size={15} /> Benchmark Prix
-            {benchmarkData.length > 0 && <span className="ml-1 px-2 py-0.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-full text-[10px] font-black">{benchmarkData.length}</span>}
+          <button onClick={() => setActiveTab('benchmark')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'benchmark' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            <BarChart3 size={16} /> Benchmark
+            {benchmarkData.length > 0 && <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full text-xs font-bold">{benchmarkData.length}</span>}
           </button>
         </div>
         {activeTab === 'catalog' && (
           <div className="flex gap-2 w-full md:w-auto">
-            <button onClick={handleExportCsv} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold text-sm hover:bg-slate-50 hover:text-emerald-600 transition-all">
+            <button onClick={handleExportCsv} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 hover:text-emerald-600 transition-all">
               <Download size={16} /> Exporter
             </button>
-            <button onClick={() => { setCsvStep('upload'); setImportModalOpen(true); }} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold text-sm hover:bg-slate-50 hover:text-indigo-600 transition-all">
-              <FileSpreadsheet size={16} /> Importer CSV
+            <button onClick={() => { setCsvStep('upload'); setImportModalOpen(true); }} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 hover:text-blue-600 transition-all">
+              <FileSpreadsheet size={16} /> Importer
             </button>
-            <button onClick={handleCreateNew} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20">
-              <Plus size={16} /> Nouveau produit
+            <button onClick={handleCreateNew} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-all shadow-md">
+              <Plus size={16} /> Ajouter
             </button>
           </div>
         )}
@@ -315,36 +389,36 @@ export default function VendorCatalogClient({
 
       {/* ── CATALOG TAB ── */}
       {activeTab === 'catalog' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {initialProducts.map(p => (
-            <div key={p.id} className="bg-white dark:bg-slate-900/40 rounded-[32px] border border-slate-200 dark:border-slate-800/50 overflow-hidden flex flex-col transition-all duration-300 hover:border-indigo-500/30 hover:-translate-y-1 group shadow-sm hover:shadow-xl">
-              <div className="h-48 bg-slate-100 dark:bg-slate-950 relative overflow-hidden">
-                <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
-                <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
-                  {p.isFeatured  && <div className="bg-amber-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">🔥 Vedette</div>}
-                  {p.isFlashSale && <div className="bg-rose-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">⚡ -{p.discount}%</div>}
+            <div key={p.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden flex flex-col transition-all duration-200 hover:shadow-md group">
+              <div className="h-40 bg-slate-100 relative overflow-hidden">
+                <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} className="w-full h-full object-cover" />
+                <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
+                  {p.isFeatured  && <div className="bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-semibold">Vedette</div>}
+                  {p.isFlashSale && <div className="bg-rose-500 text-white px-2 py-1 rounded-full text-xs font-semibold">-{p.discount}%</div>}
                 </div>
               </div>
-              <div className="p-5 flex flex-1 flex-col">
+              <div className="p-4 flex flex-1 flex-col">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">{getCategoryLabel(p.categoryId)}</span>
-                  {(p as any).brand && <span className="px-2 py-0.5 bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 rounded-full text-[9px] font-black"><Tag size={8} className="inline mr-1" />{(p as any).brand}</span>}
+                  <span className="text-xs text-slate-500 font-medium">{getCategoryLabel(p.categoryId)}</span>
+                  {(p as any).brand && <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-xs font-medium">{(p as any).brand}</span>}
                 </div>
-                <h4 className="text-base font-black text-slate-900 dark:text-white leading-tight mb-4 group-hover:text-indigo-600 transition-colors">{p.name}</h4>
-                <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800/50 flex justify-between items-end">
+                <h4 className="text-base font-semibold text-slate-900 leading-tight mb-3 group-hover:text-blue-600 transition-colors">{p.name}</h4>
+                <div className="mt-auto flex justify-between items-end">
                   <div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-black text-slate-900 dark:text-white">{Number(p.price).toFixed(3)}</span>
-                      <span className="text-xs font-bold text-slate-400 uppercase">DT / {p.unit}</span>
+                      <span className="text-xl font-bold text-slate-900">{Number(p.price).toFixed(3)}</span>
+                      <span className="text-xs text-slate-500">DT / {p.unit}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleEdit(p)} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-400 hover:text-white hover:bg-indigo-600 hover:border-indigo-500 transition-all"><Edit2 size={15} /></button>
-                    <button onClick={() => handleDelete(p.id)} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 text-slate-400 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200 transition-all"><Trash2 size={15} /></button>
+                  <div className="flex gap-1">
+                    <button onClick={() => handleEdit(p)} className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-all"><Edit2 size={14} /></button>
+                    <button onClick={() => handleDelete(p.id)} className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:text-rose-500 hover:bg-rose-50 transition-all"><Trash2 size={14} /></button>
                   </div>
                 </div>
                 {p.isFlashSale && p.flashEnd && (
-                  <div className="mt-3 flex items-center gap-2 text-[10px] font-black text-rose-500 uppercase tracking-widest bg-rose-50 dark:bg-rose-500/5 border border-rose-100 px-3 py-1.5 rounded-lg">
+                  <div className="mt-3 flex items-center gap-2 text-xs font-medium text-rose-500 bg-rose-50 px-3 py-1.5 rounded-lg">
                     <Clock size={12} /> Fin : {new Date(p.flashEnd).toLocaleDateString()}
                   </div>
                 )}
@@ -521,10 +595,15 @@ export default function VendorCatalogClient({
 
           <div>
             <label className={labelClass}>Catégorie</label>
+            {mktSectors.length === 0 && (
+              <div className="mb-2 p-3 bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/10 rounded-xl text-[10px] text-amber-700 dark:text-amber-400 font-bold uppercase tracking-wider">
+                ⚠️ Aucun secteur configuré dans vos paramètres. Toutes les catégories sont affichées.
+              </div>
+            )}
             <CategorySelector
-              categoryTree={categoryTree}
+              categoryTree={filteredCategoryTree}
               value={form.categoryId}
-              onChange={id => setForm({...form, categoryId: id})}
+              onChange={(catId, subcatId) => setForm({...form, categoryId: catId, subcategoryId: subcatId || null})}
               onPropose={() => setProposeModalOpen(true)}
               inputClass={inputClass}
             />
@@ -539,8 +618,96 @@ export default function VendorCatalogClient({
           </div>
 
           <div>
-            <label className={labelClass}>Image (URL)</label>
-            <input className={inputClass} value={form.image} onChange={e => setForm({...form, image: e.target.value})} placeholder="https://..." />
+            <label className={labelClass}>Photo du produit</label>
+            <div className="space-y-3">
+              {/* Preview de l'image */}
+              {(form.image || form.imagePreview) && (
+                <div className="relative w-32 h-32 rounded-2xl overflow-hidden border-2 border-indigo-200 dark:border-indigo-800">
+                  <img 
+                    src={form.imagePreview || form.image} 
+                    alt="Preview" 
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setForm({...form, image: '', imagePreview: ''})}
+                    className="absolute top-1 right-1 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center text-xs font-bold hover:bg-rose-600"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+
+              {/* Boutons d'upload */}
+              <div className="flex gap-2 flex-wrap">
+                {/* Bouton Upload fichier */}
+                <label className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-500/30 transition-colors text-sm font-bold">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          setForm({...form, image: file.name, imagePreview: reader.result as string});
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Importer
+                </label>
+
+                {/* Bouton Caméra (mobile) */}
+                <label className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-500/30 transition-colors text-sm font-bold">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          setForm({...form, image: file.name, imagePreview: reader.result as string});
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Caméra
+                </label>
+
+                {/* Bouton URL (optionnel) */}
+                <button
+                  type="button"
+                  onClick={() => setForm({...form, showUrlInput: !form.showUrlInput})}
+                  className="px-4 py-2.5 text-slate-500 hover:text-slate-700 text-sm font-medium"
+                >
+                  {form.showUrlInput ? '← Masquer URL' : 'Ou via URL'}
+                </button>
+              </div>
+
+              {/* Input URL (caché par défaut) */}
+              {form.showUrlInput && (
+                <input 
+                  className={inputClass} 
+                  value={form.image} 
+                  onChange={e => setForm({...form, image: e.target.value, imagePreview: ''})} 
+                  placeholder="https://exemple.com/photo.jpg" 
+                />
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-950/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
@@ -625,8 +792,9 @@ export default function VendorCatalogClient({
           {csvStep === 'upload' && (
             <>
               <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-                <p className="text-xs text-slate-500 font-medium">Format : <code className="text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded font-mono">Nom, Prix, Unite, Categorie, Marque, ImageURL</code></p>
-                <button onClick={() => { const b = new Blob(['Nom,Prix,Unite,Categorie,Marque,ImageURL\nCharbon Coco King,12.500,kg,Charbons,CocoKing,\nTabac Al Fakher Pomme,8.900,50g,Tabac,Al Fakher,'], { type: 'text/csv' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'modele_catalogue.csv'; a.click(); }} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-indigo-200 text-indigo-600 font-black text-xs hover:bg-indigo-50 transition-colors">
+                <p className="text-xs text-slate-500 font-medium">Colonnes requises: <code className="text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded font-mono">Nom, Prix, Unite, Categorie</code></p>
+                <p className="text-xs text-slate-400">Optionnelles: <code className="text-slate-600 bg-slate-100 px-1 py-0.5 rounded font-mono">SousCategorie, QteMin, Marque, ImageURL, Description, Stock</code></p>
+                <button onClick={() => { const b = new Blob(['Nom,Prix,Unite,Categorie,SousCategorie,QteMin,Marque,ImageURL,Description,Stock\nCharbon Coco King,12.500,kg,Charbons,,1,CocoKing,https://example.com/image.jpg,Charbon de qualité,IN_STOCK\nTabac Al Fakher Pomme,8.900,50g,Tabac,Flavored,10,Al Fakher,,Fruit,LOW_STOCK'], { type: 'text/csv' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'modele_catalogue.csv'; a.click(); }} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-indigo-200 text-indigo-600 font-black text-xs hover:bg-indigo-50 transition-colors">
                   <Download size={14} /> Télécharger le modèle
                 </button>
               </div>
@@ -680,10 +848,18 @@ export default function VendorCatalogClient({
               <div className="flex items-center gap-4 p-5 bg-emerald-50 rounded-2xl border border-emerald-100">
                 <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shrink-0"><CheckCircle2 size={24} /></div>
                 <div>
-                  <div className="font-black text-emerald-700">{csvResult.created} produit(s) créés</div>
+                  <div className="font-black text-emerald-700">{csvResult.created} créé(s) · {csvResult.updated} mis à jour</div>
                   {csvResult.skipped > 0 && <div className="text-xs text-slate-500 mt-1">{csvResult.skipped} ignoré(s)</div>}
                 </div>
               </div>
+              {csvResult.newCategories.length > 0 && (
+                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200">
+                  <div className="text-xs font-black text-amber-700 uppercase tracking-widest mb-2">Nouvelles catégories (en attente d'approbation)</div>
+                  {csvResult.newCategories.map((msg, i) => (
+                    <div key={i} className="text-xs text-amber-600 font-medium">{msg}</div>
+                  ))}
+                </div>
+              )}
               {csvResult.errors.length > 0 && <div className="space-y-1.5">{csvResult.errors.map((err, i) => <div key={i} className="text-xs text-rose-600 font-bold flex items-center gap-2 bg-rose-50 px-3 py-2 rounded-xl"><AlertCircle size={12} />{err}</div>)}</div>}
               <button onClick={handleImportModalClose} className="w-full px-4 py-3 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-500">Fermer et voir le catalogue</button>
             </div>

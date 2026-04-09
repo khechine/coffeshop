@@ -21,8 +21,10 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   const handleLogout = async () => {
     const { logoutUser } = await import('../actions');
     await logoutUser();
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
   };
 
   return (

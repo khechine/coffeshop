@@ -40,8 +40,6 @@ export default function MarketplaceMapClient({ data }: { data: any }) {
     if (typeof window === 'undefined' || !mapContainer.current) return;
 
     const L = require('leaflet');
-    // We already have the link in page.tsx, but this is a safeguard for dynamic leaflet
-    require('leaflet/dist/leaflet.css');
 
     if (!mapInstance.current) {
       mapInstance.current = L.map(mapContainer.current);

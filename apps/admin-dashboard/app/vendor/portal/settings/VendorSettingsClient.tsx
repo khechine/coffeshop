@@ -2,17 +2,17 @@
 
 import React, { useState, useTransition, useEffect, useRef } from 'react';
 import { Building2, Save, CheckCircle2, Briefcase, MapPin, Crosshair } from 'lucide-react';
-import { updateVendorActivityPolesAction, updateVendorProfileAction } from '../../../actions';
+import { updateVendorSectorsAction, updateVendorProfileAction } from '../../../actions';
 
 import 'leaflet/dist/leaflet.css';
 
 export default function VendorSettingsClient({
   portalData,
-  activityPoles,
+  mktCategories,
   globalUnits,
 }: {
   portalData: any;
-  activityPoles: { id: string; name: string; icon?: string | null }[];
+  mktCategories: { id: string; name: string; icon?: string | null }[];
   globalUnits: { id: string; name: string }[];
 }) {
   const [isPending, startTransition] = useTransition();
@@ -95,8 +95,8 @@ export default function VendorSettingsClient({
   };
 
   // ── Activity Poles (multi-select) ─────────────────────────
-  const [selectedPoleIds, setSelectedPoleIds] = useState<string[]>(
-    portalData.activityPoles?.map((p: any) => p.id) || []
+  const [selectedSectorIds, setSelectedSectorIds] = useState<string[]>(
+    portalData.mktSectors?.map((p: any) => p.id) || []
   );
 
   const showToast = (message: string) => {
@@ -104,15 +104,15 @@ export default function VendorSettingsClient({
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleTogglePole = (id: string) => {
-    setSelectedPoleIds(prev =>
+  const handleToggleSector = (id: string) => {
+    setSelectedSectorIds(prev =>
       prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
     );
   };
 
-  const handleSavePoles = () => {
+  const handleSaveSectors = () => {
     startTransition(async () => {
-      await updateVendorActivityPolesAction(portalData.id, selectedPoleIds);
+      await updateVendorSectorsAction(portalData.id, selectedSectorIds);
       showToast('Secteurs d\'activité enregistrés !');
     });
   };
@@ -145,19 +145,19 @@ export default function VendorSettingsClient({
                 <Briefcase size={28} className="text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-black text-slate-900 dark:text-white">Secteurs d'Activité</h2>
-                <p className="text-slate-500 text-sm font-medium">Sélectionnez vos spécialités ({selectedPoleIds.length} sélectionnés)</p>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white">Secteurs Marketplace</h2>
+                <p className="text-slate-500 text-sm font-medium">Sélectionnez vos spécialités ({selectedSectorIds.length} sélectionnées)</p>
               </div>
             </div>
 
-            {activityPoles.length === 0 ? (
+            {mktCategories.length === 0 ? (
               <div className="py-12 bg-slate-50 dark:bg-slate-950/30 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-slate-500 font-bold">
-                Aucun pôle d'activité configuré
+                Aucun secteur configuré
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-8 relative z-10">
-                {activityPoles.map(pole => {
-                  const isActive = selectedPoleIds.includes(pole.id);
+                {mktCategories.map(pole => {
+                  const isActive = selectedSectorIds.includes(pole.id);
                   return (
                     <label 
                       key={pole.id} 
@@ -171,12 +171,12 @@ export default function VendorSettingsClient({
                         type="checkbox"
                         value={pole.id}
                         checked={isActive}
-                        onChange={() => handleTogglePole(pole.id)}
+                        onChange={() => handleToggleSector(pole.id)}
                         className="w-4 h-4 accent-violet-500 shrink-0 rounded"
                       />
-                      <div className="flex flex-col overflow-hidden">
-                        {pole.icon && <span className="text-xl leading-none mb-1">{pole.icon}</span>}
-                        <span className={`font-black text-[10px] uppercase tracking-wider truncate ${isActive ? 'text-violet-600 dark:text-violet-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                      <div className="flex flex-col flex-1 overflow-visible">
+                        {pole.icon && <span className="text-xl leading-none mb-1 text-center">{pole.icon}</span>}
+                        <span className={`font-black text-[11px] uppercase tracking-wider leading-tight text-center ${isActive ? 'text-violet-600 dark:text-violet-400' : 'text-slate-400 dark:text-slate-500'}`}>
                           {pole.name}
                         </span>
                       </div>
@@ -187,7 +187,7 @@ export default function VendorSettingsClient({
             )}
 
             <button 
-              onClick={handleSavePoles} 
+              onClick={handleSaveSectors} 
               disabled={isPending} 
               className="w-full flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-violet-600 text-white font-black text-sm hover:bg-violet-500 transition-all shadow-xl shadow-violet-600/20 disabled:opacity-50 uppercase tracking-widest relative z-10"
             >
@@ -296,11 +296,11 @@ export default function VendorSettingsClient({
                 </span>
               </div>
               
-              {selectedPoleIds.length > 0 && (
+              {selectedSectorIds.length > 0 && (
                 <div className="py-4 border-b border-slate-100 dark:border-slate-800/50">
                   <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-3">Secteurs Actifs</span>
                   <div className="flex flex-wrap gap-2">
-                    {activityPoles.filter(p => selectedPoleIds.includes(p.id)).map(p => (
+                    {mktCategories.filter(p => selectedSectorIds.includes(p.id)).map(p => (
                       <span key={p.id} className="flex items-center gap-1 px-2.5 py-1 bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 rounded-lg text-[10px] font-black border border-violet-100 dark:border-violet-500/20">
                         {p.icon} {p.name}
                       </span>

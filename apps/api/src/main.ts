@@ -1,12 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { json } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors(); // Autoriser les requêtes depuis l'application mobile
 
+  // Increase payload limit for image uploads (10MB)
+  app.use(json({ limit: '10mb' }));
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 

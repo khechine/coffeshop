@@ -6,11 +6,10 @@ export const dynamic = 'force-dynamic';
 export default async function MarketplaceMapPage() {
   const store = await prisma.store.findFirst();
   const vendors = await prisma.vendorProfile.findMany({
-     where: { status: 'ACTIVE' },
-     include: { categories: true }
+     where: { status: 'ACTIVE' }
   });
 
-  const categories = await prisma.marketplaceCategory.findMany();
+  const categories = await prisma.mktCategory.findMany({ where: { status: 'ACTIVE' } });
 
   const mapData = {
     store: {
@@ -24,7 +23,7 @@ export default async function MarketplaceMapPage() {
       name: v.companyName,
       lat: Number(v.lat) || 36.80,
       lng: Number(v.lng) || 10.18,
-      categories: v.categories.map(c => c.name)
+      categories: [] as string[]
     })),
     categories: categories.map(c => ({ id: c.id, name: c.name }))
   };

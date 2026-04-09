@@ -18,12 +18,19 @@ export default function HomePage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      window.location.href = '/admin';
+    }
+  }, [user]);
 
   if (loading) return null;
 

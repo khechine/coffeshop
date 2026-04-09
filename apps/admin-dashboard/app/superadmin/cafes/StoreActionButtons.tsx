@@ -1,40 +1,38 @@
 'use client';
 
 import React, { useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { updateStoreAdminAction } from '../../actions';
+import { BarChart3, Settings, ExternalLink } from 'lucide-react';
 
 export default function StoreActionButtons({ storeId }: { storeId: string }) {
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const handleMetrics = () => {
-    alert('Redirection vers les métriques du store ' + storeId);
+    router.push(`/superadmin/cafes/${storeId}/metrics`);
   };
 
   const handleParams = () => {
-    const newName = prompt('Nouveau nom du store ?');
-    if (newName) {
-      startTransition(async () => {
-        await updateStoreAdminAction(storeId, { name: newName });
-      });
-    }
+    router.push(`/superadmin/cafes/${storeId}`);
   };
 
   return (
-    <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+    <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
        <button 
          onClick={handleMetrics}
-         className="btn btn-primary" 
-         style={{ flex: 1, background: '#1E293B', border: 'none' }}
+         className="flex items-center justify-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs transition-colors"
+         style={{ flex: 1 }}
        >
-         Accéder aux Metrics
+         <BarChart3 size={14} /> Metrics
        </button>
        <button 
          onClick={handleParams}
          disabled={isPending}
-         className="btn btn-outline" 
+         className="flex items-center justify-center gap-2 px-3 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg font-bold text-xs transition-colors"
          style={{ flex: 1 }}
        >
-         {isPending ? 'En cours...' : 'Paramètres'}
+         {isPending ? '...' : <><Settings size={14} /> Params</>}
        </button>
     </div>
   );

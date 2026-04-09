@@ -4,14 +4,23 @@ import VendorsListClient from './VendorsListClient';
 export const dynamic = 'force-dynamic';
 
 export default async function SuperAdminVendorsPage() {
-  const vendors = await prisma.vendorProfile.findMany({
+  const vendorsRaw = await (prisma as any).vendorProfile.findMany({
     include: { 
       user: true, 
-      categories: true,
-      products: true
+      vendorProducts: true
     },
     orderBy: { createdAt: 'desc' }
   });
+
+  // Convert Decimal fields to numbers
+  const vendors = vendorsRaw.map((v: any) => ({
+    ...v,
+    vendorProducts: (v.vendorProducts || []).map((p: any) => ({
+      ...p,
+      price: Number(p.price),
+      discountPrice: p.discountPrice ? Number(p.discountPrice) : null,
+    }))
+  }));
 
   return (
     <div className="flex flex-col gap-10 p-6 max-w-8xl mx-auto">

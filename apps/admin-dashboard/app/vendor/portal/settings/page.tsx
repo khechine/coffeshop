@@ -6,12 +6,16 @@ export const dynamic = 'force-dynamic';
 
 export default async function VendorSettingsPage() {
   const portalData = await getVendorPortalData();
-  const [activityPoles, globalUnits] = await Promise.all([
-    prisma.activityPole.findMany({ orderBy: { name: 'asc' } }),
+  const [mktCategories, globalUnits] = await Promise.all([
+    (prisma as any).mktCategory.findMany({ where: { status: 'ACTIVE' }, orderBy: { name: 'asc' } }),
     prisma.globalUnit.findMany({ orderBy: { name: 'asc' } }),
   ]);
 
   if (!portalData) return <div style={{ padding: '40px' }}>Chargement ou profil non trouvé...</div>;
 
-  return <VendorSettingsClient portalData={portalData} activityPoles={activityPoles} globalUnits={globalUnits} />;
+  return <VendorSettingsClient 
+    portalData={JSON.parse(JSON.stringify(portalData))} 
+    mktCategories={JSON.parse(JSON.stringify(mktCategories))} 
+    globalUnits={JSON.parse(JSON.stringify(globalUnits))} 
+  />;
 }

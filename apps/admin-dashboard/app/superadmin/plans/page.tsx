@@ -8,12 +8,18 @@ export const dynamic = 'force-dynamic';
 export default async function SuperAdminPlans() {
   // Use raw query to ensure we get all fields (like hasMarketplace) even if client is stale
   const plans: any[] = await prisma.$queryRawUnsafe('SELECT * FROM "Plan" ORDER BY name ASC');
-
-  // Enrich with subscriber counts
+  
   const plansWithSubs = await Promise.all(plans.map(async (plan) => {
     const subCount = await prisma.subscription.count({ where: { planId: plan.id } });
     const activeCount = await prisma.subscription.count({ where: { planId: plan.id, status: 'ACTIVE' } });
-    return { ...plan, subCount, activeCount };
+    return { 
+      ...plan, 
+      price: Number(plan.price),
+      maxStores: Number(plan.maxStores),
+      maxProducts: Number(plan.maxProducts),
+      subCount, 
+      activeCount 
+    };
   }));
 
   const totalStores = await prisma.store.count();

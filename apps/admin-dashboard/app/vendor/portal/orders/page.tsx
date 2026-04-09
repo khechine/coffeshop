@@ -21,7 +21,7 @@ export default async function VendorOrdersPage() {
         </div>
       </div>
 
-      <VendorOrderListClient orders={portalData.orders} />
+      <VendorOrderListClient orders={JSON.parse(JSON.stringify(portalData.orders))} />
     </div>
   );
 }

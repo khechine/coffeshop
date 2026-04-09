@@ -5,13 +5,16 @@ export const dynamic = 'force-dynamic';
 
 export default async function SuperAdminMapPage() {
   const stores = await prisma.store.findMany();
-  const vendors = await prisma.vendorProfile.findMany({ include: { categories: true, products: true } });
+  const vendors = await prisma.vendorProfile.findMany({ include: { vendorProducts: true } });
   const couriers = await prisma.courierProfile.findMany();
-  const categories = await prisma.marketplaceCategory.findMany();
+  const categories = await prisma.mktCategory.findMany({ where: { status: 'ACTIVE' } });
 
-  // For SuperAdmin, the "store" is just a reference or we can pick the first one
+  const vendorProducts = await prisma.vendorProduct.findMany({
+    include: { vendor: true, productStandard: true }
+  });
+
   const mapData = {
-    categories: categories,
+    categories: categories.map((c: any) => ({ id: c.id, name: c.name })),
     store: {
       id: stores[0]?.id,
       name: stores[0]?.name || 'Siège',
@@ -23,7 +26,7 @@ export default async function SuperAdminMapPage() {
       name: v.companyName,
       lat: v.lat || 36.80,
       lng: v.lng || 10.18,
-      categories: v.categories.map(c => c.name),
+      categories: [] as string[],
       type: 'VENDOR'
     })),
     extraPoints: [

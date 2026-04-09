@@ -1,12 +1,13 @@
 import { getMarketplaceData, getStore } from '../actions';
-import MarketplaceClient from './MarketplaceClient';
-import { ShoppingCart, Star, Zap, ChevronRight, Package, Store, MapPin, CheckCircle, Clock, Send, Plus, Lock } from 'lucide-react';
+import { ShoppingCart, Package, Lock } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
+import MarketplaceClient from './MarketplaceClient';
+
 export default async function MarketplacePage() {
   const store = await getStore();
-  const hasMarketplace = (store as any)?.subscription?.plan?.hasMarketplace !== false;
+  const hasMarketplace = store && (store as any)?.subscription?.plan?.hasMarketplace !== false;
   const data = await getMarketplaceData();
 
   if (!hasMarketplace) {
@@ -31,62 +32,6 @@ export default async function MarketplacePage() {
 
   return (
     <div className="page-content" style={{ padding: 0 }}>
-      {/* Premium Search Header */}
-      <div style={{ 
-        background: 'rgba(255, 255, 255, 0.8)', 
-        backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(226, 232, 240, 0.8)', 
-        padding: '20px 32px', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        position: 'sticky', 
-        top: 0, 
-        zIndex: 50 
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ 
-            width: '42px', 
-            height: '42px', 
-            background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', 
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(79, 70, 229, 0.2)'
-          }}>
-            <ShoppingCart size={22} color="#fff" />
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 900, color: '#1E293B', letterSpacing: '-0.025em' }}>Marketplace Fournisseurs</h1>
-            <p style={{ margin: 0, fontSize: '13px', color: '#64748B', fontWeight: 500 }}>Trouvez les meilleurs produits pour votre établissement</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
-            <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>
-              <Package size={18} />
-            </div>
-            <input 
-              type="text" 
-              placeholder="Rechercher un produit, une marque ou un fournisseur..." 
-              style={{ 
-                width: '450px', 
-                padding: '12px 16px 12px 42px', 
-                borderRadius: '14px', 
-                border: '1.5px solid #F1F5F9', 
-                background: '#F8FAFC',
-                fontSize: '14px', 
-                fontWeight: 500,
-                outline: 'none',
-                transition: 'all 0.2s',
-                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
       <MarketplaceClient initialData={data} />
     </div>
   );

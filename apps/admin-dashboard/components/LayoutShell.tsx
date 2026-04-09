@@ -23,13 +23,20 @@ export default function LayoutShell({
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [mounted, setMounted] = useState(false);
+  const [cashierName, setCashierName] = useState<string>('Administrateur');
 
   useEffect(() => {
+    setMounted(true);
+    if (typeof window === 'undefined') return;
+    
     // Auth & User
     const savedUser = localStorage.getItem('user');
     const savedRole = localStorage.getItem('pos_cashier_role');
+    const savedCashier = localStorage.getItem('pos_cashier');
     if (savedUser) setUser(JSON.parse(savedUser));
     if (savedRole) setRole(savedRole);
+    if (savedCashier) setCashierName(savedCashier);
 
     // Theme (Corrected for Next.js - apply to HTML)
     const savedTheme = (localStorage.getItem('admin_theme') || 'light') as 'light' | 'dark';
@@ -42,6 +49,7 @@ export default function LayoutShell({
   }, []);
 
   const toggleTheme = () => {
+    if (typeof window === 'undefined') return;
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     localStorage.setItem('admin_theme', newTheme);
@@ -54,14 +62,17 @@ export default function LayoutShell({
 
   const handleLogout = async () => {
     await logoutUser();
-    localStorage.removeItem('user');
-    localStorage.removeItem('pos_cashier');
-    localStorage.removeItem('pos_cashier_role');
-    localStorage.removeItem('pos_cashier_permissions');
-    window.location.href = '/login';
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user');
+      localStorage.removeItem('pos_cashier');
+      localStorage.removeItem('pos_cashier_role');
+      localStorage.removeItem('pos_cashier_permissions');
+      window.location.href = '/login';
+    }
   };
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     // Initial state from localStorage
     const storedCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
     setIsCollapsed(storedCollapsed);
@@ -119,12 +130,12 @@ export default function LayoutShell({
             
             <div className="topbar-user-profile">
                <div className="user-info-text">
-                  <span className="user-name">{localStorage.getItem('pos_cashier') || 'Administrateur'}</span>
-                  <span className="user-role">{role?.replace('_', ' ') || 'PROPRIÉTAIRE'}</span>
+                  <span className="user-name">{mounted ? cashierName : 'Administrateur'}</span>
+                  <span className="user-role">{(role || user?.role || 'STORE_OWNER').replace('_', ' ')}</span>
                </div>
                <div className="user-avatar-wrapper">
                   <div className="user-avatar" style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '15px' }}>
-                    {(localStorage.getItem('pos_cashier') || 'A').charAt(0).toUpperCase()}
+                    {(mounted ? cashierName : 'A').charAt(0).toUpperCase()}
                   </div>
                </div>
                <button onClick={handleLogout} className="topbar-logout-btn" title="Déconnexion">

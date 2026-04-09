@@ -58,10 +58,10 @@ export default async function ProductsManagement() {
       </div>
 
       <ProductsClient
-        products={products as any}
+        products={JSON.parse(JSON.stringify(products))}
         categories={categories}
-        stockItems={stockItems as any}
-        globalUnits={globalUnits as any}
+        stockItems={JSON.parse(JSON.stringify(stockItems))}
+        globalUnits={JSON.parse(JSON.stringify(globalUnits))}
       />
     </div>
   );

@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
-  Coffee, LayoutDashboard, Package, Layers, Users, CreditCard, Crown, Truck, Bell, LogOut, 
-  Clock, Tablet, Store, History, Settings, LayoutGrid, Boxes, ShoppingBag, 
-  ChevronDown, ChevronRight 
+  LayoutDashboard, ShoppingCart, History, Store, Tablet, Users, CreditCard, Settings, 
+  Boxes, Coffee, BarChart3, ChevronDown, ChevronRight, Package, FileText, TrendingUp,
+  Layers, LayoutGrid, Truck, ShoppingBag
 } from 'lucide-react';
 
 import { logoutUser } from '../app/actions';
@@ -28,6 +28,7 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
   const isActive = (href: string) => pathname === href;
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     setMounted(true);
     const storedRole = localStorage.getItem('pos_cashier_role') as Role;
     const storedPerms = localStorage.getItem('pos_cashier_permissions');
@@ -39,7 +40,6 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
     if (storedSections) {
       setOpenSections(JSON.parse(storedSections));
     } else {
-      // Default open sections for a 'complet' look
       setOpenSections(['VENTES', 'PILOTAGE', 'PRODUITS', 'B2B']);
     }
     
@@ -58,8 +58,6 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
       if (window.innerWidth >= 768 && window.innerWidth <= 1100) {
         setIsCollapsed(true);
       } else {
-        // Desktop (> 1100px) or Mobile (< 768px handled by layout)
-        // Keep user preference or stay expanded
         const stored = localStorage.getItem('sidebar_collapsed_v2') === 'true';
         setIsCollapsed(stored);
       }
@@ -73,13 +71,14 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
   const toggleCollapse = () => {
     const newState = !isCollapsed;
     setIsCollapsed(newState);
-    if (!newState) {
-       // When manually expanding, keep it expanded
-       localStorage.setItem('sidebar_collapsed_v2', 'false');
-    } else {
-       localStorage.setItem('sidebar_collapsed_v2', 'true');
+    if (typeof window !== 'undefined') {
+      if (!newState) {
+        localStorage.setItem('sidebar_collapsed_v2', 'false');
+      } else {
+        localStorage.setItem('sidebar_collapsed_v2', 'true');
+      }
+      window.dispatchEvent(new Event('sidebarToggle'));
     }
-    window.dispatchEvent(new Event('sidebarToggle'));
   };
 
   const handleMouseEnter = () => {
@@ -98,7 +97,9 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
       const newSections = prev.includes(section)
         ? prev.filter(s => s !== section)
         : [...prev, section];
-      localStorage.setItem('sidebar_open_sections', JSON.stringify(newSections));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sidebar_open_sections', JSON.stringify(newSections));
+      }
       return newSections;
     });
   };
@@ -107,12 +108,13 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
 
   const handleLogout = async () => {
     await logoutUser();
-    localStorage.removeItem('user');
-    localStorage.removeItem('pos_cashier');
-    localStorage.removeItem('pos_cashier_role');
-    localStorage.removeItem('pos_cashier_permissions');
-    setRole(null);
-    window.location.href = '/login';
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user');
+      localStorage.removeItem('pos_cashier');
+      localStorage.removeItem('pos_cashier_role');
+      localStorage.removeItem('pos_cashier_permissions');
+      window.location.href = '/login';
+    }
   };
 
   if (!mounted) return null;
@@ -229,6 +231,12 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
                   <Link href="/admin/expenses" title="Gestion Dépenses" className={`nav-item${isActive('/admin/expenses') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
                     <CreditCard size={18} />
                     {displayExpanded && <span>Gestion Dépenses</span>}
+                  </Link>
+                )}
+                {role === 'STORE_OWNER' && (
+                  <Link href="/admin/metrics" title="Metrics & Analytics" className={`nav-item${isActive('/admin/metrics') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
+                    <BarChart3 size={18} />
+                    {displayExpanded && <span>Metrics & Analytics</span>}
                   </Link>
                 )}
                 {role === 'STORE_OWNER' && (

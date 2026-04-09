@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export default async function SuperAdminDashboard() {
   const vendorsCount = await (prisma as any).vendorProfile?.count() || 0;
   const storesCount = await (prisma as any).store?.count() || 0;
-  const productsCount = await (prisma as any).marketplaceProduct?.count() || 0;
+  const productsCount = await (prisma as any).vendorProduct?.count() || 0;
   const couriersCount = await (prisma as any).courierProfile?.count() || 0;
   const ordersCount = await (prisma as any).supplierOrder?.count({ where: { vendorId: { not: null } } }) || 0;
   const ordersAgg = await prisma.supplierOrder.aggregate({

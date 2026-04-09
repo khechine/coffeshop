@@ -5,9 +5,16 @@ interface CreateMarketplaceProductDto {
   name: string;
   price: number;
   categoryId: string;
+  subcategoryId?: string;
   vendorId: string;
-  minOrderQuantity?: number;
+  minOrderQty?: number;
   image?: string;
+  unit?: string;
+  isFeatured?: boolean;
+  isFlashSale?: boolean;
+  discountPrice?: number;
+  flashStart?: string | Date;
+  flashEnd?: string | Date;
 }
 
 @Controller('management')
@@ -81,21 +88,30 @@ export class ManagementController {
   @Get('categories/:storeId')
   async getCategories(@Param('storeId') storeId: string): Promise<any> {
     return prisma.category.findMany({ 
-      include: { _count: { select: { products: true } } },
+      where: { OR: [{ storeId }, { storeId: null }] },
       orderBy: { name: 'asc' } 
     });
   }
 
   @Post('categories')
-  async createCategory(@Body() body: { name: string }): Promise<any> {
-    return prisma.category.create({ data: { name: body.name } });
+  async createCategory(@Body() body: { name: string; storeId?: string; parentId?: string }): Promise<any> {
+    return prisma.category.create({ 
+      data: { 
+        name: body.name, 
+        storeId: body.storeId,
+        parentId: body.parentId || null
+      } 
+    });
   }
 
   @Put('categories/:id')
-  async updateCategory(@Param('id') id: string, @Body() body: { name: string }): Promise<any> {
+  async updateCategory(@Param('id') id: string, @Body() body: { name?: string; parentId?: string }): Promise<any> {
     return prisma.category.update({
       where: { id },
-      data: { name: body.name },
+      data: { 
+        name: body.name,
+        parentId: body.parentId
+      },
     });
   }
 
@@ -391,59 +407,91 @@ export class ManagementController {
   // MARKETPLACE / VENDOR SPECIFIC
   // ═══════════════════════════════════════════════════════════
 
-  @Get('marketplace/categories')
-  async getMarketplaceCategories(): Promise<any> {
-    return prisma.marketplaceCategory.findMany({
+  @Get('xyz-categories-test')
+  async getXyzCategories(): Promise<any> {
+    return prisma.mktCategory.findMany({
       where: { status: 'ACTIVE' },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  @Get('marketplace/categories')
+  async getMarketplaceCategories(@Query('vendorId') vendorId?: string): Promise<any> {
+    if (vendorId) {
+      const vendor = await prisma.vendorProfile.findUnique({
+        where: { id: vendorId },
+        include: { mktSectors: { include: { subcategories: true } } }
+      });
+      if (vendor && vendor.mktSectors.length > 0) {
+        return vendor.mktSectors;
+      }
+    }
+
+    return prisma.mktCategory.findMany({
+      where: { status: 'ACTIVE' },
+      include: { subcategories: true },
       orderBy: { name: 'asc' },
     });
   }
 
   @Get('marketplace/products')
   async getMarketplaceProducts(@Query('vendorId') vendorId: string): Promise<any> {
-    return prisma.marketplaceProduct.findMany({
+    return prisma.vendorProduct.findMany({
       where: vendorId ? { vendorId } : {},
-      include: { category: true },
-      orderBy: { name: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
   @Post('marketplace/products')
   async createMarketplaceProduct(@Body() body: CreateMarketplaceProductDto): Promise<any> {
-    return prisma.marketplaceProduct.create({
+    return prisma.vendorProduct.create({
       data: {
         name: body.name,
         price: body.price,
         categoryId: body.categoryId || null,
+        subcategoryId: body.subcategoryId || null,
         vendorId: body.vendorId,
-        minOrderQuantity: body.minOrderQuantity || 1,
-        unit: 'pièce', // Valeur par défaut
+        minOrderQty: body.minOrderQty || 1,
+        unit: body.unit || 'pièce',
         image: body.image || null,
+        isFeatured: body.isFeatured || false,
+        isFlashSale: body.isFlashSale || false,
+        discountPrice: body.discountPrice || null,
+        flashStart: body.flashStart ? new Date(body.flashStart) : null,
+        flashEnd: body.flashEnd ? new Date(body.flashEnd) : null,
       },
-      include: { category: true },
     });
   }
 
   @Put('marketplace/products/:id')
   async updateMarketplaceProduct(@Param('id') id: string, @Body() body: {
-    name?: string; price?: number; categoryId?: string; minOrderQuantity?: number; image?: string; active?: boolean;
+    name?: string; price?: number; categoryId?: string; subcategoryId?: string; 
+    minOrderQty?: number; image?: string; active?: boolean; unit?: string;
+    isFeatured?: boolean; isFlashSale?: boolean; discountPrice?: number;
+    flashStart?: string | Date; flashEnd?: string | Date;
   }): Promise<any> {
-    return prisma.marketplaceProduct.update({
+    return prisma.vendorProduct.update({
       where: { id },
       data: {
         ...(body.name && { name: body.name }),
         ...(body.price !== undefined && { price: body.price }),
         ...(body.categoryId && { categoryId: body.categoryId }),
-        ...(body.minOrderQuantity !== undefined && { minOrderQuantity: body.minOrderQuantity }),
+        ...(body.subcategoryId !== undefined && { subcategoryId: body.subcategoryId || null }),
+        ...(body.minOrderQty !== undefined && { minOrderQty: body.minOrderQty }),
         ...(body.image !== undefined && { image: body.image }),
+        ...(body.unit !== undefined && { unit: body.unit }),
+        ...(body.isFeatured !== undefined && { isFeatured: body.isFeatured }),
+        ...(body.isFlashSale !== undefined && { isFlashSale: body.isFlashSale }),
+        ...(body.discountPrice !== undefined && { discountPrice: body.discountPrice }),
+        ...(body.flashStart !== undefined && { flashStart: body.flashStart ? new Date(body.flashStart) : null }),
+        ...(body.flashEnd !== undefined && { flashEnd: body.flashEnd ? new Date(body.flashEnd) : null }),
       },
-      include: { category: true },
     });
   }
 
   @Delete('marketplace/products/:id')
   async deleteMarketplaceProduct(@Param('id') id: string): Promise<any> {
-    return prisma.marketplaceProduct.delete({
+    return prisma.vendorProduct.delete({
       where: { id }
     });
   }
@@ -453,7 +501,7 @@ export class ManagementController {
     return prisma.supplierOrder.findMany({
       where: { vendorId },
       include: {
-        store: { select: { name: true, city: true } },
+        store: { select: { id: true, name: true, address: true, city: true, phone: true, lat: true, lng: true } },
         items: true,
       },
       orderBy: { createdAt: 'desc' },

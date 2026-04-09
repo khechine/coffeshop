@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AntigravityTheme } from '../theme/AntigravityTheme';
 import { NeonFoodTheme } from '../theme/NeonFoodTheme';
+import { VendorTheme } from '../theme/VendorTheme';
 import { ITheme } from '../theme/ThemeInterface';
 
 export interface Product {
@@ -52,7 +53,7 @@ export interface POSState {
   vendorId: string | null;
   vendorName: string | null;
   userRole: UserRole;
-  themeName: 'antigravity' | 'neon-food';
+  themeName: 'antigravity' | 'neon-food' | 'vendor';
   theme: ITheme;
   rachmaCart: Record<string, number>;
   rachmaHistory: { id: string, productId: string, name: string, timestamp: number, type: 'ADD' | 'REMOVE' }[];
@@ -63,7 +64,7 @@ export interface POSState {
   logoutBarista: () => void;
   logout: () => void;
   deactivateTerminal: () => Promise<void>;
-  setTheme: (name: 'antigravity' | 'neon-food') => void;
+  setTheme: (name: 'antigravity' | 'neon-food' | 'vendor') => void;
   addToCart: (productId: string) => void;
   removeFromCart: (productId: string) => void;
   addToRachma: (productId: string) => void;
@@ -122,9 +123,9 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     defaultPosMode?: string
   } | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
-  const [themeName, setThemeName] = useState<'antigravity' | 'neon-food'>('antigravity');
+  const [themeName, setThemeName] = useState<'antigravity' | 'neon-food' | 'vendor'>('antigravity');
   
-  const theme = themeName === 'neon-food' ? NeonFoodTheme : AntigravityTheme;
+  const theme = themeName === 'vendor' ? VendorTheme : themeName === 'neon-food' ? NeonFoodTheme : AntigravityTheme;
   
   const [isReady, setIsReady] = useState(false);
 
@@ -261,6 +262,12 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         else role = 'cashier';
         
         setUserRole(role);
+
+        // Auto-set vendor theme for vendors
+        if (role === 'vendor') {
+          setTheme('vendor');
+        }
+
         return true;
       }
     } catch (e) {
@@ -306,7 +313,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setUserRole(null);
   };
 
-  const setTheme = (name: 'antigravity' | 'neon-food') => {
+  const setTheme = (name: 'antigravity' | 'neon-food' | 'vendor') => {
     setThemeName(name);
   };
   

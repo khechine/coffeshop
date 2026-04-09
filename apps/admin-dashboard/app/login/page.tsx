@@ -16,10 +16,12 @@ export default function LoginPage() {
 
   // Clear stale local storage to prevent redirect loops from the landing page
   useEffect(() => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('pos_cashier');
-    localStorage.removeItem('pos_cashier_role');
-    localStorage.removeItem('pos_cashier_permissions');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user');
+      localStorage.removeItem('pos_cashier');
+      localStorage.removeItem('pos_cashier_role');
+      localStorage.removeItem('pos_cashier_permissions');
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,12 +37,12 @@ export default function LoginPage() {
         return;
       }
       
-      localStorage.setItem('user', JSON.stringify(result));
-      
-      // Legacy storage sync for Sidebar & Dashboard
-      localStorage.setItem('pos_cashier', result.name);
-      localStorage.setItem('pos_cashier_role', result.role);
-      localStorage.setItem('pos_cashier_permissions', JSON.stringify(['DASHBOARD', 'POS', 'PRODUCTS', 'STOCK', 'STAFF', 'SUBS', 'SUPPLY']));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(result));
+        localStorage.setItem('pos_cashier', result.name);
+        localStorage.setItem('pos_cashier_role', result.role);
+        localStorage.setItem('pos_cashier_permissions', JSON.stringify(['DASHBOARD', 'POS', 'PRODUCTS', 'STOCK', 'STAFF', 'SUBS', 'SUPPLY']));
+      }
 
       if (result.role === 'VENDOR') router.push('/vendor/portal');
       else if (result.role === 'SUPERADMIN') router.push('/superadmin');
