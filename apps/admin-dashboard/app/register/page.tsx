@@ -21,8 +21,26 @@ export default function RegisterPage() {
     rne: '',
     cin: '',
     description: '', // For vendor
-    role: 'STORE_OWNER' as 'STORE_OWNER' | 'VENDOR'
+    role: 'STORE_OWNER' as 'STORE_OWNER' | 'VENDOR',
+    subdomain: ''
   });
+
+  const slugify = (text: string) => {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  };
+
+  const handleStoreNameChange = (val: string) => {
+    setForm(prev => ({ 
+      ...prev, 
+      storeName: val, 
+      subdomain: prev.role === 'STORE_OWNER' ? slugify(val) : prev.subdomain 
+    }));
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,9 +265,37 @@ export default function RegisterPage() {
                       </label>
                       <div className="relative">
                         {form.role === 'STORE_OWNER' ? <StoreIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" /> : <Building2 size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />}
-                        <input className={`${inputClass} pl-12`} value={form.role === 'STORE_OWNER' ? form.storeName : form.companyName} onChange={e => setForm({...form, [form.role === 'STORE_OWNER' ? 'storeName' : 'companyName']: e.target.value})} placeholder={form.role === 'STORE_OWNER' ? "ex: L'Artisan Coffee" : "ex: Distribution Ben Ahmed"} required />
+                        <input 
+                          className={`${inputClass} pl-12`} 
+                          value={form.role === 'STORE_OWNER' ? form.storeName : form.companyName} 
+                          onChange={e => {
+                            if (form.role === 'STORE_OWNER') handleStoreNameChange(e.target.value);
+                            else setForm({...form, companyName: e.target.value});
+                          }} 
+                          placeholder={form.role === 'STORE_OWNER' ? "ex: L'Artisan Coffee" : "ex: Distribution Ben Ahmed"} 
+                          required 
+                        />
                       </div>
                    </div>
+
+                   {form.role === 'STORE_OWNER' && (
+                     <div className="animate-in fade-in slide-in-from-left-2 duration-300">
+                        <label className={labelClass}>Votre Adresse Web (Sous-domaine)</label>
+                        <div className="relative group">
+                          <input 
+                            className={`${inputClass} font-mono text-xs`} 
+                            value={form.subdomain} 
+                            onChange={e => setForm({...form, subdomain: slugify(e.target.value)})} 
+                            placeholder="mon-cafe" 
+                            required 
+                          />
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-indigo-400 uppercase tracking-widest hidden md:block">
+                            .coffeeshop.tn
+                          </div>
+                        </div>
+                        <p className="mt-2 text-[10px] text-slate-400 font-medium">Votre tableau de bord sera accessible via <span className="text-indigo-600 font-bold">{form.subdomain || 'votre-nom'}.coffeeshop.tn</span></p>
+                     </div>
+                   )}
 
                    {form.role === 'VENDOR' && (
                      <div>

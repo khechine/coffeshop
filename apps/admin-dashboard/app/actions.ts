@@ -377,7 +377,7 @@ export async function deleteCategory(id: string) {
 //  AUTH
 // ══════════════════════════════════════════════════════════════
 export async function registerStoreAction(data: any) {
-  const { email, password, name, storeName, address, city, phone, rne, cin } = data;
+  const { email, password, name, storeName, address, city, phone, rne, cin, subdomain } = data;
   
   // Hash password before saving
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -395,6 +395,7 @@ export async function registerStoreAction(data: any) {
       store: {
         create: {
           name: storeName,
+          subdomain,
           address,
           city,
           phone,

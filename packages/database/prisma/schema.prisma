@@ -93,6 +93,7 @@ model Expense {
 model Store {
   id        String   @id @default(cuid())
   name      String
+  subdomain String?  @unique
   address   String?
   city      String?
   phone     String?
