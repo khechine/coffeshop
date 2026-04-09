@@ -31,7 +31,9 @@ echo "🐳 Updating containers and database on VPS..."
 ssh $ssh_server << EOF
   cd $ssh_folder
   git pull origin main
-  docker compose up -d --build
+  docker compose down
+  docker compose build --no-cache
+  docker compose up -d
   
   echo "🔑 Resetting database credentials..."
   # Use the password from .env synced earlier on the VPS
