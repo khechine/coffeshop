@@ -1,9 +1,17 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Building2, Mail, Lock, Phone, MapPin, Send, CheckCircle, Store, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
-import { registerVendorAction } from '../../actions';
+import { registerVendorAction, checkEmailAvailability } from '../../actions';
+
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+  let timeout: NodeJS.Timeout | null = null;
+  return ((...args: any[]) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  }) as T;
+}
 
 export default function VendorRegisterPage() {
   const [step, setStep] = useState(1);
@@ -19,6 +27,35 @@ export default function VendorRegisterPage() {
   });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+
+  // Debounced email check
+  const checkEmail = useCallback(
+    debounce(async (email: string) => {
+      if (!email || typeof email !== 'string' || !email.includes('@')) {
+        setEmailStatus('idle');
+        return;
+      }
+      setEmailStatus('checking');
+      try {
+        const res = await checkEmailAvailability(email);
+        if (res && typeof res.available === 'boolean') {
+          setEmailStatus(res.available ? 'available' : 'taken');
+        } else {
+          setEmailStatus('idle');
+        }
+      } catch (err) {
+        setEmailStatus('idle');
+      }
+    }, 500),
+    []
+  );
+
+  useEffect(() => {
+    if (form.email) {
+      checkEmail(form.email);
+    }
+  }, [form.email, checkEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +111,19 @@ export default function VendorRegisterPage() {
             </div>
             <div>
               <label style={labelStyle}>Email Professionnel</label>
-              <input type="email" style={inputStyle} placeholder="nom@entreprise.tn" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+              <input 
+                type="email" 
+                style={{ 
+                  ...inputStyle, 
+                  borderColor: emailStatus === 'taken' ? '#F43F5E' : emailStatus === 'available' ? '#10B981' : '#E2E8F0' 
+                }} 
+                placeholder="nom@entreprise.tn" 
+                value={form.email} 
+                onChange={e => setForm({...form, email: e.target.value})} 
+              />
+              {emailStatus === 'checking' && <span style={{ fontSize: '12px', color: '#64748B' }}>Vérification...</span>}
+              {emailStatus === 'taken' && <span style={{ fontSize: '12px', color: '#F43F5E' }}>Cet email est déjà utilisé</span>}
+              {emailStatus === 'available' && <span style={{ fontSize: '12px', color: '#10B981' }}>Email disponible</span>}
             </div>
             <div>
               <label style={labelStyle}>Mot de passe</label>
@@ -96,9 +145,19 @@ export default function VendorRegisterPage() {
               </div>
             </div>
             <button 
-              onClick={() => setStep(2)}
+              onClick={() => {
+                if (emailStatus === 'taken') {
+                  alert("Cet email est déjà utilisé. Veuillez en choisir un autre.");
+                  return;
+                }
+                if (emailStatus === 'checking') {
+                  alert("Veuillez patienter pendant la vérification de l'email.");
+                  return;
+                }
+                setStep(2);
+              }}
               disabled={!form.email || !form.password}
-              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: '#4F46E5', color: '#fff', border: 'none', fontWeight: 800, cursor: 'pointer', marginTop: '12px' }}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: '#4F46E5', color: '#fff', border: 'none', fontWeight: 800, cursor: 'pointer', marginTop: '12px', opacity: (!form.email || !form.password) ? 0.5 : 1 }}
             >
               Continuer →
             </button>

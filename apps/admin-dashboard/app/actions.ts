@@ -37,14 +37,17 @@ export async function getStore() {
            return storeObj;
         }
      }
-  } catch (err) {
-     console.error("getStore error, trying raw fallback", err);
-     const stores: any[] = await prisma.$queryRawUnsafe(
-       `SELECT s.* FROM "Store" s JOIN "_StoreToUser" su ON s.id = su."A" WHERE su."B" = $1 LIMIT 1`,
-       userId
-     );
-     if (stores[0]) return stores[0];
-  }
+   } catch (err) {
+      console.error("getStore error, trying raw fallback", err);
+      // Use direct storeId from user record instead of relation table
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { storeId: true }
+      });
+      if (user?.storeId) {
+        return await prisma.store.findUnique({ where: { id: user.storeId } });
+      }
+   }
   return null;
 }
 
@@ -391,12 +394,51 @@ export async function checkSubdomainAvailability(subdomain: string) {
   return { available: !existing, forbidden: false };
 }
 
+export async function checkEmailAvailability(email: string) {
+  try {
+    const existing = await prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() }
+    });
+    return { available: !existing };
+  } catch (err) {
+    console.error('checkEmailAvailability error:', err);
+    return { available: true }; // Allow on error to not block
+  }
+}
+
 export async function registerStoreAction(data: any) {
   const { 
     email, password, name, storeName, 
     address, city, phone, subdomain,
-    officialDocs // Expecting { rne: { base64, name }, cin: { base64, name } } or similar
+    officialDocs
   } = data;
+
+  if (!email || !password || !name || !storeName || !subdomain) {
+    throw new Error('Tous les champs obligatoires doivent être remplis');
+  }
+
+  const existingEmail = await prisma.user.findUnique({
+    where: { email: email.toLowerCase().trim() }
+  });
+  
+  if (existingEmail) {
+    throw new Error('Un compte avec cet email existe déjà');
+  }
+
+  const existingSubdomain = await prisma.store.findUnique({
+    where: { subdomain: subdomain.toLowerCase().trim() }
+  });
+  
+  if (existingSubdomain) {
+    throw new Error('Ce sous-domaine est déjà utilisé');
+  }
+
+  const sub = subdomain.toLowerCase().trim();
+  const forbidden = ['api', 'admin', 'www', 'support', 'app', 'dev', 'mail', 'test', 'status', 'dashboard', 'auth', 'login', 'register'];
+  
+  if (forbidden.includes(sub)) {
+    throw new Error('Ce sous-domaine n\'est pas autorisé');
+  }
   
   // Hash password before saving
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -941,6 +983,18 @@ export async function registerVendorAction(data: any) {
     phone, address, city, description,
     officialDocs 
   } = data;
+
+  if (!email || !password || !name || !companyName) {
+    throw new Error('Tous les champs obligatoires doivent être remplis');
+  }
+
+  const existingEmail = await prisma.user.findUnique({
+    where: { email: email.toLowerCase().trim() }
+  });
+  
+  if (existingEmail) {
+    throw new Error('Un compte avec cet email existe déjà');
+  }
 
   const hashedPassword = await bcrypt.hash(password, 10);
   

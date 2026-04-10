@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Coffee, Mail, Lock, User, Store as StoreIcon, MapPin, CheckCircle, FileUp, ShieldCheck, ArrowRight, Building2, Truck, Star, Briefcase, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
-import { registerStoreAction, registerVendorAction, checkSubdomainAvailability } from '../actions';
+import { registerStoreAction, registerVendorAction, checkSubdomainAvailability, checkEmailAvailability } from '../actions';
 import { useEffect, useCallback } from 'react';
 function debounce(fn: Function, delay: number) {
   let timeoutId: any;
@@ -34,6 +34,7 @@ export default function RegisterPage() {
   });
 
   const [subdomainStatus, setSubdomainStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'forbidden'>('idle');
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const [officialDocs, setOfficialDocs] = useState<{
     rne: { base64: string; name: string } | null;
     cin: { base64: string; name: string } | null;
@@ -58,11 +59,40 @@ export default function RegisterPage() {
     []
   );
 
+  // Debounced email check
+  const checkEmail = useCallback(
+    debounce(async (email: string) => {
+      if (!email || typeof email !== 'string' || !email.includes('@')) {
+        setEmailStatus('idle');
+        return;
+      }
+      setEmailStatus('checking');
+      try {
+        const res = await checkEmailAvailability(email);
+        if (res && typeof res.available === 'boolean') {
+          setEmailStatus(res.available ? 'available' : 'taken');
+        } else {
+          setEmailStatus('idle');
+        }
+      } catch (err) {
+        console.error('Email check error:', err);
+        setEmailStatus('idle');
+      }
+    }, 500),
+    []
+  );
+
   useEffect(() => {
     if (form.role === 'STORE_OWNER' && form.subdomain) {
       checkAvailability(form.subdomain);
     }
   }, [form.subdomain, form.role, checkAvailability]);
+
+  useEffect(() => {
+    if (form.email) {
+      checkEmail(form.email);
+    }
+  }, [form.email, checkEmail]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'rne' | 'cin') => {
     const file = e.target.files?.[0];
@@ -99,6 +129,10 @@ export default function RegisterPage() {
     e.preventDefault();
     if (form.role === 'STORE_OWNER' && (subdomainStatus === 'taken' || subdomainStatus === 'forbidden')) {
       alert(subdomainStatus === 'forbidden' ? "Ce sous-domaine est réservé." : "Ce sous-domaine est déjà utilisé.");
+      return;
+    }
+    if (emailStatus === 'taken') {
+      alert("Cet email est déjà utilisé par un autre compte.");
       return;
     }
 
@@ -263,13 +297,19 @@ export default function RegisterPage() {
                         <input className={`${inputClass} pl-12`} value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Sami Ben Ahmed" required />
                       </div>
                    </div>
-                   <div>
-                      <label className={labelClass}>Email Professionnel</label>
-                      <div className="relative">
-                        <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input type="email" className={`${inputClass} pl-12`} value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="sami@entreprise.tn" required />
-                      </div>
-                   </div>
+                    <div>
+                       <label className={labelClass}>Email Professionnel</label>
+                       <div className="relative">
+                         <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                         <input type="email" className={`${inputClass} pl-12 ${emailStatus === 'taken' ? 'border-rose-500 ring-4 ring-rose-500/10' : emailStatus === 'available' ? 'border-emerald-500 ring-4 ring-emerald-500/10' : ''}`} value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="sami@entreprise.tn" required />
+                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                           {emailStatus === 'checking' && <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />}
+                           {emailStatus === 'available' && <CheckCircle size={16} className="text-emerald-500" />}
+                           {emailStatus === 'taken' && <span className="text-[10px] font-black text-rose-500 uppercase">Déjà utilisé</span>}
+                         </div>
+                       </div>
+                       {emailStatus === 'taken' && <p className="text-[11px] text-rose-500 mt-1 font-medium">Cet email est déjà utilisé par un autre compte.</p>}
+                    </div>
                    <div>
                       <label className={labelClass}>Mot de passe</label>
                       <div className="relative group">
@@ -292,14 +332,24 @@ export default function RegisterPage() {
                       </div>
                    </div>
                    
-                   <div className="pt-4 flex flex-col gap-3">
-                     <button 
-                      onClick={() => setStep(2)} 
-                      disabled={!form.email || !form.password || !form.name} 
-                      className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none uppercase tracking-widest"
-                     >
-                       Suivant <ArrowRight size={18} />
-                     </button>
+                    <div className="pt-4 flex flex-col gap-3">
+                      <button 
+                       onClick={() => {
+                         if (emailStatus === 'taken') {
+                           alert("Cet email est déjà utilisé. Veuillez en choisir un autre.");
+                           return;
+                         }
+                         if (emailStatus === 'checking') {
+                           alert("Veuillez patienter pendant la vérification de l'email.");
+                           return;
+                         }
+                         setStep(2);
+                       }} 
+                       disabled={!form.email || !form.password || !form.name} 
+                       className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:shadow-none uppercase tracking-widest"
+                      >
+                        Suivant <ArrowRight size={18} />
+                      </button>
                      <button onClick={() => setStep(0)} className="w-full py-4 text-slate-400 font-bold text-xs hover:text-slate-600 transition-colors uppercase tracking-widest">
                        Modifier le type de compte
                      </button>
