@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile
 # Clean all old Prisma binaries and cache
 RUN find . -name "*.so.node" -delete
 RUN find . -name ".prisma" -type d -exec rm -rf {} + 2>/dev/null || true
-RUN pnpm exec prisma generate --schema packages/database/prisma/schema.prisma
+RUN npx prisma generate --schema /app/packages/database/prisma/schema.prisma
 RUN pnpm build
 
 FROM base AS runner
