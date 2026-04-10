@@ -7,7 +7,7 @@ import { cookies } from 'next/headers';
 
 // ── Helpers (Updated for phone field) ──────────────────────────
 export async function getStore() {
-  const userId = cookies().get('userId')?.value;
+  const userId = (await cookies()).get('userId')?.value;
   if (!userId) return null;
 
   try {
@@ -480,13 +480,13 @@ export async function loginUser(email: string, pass: string) {
   };
 
 
-  cookies().set('userId', user.id, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+  (await cookies()).set('userId', user.id, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
   
   return response;
 }
 
 export async function logoutUser() {
-  cookies().delete('userId');
+  (await cookies()).delete('userId');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -704,7 +704,7 @@ export async function getMarketplaceCategoryTree() {
 
 // ── Vendor proposes a new subcategory (status = PENDING → admin approves) ──────
 export async function proposeSubCategoryAction(name: string, categoryId: string) {
-  const userId = cookies().get('userId')?.value;
+  const userId = (await cookies()).get('userId')?.value;
   if (!userId) throw new Error('Non authentifié');
 
   const user = await (prisma as any).user.findUnique({ where: { id: userId } });
@@ -744,7 +744,7 @@ export async function getPendingCategoryProposals() {
 // ── User helper ───────────────────────────────────────────────────────────
 export async function getUser() {
   // Check cookie first (server-side)
-  const userId = cookies().get('userId')?.value;
+  const userId = (await cookies()).get('userId')?.value;
   if (userId) {
     return (prisma as any).user.findUnique({ where: { id: userId } });
   }
@@ -753,7 +753,7 @@ export async function getUser() {
 
 // ── Admin: approve or reject a proposed subcategory ───────────────────────────
 export async function resolveCategoryProposal(id: string, action: 'approve' | 'reject', newName?: string, newCategoryId?: string) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value;
   
   if (!userId) {
@@ -778,7 +778,7 @@ export async function resolveCategoryProposal(id: string, action: 'approve' | 'r
 }
 
 export async function updateMarketplaceCategoryAction(id: string, data: { name?: string; icon?: string }) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value;
   
   if (!userId) {
@@ -812,7 +812,7 @@ export async function updateMarketplaceCategoryAction(id: string, data: { name?:
 }
 
 export async function migrateSubcategoryAction(subcategoryId: string, newCategoryId: string) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value;
   
   if (!userId) {
@@ -831,7 +831,7 @@ export async function migrateSubcategoryAction(subcategoryId: string, newCategor
 }
 
 export async function deleteMarketplaceCategoryAction(id: string) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value;
   
   if (!userId) {
@@ -862,7 +862,7 @@ export async function deleteMarketplaceCategoryAction(id: string) {
 }
 
 export async function createMarketplaceCategoryAction(data: { name: string; icon?: string }) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const userId = cookieStore.get('userId')?.value;
   
   if (!userId) {
@@ -1010,7 +1010,7 @@ export async function updateVendorStatus(id: string, status: string) {
 }
 
 export async function getVendorPortalData() {
-  const userId = cookies().get('userId')?.value;
+  const userId = (await cookies()).get('userId')?.value;
   if (!userId) return null;
 
   // Robust separate fetches to avoid Prisma runtime issues
@@ -1081,7 +1081,7 @@ export async function getVendorPortalData() {
 }
 
 export async function createMarketplaceProductAction(data: any) {
-  const userId = cookies().get('userId')?.value;
+  const userId = (await cookies()).get('userId')?.value;
   if (!userId) throw new Error('Non authentifié');
 
   const user = await (prisma as any).user.findUnique({ where: { id: userId } });
@@ -1125,7 +1125,7 @@ export async function importCsvProductsAction(rows: {
   description?: string;
   stockStatus?: string;
 }[]) {
-  const userId = cookies().get('userId')?.value;
+  const userId = (await cookies()).get('userId')?.value;
   if (!userId) throw new Error('Non authentifié');
 
   const user = await (prisma as any).user.findUnique({ where: { id: userId } });
