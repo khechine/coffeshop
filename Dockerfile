@@ -10,10 +10,6 @@ RUN apt-get update && apt-get install -y libc6-dev python3 make g++ && rm -rf /v
 ENV PRISMA_CLI_BINARY_TARGETS="debian-openssl-3.0.x"
 COPY . .
 RUN pnpm install --frozen-lockfile
-# Clean all old Prisma binaries and cache
-RUN find . -name "*.so.node" -delete
-RUN find . -name ".prisma" -type d -exec rm -rf {} + 2>/dev/null || true
-RUN cd packages/database && npx prisma@5.14.0 generate
 RUN pnpm build
 
 FROM base AS runner
