@@ -11,7 +11,7 @@ ENV PRISMA_CLI_BINARY_TARGETS="debian-openssl-3.0.x"
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 COPY . .
 RUN pnpm install --frozen-lockfile
-RUN pnpm build --verbose
+RUN pnpm build --verbosity=4
 
 FROM base AS runner
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
