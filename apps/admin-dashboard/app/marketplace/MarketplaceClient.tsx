@@ -182,7 +182,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
 
   return (
     <div style={{ background: '#fff', minHeight: '100vh', position: 'relative' }}>
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes mesh {
           0% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }
@@ -232,7 +232,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .filter-section { margin-bottom: 24px; }
         .filter-label { font-size: 12px; font-weight: 800; color: #1E293B; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: block; }
-      `}</style>
+      `}} />
 
       {/* --- HEADER --- */}
       <div className="glass-nav" style={{ padding: '16px 32px', position: 'sticky', top: '0', zIndex: 100 }}>
