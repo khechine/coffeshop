@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useTransition, useEffect, useRef } from 'react';
-import { updateStore } from '../../actions';
-import { Building2, MapPin, Store, Crosshair, Save, Clock, CheckCircle2, FileCheck, AlertCircle, ShieldCheck, FileUp, Eye, Upload, X, ShoppingCart } from 'lucide-react';
+import { updateStore, seedDemoProductsAction, resetDemoDataAction } from '../../actions';
+import { Building2, MapPin, Store, Crosshair, Save, Clock, CheckCircle2, FileCheck, AlertCircle, ShieldCheck, FileUp, Eye, Upload, X, ShoppingCart, Sparkles, RotateCcw } from 'lucide-react';
 
 import 'leaflet/dist/leaflet.css';
 
@@ -331,6 +331,45 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
               <p style={{ fontSize: '12px', marginTop: '4px' }}>Les documents officiels seront demandés lors de la vérification.</p>
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title"><Sparkles size={16} /> Démo Boutique</span>
+        </div>
+        <div style={{ padding: '20px' }}>
+          <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '16px' }}>
+            Ajoutez des produits, catégories et stock fictifs pour tester votre coffeeshop, puis supprimez-les quand vous êtes prêt.
+          </p>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => {
+                if (!confirm('Ajouter les données demo? Cela va créer catégories, produits et stock.')) return;
+                startTransition(async () => {
+                  await seedDemoProductsAction(store.id);
+                  alert('Produits demo ajoutés avec succès!');
+                });
+              }}
+              disabled={isPending}
+              style={{ flex: 1, padding: '12px 16px', background: '#10B981', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <Sparkles size={16} /> Installer Demo
+            </button>
+            <button
+              onClick={() => {
+                if (!confirm('Supprimer toutes les données demo? Cette action est irréversible.')) return;
+                startTransition(async () => {
+                  await resetDemoDataAction(store.id);
+                  alert('Données demo supprimées.');
+                });
+              }}
+              disabled={isPending}
+              style={{ flex: 1, padding: '12px 16px', background: '#EF4444', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              <RotateCcw size={16} /> Reset
+            </button>
+          </div>
         </div>
       </div>
     </div>

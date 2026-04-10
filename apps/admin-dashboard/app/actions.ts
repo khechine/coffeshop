@@ -4,6 +4,7 @@ import { prisma } from '@coffeeshop/database';
 import { revalidatePath } from 'next/cache';
 import * as bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
+import { Prisma } from '@prisma/client';
 
 // ── Helpers (Updated for phone field) ──────────────────────────
 export async function getStore() {
@@ -1847,4 +1848,91 @@ export async function deleteTerminalAction(id: string) {
      await prisma.$executeRawUnsafe(`DELETE FROM "PosTerminal" WHERE id = $1`, id);
   }
   revalidatePath('/admin/terminals');
+}
+
+export async function seedDemoProductsAction(storeId: string) {
+  const store = await (prisma as any).store.findUnique({ where: { id: storeId } });
+  if (!store) throw new Error('Store not found');
+
+  const demoCategories = [
+    { name: 'Café', storeId },
+    { name: 'Lait', storeId },
+    { name: 'Sirop', storeId },
+    { name: 'Gobelets', storeId },
+  ];
+
+  const categories = await Promise.all(
+    demoCategories.map(c => 
+      (prisma as any).category.upsert({
+        where: { id: `${storeId}-${c.name.toLowerCase()}` },
+        update: {},
+        create: { id: `${storeId}-${c.name.toLowerCase()}`, name: c.name, storeId: c.storeId }
+      })
+    )
+  );
+
+  const demoProducts = [
+    { name: 'Expresso', price: 3.000, categoryId: categories[0].id },
+    { name: 'Cappuccino', price: 4.500, categoryId: categories[0].id },
+    { name: 'Americano', price: 3.500, categoryId: categories[0].id },
+    { name: 'Lait Entier', price: 1.500, categoryId: categories[1].id },
+    { name: 'Lait Amande', price: 2.000, categoryId: categories[1].id },
+    { name: 'Sirop Vanille', price: 0.500, categoryId: categories[2].id },
+    { name: 'Sirop Caramel', price: 0.500, categoryId: categories[2].id },
+    { name: 'Gobelet Carton', price: 0.300, categoryId: categories[3].id },
+  ];
+
+  await Promise.all(
+    demoProducts.map(p =>
+      (prisma as any).product.create({
+        data: { name: p.name, price: String(p.price), categoryId: p.categoryId, storeId }
+      })
+    )
+  );
+
+  const demoStockItems = [
+    { name: 'Café Grains 1kg', quantity: 10, cost: 25.000, minThreshold: 3, unit: 'kg' },
+    { name: 'Lait 1L', quantity: 20, cost: 1.500, minThreshold: 5, unit: 'L' },
+    { name: 'Gobelets 50pcs', quantity: 5, cost: 8.000, minThreshold: 2, unit: 'pack' },
+    { name: 'Sirop Vanille 1L', quantity: 3, cost: 12.000, minThreshold: 1, unit: 'L' },
+    { name: 'Sucre 1kg', quantity: 5, cost: 2.500, minThreshold: 2, unit: 'kg' },
+  ];
+
+  for (const item of demoStockItems) {
+    let unit = await (prisma as any).globalUnit.findUnique({ where: { name: item.unit } });
+    if (!unit) {
+      unit = await (prisma as any).globalUnit.create({ data: { name: item.unit } });
+    }
+    await (prisma as any).stockItem.create({
+      data: { name: item.name, quantity: item.quantity, cost: String(item.cost), minThreshold: item.minThreshold, storeId, unitId: unit.id }
+    });
+  }
+
+  const demoTables = ['T1', 'T2', 'T3', 'T4', 'T5'];
+  await Promise.all(
+    demoTables.map(label =>
+      (prisma as any).storeTable.create({
+        data: { label, capacity: 4, storeId }
+      })
+    )
+  );
+
+  revalidatePath('/admin/products');
+  revalidatePath('/admin/stock');
+  revalidatePath('/admin/tables');
+  return { success: true, message: 'Données demo ajoutées successfully' };
+}
+
+export async function resetDemoDataAction(storeId: string) {
+  await (prisma as any).stockItem.deleteMany({ where: { storeId } });
+  await (prisma as any).product.deleteMany({ where: { storeId } });
+  await (prisma as any).category.deleteMany({ where: { storeId } });
+  await (prisma as any).storeTable.deleteMany({ where: { storeId } });
+  await (prisma as any).sale.deleteMany({ where: { storeId } });
+
+  revalidatePath('/admin/products');
+  revalidatePath('/admin/stock');
+  revalidatePath('/admin/tables');
+  revalidatePath('/admin/sales');
+  return { success: true, message: 'Données demo supprimées' };
 }
