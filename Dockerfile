@@ -9,7 +9,7 @@ FROM base AS builder
 RUN apt-get update && apt-get install -y libc6-dev python3 make g++ && rm -rf /var/lib/apt/lists/*
 ENV PRISMA_CLI_BINARY_TARGETS="debian-openssl-3.0.x"
 COPY . .
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 RUN pnpm build
 
 FROM base AS runner
