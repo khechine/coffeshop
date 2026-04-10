@@ -14,6 +14,7 @@ COPY . .
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm --filter @coffeeshop/shared run build
 RUN pnpm --filter @coffeeshop/database run db:generate
+RUN pnpm --filter @coffeeshop/database run build
 RUN pnpm --filter @coffeeshop/api run build
 RUN pnpm --filter @coffeeshop/admin-dashboard run build
 
