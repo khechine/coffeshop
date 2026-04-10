@@ -31,8 +31,11 @@ echo "🐳 Updating containers and database on VPS..."
 ssh $ssh_server << EOF
   cd $ssh_folder
   git pull origin main
-  docker compose down
-  docker compose build --no-cache
+  
+  echo "🔨 Building fresh Docker images..."
+  docker compose build --no-cache || { echo "❌ Build failed"; exit 1; }
+  
+  echo "🚀 Starting containers..."
   docker compose up -d
   
   echo "🔑 Resetting database credentials..."
