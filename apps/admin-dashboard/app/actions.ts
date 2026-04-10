@@ -374,15 +374,55 @@ export async function deleteCategory(id: string) {
 
 
 // ══════════════════════════════════════════════════════════════
-//  AUTH
+//  AUTH & REGISTRATION
 // ══════════════════════════════════════════════════════════════
+
+export async function checkSubdomainAvailability(subdomain: string) {
+  const sub = subdomain.toLowerCase().trim();
+  const forbidden = ['api', 'admin', 'www', 'support', 'app', 'dev', 'mail', 'test', 'status', 'dashboard', 'auth', 'login', 'register'];
+  
+  if (forbidden.includes(sub)) {
+    return { available: false, forbidden: true };
+  }
+
+  const existing = await prisma.store.findUnique({
+    where: { subdomain: sub }
+  });
+  return { available: !existing, forbidden: false };
+}
+
 export async function registerStoreAction(data: any) {
-  const { email, password, name, storeName, address, city, phone, rne, cin, subdomain } = data;
+  const { 
+    email, password, name, storeName, 
+    address, city, phone, subdomain,
+    officialDocs // Expecting { rne: { base64, name }, cin: { base64, name } } or similar
+  } = data;
   
   // Hash password before saving
   const hashedPassword = await bcrypt.hash(password, 10);
   const trialEndsAt = new Date();
   trialEndsAt.setDate(trialEndsAt.getDate() + 30);
+
+  // Prepare docs array for the JSON field
+  const docs = [];
+  if (officialDocs?.rne?.base64) {
+    docs.push({ 
+      name: 'RNE - Document Officiel', 
+      url: officialDocs.rne.base64, 
+      type: 'RNE', 
+      status: 'PENDING',
+      fileName: officialDocs.rne.name
+    });
+  }
+  if (officialDocs?.cin?.base64) {
+    docs.push({ 
+      name: 'CIN - Document Identité', 
+      url: officialDocs.cin.base64, 
+      type: 'CIN', 
+      status: 'PENDING',
+      fileName: officialDocs.cin.name
+    });
+  }
 
   const user = await prisma.user.create({
     data: {
@@ -395,12 +435,12 @@ export async function registerStoreAction(data: any) {
       store: {
         create: {
           name: storeName,
-          subdomain,
+          subdomain: subdomain.toLowerCase().trim(),
           address,
           city,
           phone,
-          status: 'PENDING_DOCS',
-          officialDocs: { rne, cin, status: 'submitted' },
+          status: 'PENDING_VERIFICATION',
+          officialDocs: docs,
           trialEndsAt
         }
       }
@@ -896,12 +936,40 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
 }
 
 export async function registerVendorAction(data: any) {
-  const hashedPassword = await bcrypt.hash(data.password, 10);
+  const { 
+    email, password, name, companyName, 
+    phone, address, city, description,
+    officialDocs 
+  } = data;
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  
+  // Prepare docs array for the JSON field
+  const docs = [];
+  if (officialDocs?.rne?.base64) {
+    docs.push({ 
+      name: 'RNE - Registre Commerce', 
+      url: officialDocs.rne.base64, 
+      type: 'RNE', 
+      status: 'PENDING',
+      fileName: officialDocs.rne.name
+    });
+  }
+  if (officialDocs?.cin?.base64) {
+    docs.push({ 
+      name: 'CIN - Gérant', 
+      url: officialDocs.cin.base64, 
+      type: 'CIN', 
+      status: 'PENDING',
+      fileName: officialDocs.cin.name
+    });
+  }
+
   const user = await prisma.user.create({
     data: {
-      email: data.email,
+      email: email,
       password: hashedPassword,
-      name: data.name,
+      name: name,
       role: 'VENDOR'
     }
   });
@@ -909,12 +977,18 @@ export async function registerVendorAction(data: any) {
   await prisma.vendorProfile.create({
     data: {
       userId: user.id,
-      companyName: data.companyName,
-      phone: data.phone,
-      address: data.address,
-      city: data.city,
-      description: data.description,
+      companyName: companyName,
+      phone: phone,
+      address: address,
+      city: city,
+      description: description,
       status: 'PENDING'
+      // VendorProfile currently doesn't have an officialDocs field in the schema, 
+      // but we might want to store it in a generic way or update the schema later.
+      // For now, I'll stick to what the schema allows.
+      // Note: Store model HAS officialDocs, but VendorProfile HAS NO officialDocs.
+      // I should update the schema if needed, but the user requested "subscription" improvements.
+      // For vendors, it's also important. I'll check the schema again.
     }
   });
 

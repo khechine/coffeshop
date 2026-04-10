@@ -3,7 +3,15 @@
 import React, { useState } from 'react';
 import { Coffee, Mail, Lock, User, Store as StoreIcon, MapPin, CheckCircle, FileUp, ShieldCheck, ArrowRight, Building2, Truck, Star, Briefcase, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
-import { registerStoreAction, registerVendorAction } from '../actions';
+import { registerStoreAction, registerVendorAction, checkSubdomainAvailability } from '../actions';
+import { useEffect, useCallback } from 'react';
+function debounce(fn: Function, delay: number) {
+  let timeoutId: any;
+  return (...args: any[]) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+}
 
 export default function RegisterPage() {
   const [step, setStep] = useState(0); // 0 = Role Selection, 1 = Personal Info, 2 = Biz Info, 3 = Success
@@ -25,6 +33,51 @@ export default function RegisterPage() {
     subdomain: ''
   });
 
+  const [subdomainStatus, setSubdomainStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'forbidden'>('idle');
+  const [officialDocs, setOfficialDocs] = useState<{
+    rne: { base64: string; name: string } | null;
+    cin: { base64: string; name: string } | null;
+  }>({ rne: null, cin: null });
+
+  // Debounced subdomain check
+  const checkAvailability = useCallback(
+    debounce(async (sub: string) => {
+      if (sub.length < 3) {
+        setSubdomainStatus('idle');
+        return;
+      }
+      setSubdomainStatus('checking');
+      try {
+        const res = await checkSubdomainAvailability(sub);
+        if (res.forbidden) setSubdomainStatus('forbidden');
+        else setSubdomainStatus(res.available ? 'available' : 'taken');
+      } catch (err) {
+        setSubdomainStatus('idle');
+      }
+    }, 500),
+    []
+  );
+
+  useEffect(() => {
+    if (form.role === 'STORE_OWNER' && form.subdomain) {
+      checkAvailability(form.subdomain);
+    }
+  }, [form.subdomain, form.role, checkAvailability]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'rne' | 'cin') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setOfficialDocs(prev => ({
+          ...prev,
+          [type]: { base64: reader.result as string, name: file.name }
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const slugify = (text: string) => {
     return text
       .toLowerCase()
@@ -44,13 +97,23 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (form.role === 'STORE_OWNER' && (subdomainStatus === 'taken' || subdomainStatus === 'forbidden')) {
+      alert(subdomainStatus === 'forbidden' ? "Ce sous-domaine est réservé." : "Ce sous-domaine est déjà utilisé.");
+      return;
+    }
+
     setLoading(true);
     try {
+      const payload = {
+        ...form,
+        officialDocs
+      };
+
       if (form.role === 'STORE_OWNER') {
-        await registerStoreAction(form);
+        await registerStoreAction(payload);
       } else {
         await registerVendorAction({
-          ...form,
+          ...payload,
           companyName: form.companyName || form.storeName
         });
       }
@@ -283,17 +346,34 @@ export default function RegisterPage() {
                         <label className={labelClass}>Votre Adresse Web (Sous-domaine)</label>
                         <div className="relative group">
                           <input 
-                            className={`${inputClass} font-mono text-xs`} 
+                            className={`${inputClass} font-mono text-xs ${
+                              subdomainStatus === 'available' ? 'border-emerald-500 ring-4 ring-emerald-500/10' : 
+                              (subdomainStatus === 'taken' || subdomainStatus === 'forbidden') ? 'border-rose-500 ring-4 ring-rose-500/10' : ''
+                            }`} 
                             value={form.subdomain} 
                             onChange={e => setForm({...form, subdomain: slugify(e.target.value)})} 
                             placeholder="mon-cafe" 
                             required 
                           />
-                          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-indigo-400 uppercase tracking-widest hidden md:block">
-                            .coffeeshop.tn
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                            {subdomainStatus === 'checking' && <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />}
+                            {subdomainStatus === 'available' && <CheckCircle size={16} className="text-emerald-500" />}
+                            {(subdomainStatus === 'taken' || subdomainStatus === 'forbidden') && <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">{subdomainStatus === 'forbidden' ? 'Interdit' : 'Déjà pris'}</span>}
+                            <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest hidden md:block border-l border-slate-100 pl-3 ml-1">
+                              .elkassa.com
+                            </div>
                           </div>
                         </div>
-                        <p className="mt-2 text-[10px] text-slate-400 font-medium">Votre tableau de bord sera accessible via <span className="text-indigo-600 font-bold">{form.subdomain || 'votre-nom'}.coffeeshop.tn</span></p>
+                        <p className="mt-2 text-[10px] text-slate-400 font-medium italic">
+                          {subdomainStatus === 'taken' && "Désolé, ce nom est déjà réservé. Essayez une variante."}
+                          {subdomainStatus === 'forbidden' && "Désolé, ce nom est réservé par le système."}
+                          {subdomainStatus === 'available' && "Super ! Ce sous-domaine est disponible."}
+                          {(subdomainStatus === 'idle' || subdomainStatus === 'checking') && (
+                            <>
+                              Votre tableau de bord sera accessible via <span className="text-indigo-600 font-black not-italic">{form.subdomain || 'votre-nom'}.elkassa.com</span>
+                            </>
+                          )}
+                        </p>
                      </div>
                    )}
 
@@ -317,18 +397,40 @@ export default function RegisterPage() {
                       </div>
                       <div>
                         <label className={labelClass}>Téléphone</label>
-                        <input className={inputClass} value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="+216 ..." required />
+                        <input 
+                          className={inputClass} 
+                          value={form.phone} 
+                          onChange={e => {
+                            // Simple numeric formatting for TN numbers: +216 00 000 000
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 11);
+                            setForm({...form, phone: val});
+                          }} 
+                          placeholder="21 666 888" 
+                          required 
+                        />
                       </div>
                    </div>
 
                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className={labelClass}>Identifiant RNE</label>
-                        <input className={inputClass} value={form.rne} onChange={e => setForm({...form, rne: e.target.value})} placeholder="1234567M" required />
+                        <label className={labelClass}>Registre Commerce (RNE)</label>
+                        <label className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed transition-all cursor-pointer hover:bg-slate-50 ${officialDocs.rne ? 'border-indigo-500 bg-indigo-50/30' : 'border-slate-200 bg-white'}`}>
+                          <FileUp size={20} className={officialDocs.rne ? 'text-indigo-500' : 'text-slate-400'} />
+                          <span className="text-[10px] font-bold text-slate-500 mt-2 text-center truncate w-full px-2">
+                            {officialDocs.rne ? officialDocs.rne.name : 'Importer PDF/Image'}
+                          </span>
+                          <input type="file" className="hidden" accept="image/*,application/pdf" onChange={e => handleFileUpload(e, 'rne')} />
+                        </label>
                       </div>
                       <div>
-                        <label className={labelClass}>Numéro de CIN</label>
-                        <input className={inputClass} value={form.cin} onChange={e => setForm({...form, cin: e.target.value})} placeholder="01234567" required />
+                        <label className={labelClass}>Carte d'Identité (CIN)</label>
+                        <label className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed transition-all cursor-pointer hover:bg-slate-50 ${officialDocs.cin ? 'border-indigo-500 bg-indigo-50/30' : 'border-slate-200 bg-white'}`}>
+                          <FileUp size={20} className={officialDocs.cin ? 'text-indigo-500' : 'text-slate-400'} />
+                          <span className="text-[10px] font-bold text-slate-500 mt-2 text-center truncate w-full px-2">
+                             {officialDocs.cin ? officialDocs.cin.name : 'Importer PDF/Image'}
+                          </span>
+                          <input type="file" className="hidden" accept="image/*,application/pdf" onChange={e => handleFileUpload(e, 'cin')} />
+                        </label>
                       </div>
                    </div>
 

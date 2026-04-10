@@ -98,16 +98,38 @@ export default async function StoreDetailPage(props: { params: Promise<{ id: str
           <FileCheck size={18} /> Documents Officiels
         </h3>
         {(store.officialDocs as any[])?.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {(store.officialDocs as any[]).map((doc: any, idx: number) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                <span className="font-medium">{doc.name}</span>
-                <span className="text-xs text-slate-500">{doc.status}</span>
+              <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-colors">
+                <div className="flex flex-col">
+                  <span className="font-black text-slate-900 text-sm">{doc.name}</span>
+                  <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{doc.fileName || doc.type}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                    doc.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : 
+                    doc.status === 'REJECTED' ? 'bg-rose-100 text-rose-700' : 
+                    'bg-amber-100 text-amber-700'
+                  }`}>
+                    {doc.status}
+                  </span>
+                  {doc.url && (
+                    <a 
+                      href={doc.url} 
+                      download={doc.fileName || `${doc.type}_${store.name}.dat`}
+                      className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all shadow-sm"
+                    >
+                      Télécharger
+                    </a>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-slate-400 text-sm">Aucun document上传é</p>
+          <div className="py-8 text-center border-2 border-dashed border-slate-100 rounded-2xl">
+            <p className="text-slate-400 text-sm font-medium">Aucun document téléchargé</p>
+          </div>
         )}
       </div>
 
