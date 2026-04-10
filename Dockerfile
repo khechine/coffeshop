@@ -12,6 +12,7 @@ ENV TURBO_TELEMETRY_DISABLED=1
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY . .
 RUN pnpm install --no-frozen-lockfile
+RUN pnpm --filter @coffeeshop/database run db:generate
 RUN pnpm build --filter=@coffeeshop/admin-dashboard... --filter=@coffeeshop/api... > /tmp/build.log 2>&1 || (cat /tmp/build.log && exit 1)
 
 FROM base AS runner
