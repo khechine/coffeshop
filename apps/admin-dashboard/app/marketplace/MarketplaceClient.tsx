@@ -210,7 +210,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
 
   return (
     <div style={{ background: '#fff', minHeight: '100vh', position: 'relative' }}>
-      <style dangerouslySetInnerHTML={{ __html: cssStyles }} />
+      <style dangerouslySetInnerHTML={{ __html: cssStyles }}></style>
 
       {/* --- HEADER --- */}
       <div className="glass-nav" style={{ padding: '16px 32px', position: 'sticky', top: '0', zIndex: 100 }}>
