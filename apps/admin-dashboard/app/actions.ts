@@ -1924,11 +1924,19 @@ export async function seedDemoProductsAction(storeId: string) {
 }
 
 export async function resetDemoDataAction(storeId: string) {
+  const products: any[] = await (prisma as any).product.findMany({ where: { storeId }, select: { id: true } });
+  const productIds = products.map((p: any) => p.id);
+
+  if (productIds.length > 0) {
+    await (prisma as any).recipeItem.deleteMany({ where: { productId: { in: productIds } } });
+  }
+
+  await (prisma as any).saleItem.deleteMany({ where: { sale: { storeId } } });
+  await (prisma as any).sale.deleteMany({ where: { storeId } });
   await (prisma as any).stockItem.deleteMany({ where: { storeId } });
   await (prisma as any).product.deleteMany({ where: { storeId } });
   await (prisma as any).category.deleteMany({ where: { storeId } });
   await (prisma as any).storeTable.deleteMany({ where: { storeId } });
-  await (prisma as any).sale.deleteMany({ where: { storeId } });
 
   revalidatePath('/admin/products');
   revalidatePath('/admin/stock');
