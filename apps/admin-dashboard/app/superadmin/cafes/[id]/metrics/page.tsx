@@ -4,8 +4,8 @@ import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-export default async function StoreMetricsPage(props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+export default async function StoreMetricsPage(props: { params: { id: string } }) {
+  const params = props.params;
   const id = params.id;
   const store = await prisma.store.findUnique({ where: { id } });
   if (!store) notFound();

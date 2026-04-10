@@ -4,8 +4,8 @@ import { Store, MapPin, Phone, Building2, ShieldCheck, FileCheck } from 'lucide-
 
 export const dynamic = 'force-dynamic';
 
-export default async function StoreDetailPage(props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+export default async function StoreDetailPage(props: { params: { id: string } }) {
+  const params = props.params;
   const store = await prisma.store.findUnique({ 
     where: { id: params.id },
     include: { 

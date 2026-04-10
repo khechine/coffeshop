@@ -8,10 +8,9 @@ WORKDIR /app
 FROM base AS builder
 RUN apt-get update && apt-get install -y libc6-dev python3 make g++ && rm -rf /var/lib/apt/lists/*
 ENV PRISMA_CLI_BINARY_TARGETS="debian-openssl-3.0.x"
-ENV NODE_OPTIONS="--max-old-space-size=4096"
 COPY . .
 RUN pnpm install --frozen-lockfile
-RUN pnpm build --verbosity=4
+RUN pnpm build
 
 FROM base AS runner
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
