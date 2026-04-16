@@ -438,6 +438,13 @@ export class ManagementController {
   async getMarketplaceProducts(@Query('vendorId') vendorId: string): Promise<any> {
     return prisma.vendorProduct.findMany({
       where: vendorId ? { vendorId } : {},
+      include: { 
+        vendor: { 
+          include: { 
+            user: { select: { email: true } }
+          }
+        } 
+      },
       orderBy: { createdAt: 'desc' },
     });
   }

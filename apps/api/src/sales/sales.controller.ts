@@ -93,4 +93,32 @@ export class SalesController {
       take: 50
     });
   }
+
+  @Post('management/staff/:id')
+  async updateStaff(
+    @Param('id') id: string,
+    @Body() body: { name?: string; role?: string; permissions?: string[]; defaultPosMode?: string; assignedTables?: string[] }
+  ) {
+    return prisma.user.update({
+      where: { id },
+      data: {
+        ...(body.name && { name: body.name }),
+        ...(body.role && { role: body.role as any }),
+        ...(body.permissions && { permissions: body.permissions }),
+        ...(body.defaultPosMode && { defaultPosMode: body.defaultPosMode }),
+        ...(body.assignedTables && { assignedTables: body.assignedTables }),
+      }
+    });
+  }
+
+  @Post('management/staff/:id/pin')
+  async updateStaffPin(
+    @Param('id') id: string,
+    @Body() body: { pinCode: string | null }
+  ) {
+    return prisma.user.update({
+      where: { id },
+      data: { pinCode: body.pinCode }
+    });
+  }
 }

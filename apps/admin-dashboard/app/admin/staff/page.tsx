@@ -2,12 +2,13 @@ import { prisma } from '@coffeeshop/database';
 import { Users, ShieldCheck, Clock } from 'lucide-react';
 import StaffClient from './StaffClient';
 
-import { getStore } from '../../actions';
+import { getStore, getUser } from '../../actions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function StaffManagement() {
   const store = await getStore();
+  const currentUser = await getUser();
   const staff = store ? await prisma.user.findMany({ where: { storeId: store.id } }) : [];
   const tables = store ? await prisma.storeTable.findMany({ where: { storeId: store.id }, orderBy: { label: 'asc' } }) : [];
 
@@ -35,7 +36,7 @@ export default async function StaffManagement() {
         </div>
       </div>
 
-      <StaffClient staff={staff as any} tables={tables as any} />
+      <StaffClient staff={staff as any} tables={tables as any} currentUser={currentUser as any} />
     </div>
   );
 }

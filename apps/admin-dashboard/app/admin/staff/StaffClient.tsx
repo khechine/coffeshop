@@ -34,8 +34,41 @@ interface StaffMember {
   assignedTables?: string[];
 }
 
-export default function StaffClient({ staff, tables }: { staff: StaffMember[]; tables: { id: string; label: string }[] }) {
+export default function StaffClient({ staff, tables, currentUser }: { staff: StaffMember[]; tables: { id: string; label: string }[]; currentUser: any }) {
+  const [localRole, setLocalRole] = useState<string | null>(null);
+  const [localPerms, setLocalPerms] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
+
+  React.useEffect(() => {
+    // Sync with localStorage (what the Sidebar uses)
+    const storedRole = localStorage.getItem('pos_cashier_role') || localStorage.getItem('role');
+    const storedPermsRaw = localStorage.getItem('pos_cashier_permissions') || localStorage.getItem('permissions');
+    
+    if (storedRole) setLocalRole(storedRole);
+    if (storedPermsRaw) {
+      try {
+        const p = JSON.parse(storedPermsRaw);
+        if (Array.isArray(p)) setLocalPerms(p);
+      } catch (e) {}
+    }
+  }, []);
+
+  // Manager if:
+  // - SERVER says so (prop)
+  // - OR CLIENT says so (localStorage)
+  const isManager = React.useMemo(() => {
+    const r = (currentUser?.role || localRole || '').toUpperCase();
+    const p = currentUser?.permissions || localPerms || [];
+    
+    // Very permissive check: if role is known and not CASHIER, or has STAFF perm, or special roles
+    const isSpecial = r === 'STORE_OWNER' || r === 'OWNER' || r === 'SUPERADMIN';
+    const hasPerm = p.includes('STAFF');
+    const notCashier = r !== '' && r !== 'CASHIER';
+    
+    // Diagnostic log in browser console if needed (hidden from user usually)
+    return isSpecial || hasPerm || notCashier;
+  }, [currentUser, localRole, localPerms]);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<StaffMember | null>(null);
   const [form, setForm] = useState({ 
@@ -90,10 +123,33 @@ export default function StaffClient({ staff, tables }: { staff: StaffMember[]; t
 
   return (
     <>
+      <div style={{ 
+        background: '#FEF9C3', 
+        border: '2px solid #CA8A04', 
+        padding: '12px 20px', 
+        borderRadius: '12px', 
+        marginBottom: '20px', 
+        fontSize: '13px', 
+        color: '#854D0E',
+        fontWeight: 700,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <div style={{ display: 'flex', gap: '15px' }}>
+          <span>👤 ROLE: <strong style={{color: '#1E1B4B'}}>{(currentUser?.role || localRole || 'VISUALISATEUR').toUpperCase()}</strong></span>
+          <span>🔑 ACCÈS: <strong>{isManager ? '✅ GÉRANT ACTIVÉ' : '❌ LECTURE SEULE'}</strong></span>
+          <span>📜 PERMS: <strong>{(currentUser?.permissions || localPerms || []).length > 0 ? (currentUser?.permissions || localPerms || []).join(', ') : 'Aucune'}</strong></span>
+        </div>
+        <div style={{ opacity: 0.7, fontSize: '10px' }}>ID: {currentUser?.id || 'Inconnu'}</div>
+      </div>
+
       <div className="card" style={{ marginBottom: '32px', border: 'none', boxShadow: '0 10px 30px -5px rgba(0,0,0,0.05)', borderRadius: '24px', overflow: 'hidden' }}>
         <div className="card-header" style={{ padding: '24px 32px', background: '#fff', borderBottom: '1px solid #F1F5F9' }}>
           <span className="card-title" style={{ fontSize: '18px', fontWeight: 900, color: '#1E1B4B' }}>👥 Équipe Complète</span>
-          <button className="btn btn-primary" onClick={openCreate} style={{ padding: '10px 20px', borderRadius: '12px' }}><Plus size={14} strokeWidth={3} /> Ajouter un Collaborateur</button>
+          <button className="btn btn-primary" onClick={openCreate} style={{ padding: '10px 20px', borderRadius: '12px', opacity: isManager ? 1 : 0.5 }}>
+            <Plus size={14} strokeWidth={3} /> {isManager ? 'Ajouter un Collaborateur' : 'Ajouter (Admin uniquement)'}
+          </button>
         </div>
         <div className="table-responsive">
           <table className="data-table">
@@ -109,7 +165,11 @@ export default function StaffClient({ staff, tables }: { staff: StaffMember[]; t
               {staff.map(member => {
                 const roleConf = ROLES.find(r => r.value === member.role) || ROLES[1];
                 return (
-                  <tr key={member.id}>
+                  <tr 
+                    key={member.id} 
+                    onClick={() => isManager && openEdit(member)} 
+                    style={{ cursor: isManager ? 'pointer' : 'default' }}
+                  >
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: 38, height: 38, borderRadius: '50%', background: member.role === 'STORE_OWNER' ? 'linear-gradient(135deg,#4F46E5,#7C3AED)' : '#F1F5F9', color: member.role === 'STORE_OWNER' ? '#fff' : '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px' }}>
@@ -132,9 +192,15 @@ export default function StaffClient({ staff, tables }: { staff: StaffMember[]; t
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <button title="Historique Sessions" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openLogs(member)}><History size={14} /></button>
-                      <button title="Gérer PIN" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => { setPinTarget(member); setNewPin(member.pinCode || ''); }}><Key size={14} /></button>
-                      <button title="Modifier" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEdit(member)}><Edit2 size={14} /></button>
-                      <button title="Révoquer" className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteTarget(member)}><Trash2 size={14} /></button>
+                      {isManager && (
+                        <>
+                          <button title="Gérer PIN" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => { setPinTarget(member); setNewPin(member.pinCode || ''); }}><Key size={14} /></button>
+                          <button title="Modifier" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEdit(member)}><Edit2 size={14} /></button>
+                          {currentUser?.id !== member.id && (
+                            <button title="Révoquer" className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteTarget(member)}><Trash2 size={14} /></button>
+                          )}
+                        </>
+                      )}
                     </td>
                   </tr>
                 );
@@ -147,6 +213,11 @@ export default function StaffClient({ staff, tables }: { staff: StaffMember[]; t
                )}
             </tbody>
           </table>
+        </div>
+        <div style={{ padding: '8px 32px', background: '#F8FAFC', color: '#94A3B8', fontSize: '10px', textAlign: 'right', borderTop: '1px solid #F1F5F9' }}>
+           Session: {(currentUser?.role || localRole || 'VISITOR').toUpperCase()} 
+           | Perms: {(currentUser?.permissions || localPerms || []).join(',')}
+           | {isManager ? '✓ ADMIN ACCESS' : '❌ READ ONLY (isManager=false)'}
         </div>
       </div>
 

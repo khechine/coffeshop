@@ -83,6 +83,14 @@ export interface POSState {
   getRachmaTotal: () => number;
   setStoreTables: (tables: { id: string, label: string }[]) => void;
   updatePreparationStatus: (saleId: string, status: string, station?: string) => Promise<boolean>;
+  updateStaffMember: (id: string, data: any) => Promise<boolean>;
+  updateStaffPin: (id: string, pinCode: string | null) => Promise<boolean>;
+  mktCart: Record<string, number>;
+  addToMktCart: (productId: string) => void;
+  removeFromMktCart: (productId: string) => void;
+  clearMktCart: () => void;
+  submitMktOrders: (vendorId: string, items: any[], total: number) => Promise<boolean>;
+  hasBarSupport: boolean;
 }
 
 
@@ -124,6 +132,8 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   } | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [themeName, setThemeName] = useState<'antigravity' | 'neon-food' | 'vendor'>('antigravity');
+  const [hasBarSupport, setHasBarSupport] = useState(false);
+  const [mktCart, setMktCart] = useState<Record<string, number>>({});
   
   const theme = themeName === 'vendor' ? VendorTheme : themeName === 'neon-food' ? NeonFoodTheme : AntigravityTheme;
   
@@ -164,6 +174,12 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (storedTheme === 'neon-food' || storedTheme === 'antigravity') {
           setThemeName(storedTheme as any);
         }
+        
+        const storedBarSupport = await AsyncStorage.getItem('pos-has-bar-support');
+        if (storedBarSupport) setHasBarSupport(storedBarSupport === 'true');
+        
+        const storedMktCart = await AsyncStorage.getItem('pos-mkt-cart');
+        if (storedMktCart) setMktCart(JSON.parse(storedMktCart));
         
       } catch (e) {
         // ignore storage errors
@@ -210,9 +226,11 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       else AsyncStorage.removeItem('pos-user-role');
 
       AsyncStorage.setItem('pos-active-theme', themeName).catch(() => {});
+      AsyncStorage.setItem('pos-has-bar-support', hasBarSupport ? 'true' : 'false').catch(() => {});
       AsyncStorage.setItem('pos-rachma-cart', JSON.stringify(rachmaCart)).catch(() => {});
+      AsyncStorage.setItem('pos-mkt-cart', JSON.stringify(mktCart)).catch(() => {});
     }
-  }, [cart, tables, pendingSales, authToken, storeId, storeName, vendorId, vendorName, authMode, storeTables, currentBarista, userRole, themeName, rachmaCart, isReady]);
+  }, [cart, tables, pendingSales, authToken, storeId, storeName, vendorId, vendorName, authMode, storeTables, currentBarista, userRole, themeName, hasBarSupport, rachmaCart, isReady]);
 
   const authenticate = (token: string, store: string) => {
     setAuthToken(token);
@@ -485,6 +503,22 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
       };
       fetchTables();
+
+      const fetchStaff = async () => {
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+        try {
+          const response = await fetch(`${API_URL}/sales/management/staff/${storeId}`);
+          if (response.ok) {
+            const data: any[] = await response.json();
+            // Store has bar if at least one staff member has BAR permission
+            const storeHasBar = data.some(m => m.permissions && m.permissions.includes('BAR'));
+            setHasBarSupport(storeHasBar);
+          }
+        } catch (e) {
+          // ignore
+        }
+      };
+      fetchStaff();
     }
   }, [storeId, isReady]);
 
@@ -637,6 +671,75 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
 
+  const addToMktCart = (id: string) => {
+    setMktCart(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+  };
+
+  const removeFromMktCart = (id: string) => {
+    setMktCart(prev => {
+      const next = { ...prev };
+      next[id] = Math.max(0, (next[id] || 0) - 1);
+      if (next[id] === 0) delete next[id];
+      return next;
+    });
+  };
+
+  const clearMktCart = () => setMktCart({});
+
+  const submitMktOrders = async (vendorId: string, items: any[], total: number): Promise<boolean> => {
+    const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+    try {
+      const response = await fetch(`${API_URL}/management/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId,
+          vendorId,
+          total,
+          items: items.map(it => ({
+            name: it.name,
+            quantity: it.quantity,
+            price: it.price
+          }))
+        })
+      });
+      return response.ok;
+    } catch (e) {
+      console.error("❌ Erreur marketplace order:", e);
+      return false;
+    }
+  };
+
+  const updateStaffMember = async (id: string, data: any): Promise<boolean> => {
+    const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+    try {
+      const response = await fetch(`${API_URL}/sales/management/staff/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return response.ok;
+    } catch (e) {
+      console.error("❌ Erreur update staff:", e);
+      return false;
+    }
+  };
+
+  const updateStaffPin = async (id: string, pinCode: string | null): Promise<boolean> => {
+    const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+    try {
+      const response = await fetch(`${API_URL}/sales/management/staff/${id}/pin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinCode })
+      });
+      return response.ok;
+    } catch (e) {
+      console.error("❌ Erreur update staff pin:", e);
+      return false;
+    }
+  };
+
   // Auto-sync effect
   useEffect(() => {
     if (pendingSales.some(s => s.status === 'pending')) {
@@ -648,11 +751,18 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <POSContext.Provider value={{ 
       cart, tables, activeTable, products, pendingSales, authToken, storeId, storeName, vendorId, vendorName, authMode, storeTables,
-      currentBarista, userRole, themeName, theme, rachmaCart, rachmaHistory, authenticate, activateTerminal, loginWithAccount, loginWithPin, logoutBarista, logout, deactivateTerminal, setTheme,
+      currentBarista, userRole, themeName, theme, rachmaCart, rachmaHistory, hasBarSupport, authenticate, activateTerminal, loginWithAccount, loginWithPin, logoutBarista, logout, deactivateTerminal, setTheme,
       addToCart, removeFromCart, addToRachma, removeFromRachma, clearRachma, clearCart, 
       setActiveTable, checkout, checkoutTable, checkoutRachma, 
       syncSales, setProducts, setStoreTables, getTotalItems, getTableTotal, getTotalPrice, getRachmaTotal,
-      updatePreparationStatus
+      updatePreparationStatus,
+      updateStaffMember,
+      updateStaffPin,
+      mktCart,
+      addToMktCart,
+      removeFromMktCart,
+      clearMktCart,
+      submitMktOrders
     }}>
       {children}
     </POSContext.Provider>

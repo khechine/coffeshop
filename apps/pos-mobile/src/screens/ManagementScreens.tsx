@@ -377,7 +377,7 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
     price: '',
     categoryId: '',
     subcategoryId: '',
-    minOrderQuantity: '1',
+    minOrderQty: '1',
     active: true,
     image: '',
     unit: 'kg',
@@ -439,7 +439,7 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
       name: '', price: '',
       categoryId: '',
       subcategoryId: '',
-      unit: 'kg', minOrderQuantity: '1',
+      unit: 'kg', minOrderQty: '1',
       brand: '', image: '',
       isFeatured: false, isFlashSale: false,
       discountPrice: '', flashDuration: '24',
@@ -456,7 +456,7 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
       categoryId: item.categoryId,
       subcategoryId: item.subcategoryId || '',
       unit: item.unit || 'kg',
-      minOrderQuantity: String(item.minOrderQuantity || 1),
+      minOrderQty: String(item.minOrderQty || 1),
       brand: item.brand || '',
       image: item.image || '',
       isFeatured: item.isFeatured || false,
@@ -502,7 +502,7 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
               ? new Date(Date.now() + parseInt(form.flashDuration || '24') * 3600000).toISOString() 
               : null,
           }),
-          minOrderQuantity: parseInt(form.minOrderQuantity) || 1,
+          minOrderQty: parseFloat(form.minOrderQty) || 1,
           active: form.active,
           image: form.image || undefined,
           ...(!editItem && {
@@ -704,7 +704,7 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
               </View>
 
               <Text style={mgStyles.label}>Quantité min. de commande</Text>
-              <TextInput style={mgStyles.input} placeholder="1" keyboardType="number-pad" value={form.minOrderQuantity} onChangeText={v => setForm({ ...form, minOrderQuantity: v })} />
+              <TextInput style={mgStyles.input} placeholder="1" keyboardType="number-pad" value={form.minOrderQty} onChangeText={v => setForm({ ...form, minOrderQty: v })} />
 
               <Text style={mgStyles.label}>Marque (optionnel)</Text>
               <TextInput style={mgStyles.input} placeholder="ex: Al Fakher, Fumari, Tangiers" value={form.brand} onChangeText={v => setForm({ ...form, brand: v })} />

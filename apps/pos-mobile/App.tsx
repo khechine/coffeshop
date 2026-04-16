@@ -6,7 +6,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { usePOSStore, POSProvider } from './src/store/posStore';
 import { ConfirmProvider, useConfirm } from './src/context/ConfirmContext';
 import { ProductButton } from './src/components/ProductButton';
-import { ProductsScreen, CategoriesScreen, StockManagementScreen, SuppliersScreen, OrdersScreen, NotificationsScreen } from './src/screens/ManagementScreens';
+import { ProductsScreen, CategoriesScreen, SuppliersScreen, OrdersScreen, NotificationsScreen } from './src/screens/ManagementScreens';
+import { MarketplaceScreen } from './src/screens/MarketplaceScreen';
 import { AntigravityTheme } from './src/theme/AntigravityTheme';
 import { FloatingCard } from './src/components/Antigravity/FloatingCard';
 import { GlassPanel } from './src/components/Antigravity/GlassPanel';
@@ -124,7 +125,7 @@ function LoginView() {
     <SafeAreaView style={loginStyles.loginContainer}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}>
         <View style={{ width: '85%', maxWidth: 400, backgroundColor: theme.colors.surface, padding: 32, borderRadius: 30, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.glassBorder }}>
-          <Text style={{ fontSize: 60, marginBottom: 20 }}>🏰</Text>
+          <Text style={{ fontSize: 60, marginBottom: 20 }}>☕</Text>
           
           <View style={{ flexDirection: 'row', backgroundColor: theme.colors.background, borderRadius: 12, padding: 4, marginBottom: 24, width: '100%' }}>
             <TouchableOpacity 
@@ -318,7 +319,8 @@ function PinLoginView() {
 
 // ─── POS HEADER COMPONENT ──────────────────────────────────
 function POSHeader({ title, sub }: { title?: string; sub?: string }) {
-  const { currentBarista, storeName, logoutBarista, theme } = usePOSStore();
+  const { currentBarista, storeName, logoutBarista, clearRachma, theme } = usePOSStore();
+  const { confirm } = useConfirm();
   const [time, setTime] = useState(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
   const mainStyles = useMemo(() => createMainStyles(theme), [theme]);
 
@@ -344,7 +346,18 @@ function POSHeader({ title, sub }: { title?: string; sub?: string }) {
           </View>
 
           <TouchableOpacity 
-            onPress={logoutBarista}
+            onPress={() => {
+              confirm({
+                title: 'Changer de Serveur',
+                message: 'Voulez-vous clôturer votre session et vous déconnecter ? Le panier en cours non validé sera réinitialisé.',
+                type: 'danger',
+                confirmLabel: 'CLÔTURER (ABANDONNER PANIER)',
+                onConfirm: async () => {
+                  clearRachma();
+                  logoutBarista();
+                }
+              });
+            }}
             style={{ 
               paddingHorizontal: 10, 
               paddingVertical: 6, 
@@ -385,7 +398,7 @@ function POSHeader({ title, sub }: { title?: string; sub?: string }) {
 }
 
 // ─── TABLES SCREEN (Mode Table) ───────────────────────────
-function TablesScreen({ onSelectTable }: { onSelectTable: (id: string) => void }) {
+function LocalTablesScreen({ onSelectTable }: { onSelectTable: (id: string) => void }) {
   const { tables, getTableTotal, currentBarista, userRole, storeTables, theme } = usePOSStore();
   const posStyles = useMemo(() => createPosStyles(theme), [theme]);
   
@@ -426,7 +439,7 @@ function TablesScreen({ onSelectTable }: { onSelectTable: (id: string) => void }
                 >
                   <Text style={[posStyles.tableNumber, isOccupied && { color: theme.colors.background }]}>{id}</Text>
                   {isOccupied ? (
-                    <Text style={[posStyles.tableTotal, { fontSize: 11, color: theme.colors.background, fontWeight: '900' }]}>{total.toFixed(3)} DT</Text>
+                    <Text style={[posStyles.tableTotal, { fontSize: 11, color: theme.colors.background, fontWeight: '900' }]}>{Number(total).toFixed(3)} DT</Text>
                   ) : (
                     <Text style={posStyles.tableStatus}>Libre</Text>
                   )}
@@ -442,7 +455,7 @@ function TablesScreen({ onSelectTable }: { onSelectTable: (id: string) => void }
 }
 
 // ─── POS SCREEN (Caisse) ──────────────────────────────────
-function CaisseScreen({ onBackToTables }: { 
+function LocalCaisseScreen({ onBackToTables }: { 
   onBackToTables?: () => void; 
 }) {
   const { confirm } = useConfirm();
@@ -501,7 +514,7 @@ function CaisseScreen({ onBackToTables }: {
 
     confirm({
       title: activeTable ? `Encaisser Table ${activeTable}` : 'Valider le paiement',
-      message: `Montant total à encaisser : ${totalPrice.toFixed(3)} DT. Voulez-vous valider cette vente ?`,
+      message: `Montant total à encaisser : ${Number(totalPrice).toFixed(3)} DT. Voulez-vous valider cette vente ?`,
       type: 'checkout',
       items: checkoutItems,
       confirmLabel: 'ENCAISSER',
@@ -645,7 +658,7 @@ function CaisseScreen({ onBackToTables }: {
           >
             <Text style={{ fontSize: 11, fontWeight: '900', color: theme.colors.creamMuted }}>VOIR COMMANDE ({totalItems})</Text>
           </TouchableOpacity>
-          <Text style={[posStyles.totalPrice, { color: theme.colors.cream }]}>{totalPrice.toFixed(3)} DT</Text>
+          <Text style={[posStyles.totalPrice, { color: theme.colors.cream }]}>{Number(totalPrice).toFixed(3)} DT</Text>
         </View>
         <TouchableOpacity style={[posStyles.payBtn, { backgroundColor: theme.colors.caramel }]} onPress={handleCheckout}>
           <Text style={[posStyles.payBtnText, { color: theme.colors.background }]}>ENCAISSER</Text>
@@ -695,6 +708,85 @@ function RachmaHistoryModal({ visible, onClose }: { visible: boolean; onClose: (
                     <Text style={{ fontSize: 12, color: theme.colors.creamMuted }}>{item.type === 'ADD' ? 'Ajouté' : 'Retiré'}</Text>
                   </View>
                   <Text style={{ fontSize: 14, fontWeight: '900', color: theme.colors.caramel }}>{formatTime(item.timestamp)}</Text>
+                </View>
+              ))
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── RACHMA PAST SALES MODAL ───────────────────────────────
+function RachmaPastSalesModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { storeId, theme, products } = usePOSStore();
+  const [sales, setSales] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!visible || !storeId) return;
+    const fetchSales = async () => {
+      setLoading(true);
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+      try {
+        const res = await fetch(`${API_URL}/sales/${storeId}`);
+        if (res.ok) {
+          const data = await res.json();
+          // Filter to show completed/paid sales
+          setSales(data.filter((s: any) => s.paymentStatus !== 'pending' && s.total > 0).slice(0, 50));
+        }
+      } catch (e) {
+        console.warn('RachmaPastSales: erreur fetch', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSales();
+  }, [visible, storeId]);
+
+  const formatTime = (ts: string) => {
+    const d = new Date(ts);
+    return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: theme.colors.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, height: '85%', padding: 24, borderWidth: 1, borderColor: theme.colors.glassBorder }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+            <View>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: theme.colors.cream }}>Ventes Clôturées</Text>
+              <Text style={{ fontSize: 13, color: theme.colors.caramel, fontWeight: '700' }}>HISTORIQUE DES SESSIONS (Aujourd'hui, etc.)</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={{ padding: 8, backgroundColor: theme.colors.surface, borderRadius: 12 }}>
+              <Text style={{ fontSize: 16, fontWeight: '900', color: theme.colors.creamMuted }}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={{ flex: 1 }}>
+            {loading ? (
+              <Text style={{ color: theme.colors.creamMuted, marginTop: 20, textAlign: 'center' }}>Chargement...</Text>
+            ) : sales.length === 0 ? (
+              <Text style={{ color: theme.colors.creamMuted, marginTop: 20, textAlign: 'center' }}>Aucune vente trouvée.</Text>
+            ) : (
+              sales.map((item) => (
+                <View key={item.id} style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: theme.colors.glassBorder }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: theme.colors.cream }}>Total: {Number(item.total).toFixed(3)} DT</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: item.paymentStatus === 'PAID' ? theme.colors.success : theme.colors.softOrange }}>{item.paymentStatus}</Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: theme.colors.caramel, marginBottom: 8, fontWeight: '700' }}>{formatTime(item.createdAt)}</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {item.items?.map((i: any, idx: number) => {
+                      const p = products.find(prod => prod.id === i.productId);
+                      return (
+                        <View key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                          <Text style={{ fontSize: 11, color: theme.colors.creamMuted }}>{p?.name || 'Produit'} x{i.quantity}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
                 </View>
               ))
             )}
@@ -789,12 +881,12 @@ function OrderItemsModal({ visible, onClose, activeTable }: { visible: boolean; 
             {discount > 0 && (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                 <Text style={{ color: theme.colors.creamMuted, fontWeight: '700' }}>Remise ({discount}%)</Text>
-                <Text style={{ color: '#EF4444', fontWeight: '800' }}>-{(rawTotal * discount / 100).toFixed(3)} DT</Text>
+                <Text style={{ color: '#EF4444', fontWeight: '800' }}>-{(Number(rawTotal) * discount / 100).toFixed(3)} DT</Text>
               </View>
             )}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
               <Text style={{ fontSize: 20, fontWeight: '900', color: theme.colors.cream }}>TOTAL</Text>
-              <Text style={{ fontSize: 20, fontWeight: '900', color: theme.colors.caramel }}>{discountedTotal.toFixed(3)} DT</Text>
+              <Text style={{ fontSize: 20, fontWeight: '900', color: theme.colors.caramel }}>{Number(discountedTotal).toFixed(3)} DT</Text>
             </View>
 
             <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -859,7 +951,7 @@ const createPosStyles = (theme: any) => StyleSheet.create({
   tableNumber: { fontSize: 18, fontWeight: '900', color: theme.colors.caramel },
   tableTotal: { fontSize: 10, fontWeight: '700', color: theme.colors.cream, marginTop: 4 },
   tableStatus: { fontSize: 11, color: theme.colors.softOrange, marginTop: 2, fontWeight: '700' },
-  checkoutFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: theme.colors.background, borderTopWidth: 1, borderTopColor: theme.colors.glassBorder, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, paddingBottom: Platform.OS === 'ios' ? 30 : (Platform.OS === 'android' ? 36 : 16), justifyContent: 'space-between', ...(theme.shadows.floating as any) },
+  checkoutFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: theme.colors.background, borderTopWidth: 1, borderTopColor: theme.colors.glassBorder, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, paddingBottom: Platform.OS === 'ios' ? 30 : (Platform.OS === 'android' ? 64 : 16), justifyContent: 'space-between', ...(theme.shadows.floating as any) },
   totalPrice: { fontSize: 26, fontWeight: '900', color: theme.colors.cream, letterSpacing: -0.5 },
   payBtn: { backgroundColor: theme.colors.caramel, paddingHorizontal: 28, paddingVertical: 16, borderRadius: 16, minWidth: 150, alignItems: 'center', ...(theme.shadows.glow as any) },
   payBtnText: { color: theme.colors.background, fontSize: 15, fontWeight: '900', letterSpacing: 1 },
@@ -883,11 +975,12 @@ const createMgStyles = (theme: any) => StyleSheet.create({
 });
 
 // ─── RACHMA SCREEN (Simplified Mode) ───────────────────────
-function RachmaScreen() {
+function LocalRachmaScreen() {
   const { confirm } = useConfirm();
-  const { products, rachmaCart, addToRachma, removeFromRachma, clearRachma, checkoutRachma, getRachmaTotal, syncSales, pendingSales, theme } = usePOSStore();
+  const { products, rachmaCart, addToRachma, removeFromRachma, clearRachma, checkoutRachma, getRachmaTotal, syncSales, pendingSales, theme, hasBarSupport } = usePOSStore();
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [showPastSales, setShowPastSales] = useState(false);
 
   const categories = Array.from(new Set(products.map(p => p.categoryName || 'Autres'))).sort();
   
@@ -991,55 +1084,72 @@ function RachmaScreen() {
         <View style={{ height: 160 }} />
       </ScrollView>
 
-      <View style={{ position: 'absolute', bottom: Platform.OS === 'android' ? 48 : 16, left: 16, right: 16, zIndex: 1000, elevation: 15 }} pointerEvents="box-none">
+      <View style={{ position: 'absolute', bottom: Platform.OS === 'android' ? 64 : 24, left: 16, right: 16, zIndex: 1000, elevation: 15 }} pointerEvents="box-none">
         <GlassPanel intensity={85} style={{ padding: 16, flexDirection: 'column', alignItems: 'stretch' }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(245, 230, 211, 0.05)' }}>
             <Text style={{ color: theme.colors.creamMuted, fontSize: 13, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' }}>Total Rachmet</Text>
-            <Text style={{ color: theme.colors.cream, fontSize: 32, fontWeight: '900', letterSpacing: -1 }}>{total.toFixed(3)} <Text style={{ fontSize: 14 }}>DT</Text></Text>
+            <Text style={{ color: theme.colors.cream, fontSize: 32, fontWeight: '900', letterSpacing: -1 }}>{Number(total).toFixed(3)} <Text style={{ fontSize: 14 }}>DT</Text></Text>
           </View>
           
-          <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
             <TouchableOpacity 
               onPress={() => setShowHistory(true)}
               activeOpacity={0.7}
-              style={{ flex: 1, backgroundColor: 'rgba(245, 230, 211, 0.05)', height: 58, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, borderWidth: 1, borderColor: 'rgba(245, 230, 211, 0.2)' }}
+              style={{ width: '48%', backgroundColor: 'rgba(245, 230, 211, 0.05)', height: 60, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, borderWidth: 1, borderColor: 'rgba(245, 230, 211, 0.2)', flexDirection: 'row', gap: 8 }}
             >
-              <Text style={{ fontSize: 20 }}>📜</Text>
+              <Text style={{ fontSize: 18 }}>💰</Text>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: theme.colors.cream }}>EN COURS</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => setShowPastSales(true)}
+              activeOpacity={0.7}
+              style={{ width: '48%', backgroundColor: 'rgba(16, 185, 129, 0.1)', height: 60, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.2)', flexDirection: 'row', gap: 8 }}
+            >
+              <Text style={{ fontSize: 18 }}>💰</Text>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: '#10B981' }}>CLÔTURÉS</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               onPress={handleClearRequest}
               activeOpacity={0.7}
-              style={{ flex: 1, backgroundColor: 'rgba(245, 230, 211, 0.05)', height: 58, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, borderWidth: 1, borderColor: 'rgba(245, 230, 211, 0.2)' }}
+              style={{ width: '48%', backgroundColor: 'rgba(239, 68, 68, 0.1)', height: 60, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)', flexDirection: 'row', gap: 8 }}
             >
-              <Text style={{ fontSize: 18 }}>🗑️</Text>
+              <Text style={{ fontSize: 18 }}>💰</Text>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: '#EF4444' }}>VIDER TOUT</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              onPress={handlePrepare}
+              onPress={handleFinish}
               activeOpacity={0.9}
-              style={{ flex: 2, backgroundColor: 'rgba(212, 132, 70, 0.1)', height: 58, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, borderWidth: 1, borderColor: theme.colors.caramel }}
+              style={{ width: '48%', backgroundColor: theme.colors.caramel, height: 60, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, flexDirection: 'row', gap: 8 }}
             >
-              <Text style={{ color: theme.colors.caramel, fontWeight: '900', fontSize: 14, letterSpacing: 0.5 }}>7ADHER</Text>
+              <Text style={{ fontSize: 18 }}>💰</Text>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: theme.colors.background }}>ENCAISSER</Text>
             </TouchableOpacity>
 
-            <View style={{ flex: 1.5 }}>
-              <RachmaButton 
-                label="💰" 
-                onPress={handleFinish} 
-              />
-            </View>
+            {hasBarSupport && (
+              <TouchableOpacity 
+                onPress={handlePrepare}
+                activeOpacity={0.9}
+                style={{ width: '100%', backgroundColor: 'rgba(212, 132, 70, 0.1)', height: 50, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, borderWidth: 1, borderColor: theme.colors.caramel, flexDirection: 'row', gap: 8, marginTop: 4 }}
+              >
+                <Text style={{ fontSize: 18 }}>☕</Text>
+                <Text style={{ color: theme.colors.caramel, fontWeight: '900', fontSize: 13, letterSpacing: 0.5 }}>7ADHER</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </GlassPanel>
       </View>
 
       <RachmaHistoryModal visible={showHistory} onClose={() => setShowHistory(false)} />
+      <RachmaPastSalesModal visible={showPastSales} onClose={() => setShowPastSales(false)} />
     </View>
   );
 }
 
 // ─── PREPARATEUR SCREEN (KDS Mode) ───────────────────────
-function PreparateurScreen({ onBack }: { onBack: () => void }) {
+function LocalPreparateurScreen({ onBack }: { onBack: () => void }) {
   const { storeId, updatePreparationStatus, syncSales, theme } = usePOSStore();
   const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1116,7 +1226,7 @@ function PreparateurScreen({ onBack }: { onBack: () => void }) {
 }
 
 // ─── DASHBOARD SCREEN ──────────────────────────────────────
-function DashboardScreen() {
+function LocalDashboardScreen() {
   const { pendingSales, storeId, currentBarista, products, theme, themeName, setTheme } = usePOSStore();
   const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   const [serverSales, setServerSales] = useState<any[]>([]);
@@ -1164,7 +1274,7 @@ function DashboardScreen() {
       <View style={mgStyles.cardRow}>
         <View style={[mgStyles.card, { backgroundColor: theme.colors.caramel }]}>
           <Text style={mgStyles.cardLabel}>Chiffre Jour</Text>
-          <Text style={mgStyles.cardValue}>{displayRevenue.toFixed(3)} DT</Text>
+          <Text style={mgStyles.cardValue}>{Number(displayRevenue).toFixed(3)} DT</Text>
         </View>
       </View>
 
@@ -1202,7 +1312,7 @@ function DashboardScreen() {
 }
 
 // ─── STOCK SCREEN ──────────────────────────────────────────
-function StockScreen() {
+function LocalStockScreen() {
   const { storeId, theme } = usePOSStore();
   const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   const [stockItems, setStockItems] = useState<any[]>([]);
@@ -1241,9 +1351,10 @@ function StockScreen() {
 }
 
 // ─── STAFF SCREEN ──────────────────────────────────────────
-function StaffScreen() {
-  const { storeId, theme } = usePOSStore();
+function LocalStaffScreen() {
+  const { storeId, theme, userRole, currentBarista, updateStaffMember, updateStaffPin } = usePOSStore();
   const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
+  const isOwner = userRole === 'owner' || userRole === 'superadmin';
   const [staffList, setStaffList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -1265,41 +1376,145 @@ function StaffScreen() {
     fetchStaff();
   }, [storeId]);
 
+  const [editingMember, setEditingMember] = useState<any>(null);
+  const [form, setForm] = useState({ name: '', pinCode: '' });
+  const [saving, setSaving] = useState(false);
+
+  const openEdit = (m: any) => {
+    if (userRole !== 'owner' && !(currentBarista?.permissions || []).includes('STAFF')) return;
+    setEditingMember(m);
+    setForm({ name: m.name, pinCode: m.pinCode || '' });
+  };
+
+  const handleUpdate = async () => {
+    setSaving(true);
+    const success = await updateStaffMember(editingMember.id, { name: form.name });
+    const pinSuccess = await updateStaffPin(editingMember.id, form.pinCode || null);
+    
+    if (success && pinSuccess) {
+      // Refresh list
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+      const res = await fetch(`${API_URL}/sales/management/staff/${storeId}`);
+      if (res.ok) setStaffList(await res.json());
+      setEditingMember(null);
+    }
+    setSaving(false);
+  };
+
   return (
-    <ScrollView style={mgStyles.container} contentContainerStyle={{ padding: 20 }}>
-      <Text style={mgStyles.title}>Gestion du Personnel</Text>
-      {staffList.map((member) => (
-        <View key={member.id} style={mgStyles.saleRow}>
-          <Text style={mgStyles.saleId}>{member.name}</Text>
-        </View>
-      ))}
-      <View style={{ height: 100 }} />
-    </ScrollView>
+    <View style={{ flex: 1 }}>
+      <ScrollView style={mgStyles.container} contentContainerStyle={{ padding: 20 }}>
+        <Text style={mgStyles.title}>Gestion du Personnel</Text>
+        <Text style={{ color: theme.colors.cream, opacity: 0.6, fontSize: 12, marginBottom: 15 }}>
+          {isOwner || (currentBarista?.permissions || []).includes('STAFF') ? "Cliquer sur un membre pour modifier son profil ou son PIN." : "Consultez la liste de vos collaborateurs."}
+        </Text>
+        {staffList.map((member) => (
+          <TouchableOpacity 
+            key={member.id} 
+            style={[mgStyles.saleRow, { justifyContent: 'space-between' }]}
+            onPress={() => openEdit(member)}
+          >
+            <View>
+              <Text style={mgStyles.saleId}>{member.name}</Text>
+              <Text style={{ color: theme.colors.cream, opacity: 0.5, fontSize: 11 }}>
+                Role: {member.role === 'STORE_OWNER' ? 'Gérant' : 'Caissier'} {member.pinCode ? '• PIN: ****' : ''}
+              </Text>
+            </View>
+            {(isOwner || (currentBarista?.permissions || []).includes('STAFF')) && (
+              <Text style={{ fontSize: 20 }}>✏️</Text>
+            )}
+          </TouchableOpacity>
+        ))}
+        <View style={{ height: 100 }} />
+      </ScrollView>
+
+      {/* Staff Edit Modal */}
+      {editingMember && (
+        <Modal 
+          visible={!!editingMember} 
+          transparent 
+          animationType="fade"
+          onRequestClose={() => setEditingMember(null)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <View style={{ width: '100%', maxWidth: 400, backgroundColor: theme.colors.surface, padding: 24, borderRadius: 25, borderWidth: 1, borderColor: theme.colors.glassBorder }}>
+              <Text style={{ color: theme.colors.cream, fontSize: 20, fontWeight: '900', marginBottom: 20 }}>Modifier {editingMember.name}</Text>
+              
+              <Text style={{ color: theme.colors.cream, fontSize: 13, marginBottom: 8, fontWeight: '700' }}>NOM COMPLET</Text>
+              <TextInput 
+                style={{ backgroundColor: theme.colors.background, color: '#FFF', padding: 15, borderRadius: 12, marginBottom: 20 }}
+                value={form.name}
+                onChangeText={t => setForm(f => ({ ...f, name: t }))}
+              />
+
+              <Text style={{ color: theme.colors.cream, fontSize: 13, marginBottom: 8, fontWeight: '700' }}>CODE PIN (4 CHIFFRES)</Text>
+              <TextInput 
+                style={{ backgroundColor: theme.colors.background, color: '#FFF', padding: 15, borderRadius: 12, marginBottom: 24, fontSize: 20, textAlign: 'center', letterSpacing: 8 }}
+                value={form.pinCode}
+                maxLength={4}
+                placeholder="0000"
+                placeholderTextColor="rgba(255,255,255,0.2)"
+                keyboardType="numeric"
+                onChangeText={t => setForm(f => ({ ...f, pinCode: t.replace(/\D/g, '') }))}
+              />
+
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity 
+                  onPress={() => setEditingMember(null)}
+                  style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.1)', padding: 15, borderRadius: 12, alignItems: 'center' }}
+                >
+                  <Text style={{ color: theme.colors.cream, fontWeight: '800' }}>Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={handleUpdate}
+                  disabled={saving}
+                  style={{ flex: 1, backgroundColor: theme.colors.caramel, padding: 15, borderRadius: 12, alignItems: 'center' }}
+                >
+                  <Text style={{ color: theme.colors.background, fontWeight: '900' }}>{saving ? "..." : "Enregistrer"}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+    </View>
   );
 }
 
 // ─── MAIN APP WITH TABS ────────────────────────────────────
-type TabId = 'tables' | 'caisse' | 'dashboard' | 'products' | 'categories' | 'stock' | 'suppliers' | 'orders' | 'staff' | 'notifs' | 'rachma' | 'menu' | 'bar';
+type TabId = 'tables' | 'caisse' | 'dashboard' | 'products' | 'categories' | 'stock' | 'suppliers' | 'orders' | 'staff' | 'notifs' | 'rachma' | 'menu' | 'bar' | 'marketplace';
 
-function MenuScreen({ onSelect }: { onSelect: (tab: TabId) => void }) {
-  const { theme } = usePOSStore();
+function LocalMenuScreen({ onSelect }: { onSelect: (tab: TabId) => void }) {
+  const { theme, currentBarista, userRole, authMode } = usePOSStore();
   const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   
-  const menuItems: { id: TabId, label: string, icon: string }[] = [
-    { id: 'tables', label: 'Plan Salle', icon: '🪑' },
-    { id: 'caisse', label: 'Caisse Directe', icon: '💰' },
-    { id: 'rachma', label: 'Mode Rachma', icon: '⚡' },
-    { id: 'bar', label: 'KDS / Bar', icon: '☕' },
-    { id: 'dashboard', label: 'Dashboard', icon: '📈' },
-    { id: 'stock', label: 'Stocks', icon: '📦' },
-    { id: 'staff', label: 'Personnel', icon: '👥' },
+  const permissions = currentBarista?.permissions || [];
+  const isOwner = userRole === 'owner';
+
+  const menuItems: { id: TabId, label: string, icon: string, permission?: string }[] = [
+    { id: 'tables', label: 'Plan Salle', icon: '🪑', permission: 'TABLES' },
+    { id: 'caisse', label: 'Caisse Directe', icon: '💰', permission: 'POS' },
+    { id: 'rachma', label: 'Mode Rachma', icon: '⚡', permission: 'RACHMA' },
+    { id: 'bar', label: 'KDS / Bar', icon: '☕', permission: 'BAR' },
+    { id: 'dashboard', label: 'Dashboard', icon: '📈', permission: 'DASHBOARD' },
+    { id: 'stock', label: 'Stocks', icon: '📦', permission: 'STOCK' },
+    { id: 'staff', label: 'Personnel', icon: '👥', permission: 'STAFF' },
+    { id: 'marketplace', label: 'Marketplace', icon: '🛍️' },
   ];
+
+  const filteredItems = menuItems.filter(item => {
+    // Basic permissions check
+    const hasPerm = isOwner || !item.permission || permissions.includes(item.permission);
+    // Explicit Marketplace restriction: only in Account mode
+    if (item.id === 'marketplace' && authMode === 'TERMINAL') return false;
+    return hasPerm;
+  });
 
   return (
     <ScrollView style={mgStyles.container} contentContainerStyle={{ padding: 20 }}>
       <Text style={mgStyles.title}>Menu Principal</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 20 }}>
-        {menuItems.map(item => (
+        {filteredItems.map(item => (
           <TouchableOpacity 
             key={item.id}
             onPress={() => onSelect(item.id)}
@@ -1320,9 +1535,22 @@ function MenuScreen({ onSelect }: { onSelect: (tab: TabId) => void }) {
 // ─── POS ROOT (FORMERLY MAIN APP) ──────────────────────────
 function POSRoot() {
   const { storeId, currentBarista, userRole, setActiveTable, theme, activeTable } = usePOSStore();
+  const { confirm } = useConfirm();
   const isOwner = userRole === 'owner';
-  const initialTab: TabId = isOwner ? 'menu' : ((currentBarista?.defaultPosMode?.toLowerCase() as TabId) || 'tables');
+  
+  const permissions = currentBarista?.permissions || [];
+  // Mode Rachma Pur: Only if they have RACHMA and nothing else that is functional (POS, TABLES, BAR, DASHBOARD)
+  const functionalPerms = permissions.filter(p => ['POS', 'TABLES', 'BAR', 'DASHBOARD', 'STOCK', 'STAFF'].includes(p));
+  const hasRachmaModeOnly = !isOwner && permissions.includes('RACHMA') && functionalPerms.length === 0;
+  
+  const initialTab: TabId = hasRachmaModeOnly ? 'rachma' : (isOwner ? 'menu' : ((currentBarista?.defaultPosMode?.toLowerCase() as TabId) || 'tables'));
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+
+  // Reset screen when user changes (PIN change)
+  useEffect(() => {
+    setActiveTab(initialTab);
+    setActiveTable(null);
+  }, [currentBarista?.id]);
 
   if (!currentBarista) return <PinLoginView />;
 
@@ -1333,20 +1561,21 @@ function POSRoot() {
 
   const renderScreen = () => {
     switch (activeTab) {
-      case 'menu': return <MenuScreen onSelect={setActiveTab} />;
-      case 'tables': return <TablesScreen onSelectTable={handleSelectTable} />;
-      case 'bar': return <PreparateurScreen onBack={() => setActiveTab('menu')} />;
-      case 'rachma': return <RachmaScreen />;
-      case 'dashboard': return <DashboardScreen />;
+      case 'menu': return <LocalMenuScreen onSelect={setActiveTab} />;
+      case 'tables': return <LocalTablesScreen onSelectTable={handleSelectTable} />;
+      case 'bar': return <LocalPreparateurScreen onBack={() => setActiveTab('menu')} />;
+      case 'rachma': return <LocalRachmaScreen />;
+      case 'dashboard': return <LocalDashboardScreen />;
       case 'products': return <ProductsScreen storeId={storeId!} />;
       case 'categories': return <CategoriesScreen storeId={storeId!} />;
-      case 'stock': return <StockScreen />;
+      case 'stock': return <LocalStockScreen />;
       case 'suppliers': return <SuppliersScreen storeId={storeId!} />;
       case 'orders': return <OrdersScreen storeId={storeId!} />;
-      case 'staff': return <StaffScreen />;
+      case 'staff': return <LocalStaffScreen />;
+      case 'marketplace': return <MarketplaceScreen storeId={storeId!} />;
       case 'notifs': return <NotificationsScreen storeId={storeId!} />;
       case 'caisse':
-      default: return <CaisseScreen onBackToTables={() => setActiveTab('tables')} />;
+      default: return <LocalCaisseScreen onBackToTables={() => setActiveTab('tables')} />;
     }
   };
 
@@ -1357,48 +1586,52 @@ function POSRoot() {
         {renderScreen()}
       </View>
       
-      <View style={{ padding: 12, paddingTop: 0, paddingBottom: Platform.OS === 'android' ? 32 : 0 }}>
-        <GlassPanel intensity={60} style={{ 
-          flexDirection: 'row', 
-          height: 60, 
-          borderRadius: 20,
-          alignItems: 'center',
-          justifyContent: 'space-around',
-          borderWidth: 1,
-          borderColor: theme.colors.glassBorder
-        }}>
-          {[
-            { id: 'tables', label: 'SALLE', icon: '🪑' },
-            { id: 'caisse', label: 'VENTE', icon: '💰' },
-            { id: 'rachma', label: 'RACHMA', icon: '⚡' },
-            { id: 'menu', label: 'MENU', icon: '📋' }
-          ].map(tab => {
-            const isActive = activeTab === tab.id || (tab.id === 'tables' && activeTab === 'caisse' && activeTable);
-            return (
-              <TouchableOpacity 
-                key={tab.id}
-                onPress={() => setActiveTab(tab.id as TabId)}
-                style={{ 
-                  alignItems: 'center', flex: 1, paddingVertical: 8,
-                  backgroundColor: isActive ? 'rgba(212, 132, 70, 0.1)' : 'transparent',
-                  borderRadius: 12,
-                  marginHorizontal: 4
-                }}
-              >
-                <Text style={{ fontSize: 18, marginBottom: 1, opacity: isActive ? 1 : 0.4 }}>{tab.icon}</Text>
-                <Text style={{ 
-                  fontSize: 8, 
-                  fontWeight: '900', 
-                  color: isActive ? theme.colors.caramel : theme.colors.creamMuted,
-                  letterSpacing: 1
-                }}>
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </GlassPanel>
-      </View>
+      {!hasRachmaModeOnly && (
+        <View style={{ padding: 12, paddingTop: 0, paddingBottom: Platform.OS === 'android' ? 64 : 24 }}>
+          <GlassPanel intensity={60} style={{ 
+            flexDirection: 'row', 
+            height: 60, 
+            borderRadius: 20,
+            alignItems: 'center',
+            justifyContent: 'space-around',
+            borderWidth: 1,
+            borderColor: theme.colors.glassBorder
+          }}>
+            {[
+              { id: 'tables', label: 'SALLE', icon: '🪑', permission: 'TABLES' },
+              { id: 'caisse', label: 'VENTE', icon: '💰', permission: 'POS' },
+              { id: 'rachma', label: 'RACHMA', icon: '⚡', permission: 'RACHMA' },
+              { id: 'menu', label: 'MENU', icon: '📋' }
+            ]
+              .filter(tab => isOwner || !tab.permission || permissions.includes(tab.permission))
+              .map(tab => {
+              const isActive = activeTab === tab.id || (tab.id === 'tables' && activeTab === 'caisse' && activeTable);
+              return (
+                <TouchableOpacity 
+                  key={tab.id}
+                  onPress={() => setActiveTab(tab.id as TabId)}
+                  style={{ 
+                    alignItems: 'center', flex: 1, paddingVertical: 8,
+                    backgroundColor: isActive ? 'rgba(212, 132, 70, 0.1)' : 'transparent',
+                    borderRadius: 12,
+                    marginHorizontal: 4
+                  }}
+                >
+                  <Text style={{ fontSize: 18, marginBottom: 1, opacity: isActive ? 1 : 0.4 }}>{tab.icon}</Text>
+                  <Text style={{ 
+                    fontSize: 8, 
+                    fontWeight: '900', 
+                    color: isActive ? theme.colors.caramel : theme.colors.creamMuted,
+                    letterSpacing: 1
+                  }}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </GlassPanel>
+        </View>
+      )}
     </SafeAreaView>
   );
 }

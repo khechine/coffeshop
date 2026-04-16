@@ -312,7 +312,22 @@ export async function deleteSupplierOrder(id: string) {
 // ══════════════════════════════════════════════════════════════
 //  STAFF / USERS
 // ══════════════════════════════════════════════════════════════
+
+async function checkStaffActionAuth() {
+  const user = await getUser();
+  if (!user) throw new Error('Authentification requise');
+  
+  const isOwner = user.role === 'STORE_OWNER';
+  const hasStaffPerm = (user.permissions as string[])?.includes('STAFF');
+  
+  if (!isOwner && !hasStaffPerm) {
+    throw new Error('Action non autorisée : Vous n\'avez pas le droit de gérer le personnel.');
+  }
+  return user;
+}
+
 export async function createStaffMember(data: { name: string; email: string; phone: string; role: string; defaultPosMode?: string; permissions?: string[]; assignedTables?: string[] }) {
+  const authUser = await checkStaffActionAuth();
   const store = await getStore();
   if (!store) throw new Error('Store not found');
   await prisma.user.create({
@@ -332,6 +347,7 @@ export async function createStaffMember(data: { name: string; email: string; pho
 }
 
 export async function updateStaffMember(id: string, data: { name: string; email: string; phone: string; role: string; defaultPosMode?: string; permissions?: string[]; assignedTables?: string[] }) {
+  await checkStaffActionAuth();
   await prisma.user.update({ 
     where: { id }, 
     data: { 
@@ -348,6 +364,9 @@ export async function updateStaffMember(id: string, data: { name: string; email:
 }
 
 export async function deleteStaffMember(id: string) {
+  const authUser = await checkStaffActionAuth();
+  if (authUser.id === id) throw new Error('Vous ne pouvez pas vous supprimer vous-même.');
+  
   // 1. Clean up session logs
   await prisma.staffSessionLog.deleteMany({ where: { userId: id } });
   
@@ -789,7 +808,10 @@ export async function getUser() {
   // Check cookie first (server-side)
   const userId = cookies().get('userId')?.value;
   if (userId) {
-    return (prisma as any).user.findUnique({ where: { id: userId } });
+    return (prisma as any).user.findUnique({ 
+      where: { id: userId },
+      select: { id: true, name: true, role: true, permissions: true }
+    });
   }
   return null;
 }
@@ -1162,7 +1184,7 @@ export async function createMarketplaceProductAction(data: any) {
       isFeatured: data.isFeatured || false,
       isFlashSale: data.isFlashSale || false,
       discountPrice: data.discount || null,
-      minOrderQty: data.minOrderQuantity || 1
+      minOrderQty: data.minOrderQty || 1
     }
   });
   revalidatePath('/vendor/portal/catalog');
@@ -1340,7 +1362,7 @@ export async function updateMarketplaceProductAction(id: string, data: any) {
       discountPrice: data.discount,
       flashStart: data.flashStart ? new Date(data.flashStart) : null,
       flashEnd: data.flashEnd ? new Date(data.flashEnd) : null,
-      minOrderQty: data.minOrderQuantity || 1
+      minOrderQty: data.minOrderQty || 1
     }
   });
   revalidatePath('/vendor/portal/catalog');
@@ -1669,6 +1691,7 @@ export async function deleteProductCategoryAction(id: string) {
 //  STAFF PIN & SESSIONS
 // ══════════════════════════════════════════════════════════════
 export async function updateStaffPinAction(userId: string, pinCode: string | null) {
+  await checkStaffActionAuth();
   await prisma.user.update({
     where: { id: userId },
     data: { pinCode }

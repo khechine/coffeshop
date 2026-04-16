@@ -196,7 +196,7 @@ export default function VendorCatalogClient({
 
   const [form, setForm] = useState<any>({
     name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', showUrlInput: false,
-    isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQuantity: '1',
+    isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQty: '1',
   });
 
   const handleEdit = (p: any) => {
@@ -208,14 +208,14 @@ export default function VendorCatalogClient({
       discount: p.discount ? p.discount.toString() : '',
       flashStart: p.flashStart ? new Date(p.flashStart).toISOString().slice(0, 16) : '',
       flashEnd:   p.flashEnd   ? new Date(p.flashEnd).toISOString().slice(0, 16) : '',
-      minOrderQuantity: p.minOrderQuantity ? p.minOrderQuantity.toString() : '1',
+      minOrderQty: p.minOrderQty ? p.minOrderQty.toString() : '1',
     });
     setModalOpen(true);
   };
 
   const handleCreateNew = () => {
     setEditingId(null);
-    setForm({ name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', showUrlInput: false, isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQuantity: '1' });
+    setForm({ name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', showUrlInput: false, isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQty: '1' });
     setModalOpen(true);
   };
 
@@ -319,7 +319,7 @@ export default function VendorCatalogClient({
       const payload = {
         ...form,
         price: parseFloat(form.price),
-        minOrderQuantity: parseFloat(form.minOrderQuantity),
+        minOrderQty: parseFloat(form.minOrderQty),
         brand: form.brand || null,
         discount:   form.isFlashSale ? parseFloat(form.discount) : null,
         flashStart: form.isFlashSale && form.flashStart ? new Date(form.flashStart).toISOString() : null,
@@ -589,7 +589,7 @@ export default function VendorCatalogClient({
             </div>
             <div>
               <label className={labelClass}>Qte Min</label>
-              <input className={inputClass} type="number" step="0.5" value={form.minOrderQuantity} onChange={e => setForm({...form, minOrderQuantity: e.target.value})} required />
+              <input className={inputClass} type="number" step="0.5" value={form.minOrderQty} onChange={e => setForm({...form, minOrderQty: e.target.value})} required />
             </div>
           </div>
 
