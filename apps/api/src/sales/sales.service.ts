@@ -20,6 +20,7 @@ export class SalesService {
             total: dto.total,
             baristaId: dto.baristaId,
             takenById: dto.takenById || dto.baristaId,
+            mode: dto.mode || 'NORMAL',
             items: {
               create: dto.items.map(item => ({
                 productId: item.productId,
@@ -86,6 +87,44 @@ export class SalesService {
       },
       orderBy: { createdAt: 'desc' },
       take: 50
+    });
+  }
+
+  async getSalesHistory(storeId: string, filters: { 
+    baristaId?: string, 
+    startDate?: string, 
+    endDate?: string, 
+    mode?: string 
+  }): Promise<any> {
+    const where: any = { storeId };
+    
+    if (filters.baristaId) {
+      where.baristaId = filters.baristaId;
+    }
+    
+    if (filters.mode) {
+      where.mode = filters.mode;
+    }
+    
+    if (filters.startDate || filters.endDate) {
+      where.createdAt = {};
+      if (filters.startDate) {
+        where.createdAt.gte = new Date(filters.startDate);
+      }
+      if (filters.endDate) {
+        // Make sure it includes the whole end day if needed, but client usually sends ISO
+        where.createdAt.lte = new Date(filters.endDate);
+      }
+    }
+
+    return prisma.sale.findMany({
+      where,
+      include: {
+        items: { include: { product: true } },
+        barista: { select: { name: true } },
+        takenBy: { select: { name: true } }
+      },
+      orderBy: { createdAt: 'desc' }
     });
   }
 

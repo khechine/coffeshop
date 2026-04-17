@@ -381,6 +381,7 @@ model Sale {
   preparedBy         User?     @relation("preparedBy", fields: [preparedById], references: [id])
   preparedAt         DateTime?
   preparationStation String?   // "bar", "chicha", "cuisine" — multi-poste
+  mode               String?   @default("NORMAL") // NORMAL, RACHMA
 }
 
 model SaleItem {

@@ -26,7 +26,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.elkassa.posmobile"
+      "package": "com.elkassa.posmobile",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -37,6 +37,22 @@ export class SalesController {
     return this.salesService.getSales(storeId);
   }
 
+  @Get('history/:storeId')
+  async getHistory(
+    @Param('storeId') storeId: string,
+    @Query('baristaId') baristaId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('mode') mode?: string,
+  ) {
+    return this.salesService.getSalesHistory(storeId, {
+      baristaId,
+      startDate,
+      endDate,
+      mode
+    });
+  }
+
   @Post(':id/preparation')
   async updatePreparation(
     @Param('id') id: string,

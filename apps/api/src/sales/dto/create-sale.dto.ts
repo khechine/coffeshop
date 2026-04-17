@@ -37,4 +37,8 @@ export class CreateSaleDto {
   @ValidateNested({ each: true })
   @Type(() => SaleItemDto)
   items: SaleItemDto[];
+
+  @IsString()
+  @IsOptional()
+  mode?: string;
 }

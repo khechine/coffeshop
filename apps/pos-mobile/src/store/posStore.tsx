@@ -28,6 +28,7 @@ export interface SaleEvent {
   status: 'pending' | 'synced';
   paymentStatus?: 'PAID' | 'UNPAID' | 'CANCELLED';
   baristaId?: string; // Accountability
+  mode?: 'NORMAL' | 'RACHMA';
 }
 
 export type UserRole = 'owner' | 'cashier' | 'vendor' | 'superadmin' | null;
@@ -562,7 +563,8 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       timestamp: Date.now(),
       status: 'pending',
       paymentStatus: 'PAID',
-      baristaId: currentBarista?.id
+      baristaId: currentBarista?.id,
+      mode: 'NORMAL'
     };
     
     setPendingSales(prev => [...prev, newSale]);
@@ -580,7 +582,8 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       timestamp: Date.now(),
       status: 'pending',
       paymentStatus,
-      baristaId: currentBarista?.id
+      baristaId: currentBarista?.id,
+      mode: 'RACHMA'
     };
     
     setPendingSales(prev => [...prev, newSale]);
@@ -599,7 +602,8 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       timestamp: Date.now(),
       status: 'pending',
       paymentStatus: 'PAID', // Tables are usually paid at checkout here, but we could make it UNPAID if needed
-      baristaId: currentBarista?.id
+      baristaId: currentBarista?.id,
+      mode: 'NORMAL'
     };
 
     setPendingSales(prev => [...prev, newSale]);
@@ -624,6 +628,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           total: sale.totalPrice,
           baristaId: sale.baristaId,
           paymentStatus: sale.paymentStatus || 'PAID',
+          mode: sale.mode || 'NORMAL',
           items: sale.items.map(item => ({
             productId: item.productId,
             quantity: item.quantity,

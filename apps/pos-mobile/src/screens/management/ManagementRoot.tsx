@@ -4,8 +4,9 @@ import { usePOSStore } from '../../store/posStore';
 import { GlassPanel } from '../../components/Antigravity/GlassPanel';
 import { ProductsScreen, CategoriesScreen, StockManagementScreen, SuppliersScreen, OrdersScreen, NotificationsScreen } from '../ManagementScreens';
 import { MarketplaceScreen } from '../MarketplaceScreen';
+import { SalesHistoryScreen } from '../SalesHistoryScreen';
 
-type ManagementTab = 'dashboard' | 'products' | 'categories' | 'stock' | 'suppliers' | 'orders' | 'notifs' | 'marketplace';
+type ManagementTab = 'dashboard' | 'products' | 'categories' | 'stock' | 'suppliers' | 'orders' | 'notifs' | 'marketplace' | 'history';
 
 export function ManagementRoot() {
   const { userRole, theme, storeName, vendorName, logout, storeId, vendorId } = usePOSStore();
@@ -54,6 +55,7 @@ export function ManagementRoot() {
       case 'orders': return <OrdersScreen storeId={contextId!} isVendor={isVendor} />;
       case 'notifs': return <NotificationsScreen storeId={storeId!} />;
       case 'marketplace': return <MarketplaceScreen storeId={storeId!} />;
+      case 'history': return <SalesHistoryScreen storeId={storeId!} />;
       default: return isVendor ? <VendorDashboardView onNavigate={setActiveTab} pendingCount={pendingOrdersCount} productsCount={productsCount} /> : <OwnerDashboardView onNavigate={setActiveTab} />;
     }
   };
@@ -77,8 +79,8 @@ export function ManagementRoot() {
                 <Text style={{ color: theme.colors.cream, fontSize: 17, fontWeight: '900' }} numberOfLines={1}>
                     {activeTab === 'dashboard'
                     ? (isVendor ? (vendorName || 'Fournisseur') : (storeName || 'CoffeeShop'))
-                    : (['products','categories','stock','suppliers','orders','notifs','marketplace'] as ManagementTab[]).find(t => t === activeTab)
-                        ? ({products:'Catalogue',categories:'Catégories',stock:'Stock',suppliers:'Fournisseurs',orders:'Commandes',notifs:'Alertes',marketplace:'Marketplace'} as any)[activeTab]
+                    : (['products','categories','stock','suppliers','orders','notifs','marketplace','history'] as ManagementTab[]).find(t => t === activeTab)
+                        ? ({products:'Catalogue',categories:'Catégories',stock:'Stock',suppliers:'Fournisseurs',orders:'Commandes',notifs:'Alertes',marketplace:'Marketplace',history:'Historique'} as any)[activeTab]
                         : activeTab.toUpperCase()
                   }
                 </Text>
@@ -123,6 +125,7 @@ export function ManagementRoot() {
           <NavBtn id="products" icon="📋" label="CATALOGUE" active={activeTab === 'products'} onSelect={setActiveTab} />
           {/* Catégories : lecture seule pour vendor, gestion pour owner */}
           <NavBtn id="categories" icon="🏷️" label="CATÉGORIES" active={activeTab === 'categories'} onSelect={setActiveTab} />
+          {isOwner && <NavBtn id="history" icon="📊" label="RAPPORTS" active={activeTab === 'history'} onSelect={setActiveTab} />}
         </GlassPanel>
       </View>
     </SafeAreaView>
@@ -197,7 +200,8 @@ function OwnerDashboardView({ onNavigate }: { onNavigate: (tab: ManagementTab) =
       </View>
 
       <Text style={{ color: theme.colors.cream, fontSize: 15, fontWeight: '800', marginBottom: 12 }}>Gestion rapide</Text>
-      <QuickActionBtn icon="📋" label="Gérer le catalogue" color={theme.colors.caramel} onPress={() => onNavigate('products')} />
+      <QuickActionBtn icon="Label" label="Gérer le catalogue" color={theme.colors.caramel} onPress={() => onNavigate('products')} />
+      <QuickActionBtn icon="📊" label="Rapports & Ventes" color="#10B981" onPress={() => onNavigate('history')} />
       <QuickActionBtn icon="🏷️" label="Catégories & Menus" color={theme.colors.softOrange} onPress={() => onNavigate('categories')} />
       <QuickActionBtn icon="👥" label="Fournisseurs" color="#8B5CF6" onPress={() => onNavigate('suppliers')} />
       <QuickActionBtn icon="🛍️" label="B2B Marketplace" color={theme.colors.caramel} onPress={() => onNavigate('marketplace')} />
