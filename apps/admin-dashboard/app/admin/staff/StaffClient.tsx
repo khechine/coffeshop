@@ -133,10 +133,12 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
         color: '#854D0E',
         fontWeight: 700,
         display: 'flex',
+        flexWrap: 'wrap',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        gap: '10px'
       }}>
-        <div style={{ display: 'flex', gap: '15px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
           <span>👤 ROLE: <strong style={{color: '#1E1B4B'}}>{(currentUser?.role || localRole || 'VISUALISATEUR').toUpperCase()}</strong></span>
           <span>🔑 ACCÈS: <strong>{isManager ? '✅ GÉRANT ACTIVÉ' : '❌ LECTURE SEULE'}</strong></span>
           <span>📜 PERMS: <strong>{(currentUser?.permissions || localPerms || []).length > 0 ? (currentUser?.permissions || localPerms || []).join(', ') : 'Aucune'}</strong></span>
@@ -258,7 +260,7 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
           <div><label style={label}>Prénom et Nom</label><input style={field} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="ex: Nabil Hamza" required /></div>
           <div><label style={label}>Email (identifiant de connexion)</label><input style={field} type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="nabil@cafe.tn" required /></div>
           <div><label style={label}>Téléphone</label><input style={field} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+216 XX XXX XXX" /></div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div>
               <label style={label}>Rôle</label>
               <select style={field} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
@@ -279,7 +281,7 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
 
           <div>
             <label style={label}>Droits d'Accès Spécifiques</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '1.5px solid #E2E8F0' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', background: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '1.5px solid #E2E8F0' }}>
               {PERMISSIONS.map(p => (
                 <label key={p.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
                   <input type="checkbox" checked={form.permissions.includes(p.key)} 
@@ -288,7 +290,7 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
                       setForm(f => ({ ...f, permissions: next }));
                     }}
                   />
-                  {p.label}
+                  <span style={{ lineHeight: 1.2 }}>{p.label}</span>
                 </label>
               ))}
             </div>
@@ -307,7 +309,7 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
                   {(form.assignedTables || []).length === (tables.length || 48) ? 'Tout désélectionner' : 'Tout sélectionner'}
                 </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: '6px' }}>
                 {(tables.length > 0 ? tables.map(t => t.label) : Array.from({ length: 48 }, (_, i) => `T${i + 1}`)).map((id) => {
                   const isSelected = (form.assignedTables || []).includes(id);
                   return (
@@ -329,7 +331,8 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
                         backgroundColor: isSelected ? '#4F46E5' : '#FFF',
                         color: isSelected ? '#FFF' : '#64748B',
                         cursor: 'pointer',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        width: '100%'
                       }}
                     >
                       {id}

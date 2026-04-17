@@ -1,8 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AntigravityTheme } from '../theme/AntigravityTheme';
+import { AntigravityThemeLight } from '../theme/AntigravityThemeLight';
 import { NeonFoodTheme } from '../theme/NeonFoodTheme';
+import { NeonFoodThemeLight } from '../theme/NeonFoodThemeLight';
 import { VendorTheme } from '../theme/VendorTheme';
+import { VendorThemeLight } from '../theme/VendorThemeLight';
 import { ITheme } from '../theme/ThemeInterface';
 
 export interface Product {
@@ -55,6 +58,7 @@ export interface POSState {
   vendorName: string | null;
   userRole: UserRole;
   themeName: 'antigravity' | 'neon-food' | 'vendor';
+  themeMode: 'light' | 'dark';
   theme: ITheme;
   rachmaCart: Record<string, number>;
   rachmaHistory: { id: string, productId: string, name: string, timestamp: number, type: 'ADD' | 'REMOVE' }[];
@@ -66,6 +70,7 @@ export interface POSState {
   logout: () => void;
   deactivateTerminal: () => Promise<void>;
   setTheme: (name: 'antigravity' | 'neon-food' | 'vendor') => void;
+  toggleThemeMode: () => void;
   addToCart: (productId: string) => void;
   removeFromCart: (productId: string) => void;
   addToRachma: (productId: string) => void;
@@ -87,10 +92,13 @@ export interface POSState {
   updateStaffMember: (id: string, data: any) => Promise<boolean>;
   updateStaffPin: (id: string, pinCode: string | null) => Promise<boolean>;
   mktCart: Record<string, number>;
-  addToMktCart: (productId: string) => void;
-  removeFromMktCart: (productId: string) => void;
+  addToMktCart: (productId: string, step?: number) => void;
+  removeFromMktCart: (productId: string, step?: number, minQty?: number) => void;
+  deleteItemFromMktCart: (productId: string) => void;
   clearMktCart: () => void;
   submitMktOrders: (vendorId: string, items: any[], total: number) => Promise<boolean>;
+  deleteItemFromCart: (productId: string) => void;
+  deleteItemFromRachma: (productId: string) => void;
   hasBarSupport: boolean;
 }
 
@@ -133,10 +141,16 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   } | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [themeName, setThemeName] = useState<'antigravity' | 'neon-food' | 'vendor'>('antigravity');
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('dark');
   const [hasBarSupport, setHasBarSupport] = useState(false);
   const [mktCart, setMktCart] = useState<Record<string, number>>({});
   
-  const theme = themeName === 'vendor' ? VendorTheme : themeName === 'neon-food' ? NeonFoodTheme : AntigravityTheme;
+  const theme = useMemo(() => {
+    const isLight = themeMode === 'light';
+    if (themeName === 'vendor') return isLight ? VendorThemeLight : VendorTheme;
+    if (themeName === 'neon-food') return isLight ? NeonFoodThemeLight : NeonFoodTheme;
+    return isLight ? AntigravityThemeLight : AntigravityTheme;
+  }, [themeName, themeMode]);
   
   const [isReady, setIsReady] = useState(false);
 
@@ -158,6 +172,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const storedRole = await AsyncStorage.getItem('pos-user-role');
         const storedRachma = await AsyncStorage.getItem('pos-rachma-cart');
         const storedTheme = await AsyncStorage.getItem('pos-active-theme');
+        const storedThemeMode = await AsyncStorage.getItem('pos-theme-mode');
         
         if (storedCart) setCart(JSON.parse(storedCart));
         if (storedTables) setTables(JSON.parse(storedTables));
@@ -172,8 +187,11 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (storedBarista) setCurrentBarista(JSON.parse(storedBarista));
         if (storedRole) setUserRole(storedRole as UserRole);
         if (storedRachma) setRachmaCart(JSON.parse(storedRachma));
-        if (storedTheme === 'neon-food' || storedTheme === 'antigravity') {
+        if (storedTheme === 'neon-food' || storedTheme === 'antigravity' || storedTheme === 'vendor') {
           setThemeName(storedTheme as any);
+        }
+        if (storedThemeMode === 'light' || storedThemeMode === 'dark') {
+          setThemeMode(storedThemeMode as any);
         }
         
         const storedBarSupport = await AsyncStorage.getItem('pos-has-bar-support');
@@ -227,11 +245,12 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       else AsyncStorage.removeItem('pos-user-role');
 
       AsyncStorage.setItem('pos-active-theme', themeName).catch(() => {});
+      AsyncStorage.setItem('pos-theme-mode', themeMode).catch(() => {});
       AsyncStorage.setItem('pos-has-bar-support', hasBarSupport ? 'true' : 'false').catch(() => {});
       AsyncStorage.setItem('pos-rachma-cart', JSON.stringify(rachmaCart)).catch(() => {});
       AsyncStorage.setItem('pos-mkt-cart', JSON.stringify(mktCart)).catch(() => {});
     }
-  }, [cart, tables, pendingSales, authToken, storeId, storeName, vendorId, vendorName, authMode, storeTables, currentBarista, userRole, themeName, hasBarSupport, rachmaCart, isReady]);
+  }, [cart, tables, pendingSales, authToken, storeId, storeName, vendorId, vendorName, authMode, storeTables, currentBarista, userRole, themeName, themeMode, hasBarSupport, rachmaCart, isReady]);
 
   const authenticate = (token: string, store: string) => {
     setAuthToken(token);
@@ -335,6 +354,10 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const setTheme = (name: 'antigravity' | 'neon-food' | 'vendor') => {
     setThemeName(name);
   };
+
+  const toggleThemeMode = () => {
+    setThemeMode(prev => prev === 'light' ? 'dark' : 'light');
+  };
   
   const logout = () => {
     setAuthToken(null);
@@ -414,6 +437,24 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const deleteItemFromCart = (id: string) => {
+    if (activeTable) {
+      setTables(prev => {
+        const next = { ...prev };
+        const tableCart = { ...(next[activeTable] || {}) };
+        delete tableCart[id];
+        next[activeTable] = tableCart;
+        return next;
+      });
+    } else {
+      setCart(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
+  };
+
   const addToRachma = (id: string) => {
     const product = products.find(p => p.id === id);
     setRachmaCart(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
@@ -447,6 +488,14 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       },
       ...prev.slice(0, 49)
     ]);
+  };
+
+  const deleteItemFromRachma = (id: string) => {
+    setRachmaCart(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   };
 
   const clearRachma = () => {
@@ -676,15 +725,30 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
 
-  const addToMktCart = (id: string) => {
-    setMktCart(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+  const addToMktCart = (id: string, step: number = 1) => {
+    setMktCart(prev => {
+      const current = prev[id] || 0;
+      return { ...prev, [id]: current === 0 ? step : current + step };
+    });
   };
 
-  const removeFromMktCart = (id: string) => {
+  const removeFromMktCart = (id: string, step: number = 1, minQty: number = 1) => {
     setMktCart(prev => {
       const next = { ...prev };
-      next[id] = Math.max(0, (next[id] || 0) - 1);
-      if (next[id] === 0) delete next[id];
+      const newQty = (next[id] || 0) - step;
+      if (newQty < minQty) {
+        delete next[id];
+      } else {
+        next[id] = newQty;
+      }
+      return next;
+    });
+  };
+
+  const deleteItemFromMktCart = (id: string) => {
+    setMktCart(prev => {
+      const next = { ...prev };
+      delete next[id];
       return next;
     });
   };
@@ -756,7 +820,8 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <POSContext.Provider value={{ 
       cart, tables, activeTable, products, pendingSales, authToken, storeId, storeName, vendorId, vendorName, authMode, storeTables,
-      currentBarista, userRole, themeName, theme, rachmaCart, rachmaHistory, hasBarSupport, authenticate, activateTerminal, loginWithAccount, loginWithPin, logoutBarista, logout, deactivateTerminal, setTheme,
+      currentBarista, userRole, themeName, themeMode, theme, rachmaCart, rachmaHistory, hasBarSupport, authenticate, activateTerminal, loginWithAccount, loginWithPin, logoutBarista, logout, deactivateTerminal, setTheme,
+      toggleThemeMode,
       addToCart, removeFromCart, addToRachma, removeFromRachma, clearRachma, clearCart, 
       setActiveTable, checkout, checkoutTable, checkoutRachma, 
       syncSales, setProducts, setStoreTables, getTotalItems, getTableTotal, getTotalPrice, getRachmaTotal,

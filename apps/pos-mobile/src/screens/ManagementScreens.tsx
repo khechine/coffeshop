@@ -19,22 +19,23 @@ interface CustomSelectProps {
   theme: any;
   allowEmpty?: boolean;
   emptyLabel?: string;
+  compact?: boolean;
 }
-function CustomSelect({ label, placeholder, options, value, onChange, theme, allowEmpty, emptyLabel }: CustomSelectProps) {
+function CustomSelect({ label, placeholder, options, value, onChange, theme, allowEmpty, emptyLabel, compact }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
   const selectedLabel = value ? (options.find(o => o.id === value)?.label || placeholder || 'Sélectionner') : (placeholder || 'Sélectionner');
   
   const cs = useMemo(() => StyleSheet.create({
-    wrapper: { marginBottom: 12 },
-    lbl: { fontSize: 12, fontWeight: '700', color: theme.colors.caramel, marginBottom: 6, letterSpacing: 0.5, textTransform: 'uppercase' },
+    wrapper: { marginBottom: compact ? 0 : 12 },
+    lbl: { fontSize: 12, fontWeight: '700', color: theme.colors.caramel, marginBottom: 6, letterSpacing: 0.5, textTransform: 'uppercase', display: compact ? 'none' : 'flex' },
     trigger: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       backgroundColor: theme.colors.background, borderWidth: 1.5,
       borderColor: value ? theme.colors.caramel : theme.colors.glassBorder,
-      borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14,
+      borderRadius: 12, paddingHorizontal: 12, paddingVertical: compact ? 12 : 14,
     },
-    triggerText: { fontSize: 15, fontWeight: '600', color: value ? theme.colors.cream : theme.colors.creamMuted, flex: 1 },
-    chevron: { fontSize: 12, color: theme.colors.caramel, marginLeft: 8 },
+    triggerText: { fontSize: compact ? 13 : 15, fontWeight: '600', color: value ? theme.colors.cream : theme.colors.creamMuted, flex: 1 },
+    chevron: { fontSize: 10, color: theme.colors.caramel, marginLeft: 8 },
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'flex-end' },
     sheetInner: { 
       backgroundColor: theme.colors.surface, 
@@ -52,7 +53,7 @@ function CustomSelect({ label, placeholder, options, value, onChange, theme, all
     optionTextChild: { color: theme.colors.creamMuted, fontSize: 15 },
     optionTextActive: { color: theme.colors.caramel, fontWeight: '700' },
     checkIcon: { fontSize: 16, color: theme.colors.caramel },
-  }), [theme, value]);
+  }), [theme, value, compact]);
   
   return (
     <View style={cs.wrapper}>
@@ -125,9 +126,13 @@ const createMgStyles = (theme: any) => StyleSheet.create({
   modalContent: { backgroundColor: theme.colors.surface, borderRadius: 20, padding: 24, maxHeight: '85%', borderWidth: 1, borderColor: theme.colors.glassBorder },
   modalTitle: { fontSize: 22, fontWeight: '900', color: theme.colors.cream, marginBottom: 16 },
   input: {
-    backgroundColor: theme.colors.background, padding: 14, borderRadius: 12, fontSize: 16,
-    marginBottom: 12, borderWidth: 1, borderColor: theme.colors.glassBorder, color: theme.colors.cream,
+    backgroundColor: theme.colors.background, padding: 12, borderRadius: 10, fontSize: 15,
+    marginBottom: 0, borderWidth: 1, borderColor: theme.colors.glassBorder, color: theme.colors.cream,
   },
+  label: { fontSize: 13, color: theme.colors.caramel, fontWeight: '700', marginBottom: 6 },
+  formGroup: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
+  formLabel: { flex: 1, color: theme.colors.creamMuted, fontSize: 13, fontWeight: '800' },
+  formInput: { flex: 2 },
   btnRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
   btnPrimary: { flex: 1, backgroundColor: theme.colors.caramel, padding: 16, borderRadius: 12, alignItems: 'center' },
   btnDanger: { flex: 1, backgroundColor: theme.colors.danger, padding: 16, borderRadius: 12, alignItems: 'center' },
@@ -370,19 +375,21 @@ export function CategoriesScreen({ storeId, isVendor }: { storeId: string, isVen
         <Text style={mgStyles.fabText}>+</Text>
       </TouchableOpacity>
 
-      <Modal visible={showModal} transparent animationType="slide">
-        <View style={mgStyles.modalOverlay}>
-          <View style={mgStyles.modalContent}>
+      <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
+        <TouchableOpacity style={mgStyles.modalOverlay} activeOpacity={1} onPress={() => setShowModal(false)}>
+          <TouchableOpacity activeOpacity={1} style={mgStyles.modalContent}>
             <Text style={mgStyles.modalTitle}>{editItem ? 'Modifier Catégorie' : 'Nouvelle Catégorie'}</Text>
 
-            <Text style={mgStyles.label}>Nom</Text>
-            <TextInput
-              style={mgStyles.input}
-              placeholder="ex: Boissons, Froides..."
-              placeholderTextColor={theme.colors.creamMuted}
-              value={form.name}
-              onChangeText={v => setForm({ ...form, name: v })}
-            />
+            <View style={mgStyles.formGroup}>
+              <Text style={mgStyles.formLabel}>Nom</Text>
+              <TextInput
+                style={[mgStyles.input, mgStyles.formInput]}
+                placeholder="ex: Boissons..."
+                placeholderTextColor={theme.colors.creamMuted}
+                value={form.name}
+                onChangeText={v => setForm({ ...form, name: v })}
+              />
+            </View>
 
             <CustomSelect
               label="Catégorie parente (optionnel)"
@@ -425,8 +432,8 @@ export function CategoriesScreen({ storeId, isVendor }: { storeId: string, isVen
                 <Text style={mgStyles.btnText}>{saving ? 'Sauvegarde...' : editItem ? 'Enregistrer' : 'Créer'}</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -832,26 +839,53 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
             <>
               <Text style={mgStyles.label}>Recette (Ingredients)</Text>
               {form.recipe.map((r, idx) => (
-                <View key={idx} style={{ flexDirection: 'row', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                  <View style={{ flex: 2 }}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
-                      {stockItems.map(si => (
-                        <TouchableOpacity key={si.id} style={[mgStyles.pickerChip, { marginRight: 4, paddingVertical: 4 }, r.stockItemId === si.id && mgStyles.pickerChipActive]}
-                          onPress={() => { const nr = [...form.recipe]; nr[idx].stockItemId = si.id; setForm({ ...form, recipe: nr }); }}>
-                          <Text style={[mgStyles.pickerChipText, { fontSize: 11 }, r.stockItemId === si.id && mgStyles.pickerChipTextActive]}>{si.name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
+                <View key={idx} style={{ flexDirection: 'row', gap: 8, marginBottom: 10, alignItems: 'center' }}>
+                  <View style={{ flex: 3 }}>
+                    <CustomSelect
+                      compact
+                      label="Ingrédient"
+                      placeholder="Choisir..."
+                      options={stockItems.map(si => ({ id: si.id, label: si.name }))}
+                      value={r.stockItemId}
+                      onChange={v => {
+                        const nr = [...form.recipe];
+                        nr[idx].stockItemId = v;
+                        setForm({ ...form, recipe: nr });
+                      }}
+                      theme={theme}
+                    />
                   </View>
-                  <TextInput style={[mgStyles.input, { flex: 1, marginBottom: 0, paddingVertical: 8 }]} placeholder="Qte" keyboardType="decimal-pad" value={r.quantity}
-                    onChangeText={v => { const nr = [...form.recipe]; nr[idx].quantity = v; setForm({ ...form, recipe: nr }); }} />
-                  <TouchableOpacity onPress={() => setForm({ ...form, recipe: form.recipe.filter((_, i) => i !== idx) })}>
-                    <Text style={{ fontSize: 18 }}>🗑️</Text>
+                  <View style={{ width: 80 }}>
+                    <TextInput 
+                      style={[mgStyles.input, { marginBottom: 0, paddingVertical: 12, textAlign: 'center' }]} 
+                      placeholder="Qte" 
+                      keyboardType="decimal-pad" 
+                      value={r.quantity}
+                      onChangeText={v => { 
+                        const nr = [...form.recipe]; 
+                        nr[idx].quantity = v; 
+                        setForm({ ...form, recipe: nr }); 
+                      }} 
+                    />
+                  </View>
+                  <TouchableOpacity 
+                    onPress={() => setForm({ ...form, recipe: form.recipe.filter((_, i) => i !== idx) })}
+                    style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 10 }}
+                  >
+                    <Text style={{ fontSize: 16 }}>🗑️</Text>
                   </TouchableOpacity>
                 </View>
               ))}
-              <TouchableOpacity style={{ alignItems: 'center', padding: 10, marginBottom: 12 }} onPress={() => setForm({ ...form, recipe: [...form.recipe, { stockItemId: '', quantity: '1' }] })}>
-                <Text style={{ color: '#4F46E5', fontWeight: '700' }}>+ Ajouter un ingredient</Text>
+              <TouchableOpacity 
+                style={{ 
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  padding: 12, marginBottom: 20, borderRadius: 12, backgroundColor: 'rgba(79, 70, 229, 0.05)',
+                  borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(79, 70, 229, 0.3)'
+                }} 
+                onPress={() => setForm({ ...form, recipe: [...form.recipe, { stockItemId: '', quantity: '1' }] })}
+              >
+                <Text style={{ fontSize: 16 }}>➕</Text>
+                <Text style={{ color: '#4F46E5', fontWeight: '800', fontSize: 13 }}>Ajouter un ingrédient</Text>
               </TouchableOpacity>
             </>
           )}
@@ -924,8 +958,10 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {[
               { id: 'all', label: 'Tous', icon: '📦' },
-              { id: 'featured', label: 'Vedettes', icon: '🌟' },
-              { id: 'flash', label: 'Flash', icon: '⚡' },
+              ...(isVendor ? [
+                { id: 'featured', label: 'Vedettes', icon: '🌟' },
+                { id: 'flash', label: 'Flash', icon: '⚡' },
+              ] : []),
               { id: 'archived', label: 'Archives', icon: '📁' }
             ].map(f => (
               <TouchableOpacity 
@@ -1159,50 +1195,68 @@ export function StockManagementScreen({ storeId }: { storeId: string }) {
         <Text style={mgStyles.fabText}>+</Text>
       </TouchableOpacity>
 
-      <Modal visible={showModal} transparent animationType="slide">
-        <ScrollView contentContainerStyle={mgStyles.modalOverlay}>
-          <View style={mgStyles.modalContent}>
-            <Text style={mgStyles.modalTitle}>{editItem ? 'Modifier' : 'Nouvelle matiere'}</Text>
-            <TextInput style={mgStyles.input} placeholder="Nom" value={form.name} onChangeText={v => setForm({ ...form, name: v })} />
-            <TextInput style={mgStyles.input} placeholder="Quantite" keyboardType="decimal-pad" value={form.quantity} onChangeText={v => setForm({ ...form, quantity: v })} />
-            <TextInput style={mgStyles.input} placeholder="Cout unitaire (DT)" keyboardType="decimal-pad" value={form.cost} onChangeText={v => setForm({ ...form, cost: v })} />
-            <TextInput style={mgStyles.input} placeholder="Seuil minimum" keyboardType="decimal-pad" value={form.minThreshold} onChangeText={v => setForm({ ...form, minThreshold: v })} />
-            
-            {units.length > 0 && (<>
-              <Text style={mgStyles.label}>Unite</Text>
-              <View style={mgStyles.pickerRow}>
-                {units.map(u => (
-                  <TouchableOpacity key={u.id} style={[mgStyles.pickerChip, form.unitId === u.id && mgStyles.pickerChipActive]} onPress={() => setForm({ ...form, unitId: u.id })}>
-                    <Text style={[mgStyles.pickerChipText, form.unitId === u.id && mgStyles.pickerChipTextActive]}>{u.name}</Text>
-                  </TouchableOpacity>
-                ))}
+      <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
+        <TouchableOpacity style={mgStyles.modalOverlay} activeOpacity={1} onPress={() => setShowModal(false)}>
+          <TouchableOpacity activeOpacity={1} style={mgStyles.modalContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={mgStyles.modalTitle}>{editItem ? 'Modifier Matière' : 'Nouvelle Matière'}</Text>
+              
+              <View style={mgStyles.formGroup}>
+                <Text style={mgStyles.formLabel}>Nom</Text>
+                <TextInput style={[mgStyles.input, mgStyles.formInput]} placeholder="Nom" value={form.name} onChangeText={v => setForm({ ...form, name: v })} />
               </View>
-            </>)}
+              
+              <View style={mgStyles.formGroup}>
+                <Text style={mgStyles.formLabel}>Stock actuel</Text>
+                <TextInput style={[mgStyles.input, mgStyles.formInput]} placeholder="Qte" keyboardType="decimal-pad" value={form.quantity} onChangeText={v => setForm({ ...form, quantity: v })} />
+              </View>
+              
+              <View style={mgStyles.formGroup}>
+                <Text style={mgStyles.formLabel}>Coût unit.</Text>
+                <TextInput style={[mgStyles.input, mgStyles.formInput]} placeholder="DT" keyboardType="decimal-pad" value={form.cost} onChangeText={v => setForm({ ...form, cost: v })} />
+              </View>
+              
+              <View style={mgStyles.formGroup}>
+                <Text style={mgStyles.formLabel}>Min. Alerte</Text>
+                <TextInput style={[mgStyles.input, mgStyles.formInput]} placeholder="Seuil" keyboardType="decimal-pad" value={form.minThreshold} onChangeText={v => setForm({ ...form, minThreshold: v })} />
+              </View>
+              
+              {units.length > 0 && (<>
+                <Text style={mgStyles.label}>Unite</Text>
+                <View style={mgStyles.pickerRow}>
+                  {units.map(u => (
+                    <TouchableOpacity key={u.id} style={[mgStyles.pickerChip, form.unitId === u.id && mgStyles.pickerChipActive]} onPress={() => setForm({ ...form, unitId: u.id })}>
+                      <Text style={[mgStyles.pickerChipText, form.unitId === u.id && mgStyles.pickerChipTextActive]}>{u.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>)}
 
-            {suppliers.length > 0 && (<>
-              <Text style={mgStyles.label}>Fournisseur</Text>
-              <View style={mgStyles.pickerRow}>
-                <TouchableOpacity style={[mgStyles.pickerChip, !form.supplierId && mgStyles.pickerChipActive]} onPress={() => setForm({ ...form, supplierId: '' })}>
-                  <Text style={[mgStyles.pickerChipText, !form.supplierId && mgStyles.pickerChipTextActive]}>Aucun</Text>
+              {suppliers.length > 0 && (<>
+                <Text style={mgStyles.label}>Fournisseur</Text>
+                <View style={mgStyles.pickerRow}>
+                  <TouchableOpacity style={[mgStyles.pickerChip, !form.supplierId && mgStyles.pickerChipActive]} onPress={() => setForm({ ...form, supplierId: '' })}>
+                    <Text style={[mgStyles.pickerChipText, !form.supplierId && mgStyles.pickerChipTextActive]}>Aucun</Text>
+                  </TouchableOpacity>
+                  {suppliers.map(s => (
+                    <TouchableOpacity key={s.id} style={[mgStyles.pickerChip, form.supplierId === s.id && mgStyles.pickerChipActive]} onPress={() => setForm({ ...form, supplierId: s.id })}>
+                      <Text style={[mgStyles.pickerChipText, form.supplierId === s.id && mgStyles.pickerChipTextActive]}>{s.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>)}
+
+              <View style={mgStyles.btnRow}>
+                <TouchableOpacity style={mgStyles.btnCancel} onPress={() => setShowModal(false)}>
+                  <Text style={mgStyles.btnTextDark}>Annuler</Text>
                 </TouchableOpacity>
-                {suppliers.map(s => (
-                  <TouchableOpacity key={s.id} style={[mgStyles.pickerChip, form.supplierId === s.id && mgStyles.pickerChipActive]} onPress={() => setForm({ ...form, supplierId: s.id })}>
-                    <Text style={[mgStyles.pickerChipText, form.supplierId === s.id && mgStyles.pickerChipTextActive]}>{s.name}</Text>
-                  </TouchableOpacity>
-                ))}
+                <TouchableOpacity style={mgStyles.btnPrimary} onPress={handleSave}>
+                  <Text style={mgStyles.btnText}>{editItem ? 'Modifier' : 'Creer'}</Text>
+                </TouchableOpacity>
               </View>
-            </>)}
-
-            <View style={mgStyles.btnRow}>
-              <TouchableOpacity style={mgStyles.btnCancel} onPress={() => setShowModal(false)}>
-                <Text style={mgStyles.btnTextDark}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={mgStyles.btnPrimary} onPress={handleSave}>
-                <Text style={mgStyles.btnText}>{editItem ? 'Modifier' : 'Creer'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -1310,13 +1364,25 @@ export function SuppliersScreen({ storeId }: { storeId: string }) {
         <Text style={mgStyles.fabText}>+</Text>
       </TouchableOpacity>
 
-      <Modal visible={showModal} transparent animationType="slide">
-        <View style={mgStyles.modalOverlay}>
-          <View style={mgStyles.modalContent}>
-            <Text style={mgStyles.modalTitle}>{editItem ? 'Modifier fournisseur' : 'Nouveau fournisseur'}</Text>
-            <TextInput style={mgStyles.input} placeholder="Nom du fournisseur" value={form.name} onChangeText={v => setForm({ ...form, name: v })} />
-            <TextInput style={mgStyles.input} placeholder="Contact (email/nom)" value={form.contact} onChangeText={v => setForm({ ...form, contact: v })} />
-            <TextInput style={mgStyles.input} placeholder="Telephone" keyboardType="phone-pad" value={form.phone} onChangeText={v => setForm({ ...form, phone: v })} />
+      <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
+        <TouchableOpacity style={mgStyles.modalOverlay} activeOpacity={1} onPress={() => setShowModal(false)}>
+          <TouchableOpacity activeOpacity={1} style={mgStyles.modalContent}>
+            <Text style={mgStyles.modalTitle}>{editItem ? 'Modifier Fournisseur' : 'Nouveau Fournisseur'}</Text>
+            
+            <View style={mgStyles.formGroup}>
+              <Text style={mgStyles.formLabel}>Entreprise</Text>
+              <TextInput style={[mgStyles.input, mgStyles.formInput]} placeholder="Nom" value={form.name} onChangeText={v => setForm({ ...form, name: v })} />
+            </View>
+            
+            <View style={mgStyles.formGroup}>
+              <Text style={mgStyles.formLabel}>Contact</Text>
+              <TextInput style={[mgStyles.input, mgStyles.formInput]} placeholder="Email/Nom" value={form.contact} onChangeText={v => setForm({ ...form, contact: v })} />
+            </View>
+            
+            <View style={mgStyles.formGroup}>
+              <Text style={mgStyles.formLabel}>Téléphone</Text>
+              <TextInput style={[mgStyles.input, mgStyles.formInput]} placeholder="Tel" keyboardType="phone-pad" value={form.phone} onChangeText={v => setForm({ ...form, phone: v })} />
+            </View>
 
             <View style={mgStyles.btnRow}>
               <TouchableOpacity style={mgStyles.btnCancel} onPress={() => setShowModal(false)}>
@@ -1326,8 +1392,8 @@ export function SuppliersScreen({ storeId }: { storeId: string }) {
                 <Text style={mgStyles.btnText}>{editItem ? 'Modifier' : 'Creer'}</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -1545,9 +1611,9 @@ export function OrdersScreen({ storeId, isVendor }: { storeId: string, isVendor?
             <Text style={mgStyles.fabText}>+</Text>
           </TouchableOpacity>
 
-          <Modal visible={showModal} transparent animationType="slide">
-            <ScrollView contentContainerStyle={mgStyles.modalOverlay}>
-              <View style={mgStyles.modalContent}>
+          <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
+            <TouchableOpacity style={mgStyles.modalOverlay} activeOpacity={1} onPress={() => setShowModal(false)}>
+              <TouchableOpacity activeOpacity={1} style={mgStyles.modalContent}>
                 <Text style={mgStyles.modalTitle}>Nouvelle commande</Text>
 
                 {suppliers.length > 0 && (<>
@@ -1576,8 +1642,14 @@ export function OrdersScreen({ storeId, isVendor }: { storeId: string, isVendor?
                       ))}
                     </View>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
-                      <TextInput style={[mgStyles.input, { flex: 1 }]} placeholder="Qte" keyboardType="decimal-pad" value={item.quantity} onChangeText={v => updateItem(idx, 'quantity', v)} />
-                      <TextInput style={[mgStyles.input, { flex: 1 }]} placeholder="Prix" keyboardType="decimal-pad" value={item.price} onChangeText={v => updateItem(idx, 'price', v)} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[mgStyles.label, { marginTop: 0, fontSize: 10 }]}>Quantité</Text>
+                        <TextInput style={mgStyles.input} placeholder="Qte" keyboardType="decimal-pad" value={item.quantity} onChangeText={v => updateItem(idx, 'quantity', v)} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[mgStyles.label, { marginTop: 0, fontSize: 10 }]}>Prix Total (Optionnel)</Text>
+                        <TextInput style={mgStyles.input} placeholder="Prix" keyboardType="decimal-pad" value={item.price} onChangeText={v => updateItem(idx, 'price', v)} />
+                      </View>
                     </View>
                   </View>
                 ))}
@@ -1594,8 +1666,8 @@ export function OrdersScreen({ storeId, isVendor }: { storeId: string, isVendor?
                     <Text style={mgStyles.btnText}>Commander</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-            </ScrollView>
+              </TouchableOpacity>
+            </TouchableOpacity>
           </Modal>
         </>
       )}

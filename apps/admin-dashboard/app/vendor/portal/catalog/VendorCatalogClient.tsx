@@ -575,7 +575,7 @@ export default function VendorCatalogClient({
             <input className={inputClass} value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="ex: Charbon Naturel Coco" required />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className={labelClass}>Prix (DT)</label>
               <input className={inputClass} type="number" step="0.001" value={form.price} onChange={e => setForm({...form, price: e.target.value})} required />
@@ -710,7 +710,7 @@ export default function VendorCatalogClient({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-950/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-950/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
             <label className="flex items-center gap-3 cursor-pointer">
               <input type="checkbox" className="w-5 h-5 rounded-lg" checked={form.isFeatured} onChange={e => setForm({...form, isFeatured: e.target.checked})} />
               <span className="text-sm font-bold text-slate-600 dark:text-slate-300">🔥 Produit Vedette</span>
@@ -726,7 +726,7 @@ export default function VendorCatalogClient({
               <div><label className={labelClass + ' !text-rose-600'}>Remise (%)</label>
                 <input className={inputClass} type="number" value={form.discount} onChange={e => setForm({...form, discount: e.target.value})} required />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div><label className={labelClass + ' !text-rose-600'}>Début</label>
                   <input className={inputClass} type="datetime-local" value={form.flashStart} onChange={e => setForm({...form, flashStart: e.target.value})} required /></div>
                 <div><label className={labelClass + ' !text-rose-600'}>Fin</label>

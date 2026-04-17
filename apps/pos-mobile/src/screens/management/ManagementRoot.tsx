@@ -9,7 +9,7 @@ import { SalesHistoryScreen } from '../SalesHistoryScreen';
 type ManagementTab = 'dashboard' | 'products' | 'categories' | 'stock' | 'suppliers' | 'orders' | 'notifs' | 'marketplace' | 'history';
 
 export function ManagementRoot() {
-  const { userRole, theme, storeName, vendorName, logout, storeId, vendorId } = usePOSStore();
+  const { userRole, theme, themeMode, toggleThemeMode, storeName, vendorName, logout, storeId, vendorId } = usePOSStore();
   const [activeTab, setActiveTab] = useState<ManagementTab>('dashboard');
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const [productsCount, setProductsCount] = useState(0);
@@ -86,21 +86,42 @@ export function ManagementRoot() {
                 </Text>
               </View>
             </View>
-            <TouchableOpacity
-              onPress={activeTab === 'dashboard' ? logout : () => setActiveTab('dashboard')}
-              style={{ 
-                backgroundColor: activeTab === 'dashboard' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 230, 211, 0.05)', 
-                paddingVertical: 8, 
-                paddingHorizontal: 12, 
-                borderRadius: 10, 
-                borderWidth: 1, 
-                borderColor: activeTab === 'dashboard' ? 'rgba(239,68,68,0.2)' : 'rgba(245, 230, 211, 0.2)' 
-              }}
-            >
-              <Text style={{ color: activeTab === 'dashboard' ? '#EF4444' : theme.colors.cream, fontSize: 11, fontWeight: '900' }}>
-                {activeTab === 'dashboard' ? 'QUITTER' : 'RETOUR'}
-              </Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TouchableOpacity
+                onPress={toggleThemeMode}
+                style={{ 
+                  backgroundColor: 'rgba(245, 230, 211, 0.05)', 
+                  padding: 8, 
+                  borderRadius: 10, 
+                  borderWidth: 1, 
+                  borderColor: 'rgba(245, 230, 211, 0.2)',
+                  width: 40,
+                  height: 40,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+              >
+                <Text style={{ fontSize: 18 }}>{themeMode === 'light' ? '🌙' : '☀️'}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={activeTab === 'dashboard' ? logout : () => setActiveTab('dashboard')}
+                style={{ 
+                  backgroundColor: activeTab === 'dashboard' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 230, 211, 0.05)', 
+                  paddingVertical: 8, 
+                  paddingHorizontal: 12, 
+                  borderRadius: 10, 
+                  borderWidth: 1, 
+                  borderColor: activeTab === 'dashboard' ? 'rgba(239,68,68,0.2)' : 'rgba(245, 230, 211, 0.2)',
+                  height: 40,
+                  justifyContent: 'center'
+                }}
+              >
+                <Text style={{ color: activeTab === 'dashboard' ? '#EF4444' : theme.colors.cream, fontSize: 11, fontWeight: '900' }}>
+                  {activeTab === 'dashboard' ? 'QUITTER' : 'RETOUR'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </GlassPanel>
 
@@ -128,7 +149,7 @@ export function ManagementRoot() {
       {/* Navigation Footer */}
       <View style={{ paddingHorizontal: 12, paddingTop: 6, paddingBottom: Platform.OS === 'android' ? 88 : 8 }}>
         <GlassPanel intensity={60} style={{ flexDirection: 'row', height: 62, borderRadius: 20, alignItems: 'center', justifyContent: 'space-around', borderWidth: 1, borderColor: theme.colors.glassBorder }}>
-          <NavBtn id="dashboard" icon="📈" label="STATS" active={activeTab === 'dashboard'} onSelect={setActiveTab} />
+          <NavBtn id="dashboard" icon="🏠" label="ACCUEIL" active={activeTab === 'dashboard'} onSelect={setActiveTab} />
           {isOwner && <NavBtn id="stock" icon="📦" label="STOCK" active={activeTab === 'stock'} onSelect={setActiveTab} />}
           <NavBtn id="orders" icon="🛒" label="COMMANDES" active={activeTab === 'orders'} onSelect={setActiveTab} />
           <NavBtn id="products" icon="📋" label="CATALOGUE" active={activeTab === 'products'} onSelect={setActiveTab} />
@@ -154,13 +175,19 @@ function NavBtn({ id, icon, label, active, onSelect }: any) {
   );
 }
 
-function KpiCard({ label, value, sub, color, icon }: any) {
+function KpiCard({ label, value, sub, color, icon, onPress }: any) {
   const { theme } = usePOSStore();
+  const Container = onPress ? TouchableOpacity : View;
+  
   return (
-    <View style={{
-      flex: 1, backgroundColor: theme.colors.surface, padding: 16, borderRadius: 18,
-      borderWidth: 1, borderColor: theme.colors.glassBorder, ...(theme.shadows.floating as any)
-    }}>
+    <Container 
+      onPress={onPress}
+      activeOpacity={0.8}
+      style={{
+        flex: 1, backgroundColor: theme.colors.surface, padding: 16, borderRadius: 18,
+        borderWidth: 1, borderColor: theme.colors.glassBorder, ...(theme.shadows.floating as any)
+      }}
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 }}>
         <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: `${color}18`, justifyContent: 'center', alignItems: 'center' }}>
           <Text style={{ fontSize: 16 }}>{icon}</Text>
@@ -169,7 +196,7 @@ function KpiCard({ label, value, sub, color, icon }: any) {
       </View>
       <Text style={{ color, fontSize: 26, fontWeight: '900', marginBottom: 2 }}>{value}</Text>
       {sub && <Text style={{ color: theme.colors.creamMuted, fontSize: 11 }}>{sub}</Text>}
-    </View>
+    </Container>
   );
 }
 
@@ -204,8 +231,8 @@ function OwnerDashboardView({ onNavigate }: { onNavigate: (tab: ManagementTab) =
       <Text style={{ color: theme.colors.creamMuted, fontSize: 13, marginBottom: 20 }}>Voici l'état de votre activité aujourd'hui.</Text>
 
       <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
-        <KpiCard label="VENTES DU JOUR" value="—" sub="En attente de sync" color={theme.colors.caramel} icon="💰" />
-        <KpiCard label="COMMANDES" value="0" sub="Actives" color={theme.colors.softOrange} icon="🛒" />
+        <KpiCard label="VENTES DU JOUR" value="—" sub="En attente de sync" color={theme.colors.caramel} icon="💰" onPress={() => onNavigate('history')} />
+        <KpiCard label="COMMANDES" value="0" sub="Actives" color={theme.colors.softOrange} icon="🛒" onPress={() => onNavigate('orders')} />
       </View>
 
       <Text style={{ color: theme.colors.cream, fontSize: 15, fontWeight: '800', marginBottom: 12 }}>Gestion rapide</Text>
@@ -265,8 +292,22 @@ function VendorDashboardView({ onNavigate, pendingCount, productsCount }: { onNa
 
       {/* KPIs */}
       <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
-        <KpiCard label="COMMANDES" value={pendingCount > 0 ? String(pendingCount) : '0'} sub="À traiter" color={pendingCount > 0 ? theme.colors.caramel : theme.colors.creamMuted} icon="📦" />
-        <KpiCard label="CATALOGUE" value={String(productsCount)} sub="Produits actifs" color={theme.colors.softOrange} icon="📋" />
+        <KpiCard 
+          label="COMMANDES" 
+          value={pendingCount > 0 ? String(pendingCount) : '0'} 
+          sub="À traiter" 
+          color={pendingCount > 0 ? theme.colors.caramel : theme.colors.creamMuted} 
+          icon="📦" 
+          onPress={() => onNavigate('orders')} 
+        />
+        <KpiCard 
+          label="CATALOGUE" 
+          value={String(productsCount)} 
+          sub="Produits actifs" 
+          color={theme.colors.softOrange} 
+          icon="📋" 
+          onPress={() => onNavigate('products')} 
+        />
       </View>
 
       {/* Quick actions */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, Platform, Alert, TextInput, Modal } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView, Platform, Alert, TextInput, Modal, KeyboardAvoidingView } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -25,7 +25,7 @@ Notifications.setNotificationHandler({
 
 // ─── LOGIN VIEW ────────────────────────────────────────────
 function LoginView() {
-  const { activateTerminal, loginWithAccount, theme } = usePOSStore();
+  const { activateTerminal, loginWithAccount, theme, themeMode, toggleThemeMode } = usePOSStore();
   const [loginMode, setLoginMode] = useState<'terminal' | 'account'>('terminal');
   
   // Terminal state
@@ -35,6 +35,7 @@ function LoginView() {
   // Account state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   
   const [showScanner, setShowScanner] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
@@ -123,120 +124,142 @@ function LoginView() {
 
   return (
     <SafeAreaView style={loginStyles.loginContainer}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <View style={{ width: '85%', maxWidth: 400, backgroundColor: theme.colors.surface, padding: 32, borderRadius: 30, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.glassBorder }}>
-          <Text style={{ fontSize: 60, marginBottom: 20 }}>☕</Text>
-          
-          <View style={{ flexDirection: 'row', backgroundColor: theme.colors.background, borderRadius: 12, padding: 4, marginBottom: 24, width: '100%' }}>
-            <TouchableOpacity 
-              style={{ flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: loginMode === 'terminal' ? theme.colors.caramel : 'transparent', alignItems: 'center' }}
-              onPress={() => setLoginMode('terminal')}
-            >
-              <Text style={{ color: loginMode === 'terminal' ? theme.colors.background : theme.colors.cream, fontWeight: '800', fontSize: 13 }}>Caisse</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={{ flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: loginMode === 'account' ? theme.colors.caramel : 'transparent', alignItems: 'center' }}
-              onPress={() => setLoginMode('account')}
-            >
-              <Text style={{ color: loginMode === 'account' ? theme.colors.background : theme.colors.cream, fontWeight: '800', fontSize: 13 }}>Partenaire</Text>
-            </TouchableOpacity>
+      <TouchableOpacity 
+        onPress={toggleThemeMode}
+        style={{ 
+          position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, right: 20, zIndex: 100,
+          backgroundColor: 'rgba(245, 230, 211, 0.1)', padding: 12, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(245, 230, 211, 0.2)'
+        }}
+      >
+        <Text style={{ fontSize: 20 }}>{themeMode === 'light' ? '🌙' : '☀️'}</Text>
+      </TouchableOpacity>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ width: '85%', maxWidth: 400, backgroundColor: theme.colors.surface, padding: 32, borderRadius: 30, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.glassBorder }}>
+            <Text style={{ fontSize: 60, marginBottom: 20 }}>☕</Text>
+            
+            <View style={{ flexDirection: 'row', backgroundColor: theme.colors.background, borderRadius: 12, padding: 4, marginBottom: 24, width: '100%' }}>
+              <TouchableOpacity 
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: loginMode === 'terminal' ? theme.colors.caramel : 'transparent', alignItems: 'center' }}
+                onPress={() => setLoginMode('terminal')}
+              >
+                <Text style={{ color: loginMode === 'terminal' ? theme.colors.background : theme.colors.cream, fontWeight: '800', fontSize: 13 }}>Caisse</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: loginMode === 'account' ? theme.colors.caramel : 'transparent', alignItems: 'center' }}
+                onPress={() => setLoginMode('account')}
+              >
+                <Text style={{ color: loginMode === 'account' ? theme.colors.background : theme.colors.cream, fontWeight: '800', fontSize: 13 }}>Partenaire</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 24, fontWeight: '900', color: theme.colors.cream, marginBottom: 8 }}>
+              {loginMode === 'terminal' ? 'Activation Caisse' : 'Accès Partenaire'}
+            </Text>
+            <Text style={{ fontSize: 14, color: theme.colors.creamMuted, textAlign: 'center', marginBottom: 32, lineHeight: 20 }}>
+              {loginMode === 'terminal' 
+                ? 'Veuillez entrer les identifiants fournis dans votre tableau de bord.' 
+                : 'Connectez-vous à votre compte fournisseur ou propriétaire.'}
+            </Text>
+
+            {loginMode === 'terminal' ? (
+              <>
+                <View style={{ width: '100%', marginBottom: 12 }}>
+                  <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>ID BOUTIQUE</Text>
+                  <TextInput
+                    style={{ width: '100%', backgroundColor: theme.colors.background, padding: 18, borderRadius: 16, color: theme.colors.cream, fontSize: 16, marginBottom: 16, borderWidth: 1, borderColor: theme.colors.glassBorder }}
+                    placeholder="Ex: store-123"
+                    placeholderTextColor="rgba(255,255,255,0.2)"
+                    value={storeIdInput}
+                    onChangeText={setStoreIdInput}
+                    autoCapitalize="none"
+                  />
+                </View>
+                <View style={{ width: '100%', marginBottom: 12 }}>
+                  <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>CODE D'ACTIVATION</Text>
+                  <TextInput
+                    style={{ width: '100%', backgroundColor: theme.colors.background, padding: 18, borderRadius: 16, color: theme.colors.cream, fontSize: 16, marginBottom: 20, borderWidth: 1, borderColor: theme.colors.glassBorder }}
+                    placeholder="Code à 6 chiffres"
+                    placeholderTextColor="rgba(255,255,255,0.2)"
+                    keyboardType="number-pad"
+                    value={activationCode}
+                    onChangeText={setActivationCode}
+                    maxLength={6}
+                  />
+                </View>
+                <TouchableOpacity 
+                  style={{ width: '100%', backgroundColor: theme.colors.caramel, padding: 18, borderRadius: 16, alignItems: 'center', marginBottom: 16 }} 
+                  onPress={handleTerminalLogin}
+                  disabled={isLoading}
+                >
+                  <Text style={{ color: theme.colors.background, fontSize: 16, fontWeight: '800' }}>
+                    {isLoading ? 'Activation...' : 'Activer ce terminal'}
+                  </Text>
+                </TouchableOpacity>
+                
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 12 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.glassBorder }} />
+                  <Text style={{ marginHorizontal: 16, color: theme.colors.creamMuted, fontSize: 11, fontWeight: '900', letterSpacing: 1 }}>OU</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.glassBorder }} />
+                </View>
+
+                <TouchableOpacity 
+                  style={{ paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, backgroundColor: 'rgba(212, 132, 70, 0.1)', borderWidth: 1, borderColor: theme.colors.caramel, width: '100%', alignItems: 'center' }} 
+                  onPress={startScan}
+                >
+                  <Text style={{ color: theme.colors.caramel, fontSize: 13, fontWeight: '800' }}>SCANNER LE CODE QR</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <View style={{ width: '100%', marginBottom: 12 }}>
+                  <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>E-MAIL</Text>
+                  <TextInput
+                    style={{ width: '100%', backgroundColor: theme.colors.background, padding: 18, borderRadius: 16, color: theme.colors.cream, fontSize: 16, marginBottom: 16, borderWidth: 1, borderColor: theme.colors.glassBorder }}
+                    placeholder="votre@email.com"
+                    placeholderTextColor="rgba(255,255,255,0.2)"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+                </View>
+                <View style={{ width: '100%', marginBottom: 12 }}>
+                  <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>MOT DE PASSE</Text>
+                  <View style={{ width: '100%', position: 'relative' }}>
+                    <TextInput
+                      style={{ width: '100%', backgroundColor: theme.colors.background, padding: 18, paddingRight: 60, borderRadius: 16, color: theme.colors.cream, fontSize: 16, marginBottom: 20, borderWidth: 1, borderColor: theme.colors.glassBorder }}
+                      placeholder="••••••••"
+                      placeholderTextColor="rgba(255,255,255,0.2)"
+                      secureTextEntry={!showPassword}
+                      value={password}
+                      onChangeText={setPassword}
+                    />
+                    <TouchableOpacity 
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={{ position: 'absolute', right: 15, top: 18 }}
+                    >
+                      <Text style={{ color: theme.colors.caramel, fontWeight: '800', fontSize: 12 }}>{showPassword ? 'CACHER' : 'VOIR'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  style={{ width: '100%', backgroundColor: theme.colors.caramel, padding: 18, borderRadius: 16, alignItems: 'center' }} 
+                  onPress={handleAccountLogin}
+                  disabled={isLoading}
+                >
+                  <Text style={{ color: theme.colors.background, fontSize: 16, fontWeight: '800' }}>
+                    {isLoading ? 'Connexion...' : 'Se connecter'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
-
-          <Text style={{ fontSize: 24, fontWeight: '900', color: theme.colors.cream, marginBottom: 8 }}>
-            {loginMode === 'terminal' ? 'Activation Caisse' : 'Accès Partenaire'}
-          </Text>
-          <Text style={{ fontSize: 14, color: theme.colors.creamMuted, textAlign: 'center', marginBottom: 32, lineHeight: 20 }}>
-            {loginMode === 'terminal' 
-              ? 'Veuillez entrer les identifiants fournis dans votre tableau de bord.' 
-              : 'Connectez-vous à votre compte fournisseur ou propriétaire.'}
-          </Text>
-
-          {loginMode === 'terminal' ? (
-            <>
-              <View style={{ width: '100%', marginBottom: 12 }}>
-                <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>ID BOUTIQUE</Text>
-                <TextInput
-                  style={{ width: '100%', backgroundColor: theme.colors.background, padding: 18, borderRadius: 16, color: theme.colors.cream, fontSize: 16, marginBottom: 16, borderWidth: 1, borderColor: theme.colors.glassBorder }}
-                  placeholder="Ex: store-123"
-                  placeholderTextColor="rgba(255,255,255,0.2)"
-                  value={storeIdInput}
-                  onChangeText={setStoreIdInput}
-                  autoCapitalize="none"
-                />
-              </View>
-              <View style={{ width: '100%', marginBottom: 12 }}>
-                <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>CODE D'ACTIVATION</Text>
-                <TextInput
-                  style={{ width: '100%', backgroundColor: theme.colors.background, padding: 18, borderRadius: 16, color: theme.colors.cream, fontSize: 16, marginBottom: 20, borderWidth: 1, borderColor: theme.colors.glassBorder }}
-                  placeholder="Code à 6 chiffres"
-                  placeholderTextColor="rgba(255,255,255,0.2)"
-                  keyboardType="number-pad"
-                  value={activationCode}
-                  onChangeText={setActivationCode}
-                  maxLength={6}
-                />
-              </View>
-              <TouchableOpacity 
-                style={{ width: '100%', backgroundColor: theme.colors.caramel, padding: 18, borderRadius: 16, alignItems: 'center', marginBottom: 16 }} 
-                onPress={handleTerminalLogin}
-                disabled={isLoading}
-              >
-                <Text style={{ color: theme.colors.background, fontSize: 16, fontWeight: '800' }}>
-                  {isLoading ? 'Activation...' : 'Activer ce terminal'}
-                </Text>
-              </TouchableOpacity>
-              
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 12 }}>
-                <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.glassBorder }} />
-                <Text style={{ marginHorizontal: 16, color: theme.colors.creamMuted, fontSize: 11, fontWeight: '900', letterSpacing: 1 }}>OU</Text>
-                <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.glassBorder }} />
-              </View>
-
-              <TouchableOpacity 
-                style={{ paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, backgroundColor: 'rgba(212, 132, 70, 0.1)', borderWidth: 1, borderColor: theme.colors.caramel, width: '100%', alignItems: 'center' }} 
-                onPress={startScan}
-              >
-                <Text style={{ color: theme.colors.caramel, fontSize: 13, fontWeight: '800' }}>SCANNER LE CODE QR</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <View style={{ width: '100%', marginBottom: 12 }}>
-                <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>E-MAIL</Text>
-                <TextInput
-                  style={{ width: '100%', backgroundColor: theme.colors.background, padding: 18, borderRadius: 16, color: theme.colors.cream, fontSize: 16, marginBottom: 16, borderWidth: 1, borderColor: theme.colors.glassBorder }}
-                  placeholder="votre@email.com"
-                  placeholderTextColor="rgba(255,255,255,0.2)"
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                />
-              </View>
-              <View style={{ width: '100%', marginBottom: 12 }}>
-                <Text style={{ color: theme.colors.creamMuted, fontSize: 10, fontWeight: '900', marginBottom: 8, letterSpacing: 1 }}>MOT DE PASSE</Text>
-                <TextInput
-                  style={{ width: '100%', backgroundColor: theme.colors.background, padding: 18, borderRadius: 16, color: theme.colors.cream, fontSize: 16, marginBottom: 20, borderWidth: 1, borderColor: theme.colors.glassBorder }}
-                  placeholder="••••••••"
-                  placeholderTextColor="rgba(255,255,255,0.2)"
-                  secureTextEntry
-                  value={password}
-                  onChangeText={setPassword}
-                />
-              </View>
-              <TouchableOpacity 
-                style={{ width: '100%', backgroundColor: theme.colors.caramel, padding: 18, borderRadius: 16, alignItems: 'center' }} 
-                onPress={handleAccountLogin}
-                disabled={isLoading}
-              >
-                <Text style={{ color: theme.colors.background, fontSize: 16, fontWeight: '800' }}>
-                  {isLoading ? 'Connexion...' : 'Se connecter'}
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -681,8 +704,15 @@ function RachmaHistoryModal({ visible, onClose }: { visible: boolean; onClose: (
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: theme.colors.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, height: '80%', padding: 24, borderWidth: 1, borderColor: theme.colors.glassBorder }}>
+      <TouchableOpacity 
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }} 
+        activeOpacity={1} 
+        onPress={onClose}
+      >
+        <TouchableOpacity 
+          activeOpacity={1} 
+          style={{ backgroundColor: theme.colors.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, height: '80%', padding: 24, borderWidth: 1, borderColor: theme.colors.glassBorder }}
+        >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
             <View>
               <Text style={{ fontSize: 24, fontWeight: '900', color: theme.colors.cream }}>Journal d'activité</Text>
@@ -712,8 +742,8 @@ function RachmaHistoryModal({ visible, onClose }: { visible: boolean; onClose: (
               ))
             )}
           </ScrollView>
-        </View>
-      </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   );
 }
@@ -752,8 +782,15 @@ function RachmaPastSalesModal({ visible, onClose }: { visible: boolean; onClose:
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: theme.colors.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, height: '85%', padding: 24, borderWidth: 1, borderColor: theme.colors.glassBorder }}>
+      <TouchableOpacity 
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }} 
+        activeOpacity={1} 
+        onPress={onClose}
+      >
+        <TouchableOpacity 
+          activeOpacity={1} 
+          style={{ backgroundColor: theme.colors.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, height: '85%', padding: 24, borderWidth: 1, borderColor: theme.colors.glassBorder }}
+        >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
             <View>
               <Text style={{ fontSize: 24, fontWeight: '900', color: theme.colors.cream }}>Ventes Clôturées</Text>
@@ -791,15 +828,15 @@ function RachmaPastSalesModal({ visible, onClose }: { visible: boolean; onClose:
               ))
             )}
           </ScrollView>
-        </View>
-      </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   );
 }
 
 // ─── ORDER ITEMS MODAL ─────────────────────────────────────
 function OrderItemsModal({ visible, onClose, activeTable }: { visible: boolean; onClose: () => void; activeTable: string | null }) {
-  const { cart, tables, products, removeFromCart, clearCart, getTableTotal, getTotalPrice, theme } = usePOSStore();
+  const { cart, tables, products, addToCart, removeFromCart, deleteItemFromCart, clearCart, getTableTotal, getTotalPrice, theme } = usePOSStore();
   const [discount, setDiscount] = useState(0);
 
   const currentCart = activeTable ? (tables[activeTable] || {}) : cart;
@@ -821,8 +858,15 @@ function OrderItemsModal({ visible, onClose, activeTable }: { visible: boolean; 
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: theme.colors.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, height: '85%', padding: 24, borderWidth: 1, borderColor: theme.colors.glassBorder }}>
+      <TouchableOpacity 
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }} 
+        activeOpacity={1} 
+        onPress={onClose}
+      >
+        <TouchableOpacity 
+          activeOpacity={1} 
+          style={{ backgroundColor: theme.colors.background, borderTopLeftRadius: 32, borderTopRightRadius: 32, height: '85%', padding: 24, borderWidth: 1, borderColor: theme.colors.glassBorder }}
+        >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
             <View>
               <Text style={{ fontSize: 24, fontWeight: '900', color: theme.colors.cream }}>Résumé Commande</Text>
@@ -845,10 +889,28 @@ function OrderItemsModal({ visible, onClose, activeTable }: { visible: boolean; 
                     <Text style={{ fontSize: 16, fontWeight: '800', color: theme.colors.cream }}>{item.name}</Text>
                     <Text style={{ fontSize: 12, color: theme.colors.creamMuted }}>{Number(item.price).toFixed(3)} DT/unité</Text>
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 16, fontWeight: '900', color: theme.colors.caramel, marginRight: 12 }}>x{item.qty}</Text>
-                    <TouchableOpacity onPress={() => removeFromCart(item.id)} style={{ padding: 6, backgroundColor: 'rgba(239, 68, 68, 0.15)', borderRadius: 8 }}>
-                      <Text style={{ fontSize: 12, color: '#FCA5A5' }}>🗑️</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <TouchableOpacity 
+                      onPress={() => removeFromCart(item.id)}
+                      style={{ width: 32, height: 32, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: theme.colors.glassBorder }}
+                    >
+                      <Text style={{ color: theme.colors.cream, fontSize: 18, fontWeight: '900' }}>-</Text>
+                    </TouchableOpacity>
+                    
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: theme.colors.caramel, minWidth: 24, textAlign: 'center' }}>{item.qty}</Text>
+                    
+                    <TouchableOpacity 
+                      onPress={() => addToCart(item.id)}
+                      style={{ width: 32, height: 32, backgroundColor: 'rgba(212, 132, 70, 0.2)', borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: theme.colors.caramel }}
+                    >
+                      <Text style={{ color: theme.colors.caramel, fontSize: 18, fontWeight: '900' }}>+</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      onPress={() => deleteItemFromCart(item.id)}
+                      style={{ marginLeft: 10, padding: 8, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 10 }}
+                    >
+                      <Text style={{ fontSize: 14 }}>🗑️</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -904,8 +966,8 @@ function OrderItemsModal({ visible, onClose, activeTable }: { visible: boolean; 
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   );
 }
@@ -982,15 +1044,18 @@ function LocalRachmaScreen() {
   const [showHistory, setShowHistory] = useState(false);
   const [showPastSales, setShowPastSales] = useState(false);
 
-  const categories = Array.from(new Set(products.map(p => p.categoryName || 'Autres'))).sort();
+  const categories = ['TOUT', ...Array.from(new Set(products.map(p => p.categoryName || 'Autres'))).sort()];
   
   useEffect(() => {
-    if (!selectedCat && categories.length > 0) {
-      setSelectedCat(categories[0]);
+    if (!selectedCat) {
+      setSelectedCat('TOUT');
     }
-  }, [categories]);
+  }, []);
 
-  const filteredProducts = products.filter(p => (p.categoryName || 'Autres') === selectedCat);
+  const filteredProducts = selectedCat === 'TOUT' 
+    ? products 
+    : products.filter(p => (p.categoryName || 'Autres') === selectedCat);
+
   const total = getRachmaTotal();
 
   const handleFinish = () => {
@@ -1040,46 +1105,62 @@ function LocalRachmaScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <View style={{ paddingVertical: 14, paddingHorizontal: 8 }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 4, justifyContent: 'center' }}>
+      {/* Category Ribbon */}
+      <View style={{ 
+        paddingVertical: 12, 
+        borderBottomWidth: 1, 
+        borderBottomColor: theme.colors.glassBorder,
+        backgroundColor: `${theme.colors.surface}40`
+      }}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
+        >
           {categories.map(cat => {
-            const displayCat = cat.split('>').pop()?.trim().toUpperCase() || cat.toUpperCase();
+            const isAll = cat === 'TOUT';
+            const displayCat = isAll ? 'TOUT' : (cat.split('>').pop()?.trim().toUpperCase() || cat.toUpperCase());
+            const isActive = selectedCat === cat;
+            
             return (
               <TouchableOpacity 
                 key={cat}
                 onPress={() => setSelectedCat(cat)}
                 style={{ 
-                  paddingHorizontal: 18, paddingVertical: 12, borderRadius: theme.shapes.radiusLg, 
-                  backgroundColor: selectedCat === cat ? theme.colors.caramel : theme.colors.surface,
+                  paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, 
+                  backgroundColor: isActive ? theme.colors.caramel : `${theme.colors.surface}80`,
                   alignItems: 'center',
-                  borderWidth: 1, borderColor: selectedCat === cat ? theme.colors.softOrange : theme.colors.glassBorder,
-                  ...(theme.shadows.floating as any)
+                  borderWidth: 1, 
+                  borderColor: isActive ? theme.colors.softOrange : theme.colors.glassBorder,
+                  ...(isActive ? (theme.shadows.glow as any) : (theme.shadows.floating as any))
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: '900', color: selectedCat === cat ? theme.colors.background : theme.colors.cream, letterSpacing: 0.5 }}>
+                <Text style={{ 
+                  fontSize: 12, 
+                  fontWeight: '900', 
+                  color: isActive ? theme.colors.background : theme.colors.cream, 
+                  letterSpacing: 1 
+                }}>
                   {displayCat}
                 </Text>
               </TouchableOpacity>
             )
           })}
-        </View>
+        </ScrollView>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 8 }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-          {filteredProducts.map(p => {
-            const qty = rachmaCart[p.id] || 0;
-            return (
-              <FloatingCard
-                key={p.id}
-                name={p.name}
-                price={p.price}
-                qty={qty}
-                onPress={() => addToRachma(p.id)}
-                onLongPress={() => removeFromRachma(p.id)}
-              />
-            );
-          })}
+          {filteredProducts.map(p => (
+            <FloatingCard
+              key={p.id}
+              name={p.name}
+              price={p.price}
+              qty={rachmaCart[p.id] || 0}
+              onPress={() => addToRachma(p.id)}
+              onLongPress={() => removeFromRachma(p.id)}
+            />
+          ))}
         </View>
         <View style={{ height: 160 }} />
       </ScrollView>
@@ -1097,8 +1178,8 @@ function LocalRachmaScreen() {
               activeOpacity={0.7}
               style={{ width: '48%', backgroundColor: 'rgba(245, 230, 211, 0.05)', height: 60, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, borderWidth: 1, borderColor: 'rgba(245, 230, 211, 0.2)', flexDirection: 'row', gap: 8 }}
             >
-              <Text style={{ fontSize: 18 }}>💰</Text>
-              <Text style={{ fontSize: 13, fontWeight: '900', color: theme.colors.cream }}>EN COURS</Text>
+              <Text style={{ fontSize: 18 }}>📜</Text>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: theme.colors.cream }}>JOURNAL</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -1436,8 +1517,15 @@ function LocalStaffScreen() {
           animationType="fade"
           onRequestClose={() => setEditingMember(null)}
         >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-            <View style={{ width: '100%', maxWidth: 400, backgroundColor: theme.colors.surface, padding: 24, borderRadius: 25, borderWidth: 1, borderColor: theme.colors.glassBorder }}>
+          <TouchableOpacity 
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}
+            activeOpacity={1}
+            onPress={() => setEditingMember(null)}
+          >
+            <TouchableOpacity 
+              activeOpacity={1}
+              style={{ width: '100%', maxWidth: 400, backgroundColor: theme.colors.surface, padding: 24, borderRadius: 25, borderWidth: 1, borderColor: theme.colors.glassBorder }}
+            >
               <Text style={{ color: theme.colors.cream, fontSize: 20, fontWeight: '900', marginBottom: 20 }}>Modifier {editingMember.name}</Text>
               
               <Text style={{ color: theme.colors.cream, fontSize: 13, marginBottom: 8, fontWeight: '700' }}>NOM COMPLET</Text>
@@ -1473,8 +1561,8 @@ function LocalStaffScreen() {
                   <Text style={{ color: theme.colors.background, fontWeight: '900' }}>{saving ? "..." : "Enregistrer"}</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
         </Modal>
       )}
     </View>
