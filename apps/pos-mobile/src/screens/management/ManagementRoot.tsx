@@ -87,10 +87,19 @@ export function ManagementRoot() {
               </View>
             </View>
             <TouchableOpacity
-              onPress={logout}
-              style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)' }}
+              onPress={activeTab === 'dashboard' ? logout : () => setActiveTab('dashboard')}
+              style={{ 
+                backgroundColor: activeTab === 'dashboard' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 230, 211, 0.05)', 
+                paddingVertical: 8, 
+                paddingHorizontal: 12, 
+                borderRadius: 10, 
+                borderWidth: 1, 
+                borderColor: activeTab === 'dashboard' ? 'rgba(239,68,68,0.2)' : 'rgba(245, 230, 211, 0.2)' 
+              }}
             >
-              <Text style={{ color: '#EF4444', fontSize: 11, fontWeight: '900' }}>QUITTER</Text>
+              <Text style={{ color: activeTab === 'dashboard' ? '#EF4444' : theme.colors.cream, fontSize: 11, fontWeight: '900' }}>
+                {activeTab === 'dashboard' ? 'QUITTER' : 'RETOUR'}
+              </Text>
             </TouchableOpacity>
           </View>
         </GlassPanel>
@@ -117,7 +126,7 @@ export function ManagementRoot() {
       </View>
 
       {/* Navigation Footer */}
-      <View style={{ paddingHorizontal: 12, paddingTop: 6, paddingBottom: 8 }}>
+      <View style={{ paddingHorizontal: 12, paddingTop: 6, paddingBottom: Platform.OS === 'android' ? 88 : 8 }}>
         <GlassPanel intensity={60} style={{ flexDirection: 'row', height: 62, borderRadius: 20, alignItems: 'center', justifyContent: 'space-around', borderWidth: 1, borderColor: theme.colors.glassBorder }}>
           <NavBtn id="dashboard" icon="📈" label="STATS" active={activeTab === 'dashboard'} onSelect={setActiveTab} />
           {isOwner && <NavBtn id="stock" icon="📦" label="STOCK" active={activeTab === 'stock'} onSelect={setActiveTab} />}

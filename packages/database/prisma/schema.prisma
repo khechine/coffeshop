@@ -326,6 +326,7 @@ model Category {
   parentId  String?
   parent    Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryHierarchy")
+  active    Boolean   @default(true)
   createdAt DateTime  @default(now())
 
   @@index([storeId])

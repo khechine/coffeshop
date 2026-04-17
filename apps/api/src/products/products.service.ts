@@ -22,8 +22,8 @@ export class ProductsService {
 
 
   async getCategories(): Promise<any[]> {
-
     return prisma.category.findMany({
+      where: { active: true },
       orderBy: {
         name: 'asc',
       },

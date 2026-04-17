@@ -164,12 +164,14 @@ export function CategoriesScreen({ storeId, isVendor }: { storeId: string, isVen
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '', parentId: '' });
+  const [editItem, setEditItem] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ name: '', parentId: '', active: true });
   const { alert, confirm } = useConfirm();
 
   const fetchData = async () => {
     try {
-      const endpoint = isVendor ? `management/marketplace/categories` : `products/categories`;
+      const endpoint = isVendor ? `management/marketplace/categories` : `management/categories/${storeId}`;
       const res = await fetch(`${API_URL}/${endpoint}`);
       if (res.ok) setCategories(await res.json());
     } catch (e) {
@@ -181,29 +183,67 @@ export function CategoriesScreen({ storeId, isVendor }: { storeId: string, isVen
 
   useEffect(() => { fetchData(); }, [storeId]);
 
-  const handleCreate = async () => {
+  const handleOpenCreate = () => {
+    setEditItem(null);
+    setForm({ name: '', parentId: '', active: true });
+    setShowModal(true);
+  };
+
+  const handleOpenEdit = (item: any) => {
+    setEditItem(item);
+    setForm({ name: item.name, parentId: item.parentId || '', active: item.active ?? true });
+    setShowModal(true);
+  };
+
+  const handleSave = async () => {
     if (!form.name.trim()) { alert('Erreur', 'Le nom est requis'); return; }
+    setSaving(true);
     try {
-      const res = await fetch(`${API_URL}/management/categories`, {
-        method: 'POST',
+      const url = editItem 
+        ? `${API_URL}/management/categories/${editItem.id}`
+        : `${API_URL}/management/categories`;
+      
+      const res = await fetch(url, {
+        method: editItem ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name.trim(), storeId, parentId: form.parentId || null }),
+        body: JSON.stringify({ 
+          name: form.name.trim(), 
+          storeId: isVendor ? undefined : storeId, 
+          parentId: form.parentId || null,
+          active: form.active
+        }),
       });
-      if (res.ok) { setShowModal(false); setForm({ name: '', parentId: '' }); fetchData(); }
-    } catch (e) { alert('Erreur', 'Echec creation'); }
+      if (res.ok) { 
+        setShowModal(false); 
+        fetchData(); 
+      } else {
+        const error = await res.json();
+        alert('Erreur', error.message || 'Echec sauvegarde');
+      }
+    } catch (e) { alert('Erreur', 'Echec de connexion'); }
+    finally { setSaving(false); }
   };
 
   const handleDelete = (item: any) => {
+    if ((item._count?.products || 0) > 0) {
+      alert('Action impossible', `Cette catégorie contient ${item._count.products} produits. Veuillez les déplacer ou archiver la catégorie à la place.`);
+      return;
+    }
+
     confirm({
       title: 'Supprimer',
-      message: `Supprimer "${item.name}" ?`,
+      message: `Voulez-vous supprimer définitivement "${item.name}" ?`,
       type: 'danger',
       onConfirm: async () => {
         try {
           const res = await fetch(`${API_URL}/management/categories/${item.id}`, { method: 'DELETE' });
-          if (!res.ok) { const data = await res.json(); throw new Error(data.message || 'Echec suppression'); }
-          fetchData();
-        } catch (e: any) { alert('Erreur', e.message); }
+          if (!res.ok) { 
+            const data = await res.json(); 
+            alert('Erreur', data.message || 'Echec suppression');
+          } else {
+            fetchData();
+          }
+        } catch (e: any) { alert('Erreur', 'Echec suppression'); }
       }
     });
   };
@@ -279,7 +319,7 @@ export function CategoriesScreen({ storeId, isVendor }: { storeId: string, isVen
   }
 
   // ── OWNER: full CRUD ──────────────────────────────────────────
-  const rootCatsForPicker = rootCategories;
+  const rootCatsForPicker = rootCategories.filter(c => !editItem || c.id !== editItem.id);
 
   return (
     <View style={mgStyles.container}>
@@ -297,15 +337,27 @@ export function CategoriesScreen({ storeId, isVendor }: { storeId: string, isVen
             </View>
 
             {categories.map(c => (
-              <View key={c.id} style={mgStyles.row}>
+              <View key={c.id} style={[mgStyles.row, { opacity: c.active === false ? 0.6 : 1 }]}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={mgStyles.rowTitle}>{c.parentId ? `  ↳ ${c.name}` : c.name}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={mgStyles.rowTitle}>{c.parentId ? `  ↳ ${c.name}` : c.name}</Text>
+                      {c.active === false && (
+                        <View style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={{ color: '#EF4444', fontSize: 9, fontWeight: '900' }}>ARCHIVÉE</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={mgStyles.rowSub}>{c._count?.products || 0} produits associés</Text>
                   </View>
-                  <TouchableOpacity onPress={() => handleDelete(c)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Text style={{ fontSize: 18 }}>🗑️</Text>
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 15 }}>
+                    <TouchableOpacity onPress={() => handleOpenEdit(c)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Text style={{ fontSize: 18 }}>📝</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDelete(c)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Text style={{ fontSize: 18 }}>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             ))}
@@ -314,14 +366,14 @@ export function CategoriesScreen({ storeId, isVendor }: { storeId: string, isVen
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      <TouchableOpacity style={mgStyles.fab} onPress={() => setShowModal(true)}>
+      <TouchableOpacity style={mgStyles.fab} onPress={handleOpenCreate}>
         <Text style={mgStyles.fabText}>+</Text>
       </TouchableOpacity>
 
       <Modal visible={showModal} transparent animationType="slide">
         <View style={mgStyles.modalOverlay}>
           <View style={mgStyles.modalContent}>
-            <Text style={mgStyles.modalTitle}>Nouvelle Catégorie</Text>
+            <Text style={mgStyles.modalTitle}>{editItem ? 'Modifier Catégorie' : 'Nouvelle Catégorie'}</Text>
 
             <Text style={mgStyles.label}>Nom</Text>
             <TextInput
@@ -343,12 +395,34 @@ export function CategoriesScreen({ storeId, isVendor }: { storeId: string, isVen
               emptyLabel="Racine (aucune)"
             />
 
+            <Text style={mgStyles.label}>Statut de visibilité</Text>
+            <TouchableOpacity 
+              onPress={() => setForm({ ...form, active: !form.active })}
+              style={{ 
+                flexDirection: 'row', alignItems: 'center', gap: 12, 
+                backgroundColor: theme.colors.background, padding: 14, borderRadius: 12, 
+                borderWidth: 1, borderColor: form.active ? theme.colors.caramel : theme.colors.glassBorder,
+                marginBottom: 10
+              }}
+            >
+              <View style={{ 
+                width: 20, height: 20, borderRadius: 10, borderWidth: 2, 
+                borderColor: form.active ? theme.colors.caramel : theme.colors.creamMuted,
+                justifyContent: 'center', alignItems: 'center'
+              }}>
+                {form.active && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.colors.caramel }} />}
+              </View>
+              <Text style={{ color: form.active ? theme.colors.cream : theme.colors.creamMuted, fontSize: 15, fontWeight: '600' }}>
+                {form.active ? 'Active (Visible en caisse)' : 'Archivée (Masquée en caisse)'}
+              </Text>
+            </TouchableOpacity>
+
             <View style={[mgStyles.btnRow, { marginTop: 12 }]}>
               <TouchableOpacity style={mgStyles.btnCancel} onPress={() => setShowModal(false)}>
                 <Text style={mgStyles.btnTextDark}>Annuler</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={mgStyles.btnPrimary} onPress={handleCreate}>
-                <Text style={mgStyles.btnText}>Créer</Text>
+              <TouchableOpacity style={[mgStyles.btnPrimary, { opacity: saving ? 0.6 : 1 }]} onPress={handleSave} disabled={saving}>
+                <Text style={mgStyles.btnText}>{saving ? 'Sauvegarde...' : editItem ? 'Enregistrer' : 'Créer'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -357,6 +431,7 @@ export function CategoriesScreen({ storeId, isVendor }: { storeId: string, isVen
     </View>
   );
 }
+
 
 
 // ══════════════════════════════════════════════════════════════

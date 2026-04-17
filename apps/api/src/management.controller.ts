@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, BadRequestException } from '@nestjs/common';
 import { prisma } from '@coffeeshop/database';
 
 interface CreateMarketplaceProductDto {
@@ -89,28 +89,35 @@ export class ManagementController {
   async getCategories(@Param('storeId') storeId: string): Promise<any> {
     return prisma.category.findMany({ 
       where: { OR: [{ storeId }, { storeId: null }] },
+      include: {
+        _count: {
+          select: { products: true }
+        }
+      },
       orderBy: { name: 'asc' } 
     });
   }
 
   @Post('categories')
-  async createCategory(@Body() body: { name: string; storeId?: string; parentId?: string }): Promise<any> {
+  async createCategory(@Body() body: { name: string; storeId?: string; parentId?: string; active?: boolean }): Promise<any> {
     return prisma.category.create({ 
       data: { 
         name: body.name, 
         storeId: body.storeId,
-        parentId: body.parentId || null
+        parentId: body.parentId || null,
+        active: body.active ?? true
       } 
     });
   }
 
   @Put('categories/:id')
-  async updateCategory(@Param('id') id: string, @Body() body: { name?: string; parentId?: string }): Promise<any> {
+  async updateCategory(@Param('id') id: string, @Body() body: { name?: string; parentId?: string; active?: boolean }): Promise<any> {
     return prisma.category.update({
       where: { id },
       data: { 
         name: body.name,
-        parentId: body.parentId
+        parentId: body.parentId || undefined,
+        active: body.active
       },
     });
   }
@@ -119,7 +126,7 @@ export class ManagementController {
   async deleteCategory(@Param('id') id: string): Promise<any> {
     const productsCount = await prisma.product.count({ where: { categoryId: id } });
     if (productsCount > 0) {
-      throw new Error(`Impossible de supprimer : cette catégorie contient ${productsCount} produits.`);
+      throw new BadRequestException(`Impossible de supprimer : cette catégorie contient encore ${productsCount} produits.`);
     }
     return prisma.category.delete({ where: { id } });
   }

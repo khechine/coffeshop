@@ -1084,7 +1084,7 @@ function LocalRachmaScreen() {
         <View style={{ height: 160 }} />
       </ScrollView>
 
-      <View style={{ position: 'absolute', bottom: Platform.OS === 'android' ? 64 : 24, left: 16, right: 16, zIndex: 1000, elevation: 15 }} pointerEvents="box-none">
+      <View style={{ position: 'absolute', bottom: Platform.OS === 'android' ? 88 : 24, left: 16, right: 16, zIndex: 1000, elevation: 15 }} pointerEvents="box-none">
         <GlassPanel intensity={85} style={{ padding: 16, flexDirection: 'column', alignItems: 'stretch' }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(245, 230, 211, 0.05)' }}>
             <Text style={{ color: theme.colors.creamMuted, fontSize: 13, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' }}>Total Rachmet</Text>
@@ -1587,7 +1587,7 @@ function POSRoot() {
       </View>
       
       {!hasRachmaModeOnly && (
-        <View style={{ padding: 12, paddingTop: 0, paddingBottom: Platform.OS === 'android' ? 64 : 24 }}>
+        <View style={{ padding: 12, paddingTop: 0, paddingBottom: Platform.OS === 'android' ? 88 : 24 }}>
           <GlassPanel intensity={60} style={{ 
             flexDirection: 'row', 
             height: 60, 
