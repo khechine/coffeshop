@@ -240,6 +240,12 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
                   </Link>
                 )}
                 {role === 'STORE_OWNER' && (
+                  <Link href="/admin/reports" title="Rapports Z (NACEF)" className={`nav-item${isActive('/admin/reports') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
+                    <FileText size={18} />
+                    {displayExpanded && <span>Rapports Z (NACEF)</span>}
+                  </Link>
+                )}
+                {role === 'STORE_OWNER' && (
                   <Link href="/admin/settings" title="Configuration Admin" className={`nav-item${isActive('/admin/settings') || isActive('/admin/subscription') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
                     <Settings size={18} />
                     {displayExpanded && <span>Configuration Admin</span>}

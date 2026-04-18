@@ -6,6 +6,8 @@ import { Building2, MapPin, Store, Crosshair, Save, Clock, CheckCircle2, FileChe
 
 import 'leaflet/dist/leaflet.css';
 
+import FiscalSettings from './FiscalSettings';
+
 interface StoreProps {
   id: string;
   name: string;
@@ -19,6 +21,12 @@ interface StoreProps {
   isVerified: boolean;
   officialDocs: any[] | null;
   forceMarketplaceAccess: boolean;
+  isFiscalEnabled: boolean;
+  subscription?: {
+    plan?: {
+      name: string;
+    }
+  }
 }
 
 export default function SettingsClient({ store }: { store: StoreProps }) {
@@ -145,6 +153,12 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
             </div>
          </div>
       </div>
+
+      <FiscalSettings 
+        storeId={store.id} 
+        isFiscalEnabled={store.isFiscalEnabled} 
+        planName={store.subscription?.plan?.name || 'FREE'}
+      />
 
       {/* Official Documents Section */}
       <div className="card">

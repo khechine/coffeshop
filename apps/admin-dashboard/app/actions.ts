@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import * as bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { Prisma } from '@prisma/client';
+import crypto from 'crypto';
 
 // ── Helpers (Updated for phone field) ──────────────────────────
 export async function getStore() {
@@ -73,10 +74,48 @@ export async function updateStore(data: { name: string; address: string; city: s
   revalidatePath('/');
 }
 
+export async function toggleFiscalMode(enabled: boolean, pinCode?: string) {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  // 1. Plan Verification
+  const planName = store.subscription?.plan?.name?.toUpperCase();
+  if (enabled && planName !== 'PRO' && planName !== 'STARTER') {
+    throw new Error(`Le mode fiscal NACEF est réservé aux abonnements STARTER et PRO. Plan actuel : ${planName || 'FREE'}`);
+  }
+
+  // 2. Security (Optional PIN check for locking)
+  if (!enabled && store.isFiscalEnabled) {
+    // If disabling an already active fiscal mode, we might want extra caution
+    console.warn(`Store ${store.id} is disabling fiscal mode.`);
+  }
+
+  await prisma.store.update({
+    where: { id: store.id },
+    data: { isFiscalEnabled: enabled }
+  });
+
+  // 3. Log the change
+  await prisma.fiscalLog.create({
+    data: {
+      action: enabled ? 'FISCAL_ACTIVATION' : 'FISCAL_DEACTIVATION',
+      saleId: 'CONFIG',
+      data: { 
+        storeId: store.id, 
+        plan: planName, 
+        timestamp: new Date().toISOString() 
+      }
+    }
+  });
+
+  revalidatePath('/admin/settings');
+  return { success: true };
+}
+
 // ══════════════════════════════════════════════════════════════
 //  PRODUCTS
 // ══════════════════════════════════════════════════════════════
-export async function createProduct(data: { name: string; price: number; categoryId: string; unitId?: string; recipe?: { stockItemId: string; quantity: number }[] }) {
+export async function createProduct(data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; recipe?: { stockItemId: string; quantity: number; consumeType?: string }[] }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
   
@@ -87,11 +126,15 @@ export async function createProduct(data: { name: string; price: number; categor
       categoryId: data.categoryId,
       storeId: store.id,
       unitId: data.unitId || undefined,
-      active: true,
+      taxRate: data.taxRate ?? 0.19,
+      taxCode: data.taxCode || undefined,
+      active: data.active ?? true,
+      canBeTakeaway: data.canBeTakeaway ?? true,
       recipe: data.recipe ? {
         create: data.recipe.map(r => ({
           stockItemId: r.stockItemId,
-          quantity: r.quantity
+          quantity: r.quantity,
+          consumeType: r.consumeType || 'BOTH'
         }))
       } : undefined
     } 
@@ -100,7 +143,7 @@ export async function createProduct(data: { name: string; price: number; categor
 }
 
 
-export async function updateProduct(id: string, data: { name: string; price: number; categoryId: string; unitId?: string; recipe?: { stockItemId: string; quantity: number }[] }) {
+export async function updateProduct(id: string, data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; recipe?: { stockItemId: string; quantity: number; consumeType?: string }[] }) {
   await prisma.recipeItem.deleteMany({ where: { productId: id } });
   await prisma.product.update({ 
     where: { id }, 
@@ -109,10 +152,15 @@ export async function updateProduct(id: string, data: { name: string; price: num
       price: data.price,
       categoryId: data.categoryId,
       unitId: data.unitId || undefined,
+      taxRate: data.taxRate ?? 0.19,
+      taxCode: data.taxCode || undefined,
+      active: data.active ?? true,
+      canBeTakeaway: data.canBeTakeaway ?? true,
       recipe: data.recipe ? {
         create: data.recipe.map(r => ({
           stockItemId: r.stockItemId,
-          quantity: r.quantity
+          quantity: r.quantity,
+          consumeType: r.consumeType || 'BOTH'
         }))
       } : undefined
     }
@@ -554,41 +602,237 @@ export async function logoutUser() {
 // ══════════════════════════════════════════════════════════════
 //  SALES
 // ══════════════════════════════════════════════════════════════
+// ── Customer Management (CRM) ───────────────────────────────
+export async function searchCustomers(query: string) {
+  const store = await getStore();
+  if (!store) return [];
+
+  return await prisma.customer.findMany({
+    where: {
+      storeId: store.id,
+      OR: [
+        { name: { contains: query, mode: 'insensitive' } },
+        { phone: { contains: query } }
+      ]
+    },
+    take: 10,
+    orderBy: { loyaltyPoints: 'desc' }
+  });
+}
+
+export async function createCustomer(data: { name: string; phone: string; email?: string }) {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  return await prisma.customer.create({
+    data: {
+      ...data,
+      storeId: store.id
+    }
+  });
+}
+
+export async function updateCustomerPoints(customerId: string, points: number) {
+  return await prisma.customer.update({
+    where: { id: customerId },
+    data: { loyaltyPoints: points }
+  });
+}
+
+export async function updateStoreLoyaltyRates(earnRate: number, redeemRate: number) {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  return await prisma.store.update({
+    where: { id: store.id },
+    data: { 
+      loyaltyEarnRate: earnRate,
+      loyaltyRedeemRate: redeemRate 
+    }
+  });
+}
+
 export async function recordSale(data: { 
   total: number; 
+  subtotal?: number;
+  discount?: number;
+  paymentMethod?: string;
+  paymentDetails?: any;
   items: { productId: string; quantity: number; price: number }[];
   tableName?: string;
   baristaId?: string;
   takenById?: string;
+  customerId?: string;
+  change?: number;
+  consumeType?: string; // DINE_IN | TAKEAWAY
+  terminalId?: string;
 }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
 
   const sale = await prisma.$transaction(async (tx) => {
-    const s = await tx.sale.create({
+    // ── NACEF Compliance Logic ──────────────────────────────────
+    let isFiscal = false;
+    let fiscalNumber = null;
+    let hash = null;
+    let previousHash = null;
+    let signature = null;
+    let terminalId = data.terminalId;
+    let finalSequenceNumber: number | null = null;
+
+    if (store.isFiscalEnabled) {
+      // 1. Plan Verification (Solo available on PRO & STARTER)
+      const planName = store.subscription?.plan?.name?.toUpperCase();
+      if (planName !== 'PRO' && planName !== 'STARTER') {
+        throw new Error(`Le mode fiscal NACEF nécessite un abonnement STARTER ou PRO. Votre plan actuel est : ${planName || 'FREE'}`);
+      }
+
+      // 2. Terminal Verification
+      if (!terminalId) {
+        throw new Error('Un ID de terminal est obligatoire pour enregistrer une vente fiscale (NACEF).');
+      }
+      const terminal = await tx.posTerminal.findUnique({
+        where: { id: terminalId, storeId: store.id }
+      });
+      if (!terminal) {
+        throw new Error('Terminal non valide ou non associé à cette boutique.');
+      }
+
+      isFiscal = true;
+      const currentYear = new Date().getFullYear();
+      
+      // 3. Increment atomic sequence for fiscal number
+      const updatedStore = await (tx as any).store.update({
+        where: { id: store.id },
+        data: { currentFiscalSequence: { increment: 1 } }
+      });
+      finalSequenceNumber = updatedStore.currentFiscalSequence;
+      if (finalSequenceNumber !== null) {
+        fiscalNumber = `FAC-${currentYear}-${finalSequenceNumber.toString().padStart(6, '0')}`;
+      }
+
+      // 4. Get previous hash for chaining
+      const lastSale = await tx.sale.findFirst({
+        where: { storeId: store.id, isFiscal: true },
+        orderBy: { createdAt: 'desc' }
+      });
+      previousHash = lastSale?.hash || '0'.repeat(64);
+    }
+
+    // ── Pre-calculate Fiscal Totals ──────────────────────────────
+    let totalHtGlobal = 0;
+    let totalTaxGlobal = 0;
+    const taxBreakdown: Record<string, number> = {};
+    const now = new Date();
+
+    const itemsWithTax = await Promise.all(data.items.map(async (item) => {
+      const product = await tx.product.findUnique({
+        where: { id: item.productId },
+        select: { taxRate: true }
+      });
+      const taxRate = Number(product?.taxRate || 0.19);
+      const unitPriceHt = item.price / (1 + taxRate);
+      const itemTotalHt = unitPriceHt * item.quantity;
+      const itemTaxAmount = itemTotalHt * taxRate;
+      
+      totalHtGlobal += itemTotalHt;
+      totalTaxGlobal += itemTaxAmount;
+
+      const rateLabel = `${Math.round(taxRate * 100)}%`;
+      taxBreakdown[rateLabel] = (taxBreakdown[rateLabel] || 0) + itemTaxAmount;
+
+      return {
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        unitPriceHt: Math.round(unitPriceHt * 1000) / 1000,
+        taxRate: taxRate,
+        taxAmount: Math.round(itemTaxAmount * 1000) / 1000,
+        totalHt: Math.round(itemTotalHt * 1000) / 1000,
+        totalTtc: Math.round((itemTotalHt + itemTaxAmount) * 1000) / 1000,
+      };
+    }));
+
+    // Generate SHA-256 Hash (Chain)
+    let hashInputS = null;
+    if (isFiscal) {
+      hashInputS = `${fiscalNumber}|${data.total}|${now.toISOString()}|${previousHash}`;
+      hash = crypto.createHash('sha256').update(hashInputS).digest('hex');
+      
+      // Signature HMAC (Security)
+      const secret = process.env.FISCAL_SECRET || 'nacef-default-secret-2026';
+      signature = crypto.createHmac('sha256', secret).update(hash).digest('hex');
+    }
+
+    const fiscalDay = now.toISOString().split('T')[0]; // "2026-04-18"
+    const sequenceNumber = isFiscal ? finalSequenceNumber : null;
+
+    const s = await (tx.sale as any).create({
       data: {
         total: data.total,
+        subtotal: data.subtotal || data.total,
+        discount: data.discount || 0,
+        paymentMethod: data.paymentMethod || 'CASH',
+        paymentDetails: data.paymentDetails || {},
         storeId: store.id,
         tableName: data.tableName,
         baristaId: data.baristaId,
-        takenById: data.takenById || data.baristaId, // Default to cashier if not specified
+        takenById: data.takenById || data.baristaId,
+        customerId: data.customerId,
+        consumeType: data.consumeType || 'DINE_IN',
+        isFiscal,
+        fiscalNumber,
+        sequenceNumber,
+        fiscalDay,
+        terminalId,
+        hash,
+        previousHash,
+        hashInput: hashInputS,
+        signature,
+        isVoid: false,
+        totalHt: Math.round(totalHtGlobal * 1000) / 1000,
+        totalTax: Math.round(totalTaxGlobal * 1000) / 1000,
+        taxBreakdown: taxBreakdown,
+        change: data.change ?? null,
+        appVersion: '1.0.0',
+        createdAt: now,
         items: {
-          create: data.items.map(i => ({
-            productId: i.productId,
-            quantity: i.quantity,
-            price: i.price,
-          }))
+          create: itemsWithTax
         }
+      },
+      include: {
+        items: { include: { product: true } },
+        takenBy: true
       }
     });
 
-    // 2. Deduct stock based on recipes
+    // 2. Fiscal Journaling
+    if (isFiscal) {
+      await tx.fiscalLog.create({
+        data: {
+          saleId: s.id,
+          action: 'CREATE',
+          data: {
+            hash: s.hash,
+            sequenceNumber: s.sequenceNumber,
+            terminalId: s.terminalId,
+            timestamp: now.toISOString()
+          }
+        }
+      });
+    }
+
+    // 3. Deduct stock based on recipes (with consumeType filter)
     for (const item of data.items) {
       const recipes = await tx.recipeItem.findMany({
         where: { productId: item.productId }
       });
 
       for (const recipe of recipes) {
+        // Filter: only deduct if BOTH or matches sale consumeType
+        const modeMatches = recipe.consumeType === 'BOTH' || recipe.consumeType === s.consumeType;
+        if (!modeMatches) continue;
+
         const totalToDeduct = Number(recipe.quantity) * item.quantity;
         await tx.stockItem.update({
           where: { id: recipe.stockItemId },
@@ -599,11 +843,112 @@ export async function recordSale(data: {
       }
     }
 
+    // 3. Loyalty integration
+    if (data.customerId) {
+      // 3.A Redeem points
+      if (data.paymentDetails?.points > 0) {
+        await tx.loyaltyTransaction.create({
+          data: {
+            customerId: data.customerId,
+            saleId: s.id,
+            points: -data.paymentDetails.points,
+            reason: 'REDEEM',
+          }
+        });
+        await tx.customer.update({
+          where: { id: data.customerId },
+          data: { loyaltyPoints: { decrement: data.paymentDetails.points } }
+        });
+      }
+
+      // 3.B Earn points
+      const points = Math.floor(data.total); 
+      if (points > 0) {
+        await tx.loyaltyTransaction.create({
+          data: {
+            customerId: data.customerId,
+            saleId: s.id,
+            points,
+            reason: 'PURCHASE',
+          }
+        });
+        await tx.customer.update({
+          where: { id: data.customerId },
+          data: { loyaltyPoints: { increment: points } }
+        });
+      }
+    }
+
     return s;
   });
 
   revalidatePath('/');
   return sale;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  REPORTS & CLOSING (NACEF)
+// ══════════════════════════════════════════════════════════════
+export async function generateZReport() {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+
+  // 1. Check if ZReport already exists for today
+  const existing = await prisma.zReport.findFirst({
+    where: { storeId: store.id, reportDay: today }
+  });
+  if (existing) throw new Error('Un rapport Z existe déjà pour aujourd\'hui.');
+
+  // 2. Fetch all sales of the day
+  const sales = await prisma.sale.findMany({
+    where: { 
+      storeId: store.id, 
+      isVoid: false,
+      createdAt: { gte: new Date(new Date().setHours(0,0,0,0)) }
+    },
+    include: { items: true }
+  });
+
+  if (sales.length === 0) throw new Error('Aucune vente aujourd\'hui pour générer un rapport Z.');
+
+  // 3. Aggregate totals
+  let totalTtc = 0;
+  let totalHt = 0;
+  let totalTax = 0;
+  let taxBreakdown = { "7%": 0, "19%": 0 };
+
+  for (const s of sales) {
+    totalTtc += Number(s.total);
+    totalHt += Number(s.totalHt || 0);
+    totalTax += Number(s.totalTax || 0);
+
+    for (const item of s.items) {
+      if (item.taxRate === 0.07) taxBreakdown["7%"] += Number(item.taxAmount || 0);
+      else if (item.taxRate === 0.19) taxBreakdown["19%"] += Number(item.taxAmount || 0);
+    }
+  }
+
+  // 4. Create ZReport
+  const z = await prisma.zReport.create({
+    data: {
+      storeId: store.id,
+      reportDay: today,
+      totalTtc,
+      totalHt,
+      totalTax,
+      taxBreakdown: taxBreakdown as any,
+      salesCount: sales.length,
+      isClosed: true,
+      hashInput: `${today}|${totalTtc}|${sales.length}`,
+      hash: crypto.createHash('sha256').update(`${today}|${totalTtc}`).digest('hex')
+    }
+  });
+
+  revalidatePath('/admin/reports');
+  return z;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1966,4 +2311,84 @@ export async function resetDemoDataAction(storeId: string) {
   revalidatePath('/admin/tables');
   revalidatePath('/admin/sales');
   return { success: true, message: 'Données demo supprimées' };
+}
+
+export async function generateZReportAction(terminalId?: string) {
+  const store = await getStore();
+  if (!store) throw new Error('Boutique non trouvée');
+
+  const result = await (prisma as any).$transaction(async (tx: any) => {
+    // 1. Trouver les ventes non clôturées
+    const query: any = {
+      storeId: store.id,
+      isFiscal: true,
+      zReportId: null
+    };
+    if (terminalId) query.terminalId = terminalId;
+
+    const sales = await tx.sale.findMany({ where: query });
+    if (sales.length === 0) {
+      throw new Error('Aucune vente fiscale en attente de clôture.');
+    }
+
+    // 2. Calculer les totaux
+    let totalHt = 0;
+    let totalTtc = 0;
+    let totalTax = 0;
+    const taxBreakdown: Record<string, number> = {};
+
+    sales.forEach((s: any) => {
+      totalHt += Number(s.totalHt || 0);
+      totalTtc += Number(s.total || 0);
+      totalTax += Number(s.totalTax || 0);
+
+      const breakdown = typeof s.taxBreakdown === 'string' ? JSON.parse(s.taxBreakdown) : (s.taxBreakdown || {});
+      Object.entries(breakdown).forEach(([rate, amount]) => {
+        taxBreakdown[rate] = (taxBreakdown[rate] || 0) + Number(amount);
+      });
+    });
+
+    // 3. Chainage des hashs Z
+    const lastZ = await tx.zReport.findFirst({
+      where: { storeId: store.id },
+      orderBy: { createdAt: 'desc' }
+    });
+    const previousZHash = lastZ?.hash || '0'.repeat(64);
+
+    // 4. Création du Hash du rapport
+    const reportDay = new Date().toISOString().split('T')[0];
+    const now = new Date().toISOString();
+    const hashInput = `${store.id}|${reportDay}|${totalTtc}|${now}|${previousZHash}`;
+    const hash = crypto.createHash('sha256').update(hashInput).digest('hex');
+
+    // 5. Créer le rapport Z
+    const zReport = await tx.zReport.create({
+      data: {
+        storeId: store.id,
+        terminalId: terminalId || null,
+        reportDay,
+        totalTtc: totalTtc,
+        totalHt: totalHt,
+        totalTax: totalTax,
+        taxBreakdown: taxBreakdown,
+        salesCount: sales.length,
+        isClosed: true,
+        hashInput,
+        hash,
+        previousZHash,
+        createdAt: new Date(now)
+      }
+    });
+
+    // 6. Lier les ventes au rapport
+    await tx.sale.updateMany({
+      where: query,
+      data: { zReportId: zReport.id }
+    });
+
+    return zReport;
+  });
+
+  revalidatePath('/admin/reports');
+  return JSON.parse(JSON.stringify(result));
 }

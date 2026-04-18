@@ -6,9 +6,10 @@ import {
   Plus, Minus, ShoppingCart, Trash2, CheckCircle, Clock, 
   History, User, Coffee, LogOut, Lock, LayoutGrid, CreditCard,
   ChevronRight, AlertCircle, Save, ArrowLeft, MoreVertical, ClipboardList,
-  ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard
+  ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, ShieldCheck
 } from 'lucide-react';
 import { recordSale, logStaffSessionAction } from '../actions';
+import { PrintService } from './PrintService';
 
 interface Product { id: string; name: string; price: number; category: string; }
 interface TableOrder {
@@ -23,20 +24,32 @@ type ViewMode = 'tables' | 'order' | 'simplistic' | 'history' | 'journal';
 export default function POSClient({ 
   storeId,
   storeName, 
+  storeAddress,
+  storePhone,
+  planName,
   initialProducts, 
   initialBaristas = [],
   initialSales = [],
-  initialTables = []
+  initialTables = [],
+  isFiscalEnabled = false,
+  terminals = []
 }: { 
   storeId: string;
   storeName: string; 
+  storeAddress?: string;
+  storePhone?: string;
+  planName?: string;
+  isFiscalEnabled?: boolean;
   initialProducts: Product[]; 
   initialBaristas?: any[]; 
   initialSales?: any[];
   initialTables?: any[];
+  terminals?: any[];
 }) {
   const [cashierId, setCashierId] = useState<string | null>(null);
   const [cashierName, setCashierName] = useState<string | null>(null);
+  const [terminalId, setTerminalId] = useState<string | null>(null);
+  const [showTerminalSelector, setShowTerminalSelector] = useState(false);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [pressingProductId, setPressingProductId] = useState<string | null>(null);
   const [lastProcessedLongPress, setLastProcessedLongPress] = useState<number>(0);
@@ -63,12 +76,21 @@ export default function POSClient({
   useEffect(() => {
     const cid = localStorage.getItem('pos_cashier_id');
     const cname = localStorage.getItem('pos_cashier_name');
+    const tid = localStorage.getItem('pos_terminal_id');
+
     if (cid && cname) {
       setCashierId(cid);
       setCashierName(cname);
     }
+    if (tid) setTerminalId(tid);
+    
+    // Auto-show terminal selector if fiscal mode is ON and no terminal assigned
+    if (isFiscalEnabled && !tid && cid) {
+      setShowTerminalSelector(true);
+    }
+
     loadOrders(); // Load global state
-  }, []);
+  }, [isFiscalEnabled, cashierId]);
 
   useEffect(() => {
     if (!cashierId) {
@@ -298,16 +320,34 @@ export default function POSClient({
   const validateOrder = async () => {
     if (!activeTable || currentOrderItems.length === 0) return;
     
+    // Check if we need to confirm consumeType (if not explicitly set by global switch)
+    let finalConsumeType = isTakeawayMode ? 'TAKEAWAY' : 'DINE_IN';
+    
     const tableLabel = activeTable === 'direct' ? 'Vente Directe' : `Table ${initialTables.find(t => t.id === activeTable)?.label}`;
     
     try {
-      await recordSale({
+      const saleResult = await recordSale({
         total: currentTotal,
         items: currentOrderItems,
         tableName: tableLabel,
         baristaId: cashierId!,
-        takenById: currentTableOrder?.baristaId || cashierId!
+        takenById: currentTableOrder?.baristaId || cashierId!,
+        consumeType: finalConsumeType,
+        paymentMethod: 'CASH', // Default for now
+        change: 0,
+        terminalId: terminalId || undefined
       });
+
+      // Automatic Printing
+      if (saleResult) {
+        await PrintService.printTicket({
+          storeName,
+          storeAddress,
+          storePhone,
+          sale: saleResult,
+          items: currentOrderItems
+        }, { paperSize: '80mm' }, planName);
+      }
 
       // Clear table
       const { [activeTable]: _, ...others } = tableOrders;
@@ -315,7 +355,7 @@ export default function POSClient({
       
       // Update local history
       setDailySales([{
-        id: Math.random().toString(),
+        id: saleResult.id,
         total: currentTotal,
         table: tableLabel,
         cashier: cashierName,
@@ -323,7 +363,8 @@ export default function POSClient({
         takenBy: currentTableOrder?.baristaName || cashierName,
         takenById: currentTableOrder?.baristaId || cashierId,
         time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-        items: currentOrderItems
+        items: currentOrderItems,
+        createdAt: saleResult.createdAt
       }, ...dailySales]);
 
       setViewMode('tables');
@@ -429,7 +470,8 @@ export default function POSClient({
           items: finalItems,
           tableName: 'Session Simpliste',
           baristaId: cashierId!,
-          takenById: cashierId!
+          takenById: cashierId!,
+          terminalId: terminalId || undefined
         });
       }
  
@@ -1083,6 +1125,66 @@ export default function POSClient({
           </div>
         </div>
       )}
+      {/* --- Overlay Terminal Selector (NACEF) --- */}
+      {showTerminalSelector && isFiscalEnabled && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '450px', background: '#fff', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+            <div style={{ padding: '32px 24px', textAlign: 'center', background: '#1E1B4B', color: '#fff' }}>
+               <div style={{ width: '64px', height: '64px', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                  <ShieldCheck size={32} color="#10B981" />
+               </div>
+               <h2 style={{ fontSize: '20px', fontWeight: 900, marginBottom: '8px' }}>Identification Caisse</h2>
+               <p style={{ fontSize: '13px', opacity: 0.8 }}>Ce terminal doit être identifié pour émettre des tickets fiscaux (NACEF).</p>
+            </div>
+            
+            <div style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                {terminals.length > 0 ? (
+                  terminals.map((t: any) => (
+                    <button 
+                      key={t.id}
+                      onClick={() => {
+                        setTerminalId(t.id);
+                        localStorage.setItem('pos_terminal_id', t.id);
+                        setShowTerminalSelector(false);
+                      }}
+                      style={{ 
+                        width: '100%', padding: '16px', borderRadius: '16px', border: '1.5px solid #E2E8F0', 
+                        background: '#F8FAFC', textAlign: 'left', cursor: 'pointer', transition: '0.2s',
+                        display: 'flex', alignItems: 'center', gap: '12px'
+                      }}
+                    >
+                      <div style={{ width: '40px', height: '40px', background: '#fff', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0' }}>
+                         <LayoutDashboard size={18} color="#6366F1" />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 800, color: '#1E293B', fontSize: '14px' }}>{t.nickname}</div>
+                        <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>ID: {t.id.slice(-8)}</div>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div style={{ padding: '24px', textAlign: 'center', background: '#FEF2F2', borderRadius: '16px', border: '1px solid #FEE2E2' }}>
+                     <AlertCircle size={24} color="#EF4444" style={{ margin: '0 auto 8px' }} />
+                     <div style={{ fontSize: '13px', color: '#B91C1C', fontWeight: 700 }}>Aucun terminal actif trouvé</div>
+                     <p style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>Veuillez créer un terminal dans les paramètres admin.</p>
+                  </div>
+                )}
+              </div>
+              
+              <button 
+                onClick={() => handleLogout()}
+                style={{ width: '100%', padding: '14px', borderRadius: '14px', border: 'none', background: 'transparent', color: '#94A3B8', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Retour à la connexion
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// Add these Lucide icons if not already imported at top
+// ShieldCheck
