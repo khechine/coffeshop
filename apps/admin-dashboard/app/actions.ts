@@ -624,6 +624,14 @@ export async function createCustomer(data: { name: string; phone: string; email?
   const store = await getStore();
   if (!store) throw new Error('Store not found');
 
+  const existing = await prisma.customer.findFirst({
+    where: { phone: data.phone, storeId: store.id }
+  });
+
+  if (existing) {
+    throw new Error('DUPLICATE_PHONE');
+  }
+
   return await prisma.customer.create({
     data: {
       ...data,

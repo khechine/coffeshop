@@ -62,6 +62,7 @@ export default function PremiumPOSClient({
   const [cashierName, setCashierName] = useState<string | null>(null);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
+  const [selectedTerminalId, setSelectedTerminalId] = useState<string | null>(null);
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [category, setCategory] = useState('Tous');
@@ -79,6 +80,11 @@ export default function PremiumPOSClient({
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'MIXED'>('CASH');
   const [amountReceived, setAmountReceived] = useState('0');
+  
+  // New Customer Modal
+  const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '' });
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   
   // --- Derived ---
   const filteredProducts = initialProducts.filter(p => {
@@ -133,6 +139,7 @@ export default function PremiumPOSClient({
         discount: discountFromPoints,
         items: cart.map(i => ({ productId: i.id, quantity: i.quantity, price: i.price })),
         baristaId: cashierId || 'pos-internal',
+        terminalId: selectedTerminalId || undefined,
         tableName: selectedTable?.label || 'Directe',
         paymentMethod: paymentMethod,
         paymentDetails: {
@@ -190,11 +197,20 @@ export default function PremiumPOSClient({
   useEffect(() => {
     const cid = localStorage.getItem('pos_cashier_id');
     const cname = localStorage.getItem('pos_cashier_name');
+    const tid = localStorage.getItem('pos_terminal_id');
     if (cid && cname) {
       setCashierId(cid);
       setCashierName(cname);
     }
+    if (tid) {
+      setSelectedTerminalId(tid);
+    }
   }, []);
+
+  const selectTerminal = (id: string) => {
+    setSelectedTerminalId(id);
+    localStorage.setItem('pos_terminal_id', id);
+  };
 
   if (!cashierId) {
     return (
@@ -225,6 +241,38 @@ export default function PremiumPOSClient({
             ))}
           </div>
           {error && <div style={{ marginTop: '24px', color: '#F87171', fontWeight: 800 }}>{error}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  // Terminal Selection UI (if fiscal and no terminal)
+  if (isFiscalEnabled && !selectedTerminalId) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'linear-gradient(135deg,#1E1B4B 0%,#312E81 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ width: '500px', textAlign: 'center' }}>
+          <div style={{ width: 80, height: 80, borderRadius: '24px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 32px' }}>
+             <CreditCard size={40} />
+          </div>
+          <h1 style={{ fontSize: '28px', fontWeight: 900, marginBottom: '8px' }}>Sélection du Terminal</h1>
+          <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '40px' }}>Choisissez la caisse que vous utilisez actuellement</p>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px' }}>
+            {terminals.map((t: any) => (
+              <button key={t.id} onClick={() => selectTerminal(t.id)}
+              style={{ padding: '24px', borderRadius: '20px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
+                <LayoutDashboard size={24} />
+                <span style={{ fontWeight: 800 }}>{t.name}</span>
+              </button>
+            ))}
+            {terminals.length === 0 && (
+              <div style={{ gridColumn: '1/-1', color: '#F87171' }}>Aucun terminal configuré pour cette boutique.</div>
+            )}
+          </div>
+          
+          <button onClick={handleLogout} style={{ marginTop: '40px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', textDecoration: 'underline', cursor: 'pointer' }}>
+             Se déconnecter
+          </button>
         </div>
       </div>
     );
@@ -387,7 +435,7 @@ export default function PremiumPOSClient({
                         value={customerSearch}
                         onChange={e => handleCustomerSearch(e.target.value)}
                       />
-                      <button className="btn-premium btn-premium-success" onClick={() => alert("Nouveau client")}>+ Client</button>
+                      <button className="btn-premium btn-premium-success" onClick={() => setIsAddCustomerModalOpen(true)}>+ Client</button>
                    </div>
 
                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -624,6 +672,76 @@ export default function PremiumPOSClient({
         </div>
       )}
       
+      {/* Add Customer Modal */}
+      {isAddCustomerModalOpen && (
+        <div className="pos-modal-overlay">
+           <div className="pos-modal-card" style={{ width: 440 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 32 }}>
+                 <h2 style={{ margin: 0, fontWeight: 900 }}>Nouveau Client</h2>
+                 <X size={24} onClick={() => setIsAddCustomerModalOpen(false)} style={{ cursor: 'pointer' }} />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                 <div>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 800, marginBottom: 8, color: 'var(--pos-text-muted)' }}>NOM COMPLET</label>
+                    <input 
+                      type="text" 
+                      className="customer-selector" 
+                      style={{ width: '100%', height: 50, borderStyle: 'solid' }}
+                      value={newCustomer.name}
+                      onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                    />
+                 </div>
+                 <div>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 800, marginBottom: 8, color: 'var(--pos-text-muted)' }}>TÉLÉPHONE</label>
+                    <input 
+                      type="text" 
+                      className="customer-selector" 
+                      style={{ width: '100%', height: 50, borderStyle: 'solid' }}
+                      value={newCustomer.phone}
+                      onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                    />
+                 </div>
+                 <div>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 800, marginBottom: 8, color: 'var(--pos-text-muted)' }}>EMAIL (OPTIONNEL)</label>
+                    <input 
+                      type="email" 
+                      className="customer-selector" 
+                      style={{ width: '100%', height: 50, borderStyle: 'solid' }}
+                      value={newCustomer.email}
+                      onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                    />
+                 </div>
+              </div>
+
+              <button 
+                className="btn-premium btn-premium-primary" 
+                style={{ width: '100%', height: 60, marginTop: 32 }}
+                disabled={!newCustomer.name || !newCustomer.phone || isCreatingCustomer}
+                onClick={async () => {
+                  try {
+                    setIsCreatingCustomer(true);
+                    await createCustomer(newCustomer);
+                    alert("Client créé avec succès !");
+                    setIsAddCustomerModalOpen(false);
+                    setNewCustomer({ name: '', phone: '', email: '' });
+                  } catch (err: any) {
+                    if (err.message === 'DUPLICATE_PHONE') {
+                      alert("Ce numéro de téléphone est déjà associé à un client existant.");
+                    } else {
+                      alert("Erreur lors de la création : " + err.message);
+                    }
+                  } finally {
+                    setIsCreatingCustomer(false);
+                  }
+                }}
+              >
+                {isCreatingCustomer ? "Création..." : "Enregistrer le client"}
+              </button>
+           </div>
+        </div>
+      )}
+
       <style jsx>{`
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
