@@ -1039,7 +1039,11 @@ const createMgStyles = (theme: any) => StyleSheet.create({
 // ─── RACHMA SCREEN (Simplified Mode) ───────────────────────
 function LocalRachmaScreen() {
   const { confirm } = useConfirm();
-  const { products, rachmaCart, addToRachma, removeFromRachma, clearRachma, checkoutRachma, getRachmaTotal, syncSales, pendingSales, theme, hasBarSupport } = usePOSStore();
+  const { 
+    products, rachmaCart, rachmaTakeawayCart, rachmaTakeawayActive, toggleRachmaTakeaway, 
+    addToRachma, removeFromRachma, clearRachma, checkoutRachma, getRachmaTotal, 
+    syncSales, pendingSales, theme, hasBarSupport 
+  } = usePOSStore();
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showPastSales, setShowPastSales] = useState(false);
@@ -1154,11 +1158,14 @@ function LocalRachmaScreen() {
           {filteredProducts.map(p => (
             <FloatingCard
               key={p.id}
+              id={p.id}
               name={p.name}
               price={p.price}
               qty={rachmaCart[p.id] || 0}
+              takeawayQty={rachmaTakeawayCart[p.id] || 0}
               onPress={() => addToRachma(p.id)}
               onLongPress={() => removeFromRachma(p.id)}
+              onToggleTakeaway={toggleRachmaTakeaway}
             />
           ))}
         </View>
@@ -1573,7 +1580,7 @@ function LocalStaffScreen() {
 type TabId = 'tables' | 'caisse' | 'dashboard' | 'products' | 'categories' | 'stock' | 'suppliers' | 'orders' | 'staff' | 'notifs' | 'rachma' | 'menu' | 'bar' | 'marketplace';
 
 function LocalMenuScreen({ onSelect }: { onSelect: (tab: TabId) => void }) {
-  const { theme, currentBarista, userRole, authMode } = usePOSStore();
+  const { theme, currentBarista, userRole, authMode, isFiscalEnabled } = usePOSStore();
   const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   
   const permissions = currentBarista?.permissions || [];
@@ -1595,6 +1602,8 @@ function LocalMenuScreen({ onSelect }: { onSelect: (tab: TabId) => void }) {
     const hasPerm = isOwner || !item.permission || permissions.includes(item.permission);
     // Explicit Marketplace restriction: only in Account mode
     if (item.id === 'marketplace' && authMode === 'TERMINAL') return false;
+    // Restriction: No Rachma mode if NACEF (Fiscal) is active
+    if (item.id === 'rachma' && isFiscalEnabled) return false;
     return hasPerm;
   });
 
@@ -1622,14 +1631,15 @@ function LocalMenuScreen({ onSelect }: { onSelect: (tab: TabId) => void }) {
 
 // ─── POS ROOT (FORMERLY MAIN APP) ──────────────────────────
 function POSRoot() {
-  const { storeId, currentBarista, userRole, setActiveTable, theme, activeTable } = usePOSStore();
+  const { storeId, currentBarista, userRole, setActiveTable, theme, activeTable, isFiscalEnabled } = usePOSStore();
   const { confirm } = useConfirm();
   const isOwner = userRole === 'owner';
   
   const permissions = currentBarista?.permissions || [];
   // Mode Rachma Pur: Only if they have RACHMA and nothing else that is functional (POS, TABLES, BAR, DASHBOARD)
   const functionalPerms = permissions.filter(p => ['POS', 'TABLES', 'BAR', 'DASHBOARD', 'STOCK', 'STAFF'].includes(p));
-  const hasRachmaModeOnly = !isOwner && permissions.includes('RACHMA') && functionalPerms.length === 0;
+  // Restriction: No Rachma mode if NACEF (Fiscal) is active
+  const hasRachmaModeOnly = !isOwner && permissions.includes('RACHMA') && functionalPerms.length === 0 && !isFiscalEnabled;
   
   const initialTab: TabId = hasRachmaModeOnly ? 'rachma' : (isOwner ? 'menu' : ((currentBarista?.defaultPosMode?.toLowerCase() as TabId) || 'tables'));
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
@@ -1690,9 +1700,14 @@ function POSRoot() {
               { id: 'caisse', label: 'VENTE', icon: '💰', permission: 'POS' },
               { id: 'rachma', label: 'RACHMA', icon: '⚡', permission: 'RACHMA' },
               { id: 'menu', label: 'MENU', icon: '📋' }
-            ]
-              .filter(tab => isOwner || !tab.permission || permissions.includes(tab.permission))
-              .map(tab => {
+            ].filter(tab => {
+              // Basic permission check
+              if (tab.permission && !permissions.includes(tab.permission) && !isOwner) return false;
+              // Restriction: No Rachma mode if NACEF (Fiscal) is active
+              if (tab.id === 'rachma' && isFiscalEnabled) return false;
+              return true;
+            })
+            .map(tab => {
               const isActive = activeTab === tab.id || (tab.id === 'tables' && activeTab === 'caisse' && activeTable);
               return (
                 <TouchableOpacity 

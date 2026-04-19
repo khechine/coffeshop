@@ -468,6 +468,8 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
     isFlashSale: false,
     discountPrice: '',
     flashDuration: '24', // Default 24h
+    taxRate: 0.19,
+    canBeTakeaway: true,
     recipe: [] as { stockItemId: string; quantity: string }[]
   });
   const [searchQuery, setSearchQuery] = useState('');
@@ -525,6 +527,7 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
       brand: '', image: '',
       isFeatured: false, isFlashSale: false,
       discountPrice: '', flashDuration: '24',
+      taxRate: 0.19, canBeTakeaway: true,
       active: true, recipe: []
     });
     setCurrentView('form');
@@ -546,6 +549,8 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
       discountPrice: item.discountPrice ? String(Number(item.discountPrice)) : '',
       flashDuration: item.flashEnd ? String(Math.max(1, Math.round((new Date(item.flashEnd).getTime() - (item.flashStart ? new Date(item.flashStart).getTime() : Date.now())) / (1000 * 60 * 60)))) : '24',
       active: item.active ?? true,
+      taxRate: Number(item.taxRate ?? 0.19),
+      canBeTakeaway: item.canBeTakeaway ?? true,
       recipe: (item.recipe || []).map((r: any) => ({
         stockItemId: r.stockItemId,
         quantity: String(Number(r.quantity))
@@ -586,6 +591,8 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
           }),
           minOrderQty: parseFloat(form.minOrderQty) || 1,
           active: form.active,
+          taxRate: form.taxRate,
+          canBeTakeaway: form.canBeTakeaway,
           image: form.image || undefined,
           ...(!editItem && {
             storeId: isVendor ? undefined : storeId,
@@ -721,8 +728,14 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
 
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <View style={{ flex: 2 }}>
-              <Text style={mgStyles.label}>Prix (DT)</Text>
-              <TextInput style={mgStyles.input} placeholder="0.000" keyboardType="decimal-pad" value={form.price} onChangeText={v => setForm({ ...form, price: v })} />
+              <Text style={mgStyles.label}>Prix TTC (DT)</Text>
+              <TextInput 
+                style={[mgStyles.input, { fontSize: 20, fontWeight: '900', color: theme.colors.caramel }]} 
+                placeholder="0.000" 
+                keyboardType="decimal-pad" 
+                value={form.price} 
+                onChangeText={v => setForm({ ...form, price: v })} 
+              />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={mgStyles.label}>Statut</Text>
@@ -734,6 +747,69 @@ export function ProductsScreen({ storeId, isVendor }: { storeId: string, isVendo
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Fiscal breakdown */}
+          {(() => {
+            const priceVal = parseFloat(form.price || '0');
+            const taxRate = form.taxRate;
+            const priceHt = priceVal / (1 + taxRate);
+            const taxAmount = priceVal - priceHt;
+            
+            return (
+              <View style={{ 
+                backgroundColor: theme.colors.surfaceLight, 
+                padding: 16, borderRadius: 16, marginTop: 12, marginBottom: 20,
+                borderWidth: 1, borderColor: theme.colors.glassBorder
+              }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text style={{ color: theme.colors.creamMuted, fontSize: 12, fontWeight: '700' }}>PRIX HORS TAXE (HT)</Text>
+                  <Text style={{ color: theme.colors.cream, fontSize: 13, fontWeight: '900' }}>{priceHt.toFixed(3)} DT</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ color: theme.colors.creamMuted, fontSize: 12, fontWeight: '700' }}>DONT TVA ({Math.round(taxRate * 100)}%)</Text>
+                  <Text style={{ color: theme.colors.caramel, fontSize: 13, fontWeight: '900' }}>{taxAmount.toFixed(3)} DT</Text>
+                </View>
+              </View>
+            );
+          })()}
+
+          <Text style={mgStyles.label}>Taux de TVA</Text>
+          <View style={[mgStyles.pickerRow, { marginBottom: 20 }]}>
+            {[
+              { label: '0%', value: 0 },
+              { label: '7%', value: 0.07 },
+              { label: '13%', value: 0.13 },
+              { label: '19%', value: 0.19 }
+            ].map(rate => (
+              <TouchableOpacity 
+                key={rate.value} 
+                style={[mgStyles.pickerChip, { flex: 1, alignItems: 'center' }, form.taxRate === rate.value && mgStyles.pickerChipActive]} 
+                onPress={() => setForm({ ...form, taxRate: rate.value })}
+              >
+                <Text style={[mgStyles.pickerChipText, form.taxRate === rate.value && mgStyles.pickerChipTextActive]}>{rate.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={mgStyles.label}>Options de consommation</Text>
+          <TouchableOpacity 
+            onPress={() => setForm({ ...form, canBeTakeaway: !form.canBeTakeaway })}
+            style={{ 
+              flexDirection: 'row', alignItems: 'center', gap: 12, 
+              backgroundColor: theme.colors.surface, padding: 16, borderRadius: 12, 
+              borderWidth: 1, borderColor: form.canBeTakeaway ? theme.colors.caramel : theme.colors.glassBorder,
+              marginBottom: 24
+            }}
+          >
+            <Text style={{ fontSize: 20 }}>🛍️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.cream, fontSize: 15, fontWeight: '800' }}>Disponible à emporter</Text>
+              <Text style={{ color: theme.colors.creamMuted, fontSize: 12 }}>Permet la sélection "Takeaway" sur ce produit</Text>
+            </View>
+            <View style={{ width: 44, height: 24, borderRadius: 12, backgroundColor: form.canBeTakeaway ? theme.colors.caramel : theme.colors.glassBorder, padding: 2 }}>
+              <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', alignSelf: form.canBeTakeaway ? 'flex-end' : 'flex-start' }} />
+            </View>
+          </TouchableOpacity>
 
           {/* Category selects */}
           {(() => {

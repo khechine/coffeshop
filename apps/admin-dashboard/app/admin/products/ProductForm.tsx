@@ -35,6 +35,7 @@ export interface StockItem { id: string; name: string; unit: string; cost: any }
 const TAX_RATES = [
   { label: 'Exonéré (0%)', value: 0 },
   { label: 'Réduit (7%)', value: 0.07 },
+  { label: 'Interm. (13%)', value: 0.13 },
   { label: 'Normal (19%)', value: 0.19 },
 ];
 

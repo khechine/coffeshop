@@ -13,20 +13,56 @@ export class SalesService {
     try {
       // Create Sale using a transaction
       const sale = await prisma.$transaction(async (tx) => {
+        // 1. Fetch product tax rates for calculation
+        const productIds = dto.items.map(i => i.productId);
+        const dbProducts = await tx.product.findMany({
+          where: { id: { in: productIds } },
+          select: { id: true, taxRate: true }
+        });
+        const productMap = new Map(dbProducts.map(p => [p.id, Number(p.taxRate)]));
+
+        // 2. Pre-calculate Fiscal Totals
+        let totalHtGlobal = 0;
+        let totalTaxGlobal = 0;
+        const taxBreakdown: Record<string, number> = {};
+
+        const itemsWithTax = dto.items.map(item => {
+          const taxRate = productMap.get(item.productId) ?? 0.19;
+          const unitPriceHt = item.price / (1 + taxRate);
+          const itemTotalHt = unitPriceHt * item.quantity;
+          const itemTaxAmount = itemTotalHt * taxRate;
+
+          totalHtGlobal += itemTotalHt;
+          totalTaxGlobal += itemTaxAmount;
+
+          const rateLabel = `${Math.round(taxRate * 100)}%`;
+          taxBreakdown[rateLabel] = (taxBreakdown[rateLabel] || 0) + itemTaxAmount;
+
+          return {
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+            unitPriceHt: Math.round(unitPriceHt * 1000) / 1000,
+            taxRate: taxRate,
+            taxAmount: Math.round(itemTaxAmount * 1000) / 1000,
+            totalHt: Math.round(itemTotalHt * 1000) / 1000,
+            totalTtc: Math.round((itemTotalHt + itemTaxAmount) * 1000) / 1000,
+          };
+        });
+
         const newSale = await tx.sale.create({
           data: {
             id: dto.id || undefined, // Allow client-generated ID
             storeId: dto.storeId,
             total: dto.total,
+            totalHt: Math.round(totalHtGlobal * 1000) / 1000,
+            totalTax: Math.round(totalTaxGlobal * 1000) / 1000,
+            taxBreakdown: taxBreakdown as any,
             baristaId: dto.baristaId,
             takenById: dto.takenById || dto.baristaId,
             mode: dto.mode || 'NORMAL',
             items: {
-              create: dto.items.map(item => ({
-                productId: item.productId,
-                quantity: item.quantity,
-                price: item.price,
-              }))
+              create: itemsWithTax
             }
           },
           include: { items: true }

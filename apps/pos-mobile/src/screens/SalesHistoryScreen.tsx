@@ -77,7 +77,7 @@ export function SalesHistoryScreen({ storeId }: { storeId: string }) {
     chipTextActive: { color: theme.colors.background },
 
     statsRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 10, marginBottom: 20 },
-    statCard: { flex: 1, padding: 15, borderRadius: 20, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.glassBorder },
+    statCard: { flex: 1, padding: 15, borderRadius: 20, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.glassBorder, minHeight: 70, justifyContent: 'center' },
     statLabel: { fontSize: 10, color: theme.colors.creamMuted, fontWeight: '800', marginBottom: 5, textTransform: 'uppercase' },
     statValue: { fontSize: 15, fontWeight: '900', color: theme.colors.cream },
 
@@ -102,7 +102,12 @@ export function SalesHistoryScreen({ storeId }: { storeId: string }) {
         <Text style={styles.subtitle}>Suivi par vendeur & mode</Text>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={{ paddingRight: 40 }}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.filterScroll} 
+        contentContainerStyle={{ paddingRight: 40, alignItems: 'center' }}
+      >
         {(['TODAY', 'YESTERDAY', 'WEEK', 'ALL'] as const).map(f => (
           <TouchableOpacity key={f} style={[styles.chip, timeFilter === f && styles.chipActive]} onPress={() => setTimeFilter(f)}>
             <Text style={[styles.chipText, timeFilter === f && styles.chipTextActive]}>
@@ -118,7 +123,12 @@ export function SalesHistoryScreen({ storeId }: { storeId: string }) {
         ))}
       </ScrollView>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={[styles.filterScroll, { marginBottom: 20 }]} 
+        contentContainerStyle={{ paddingRight: 40, alignItems: 'center' }}
+      >
         <TouchableOpacity style={[styles.chip, !selectedBarista && styles.chipActive]} onPress={() => setSelectedBarista(null)}>
           <Text style={[styles.chipText, !selectedBarista && styles.chipTextActive]}>Tous les vendeurs</Text>
         </TouchableOpacity>

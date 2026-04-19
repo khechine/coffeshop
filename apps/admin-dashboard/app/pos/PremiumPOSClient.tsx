@@ -6,7 +6,7 @@ import {
   History, User, Coffee, LogOut, Lock, LayoutGrid, CreditCard,
   ChevronRight, AlertCircle, Save, ArrowLeft, MoreVertical, ClipboardList,
   ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, Search,
-  X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon
+  X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck
 } from 'lucide-react';
 import { recordSale, searchCustomers, createCustomer } from '../actions';
 import './pos-premium.css';
@@ -182,13 +182,18 @@ export default function PremiumPOSClient({
           card: paymentMethod === 'CARD' ? total : 0,
           points: discountFromPoints * loyaltyRedeemRate
         },
-        customerId: selectedCustomer?.id,
+        customerId: (selectedCustomer?.id && selectedCustomer.id !== 'passager') ? selectedCustomer.id : undefined,
         change: change
       });
 
       alert("Vente enregistrée avec succès !");
       setCart([]);
-      setSelectedCustomer(null);
+      setSelectedCustomer({
+        id: 'passager',
+        name: 'Client Passager',
+        phone: '',
+        loyaltyPoints: 0
+      });
       setIsPaymentModalOpen(false);
       setIsRedeemingPoints(false);
     } catch (err) {

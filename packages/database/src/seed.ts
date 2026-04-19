@@ -47,6 +47,45 @@ async function main() {
   });
   console.log(`✅ Created Store: ${store.name}`);
 
+  // 2.1 Create RACHMA Plan & Subscription
+  const rachmaPlan = await prisma.plan.upsert({
+    where: { id: 'plan_rachma' },
+    update: {},
+    create: {
+      id: 'plan_rachma',
+      name: 'RACHMA',
+      price: 29.9,
+      maxStores: 1,
+      maxProducts: 100,
+      hasMarketplace: true
+    }
+  });
+
+  await prisma.subscription.upsert({
+    where: { storeId: store.id },
+    update: { planId: rachmaPlan.id },
+    create: {
+      storeId: store.id,
+      planId: rachmaPlan.id,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      status: 'ACTIVE'
+    }
+  });
+  console.log('✅ Created RACHMA Plan and Subscription for Central Perk');
+
+  // 2.2 Create Initial POS Terminal for Easy Pairing
+  await prisma.posTerminal.upsert({
+    where: { activationCode: '123456' },
+    update: { storeId: store.id },
+    create: {
+      nickname: 'Tablette Démo',
+      activationCode: '123456',
+      storeId: store.id,
+      status: 'INACTIVE'
+    }
+  });
+  console.log('✅ Created Default POS Terminal (Code: 123456)');
+
   // 3. Create VENDOR & VendorProfile
   const vendorUser = await prisma.user.upsert({
     where: { email: 'vendor@distributeur.tn' },
@@ -373,7 +412,7 @@ async function main() {
   ];
 
   for (const c of finishedProductCategoriesDef) {
-    const cat = await prisma.category.create({
+    const cat = await (prisma.category as any).create({
       data: { name: c.name, color: c.color, icon: c.icon, storeId: store.id }
     });
     posCategoriesMap[c.name] = cat.id; // register generic category mapping
@@ -433,10 +472,15 @@ async function main() {
 
   for (const fp of finishedProductsData) {
     if (posCategoriesMap[fp.cat]) {
+      // Tunisian Tax Logic: 7% for basic food/pastry, 19% for beverages/services
+      const foodCats = ['Pâtisserie', 'Snack', 'Crêpes'];
+      const taxRate = foodCats.includes(fp.cat) ? 0.07 : 0.19;
+
       await prisma.product.create({
         data: {
           name: fp.name,
           price: fp.price,
+          taxRate: taxRate,
           categoryId: posCategoriesMap[fp.cat],
           storeId: store.id
         }

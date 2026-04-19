@@ -186,7 +186,7 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
         )}
 
         {/* Terminaux & Matériel - Independent Group */}
-        {(hasPerm('TERMINALS') || role === 'STORE_OWNER') && showNacefModules && (
+        {(hasPerm('TERMINALS') || role === 'STORE_OWNER') && (showNacefModules || isRachma) && (
           <div className="nav-group tech-group" style={{ marginTop: '12px' }}>
             {displayExpanded && (
               <div className="nav-section-header" style={{ padding: '0 12px 6px' }}>

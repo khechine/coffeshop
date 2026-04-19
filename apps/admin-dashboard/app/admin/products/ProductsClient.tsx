@@ -16,6 +16,7 @@ interface Product {
   id: string; 
   name: string; 
   price: any; 
+  taxRate: any;
   active: boolean;
   unit: string;
   category: { id: string; name: string }; 
@@ -75,16 +76,20 @@ export default function ProductsClient({ products, categories, stockItems, globa
                 <th>Produit</th>
                 <th>Statut</th>
                 <th>Catégorie</th>
-                <th>Prix de Vente</th>
-                <th>Profit Net (Est.)</th>
+                <th>Prix HT / TVA</th>
+                <th>Prix TTC</th>
+                <th>Profit (HT)</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {products.map(p => {
                 const catColor = CATEGORY_COLORS[p.category.name] || '#6366F1';
+                const taxRate = Number(p.taxRate || 0.19);
+                const priceHt = Number(p.price) / (1 + taxRate);
+                const taxAmount = Number(p.price) - priceHt;
                 const pCogs = p.recipe.reduce((acc, r) => acc + (Number(r.stockItem.cost || 0) * Number(r.quantity)), 0);
-                const pProfit = Number(p.price) - pCogs;
+                const pProfitHt = priceHt - pCogs;
                 const isActive = p.active ?? true;
                 return (
                   <tr key={p.id} style={{ opacity: isActive ? 1 : 0.6 }}>
@@ -111,10 +116,14 @@ export default function ProductsClient({ products, categories, stockItems, globa
                         {p.category.name}
                       </span>
                     </td>
+                    <td>
+                      <div style={{ fontWeight: 700, color: '#475569', fontSize: '14px' }}>{priceHt.toFixed(3)} DT</div>
+                      <div style={{ fontSize: '10px', color: '#6366F1', fontWeight: 800 }}>TVA: {Math.round(taxRate * 100)}% (+{taxAmount.toFixed(3)})</div>
+                    </td>
                     <td><strong style={{ fontSize: '16px', color: '#1E293B' }}>{Number(p.price).toFixed(3)}</strong><span style={{ color: '#94A3B8', fontSize: '12px' }}> DT</span></td>
                     <td>
-                      <div style={{ fontWeight: 800, color: '#10B981', fontSize: '15px' }}>+{pProfit.toFixed(3)} DT</div>
-                      <div style={{ fontSize: '10px', color: '#94A3B8' }}>Marge: {Number(p.price) > 0 ? ((pProfit / Number(p.price)) * 100).toFixed(0) : 0}%</div>
+                      <div style={{ fontWeight: 800, color: pProfitHt > 0 ? '#10B981' : '#EF4444', fontSize: '15px' }}>{pProfitHt > 0 ? '+' : ''}{pProfitHt.toFixed(3)} DT</div>
+                      <div style={{ fontSize: '10px', color: '#94A3B8' }}>Marge/HT: {priceHt > 0 ? ((pProfitHt / priceHt) * 100).toFixed(0) : 0}%</div>
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <button className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEdit(p)}><Edit2 size={14} /></button>

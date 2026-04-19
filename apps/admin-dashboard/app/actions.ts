@@ -935,8 +935,9 @@ export async function generateZReport() {
     totalTax += Number(s.totalTax || 0);
 
     for (const item of s.items) {
-      if (item.taxRate === 0.07) taxBreakdown["7%"] += Number(item.taxAmount || 0);
-      else if (item.taxRate === 0.19) taxBreakdown["19%"] += Number(item.taxAmount || 0);
+      const rate = Number(item.taxRate || 0);
+      if (rate === 0.07) taxBreakdown["7%"] += Number(item.taxAmount || 0);
+      else if (rate === 0.19) taxBreakdown["19%"] += Number(item.taxAmount || 0);
     }
   }
 

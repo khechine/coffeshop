@@ -32,6 +32,7 @@ export interface SaleEvent {
   paymentStatus?: 'PAID' | 'UNPAID' | 'CANCELLED';
   baristaId?: string; // Accountability
   mode?: 'NORMAL' | 'RACHMA';
+  isFiscal?: boolean; 
 }
 
 export type UserRole = 'owner' | 'cashier' | 'vendor' | 'superadmin' | null;
@@ -60,8 +61,11 @@ export interface POSState {
   themeName: 'antigravity' | 'neon-food' | 'vendor';
   themeMode: 'light' | 'dark';
   theme: ITheme;
+  isFiscalEnabled: boolean;
   rachmaCart: Record<string, number>;
-  rachmaHistory: { id: string, productId: string, name: string, timestamp: number, type: 'ADD' | 'REMOVE' }[];
+  rachmaTakeawayCart: Record<string, number>;
+  rachmaTakeawayActive: boolean;
+  rachmaHistory: { id: string, productId: string, name: string, timestamp: number, type: 'ADD' | 'REMOVE', isTakeaway?: boolean }[];
   authenticate: (token: string, storeId: string) => void;
   activateTerminal: (code: string, storeId: string) => Promise<boolean>;
   loginWithAccount: (email: string, pass: string) => Promise<boolean>;
@@ -71,6 +75,7 @@ export interface POSState {
   deactivateTerminal: () => Promise<void>;
   setTheme: (name: 'antigravity' | 'neon-food' | 'vendor') => void;
   toggleThemeMode: () => void;
+  toggleRachmaTakeaway: () => void;
   addToCart: (productId: string) => void;
   removeFromCart: (productId: string) => void;
   addToRachma: (productId: string) => void;
@@ -131,8 +136,11 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [vendorName, setVendorName] = useState<string | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode>(null);
   const [storeTables, setStoreTablesState] = useState<{ id: string, label: string }[]>([]);
+  const [isFiscalEnabled, setIsFiscalEnabled] = useState(false);
   const [rachmaCart, setRachmaCart] = useState<Record<string, number>>({});
-  const [rachmaHistory, setRachmaHistory] = useState<{ id: string, productId: string, name: string, timestamp: number, type: 'ADD' | 'REMOVE' }[]>([]);
+  const [rachmaTakeawayCart, setRachmaTakeawayCart] = useState<Record<string, number>>({});
+  const [rachmaTakeawayActive, setRachmaTakeawayActive] = useState(false);
+  const [rachmaHistory, setRachmaHistory] = useState<{ id: string, productId: string, name: string, timestamp: number, type: 'ADD' | 'REMOVE', isTakeaway?: boolean, removed?: boolean }[]>([]);
   const [currentBarista, setCurrentBarista] = useState<{ 
     id: string, name: string, 
     assignedTables?: string[],
@@ -171,8 +179,10 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const storedBarista = await AsyncStorage.getItem('pos-current-barista');
         const storedRole = await AsyncStorage.getItem('pos-user-role');
         const storedRachma = await AsyncStorage.getItem('pos-rachma-cart');
+        const storedRachmaTakeaway = await AsyncStorage.getItem('pos-rachma-takeaway');
         const storedTheme = await AsyncStorage.getItem('pos-active-theme');
         const storedThemeMode = await AsyncStorage.getItem('pos-theme-mode');
+        const storedFiscal = await AsyncStorage.getItem('pos-is-fiscal-enabled');
         
         if (storedCart) setCart(JSON.parse(storedCart));
         if (storedTables) setTables(JSON.parse(storedTables));
@@ -187,12 +197,14 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (storedBarista) setCurrentBarista(JSON.parse(storedBarista));
         if (storedRole) setUserRole(storedRole as UserRole);
         if (storedRachma) setRachmaCart(JSON.parse(storedRachma));
+        if (storedRachmaTakeaway) setRachmaTakeawayCart(JSON.parse(storedRachmaTakeaway));
         if (storedTheme === 'neon-food' || storedTheme === 'antigravity' || storedTheme === 'vendor') {
           setThemeName(storedTheme as any);
         }
         if (storedThemeMode === 'light' || storedThemeMode === 'dark') {
           setThemeMode(storedThemeMode as any);
         }
+        if (storedFiscal) setIsFiscalEnabled(storedFiscal === 'true');
         
         const storedBarSupport = await AsyncStorage.getItem('pos-has-bar-support');
         if (storedBarSupport) setHasBarSupport(storedBarSupport === 'true');
@@ -246,8 +258,10 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       AsyncStorage.setItem('pos-active-theme', themeName).catch(() => {});
       AsyncStorage.setItem('pos-theme-mode', themeMode).catch(() => {});
+      AsyncStorage.setItem('pos-is-fiscal-enabled', isFiscalEnabled ? 'true' : 'false').catch(() => {});
       AsyncStorage.setItem('pos-has-bar-support', hasBarSupport ? 'true' : 'false').catch(() => {});
       AsyncStorage.setItem('pos-rachma-cart', JSON.stringify(rachmaCart)).catch(() => {});
+      AsyncStorage.setItem('pos-rachma-takeaway', JSON.stringify(rachmaTakeawayCart)).catch(() => {});
       AsyncStorage.setItem('pos-mkt-cart', JSON.stringify(mktCart)).catch(() => {});
     }
   }, [cart, tables, pendingSales, authToken, storeId, storeName, vendorId, vendorName, authMode, storeTables, currentBarista, userRole, themeName, themeMode, hasBarSupport, rachmaCart, isReady]);
@@ -266,6 +280,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAuthToken('terminal-token-' + data.terminalId);
         setStoreId(data.storeId);
         setStoreName(data.storeName);
+        setIsFiscalEnabled(!!data.isFiscalEnabled);
         setAuthMode('TERMINAL');
         return true;
       }
@@ -288,6 +303,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setAuthToken(data.token);
         setStoreId(data.user.storeId);
         setStoreName(data.user.storeName);
+        setIsFiscalEnabled(!!data.user.isFiscalEnabled);
         setVendorId(data.user.vendorId || null);
         setVendorName(data.user.vendorName || null);
         setAuthMode('ACCOUNT');
@@ -358,6 +374,8 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const toggleThemeMode = () => {
     setThemeMode(prev => prev === 'light' ? 'dark' : 'light');
   };
+
+  const toggleRachmaTakeaway = () => setRachmaTakeawayActive(prev => !prev);
   
   const logout = () => {
     setAuthToken(null);
@@ -400,6 +418,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       'pos-store-tables',
       'pos-current-barista',
       'pos-user-role',
+      'pos-is-fiscal-enabled',
       'pos-offline-sales',
       'pos-tables',
       'pos-offline-cart',
@@ -457,14 +476,21 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const addToRachma = (id: string) => {
     const product = products.find(p => p.id === id);
+    const isTakeaway = rachmaTakeawayActive;
+    
     setRachmaCart(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+    if (isTakeaway) {
+      setRachmaTakeawayCart(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+    }
+
     setRachmaHistory(prev => [
       { 
         id: Math.random().toString(36).substr(2, 9), 
         productId: id, 
         name: product?.name || 'Inconnu', 
         timestamp: Date.now(), 
-        type: 'ADD' 
+        type: 'ADD',
+        isTakeaway
       },
       ...prev.slice(0, 49) // Keep last 50 actions
     ]);
@@ -472,22 +498,48 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const removeFromRachma = (id: string) => {
     const product = products.find(p => p.id === id);
+    
+    // Find the last active ADD for this product to know its state
+    const lastActiveAddIdx = rachmaHistory.findIndex(a => a.productId === id && a.type === 'ADD' && !a.removed);
+    const wasTakeaway = lastActiveAddIdx !== -1 ? (rachmaHistory[lastActiveAddIdx].isTakeaway || false) : false;
+
+    // 1. Update Main Cart
     setRachmaCart(prev => {
       const next = { ...prev };
       next[id] = Math.max(0, (next[id] || 0) - 1);
       if (next[id] === 0) delete next[id];
       return next;
     });
-    setRachmaHistory(prev => [
-      { 
-        id: Math.random().toString(36).substr(2, 9), 
-        productId: id, 
-        name: product?.name || 'Inconnu', 
-        timestamp: Date.now(), 
-        type: 'REMOVE' 
-      },
-      ...prev.slice(0, 49)
-    ]);
+
+    // 2. Update Takeaway Cart if needed
+    if (wasTakeaway) {
+      setRachmaTakeawayCart(prev => {
+        const next = { ...prev };
+        next[id] = Math.max(0, (next[id] || 0) - 1);
+        if (next[id] === 0) delete next[id];
+        return next;
+      });
+    }
+
+    // 3. Update History (Mark old as removed and add new REMOVE activity)
+    setRachmaHistory(prev => {
+      const next = [...prev];
+      const idx = next.findIndex(a => a.productId === id && a.type === 'ADD' && !a.removed);
+      if (idx !== -1) {
+        next[idx] = { ...next[idx], removed: true };
+      }
+      return [
+        { 
+          id: Math.random().toString(36).substr(2, 9), 
+          productId: id, 
+          name: product?.name || 'Inconnu', 
+          timestamp: Date.now(), 
+          type: 'REMOVE',
+          isTakeaway: wasTakeaway
+        },
+        ...next.slice(0, 49)
+      ];
+    });
   };
 
   const deleteItemFromRachma = (id: string) => {
@@ -500,7 +552,9 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const clearRachma = () => {
     setRachmaCart({});
+    setRachmaTakeawayCart({});
     setRachmaHistory([]);
+    setRachmaTakeawayActive(false);
   };
 
   const clearCart = () => {
@@ -820,8 +874,22 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <POSContext.Provider value={{ 
       cart, tables, activeTable, products, pendingSales, authToken, storeId, storeName, vendorId, vendorName, authMode, storeTables,
-      currentBarista, userRole, themeName, themeMode, theme, rachmaCart, rachmaHistory, hasBarSupport, authenticate, activateTerminal, loginWithAccount, loginWithPin, logoutBarista, logout, deactivateTerminal, setTheme,
+      currentBarista, userRole, themeName, themeMode,
+      theme,
+      rachmaCart,
+      rachmaTakeawayCart,
+      rachmaTakeawayActive,
+      rachmaHistory,
+      authenticate,
+      activateTerminal,
+      loginWithAccount,
+      loginWithPin,
+      logoutBarista,
+      logout,
+      deactivateTerminal,
+      setTheme,
       toggleThemeMode,
+      toggleRachmaTakeaway,
       addToCart, removeFromCart, addToRachma, removeFromRachma, clearRachma, clearCart, 
       setActiveTable, checkout, checkoutTable, checkoutRachma, 
       syncSales, setProducts, setStoreTables, getTotalItems, getTableTotal, getTotalPrice, getRachmaTotal,
@@ -831,8 +899,13 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       mktCart,
       addToMktCart,
       removeFromMktCart,
+      deleteItemFromMktCart,
       clearMktCart,
-      submitMktOrders
+      submitMktOrders,
+      deleteItemFromCart,
+      deleteItemFromRachma,
+      hasBarSupport,
+      isFiscalEnabled
     }}>
       {children}
     </POSContext.Provider>

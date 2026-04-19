@@ -6,25 +6,32 @@ import Animated, {
   withSpring 
 } from 'react-native-reanimated';
 import { usePOSStore } from '../../store/posStore';
+import { TallyGrid } from './TallyGrid';
 
 interface FloatingCardProps {
+  id: string; // Add id
   name: string;
   price: number;
   qty: number;
+  takeawayQty?: number;
   icon?: string;
   onPress: () => void;
   onLongPress?: () => void;
+  onToggleTakeaway?: () => void;
 }
 
 export const FloatingCard: React.FC<FloatingCardProps> = ({
+  id,
   name,
   price,
   qty,
+  takeawayQty = 0,
   icon = '☕',
   onPress,
-  onLongPress
+  onLongPress,
+  onToggleTakeaway
 }) => {
-  const { theme } = usePOSStore();
+  const { theme, themeMode } = usePOSStore();
   const scale = useSharedValue(1);
   const isSelected = qty > 0;
 
@@ -65,31 +72,34 @@ export const FloatingCard: React.FC<FloatingCardProps> = ({
           {isSelected && (
             <>
               {onLongPress && (
-                <TouchableOpacity 
-                  onPress={onLongPress}
-                  hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                  style={{
-                    position: 'absolute',
-                    top: -10,
-                    left: -10,
-                    backgroundColor: theme.colors.danger,
-                    width: 38,
-                    height: 38,
-                    borderRadius: 19,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    borderWidth: 2,
-                    borderColor: theme.colors.background,
-                    zIndex: 10,
-                    elevation: 5
-                  }}
-                >
-                  <Text style={{ color: theme.colors.background, fontSize: 22, fontWeight: '900', lineHeight: 24, marginTop: -2 }}>-</Text>
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity 
+                    onPress={onLongPress}
+                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                    style={styles.actionButtonLeft}
+                  >
+                    <Text style={styles.actionText}>-</Text>
+                  </TouchableOpacity>
+
+                  {onToggleTakeaway && (
+                    <TouchableOpacity 
+                      onPress={onToggleTakeaway}
+                      style={styles.actionButtonRight}
+                    >
+                      <Text style={{ fontSize: 16 }}>{takeawayQty > 0 ? '🛍️' : '🏠'}</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <View style={{ width: '100%', paddingHorizontal: 4 }}>
+                    <TallyGrid count={qty} theme={theme} themeMode={themeMode} takeawayQty={takeawayQty} />
+                  </View>
+                </>
               )}
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{qty}</Text>
-              </View>
+              {!onLongPress && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{qty}</Text>
+                </View>
+              )}
             </>
           )}
         </Animated.View>
@@ -108,7 +118,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     borderRadius: theme.shapes.radiusLg,
     padding: 12,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     minHeight: 120,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
@@ -117,7 +127,45 @@ const createStyles = (theme: any) => StyleSheet.create({
   cardSelected: {
     backgroundColor: theme.colors.surfaceLight,
     borderColor: theme.colors.caramel,
+    minHeight: 180, // Expand to show grid
     ...(theme.shadows.glow as any),
+  },
+  actionButtonLeft: {
+    position: 'absolute',
+    top: -10,
+    left: -10,
+    backgroundColor: theme.colors.danger,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: theme.colors.background,
+    zIndex: 10,
+    elevation: 5
+  },
+  actionButtonRight: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    backgroundColor: theme.colors.surface,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: theme.colors.caramel,
+    zIndex: 10,
+    elevation: 5
+  },
+  actionText: {
+    color: theme.colors.background,
+    fontSize: 20,
+    fontWeight: '900',
+    lineHeight: 22,
+    marginTop: -2
   },
   icon: {
     fontSize: 28,
