@@ -340,6 +340,7 @@ model Category {
   id        String    @id @default(cuid())
   name      String
   color     String?   @default("#6366F1") // Couleur pour le POS
+  icon      String?
   storeId   String?
   store     Store?    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   products  Product[]

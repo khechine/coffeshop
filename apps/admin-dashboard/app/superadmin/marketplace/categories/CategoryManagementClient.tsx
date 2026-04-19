@@ -321,10 +321,10 @@ export default function CategoryManagementClient({
                             <button onClick={() => setMigratingSubId(null)} className="p-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg"><X size={14} /></button>
                           </div>
                         ) : (
-                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => startMigrating(child.id)} title="Migrer vers une autre catégorie" className="p-2 text-slate-300 hover:text-indigo-600 transition-colors"><ArrowRightCircle size={14} /></button>
-                            <button onClick={() => startEditing(child)} title="Editer" className="p-2 text-slate-300 hover:text-indigo-600 transition-colors"><Pencil size={14} /></button>
-                            <button onClick={() => handleDelete(child.id)} title="Supprimer" className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
+                          <div className="flex gap-2 text-slate-300">
+                            <button onClick={() => startMigrating(child.id)} title="Migrer vers une autre catégorie" className="p-2 hover:text-indigo-600 transition-colors"><ArrowRightCircle size={14} /></button>
+                            <button onClick={() => startEditing(child)} title="Editer" className="p-2 hover:text-indigo-600 transition-colors"><Pencil size={14} /></button>
+                            <button onClick={() => handleDelete(child.id)} title="Supprimer" className="p-2 hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
                           </div>
                         )}
                       </>

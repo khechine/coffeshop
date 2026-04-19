@@ -13,7 +13,7 @@ import { logoutUser } from '../app/actions';
 
 type Role = 'STORE_OWNER' | 'CASHIER' | 'VENDOR' | 'SUPERADMIN' | null;
 
-export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true }: { storeName?: string; isMobileOpen?: boolean; hasMarketplace?: boolean }) {
+export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true, planName = '', isFiscalEnabled = false }: { storeName?: string; isMobileOpen?: boolean; hasMarketplace?: boolean; planName?: string; isFiscalEnabled?: boolean }) {
   const [role, setRole] = useState<Role>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
@@ -26,6 +26,8 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
   const hasPerm = (p: string) => role === 'STORE_OWNER' || permissions.includes(p);
   const hasAnyAdminPerm = role === 'STORE_OWNER' || permissions.some(p => p !== 'POS');
   const isActive = (href: string) => pathname === href;
+  const isRachma = planName.toUpperCase() === 'RACHMA' || (planName.toUpperCase() === 'STARTER' && !isFiscalEnabled);
+  const showNacefModules = !isRachma && (isFiscalEnabled || ['PRO', 'ENTERPRISE'].includes(planName.toUpperCase()));
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -184,7 +186,7 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
         )}
 
         {/* Terminaux & Matériel - Independent Group */}
-        {(hasPerm('TERMINALS') || role === 'STORE_OWNER') && (
+        {(hasPerm('TERMINALS') || role === 'STORE_OWNER') && showNacefModules && (
           <div className="nav-group tech-group" style={{ marginTop: '12px' }}>
             {displayExpanded && (
               <div className="nav-section-header" style={{ padding: '0 12px 6px' }}>
@@ -239,7 +241,7 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
                     {displayExpanded && <span>Metrics & Analytics</span>}
                   </Link>
                 )}
-                {role === 'STORE_OWNER' && (
+                {role === 'STORE_OWNER' && showNacefModules && (
                   <Link href="/admin/reports" title="Rapports Z (NACEF)" className={`nav-item${isActive('/admin/reports') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
                     <FileText size={18} />
                     {displayExpanded && <span>Rapports Z (NACEF)</span>}

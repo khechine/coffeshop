@@ -42,7 +42,7 @@ export default function MetricsClient({ data, storeName }: { data: MetricsData; 
   const maxRevenue = Math.max(...data.salesByDay.map(d => d.total), 1);
 
   return (
-    <div className="space-y-8">
+    <div className="page-content space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Metrics</h1>
@@ -57,7 +57,7 @@ export default function MetricsClient({ data, storeName }: { data: MetricsData; 
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {cards.map((card, idx) => (
           <div key={idx} className={`${card.bg} border-0 rounded-2xl p-5`}>
             <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center mb-3`}>

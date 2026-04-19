@@ -3,18 +3,40 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
+  /* Common */
   --pos-primary: #6366F1;
   --pos-primary-hover: #4F46E5;
-  --pos-bg: #F8FAFC;
-  --pos-sidebar: #1E1B4B;
-  --pos-card-bg: #FFFFFF;
-  --pos-border: #E2E8F0;
-  --pos-text-main: #1E293B;
-  --pos-text-muted: #64748B;
   --pos-success: #10B981;
   --pos-danger: #EF4444;
   --pos-warning: #F59E0B;
   --pos-accent: #8B5CF6;
+  
+  /* Light Theme Colors */
+  --pos-bg: #F8FAFC;
+  --pos-sidebar: #1E1B4B;
+  --pos-header-bg: #FFFFFF;
+  --pos-card-bg: #FFFFFF;
+  --pos-card-hover: #F1F5F9;
+  --pos-border: #E2E8F0;
+  --pos-text-main: #1E293B;
+  --pos-text-muted: #64748B;
+  --pos-input-bg: #F1F5F9;
+  --pos-modal-bg: #FFFFFF;
+  --pos-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme='dark'] {
+  --pos-bg: #0F172A;
+  --pos-sidebar: #020617;
+  --pos-header-bg: #1E293B;
+  --pos-card-bg: #1E293B;
+  --pos-card-hover: #334155;
+  --pos-border: #334155;
+  --pos-text-main: #F8FAFC;
+  --pos-text-muted: #94A3B8;
+  --pos-input-bg: #334155;
+  --pos-modal-bg: #1E293B;
+  --pos-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.15);
 }
 
 .pos-premium-container {
@@ -72,7 +94,7 @@
 
 .pos-header {
   height: 80px;
-  background: #fff;
+  background: var(--pos-header-bg);
   border-bottom: 1px solid var(--pos-border);
   padding: 0 32px;
   display: flex;
@@ -84,7 +106,7 @@
 /* Categories Column (Vertical) */
 .pos-categories-column {
   width: 130px;
-  background: #fff;
+  background: var(--pos-card-bg);
   border-right: 1px solid var(--pos-border);
   display: flex;
   flex-direction: column;
@@ -101,7 +123,7 @@
 .category-vertical-pill {
   width: 100%;
   padding: 16px 12px;
-  background: #fff;
+  background: var(--pos-card-bg);
   border: 1px solid var(--pos-border);
   border-radius: 12px;
   font-size: 13px;
@@ -156,7 +178,7 @@
 
 .product-card {
   height: 320px; /* Taller for larger images */
-  background: #fff;
+  background: var(--pos-card-bg);
   border-radius: 20px;
   border: 1px solid var(--pos-border);
   overflow: hidden;
@@ -174,7 +196,7 @@
 
 .product-image-container {
   height: 140px;
-  background: #F1F5F9;
+  background: var(--pos-input-bg);
   position: relative;
   overflow: hidden;
 }
@@ -208,7 +230,7 @@
 /* Cart Sidebar (Right) */
 .pos-cart-sidebar {
   width: 420px;
-  background: #fff;
+  background: var(--pos-card-bg);
   border-left: 1px solid var(--pos-border);
   display: flex;
   flex-direction: column;
@@ -240,7 +262,7 @@
   height: 60px;
   border-radius: 12px;
   object-fit: cover;
-  background: #F1F5F9;
+  background: var(--pos-bg);
 }
 
 .cart-item-info {
@@ -262,7 +284,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #F8FAFC;
+  background: var(--pos-bg);
   padding: 6px;
   border-radius: 10px;
 }
@@ -272,7 +294,7 @@
   height: 28px;
   border-radius: 8px;
   border: none;
-  background: #fff;
+  background: var(--pos-card-bg);
   color: var(--pos-text-main);
   display: flex;
   align-items: center;
@@ -361,7 +383,7 @@
 }
 
 .pos-modal-card {
-  background: #fff;
+  background: var(--pos-modal-bg);
   width: 500px;
   border-radius: 32px;
   padding: 32px;
@@ -377,7 +399,7 @@
 
 .keypad-btn {
   height: 72px;
-  background: #F1F5F9;
+  background: var(--pos-input-bg);
   border: none;
   border-radius: 16px;
   font-size: 24px;
@@ -394,7 +416,7 @@
 
 /* Customer Selector */
 .customer-selector {
-  background: #F8FAFC;
+  background: var(--pos-input-bg);
   padding: 12px 16px;
   border-radius: 16px;
   border: 1px solid var(--pos-border);

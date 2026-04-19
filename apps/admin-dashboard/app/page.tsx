@@ -7,7 +7,7 @@ import {
   Package, Layers, Users, Zap, ArrowUpRight, User, Wallet,
   ShieldCheck, Globe, Rocket, CheckCircle2, Star, Building2
 } from 'lucide-react';
-// import { prisma } from '@coffeeshop/database'; // Client component can't use prisma directly
+import { PLAN_FEATURES } from '../lib/planFeatures';
 
 // I'll need a Dashboard component or fetch data.
 // For now, I'll just implement the Landing Page logic.
@@ -164,8 +164,36 @@ export default function HomePage() {
            </div>
         </section>
 
+        {/* Pricing Section */}
+        <section style={{ padding: '100px 20px', background: '#F8FAFC' }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
+            <h2 style={{ fontSize: '36px', fontWeight: 900, marginBottom: '12px', color: '#1E1B4B' }}>Nos Forfaits</h2>
+            <p style={{ color: '#64748B', fontSize: '17px', marginBottom: '48px' }}>Choisissez le plan adapté à votre activité</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+              {Object.entries(PLAN_FEATURES).filter(([k]) => k !== 'ENTERPRISE').map(([key, plan]) => (
+                <div key={key} style={{ padding: '32px', background: '#fff', borderRadius: '24px', border: `2px solid ${plan.color}20`, boxShadow: '0 4px 20px rgba(0,0,0,0.04)', textAlign: 'left', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '28px' }}>{plan.icon}</span>
+                    <h3 style={{ fontSize: '22px', fontWeight: 900, color: plan.color, margin: 0 }}>{key}</h3>
+                  </div>
+                  <p style={{ color: '#64748B', fontSize: '13px', marginBottom: '24px', lineHeight: 1.5 }}>{plan.tagline}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                    {plan.features.map(f => (
+                      <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: f.included ? '#1E293B' : '#CBD5E1' }}>
+                        <span style={{ fontSize: '14px', flexShrink: 0 }}>{f.included ? '✅' : '❌'}</span>
+                        <span style={{ fontWeight: f.included ? 600 : 400 }}>{f.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Link href="/register" style={{ display: 'block', marginTop: '24px', padding: '14px', borderRadius: '12px', background: plan.color, color: '#fff', fontWeight: 800, textDecoration: 'none', textAlign: 'center', fontSize: '14px' }}>Commencer</Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Role Selection / Call to Action */}
-        <section style={{ padding: '80px 20px', background: '#F8FAFC' }}>
+        <section style={{ padding: '80px 20px' }}>
            <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
               <h2 style={{ fontSize: '36px', fontWeight: 900, marginBottom: '40px' }}>Rejoignez l'écosystème</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px' }}>

@@ -6,7 +6,7 @@ import {
   Plus, Minus, ShoppingCart, Trash2, CheckCircle, Clock, 
   History, User, Coffee, LogOut, Lock, LayoutGrid, CreditCard,
   ChevronRight, AlertCircle, Save, ArrowLeft, MoreVertical, ClipboardList,
-  ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, ShieldCheck
+  ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, ShieldCheck, Sun, Moon
 } from 'lucide-react';
 import { recordSale, logStaffSessionAction } from '../actions';
 import { PrintService } from './PrintService';
@@ -20,6 +20,84 @@ interface TableOrder {
 
 const TIMEOUT_DURATION = 10 * 60 * 1000; // 10 minutes
 type ViewMode = 'tables' | 'order' | 'simplistic' | 'history' | 'journal';
+
+// === OPTIMIZED TALLY GRID ===
+// Memoized component outside main render loop to prevent redundant redraws
+const TallyGrid = React.memo(({ productId, actions = [], gridPage, onPageChange, isMobile }: { 
+  productId: string, 
+  actions: ('ADD' | 'VOID' | 'ADD_TAKEAWAY')[], 
+  gridPage?: number,
+  onPageChange: (productId: string, page: number) => void,
+  isMobile: boolean
+}) => {
+  const cols = isMobile ? 5 : 6;
+  const rows = isMobile ? 5 : 6;
+  const pageSize = cols * rows; 
+  const totalPages = Math.max(1, Math.ceil(actions.length / pageSize));
+  // Determine active page: user choice OR the page containing the latest action
+  const currentDisplayPage = gridPage ?? (totalPages - 1);
+  
+  const pageActions = actions.slice(currentDisplayPage * pageSize, (currentDisplayPage + 1) * pageSize);
+  const cells = Array(pageSize).fill(null);
+
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '4px', padding: '2px' }}>
+      {/* Pagination Area - Always rendered with fixed height to prevent layout shift */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        gap: '4px', 
+        marginBottom: '8px',
+        minHeight: '26px', // Reserve space for dots
+        visibility: totalPages > 1 ? 'visible' : 'hidden'
+      }}>
+        {totalPages > 1 && Array.from({ length: totalPages }).map((_, idx) => (
+          <div key={idx} 
+            onMouseDown={e => e.stopPropagation()}
+            onMouseUp={e => e.stopPropagation()}
+            onTouchStart={e => e.stopPropagation()}
+            onTouchEnd={e => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onPageChange(productId, idx);
+            }}
+            style={{ padding: '6px 4px', cursor: 'pointer' }}
+          >
+            <div style={{ 
+              width: '12px', height: '12px', borderRadius: '50%', 
+              background: (currentDisplayPage === idx) ? 'var(--pos-primary)' : 'var(--pos-border)',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              transform: (currentDisplayPage === idx) ? 'scale(1.2)' : 'scale(1)',
+              boxShadow: (currentDisplayPage === idx) ? '0 0 0 6px rgba(99, 102, 241, 0.1)' : 'none',
+              border: (currentDisplayPage === idx) ? 'none' : '1px solid rgba(0,0,0,0.05)'
+            }} />
+          </div>
+        ))}
+      </div>
+
+      <div style={{ 
+        display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '1px', 
+        background: 'var(--pos-border)', border: '1px solid var(--pos-border)', borderRadius: '4px', overflow: 'hidden', flex: 1
+      }}>
+        {cells.map((_, i) => {
+          const action = pageActions[i];
+          if (!action) return <div key={i} style={{ aspectRatio: '1', background: 'var(--pos-card-bg)' }} />;
+          
+          return (
+            <div key={i} style={{ 
+              aspectRatio: '1', background: 'var(--pos-card-bg)', display: 'flex', alignItems: 'center', 
+              justifyContent: 'center'
+            }}>
+              <svg width="80%" height="80%" viewBox="0 0 24 24" fill="none" strokeWidth={4} strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12" stroke={action === 'ADD' ? '#10B981' : action === 'ADD_TAKEAWAY' ? '#F59E0B' : '#EF4444'} />
+              </svg>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
 
 export default function POSClient({ 
   storeId,
@@ -50,27 +128,61 @@ export default function POSClient({
   const [cashierName, setCashierName] = useState<string | null>(null);
   const [terminalId, setTerminalId] = useState<string | null>(null);
   const [showTerminalSelector, setShowTerminalSelector] = useState(false);
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [pressingProductId, setPressingProductId] = useState<string | null>(null);
   const [lastProcessedLongPress, setLastProcessedLongPress] = useState<number>(0);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const longPressHandledRef = useRef(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   
   const [activeTable, setActiveTable] = useState<string | null>(null);
   const [tableOrders, setTableOrders] = useState<Record<string, TableOrder>>({});
   const [dailySales, setDailySales] = useState<any[]>(initialSales);
-  const [viewMode, setViewMode] = useState<ViewMode>('tables');
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    (planName?.toUpperCase() === 'RACHMA' || planName?.toUpperCase() === 'STARTER') ? 'simplistic' : 'tables'
+  );
   const [simplisticSession, setSimplisticSession] = useState<Record<string, number>>({});
   const [isTakeawayMode, setIsTakeawayMode] = useState(false);
   const [packagingId, setPackagingId] = useState<string | null>(null);
   const [selectedSale, setSelectedSale] = useState<any | null>(null);
   const [expandedSaleId, setExpandedSaleId] = useState<string | null>(null);
   const [simplisticTakeaway, setSimplisticTakeaway] = useState<Record<string, number>>({});
+  const [simplisticHistory, setSimplisticHistory] = useState<Record<string, ('ADD' | 'VOID' | 'ADD_TAKEAWAY')[]>>({});
+  const [simplisticProductTakeaway, setSimplisticProductTakeaway] = useState<Record<string, boolean>>({});
+  const [simplisticTab, setSimplisticTab] = useState<'PRODUCTS' | 'PACKAGING'>('PRODUCTS');
+  const [simplisticGridPage, setSimplisticGridPage] = useState<Record<string, number>>({});
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetPin, setResetPin] = useState("");
+  const [resetError, setResetError] = useState("");
 
   const router = useRouter();
   const lastActivityRef = useRef(Date.now());
+  
+  // === THEME MANAGEMENT ===
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('pos_theme');
+    if (savedTheme === 'dark') {
+      setIsDarkMode(true);
+      document.body.setAttribute('data-theme', 'dark');
+    } else {
+      document.body.removeAttribute('data-theme');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    setIsDarkMode(prev => {
+      const newVal = !prev;
+      localStorage.setItem('pos_theme', newVal ? 'dark' : 'light');
+      if (newVal) {
+        document.body.setAttribute('data-theme', 'dark');
+      } else {
+        document.body.removeAttribute('data-theme');
+      }
+      return newVal;
+    });
+  };
 
   // === SESSION & STORAGE ===
   useEffect(() => {
@@ -95,21 +207,28 @@ export default function POSClient({
   useEffect(() => {
     if (!cashierId) {
       setSimplisticSession({});
+      setSimplisticHistory({});
       return;
     }
     
-    // Load simplistic session for THIS barista
+    // Load simplistic session and history for THIS barista
     const savedSimplistic = localStorage.getItem(`pos_simplistic_${cashierId}`);
+    const savedHistory = localStorage.getItem(`pos_history_${cashierId}`);
     
     if (savedSimplistic) {
       try {
         setSimplisticSession(JSON.parse(savedSimplistic));
-      } catch (e) {
-        console.error("Failed to load simplistic session", e);
-        setSimplisticSession({});
-      }
+      } catch (e) { console.error("Failed to load simplistic session", e); }
     } else {
       setSimplisticSession({});
+    }
+
+    if (savedHistory) {
+      try {
+        setSimplisticHistory(JSON.parse(savedHistory));
+      } catch (e) { console.error("Failed to load simplistic history", e); }
+    } else {
+      setSimplisticHistory({});
     }
   }, [cashierId]);
 
@@ -169,7 +288,8 @@ export default function POSClient({
       logStaffSessionAction(barista.id, storeId, 'LOGIN');
       
       // Auto-set mode based on barista preference
-      if (barista.defaultPosMode === 'simplistic') {
+      const isRachmaOnly = planName?.toUpperCase() === 'RACHMA';
+      if (barista.defaultPosMode === 'simplistic' || isRachmaOnly) {
         setViewMode('simplistic');
       } else {
         setViewMode('tables');
@@ -394,14 +514,25 @@ export default function POSClient({
       return;
     }
  
+    const isTakeawayForThisTap = !!simplisticProductTakeaway[productId];
+    
     setSimplisticSession(prev => {
       const next = { ...prev, [productId]: (prev[productId] || 0) + 1 };
       localStorage.setItem(`pos_simplistic_${cashierId}`, JSON.stringify(next));
       return next;
     });
 
+    setSimplisticHistory(prev => {
+      const current = prev[productId] || [];
+      const action = isTakeawayForThisTap ? 'ADD_TAKEAWAY' : 'ADD';
+      const next = { ...prev, [productId]: [...current, action as 'ADD' | 'VOID' | 'ADD_TAKEAWAY'] };
+      localStorage.setItem(`pos_history_${cashierId}`, JSON.stringify(next));
+      return next;
+    });
+
     // Automatically handle packaging item in simplistic mode
-    const finalPackId = packagingProduct ? packagingProduct.id : (isTakeawayMode && packagingId ? packagingId : null);
+    // Either from per-product toggle OR global mode
+    const finalPackId = packagingProduct ? packagingProduct.id : ((isTakeawayMode || isTakeawayForThisTap) && packagingId ? packagingId : null);
     if (finalPackId) {
       setSimplisticTakeaway(prev => {
         const next = { ...prev, [finalPackId]: (prev[finalPackId] || 0) + 1 };
@@ -409,6 +540,15 @@ export default function POSClient({
         return next;
       });
     }
+
+    // AUTO-RESET per-product toggle & Force Jump to latest grid page
+    if (isTakeawayForThisTap) {
+      setSimplisticProductTakeaway(prev => ({ ...prev, [productId]: false }));
+    }
+    setSimplisticGridPage(prev => {
+       const { [productId]: _, ...rest } = prev;
+       return rest;
+    });
 
     setShowPackagingPopup(false);
     setPendingProduct(null);
@@ -423,6 +563,24 @@ export default function POSClient({
       const next = { ...prev, [productId]: current - 1 };
       localStorage.setItem(`pos_simplistic_${cashierId}`, JSON.stringify(next));
       return next;
+    });
+
+    setSimplisticHistory(prev => {
+      const current = prev[productId] || [];
+      // Only add a VOID if there's something to void (active items > voids)
+      const adds = current.filter(a => a === 'ADD').length;
+      const voids = current.filter(a => a === 'VOID').length;
+      if (adds <= voids) return prev;
+
+      const next = { ...prev, [productId]: [...current, 'VOID' as const] };
+      localStorage.setItem(`pos_history_${cashierId}`, JSON.stringify(next));
+      return next;
+    });
+
+    // Force Jump to latest grid page
+    setSimplisticGridPage(prev => {
+       const { [productId]: _, ...rest } = prev;
+       return rest;
     });
 
     // Also remove packaging if active
@@ -441,8 +599,26 @@ export default function POSClient({
     if (!cashierId) return;
     setSimplisticSession({});
     setSimplisticTakeaway({});
+    setSimplisticHistory({});
+    setSimplisticGridPage({});
     localStorage.removeItem(`pos_simplistic_${cashierId}`);
     localStorage.removeItem(`pos_takeaway_${cashierId}`);
+    localStorage.removeItem(`pos_history_${cashierId}`);
+  };
+
+  const handleResetPinSubmit = (enteredPin?: string) => {
+    const pinToVerify = enteredPin || resetPin;
+    const currentBarista = initialBaristas.find(b => b.id === cashierId);
+    
+    if (currentBarista && currentBarista.pinCode === pinToVerify) {
+      resetSimplistic();
+      setShowResetConfirm(false);
+      setResetPin("");
+      setResetError("");
+    } else {
+      setResetError("PIN incorrect");
+      setResetPin("");
+    }
   };
 
   const validateSimplistic = async () => {
@@ -477,7 +653,7 @@ export default function POSClient({
  
       // Update local history
       const newLogs = [];
-      if (items.length > 0) {
+      if (finalItems.length > 0) {
         newLogs.push({
           id: Math.random().toString(),
           total: simplisticTotal,
@@ -487,7 +663,7 @@ export default function POSClient({
           takenBy: cashierName,
           takenById: cashierId,
           time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-          items: items
+          items: finalItems
         });
       }
  
@@ -501,7 +677,7 @@ export default function POSClient({
   };
 
   // === UI HELPER ===
-  const box: React.CSSProperties = { padding: '24px', borderRadius: '16px', background: '#fff', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '8px' };
+  const box: React.CSSProperties = { padding: '24px', borderRadius: '16px', background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--pos-text-main)' };
 
   if (!cashierId) {
     return (
@@ -538,12 +714,12 @@ export default function POSClient({
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', background: '#F1F5F9', overflow: 'hidden', fontFamily: "'Inter', sans-serif" }}>
+    <div data-theme={isDarkMode ? 'dark' : 'light'} style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', background: 'var(--pos-bg)', color: 'var(--pos-text-main)', overflow: 'hidden', fontFamily: "'Inter', sans-serif", transition: 'all 0.3s ease' }}>
       
       {/* Sidebar - Collapsible on Mobile */}
       <div style={{ 
         width: isMobile ? '60px' : '80px', 
-        background: '#1E1B4B', 
+        background: 'var(--pos-sidebar)', 
         display: 'flex', 
         flexDirection: 'column', 
         alignItems: 'center', 
@@ -556,11 +732,11 @@ export default function POSClient({
         </div>
         
         {[
-          { icon: <Clock size={isMobile ? 18 : 20} />, label: isMobile ? null : 'Salle', mode: 'tables' as ViewMode },
+          { icon: <Clock size={isMobile ? 18 : 20} />, label: isMobile ? null : 'Salle', mode: 'tables' as ViewMode, hide: planName?.toUpperCase() === 'RACHMA' },
           { icon: <Plus size={isMobile ? 18 : 20} />, label: isMobile ? null : 'Session', mode: 'simplistic' as ViewMode },
           { icon: <ClipboardList size={isMobile ? 18 : 20} />, label: isMobile ? null : 'Journal', mode: 'journal' as ViewMode },
           { icon: <History size={isMobile ? 18 : 20} />, label: isMobile ? null : 'Histo', mode: 'history' as ViewMode }
-        ].map(btn => (
+        ].filter(btn => !btn.hide).map(btn => (
           <button key={btn.mode} onClick={() => setViewMode(btn.mode)}
             style={{ 
               width: isMobile ? '44px' : '64px', height: isMobile ? '44px' : '64px', borderRadius: '16px', border: 'none', cursor: 'pointer', 
@@ -579,103 +755,53 @@ export default function POSClient({
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Topbar */}
-        <div style={{ height: '76px', background: '#fff', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 12px' : '0 24px', flexShrink: 0, boxShadow: '0 2px 10px rgba(0,0,0,0.02)', zIndex: 100 }}>
+        <div style={{ height: '76px', background: 'var(--pos-header-bg)', borderBottom: '1px solid var(--pos-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 12px' : '0 24px', flexShrink: 0, boxShadow: 'var(--pos-shadow)', zIndex: 100 }}>
            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px' }}>
               <div style={{ width:isMobile ? 38 : 44, height: isMobile ? 38 : 44, borderRadius: '12px', background: 'linear-gradient(135deg, #6366F1, #4F46E5)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(99,102,241,0.2)' }}>
                  <Coffee size={isMobile ? 20 : 24} color="#fff" />
               </div>
               <div style={{ display: isMobile && viewMode !== 'tables' ? 'none' : 'block' }}>
-                 <div style={{ fontWeight: 900, fontSize: isMobile ? '14px' : '18px', color: '#1E1B4B', lineHeight: 1.1, textTransform: 'uppercase', letterSpacing: '-0.3px' }}>{storeName}</div>
-                 <div style={{ fontSize: '11px', color: '#6366F1', fontWeight: 800, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#6366F1' }} />
+                 <div style={{ fontWeight: 900, fontSize: isMobile ? '14px' : '18px', color: 'var(--pos-text-main)', lineHeight: 1.1, textTransform: 'uppercase', letterSpacing: '-0.3px' }}>{storeName}</div>
+                 <div style={{ fontSize: '11px', color: 'var(--pos-primary)', fontWeight: 800, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--pos-primary)' }} />
                     {viewMode === 'tables' ? 'PLAN DE SALLE' : viewMode === 'order' ? 'COMMANDE' : viewMode === 'simplistic' ? 'COMPTAGE RAPIDE' : 'JOURNAL'}
                  </div>
               </div>
            </div>
 
-           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px' }}>
-              {/* GLOBAL TAKEAWAY CONTROLS - Segmented Switch Style */}
+           <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
               <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                background: '#F1F5F9', 
-                padding: '4px', 
-                borderRadius: '14px',
-                border: '1px solid #E2E8F0'
+                padding: '10px 24px', 
+                background: 'rgba(99, 102, 241, 0.08)', 
+                border: '1.5px solid rgba(99, 102, 241, 0.2)', 
+                borderRadius: '50px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
               }}>
-                <button 
-                  onClick={() => setIsTakeawayMode(false)}
-                  style={{ 
-                    height: isMobile ? '32px' : '36px', 
-                    padding: isMobile ? '0 10px' : '0 16px', 
-                    borderRadius: '10px', 
-                    background: !isTakeawayMode ? '#fff' : 'transparent', 
-                    color: !isTakeawayMode ? '#1E293B' : '#64748B', 
-                    border: 'none', 
-                    boxShadow: !isTakeawayMode ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                    fontSize: '11px', 
-                    fontWeight: 800, 
-                    cursor: 'pointer', 
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <Coffee size={14} />
-                  <span>SUR PLACE</span>
-                </button>
-                <button 
-                  onClick={() => setIsTakeawayMode(true)}
-                  style={{ 
-                    height: isMobile ? '32px' : '36px', 
-                    padding: isMobile ? '0 10px' : '0 16px', 
-                    borderRadius: '10px', 
-                    background: isTakeawayMode ? '#6366F1' : 'transparent', 
-                    color: isTakeawayMode ? '#fff' : '#64748B', 
-                    border: 'none', 
-                    boxShadow: isTakeawayMode ? '0 4px 10px rgba(99,102,241,0.2)' : 'none',
-                    fontSize: '11px', 
-                    fontWeight: 800, 
-                    cursor: 'pointer', 
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <ShoppingBag size={14} />
-                  <span>À EMPORTER</span>
-                </button>
+                <ShieldCheck size={20} color="var(--pos-primary)" />
+                <span style={{ fontSize: '15px', fontWeight: 900, color: 'var(--pos-text-main)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                   {planName?.toUpperCase() === 'RACHMA' ? 'Mode Rachma Active' : 'Mode Premium Active'}
+                </span>
               </div>
+           </div>
 
-              {/* PACKAGING SELECTOR - Hidden on very small mobile if space is tight, but kept for tablets */}
-              {!isMobile && (
-                <div style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  background: '#F8FAFC', 
-                  padding: '4px 12px', 
-                  borderRadius: '12px', 
-                  border: '1px solid #E2E8F0',
-                  height: '44px'
+           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px' }}>
+              {/* Theme Toggle Button */}
+              <button 
+                onClick={toggleTheme}
+                style={{ 
+                  width: isMobile ? 38 : 44, height: isMobile ? 38 : 44, borderRadius: '12px', background: 'var(--pos-bg)', 
+                  border: '1px solid var(--pos-border)', display: 'flex', alignItems: 'center', 
+                  justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--pos-text-main)'
                 }}>
-                   <span style={{ fontSize: '9px', fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Emballage</span>
-                   <select 
-                     value={packagingId || ''} 
-                     onChange={(e) => setPackagingId(e.target.value)}
-                     style={{ background: 'none', border: 'none', fontSize: '11px', fontWeight: 800, outline: 'none', color: '#1E293B', padding: 0 }}
-                   >
-                     <option value="">(Auto-Popup)</option>
-                     {packagingProducts.map(p => <option key={p.id} value={p.id}>{p.name.toUpperCase()}</option>)}
-                   </select>
-                </div>
-              )}
+                {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
 
               {!isMobile && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 6px 6px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 6px 6px 16px', background: 'var(--pos-bg)', borderRadius: '14px', border: '1px solid var(--pos-border)' }}>
                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B' }}>{cashierName}</div>
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--pos-text-main)' }}>{cashierName}</div>
                       <div style={{ fontSize: '9px', color: '#10B981', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end', letterSpacing: '0.05em' }}>
                          EN LIGNE
                       </div>
@@ -689,16 +815,24 @@ export default function POSClient({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button 
                   onClick={() => router.push('/')}
-                  style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                  style={{ width: isMobile ? '48px' : '64px', height: isMobile ? '48px' : '56px', borderRadius: '14px', background: 'var(--pos-bg)', border: '1px solid var(--pos-border)', color: 'var(--pos-text-main)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', transition: 'all 0.2s' }}
+                  title="Retour Dashboard"
                 >
-                  <LayoutDashboard size={20} />
+                  <LayoutDashboard size={isMobile ? 20 : 26} color="var(--pos-primary)" />
+                  {!isMobile && <span style={{ fontSize: '9px', fontWeight: 800 }}>DASHBOARD</span>}
                 </button>
 
                 <button 
-                  onClick={handleLogout}
-                  style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgb(239, 68, 68)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <Lock size={20} />
+                  onClick={() => {
+                   if (confirm("Voulez-vous vraiment clôturer votre session ?")) handleLogout();
+                  }}
+                  style={{ 
+                    background: '#EF4444', color: '#fff', border: 'none', padding: '12px 24px', 
+                    height: isMobile ? '48px' : '56px',
+                    borderRadius: '16px', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s',
+                    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)', fontSize: '15px'
+                  }}>
+                  {isMobile ? <LogOut size={20} /> : 'CLÔTURER SESSION'}
                 </button>
               </div>
            </div>
@@ -948,44 +1082,74 @@ export default function POSClient({
             {viewMode === 'simplistic' && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: isMobile ? '12px' : '32px', background: '#F8FAFC' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '20px' : '40px' }}>
-                  <div>
-                    <h2 style={{ fontSize: isMobile ? '28px' : '40px', fontWeight: 950, color: '#1E1B4B', margin: 0, letterSpacing: '-1.5px' }}>Comptage de Session</h2>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981' }} />
-                       <span style={{ color: '#64748B', fontSize: '15px', fontWeight: 700 }}>Ventes en cours</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                    <div>
+                      <h2 style={{ fontSize: isMobile ? '28px' : '40px', fontWeight: 950, color: '#1E1B4B', margin: 0, letterSpacing: '-1.5px' }}>Session Rachma</h2>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981' }} />
+                         <span style={{ color: '#64748B', fontSize: '15px', fontWeight: 700 }}>{simplisticTab === 'PRODUCTS' ? 'Vente de produits' : 'Comptage emballages'}</span>
+                      </div>
+                    </div>
+
+                    {/* TAB SWITCHER */}
+                    <div style={{ 
+                      display: 'flex', background: '#F1F5F9', padding: '6px', borderRadius: '16px', gap: '4px'
+                    }}>
+                      <button 
+                        onClick={() => setSimplisticTab('PRODUCTS')}
+                        style={{ 
+                          padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                          fontWeight: 800, fontSize: '14px',
+                          background: simplisticTab === 'PRODUCTS' ? '#fff' : 'transparent',
+                          color: simplisticTab === 'PRODUCTS' ? '#6366F1' : '#64748B',
+                          boxShadow: simplisticTab === 'PRODUCTS' ? '0 4px 6px rgba(0,0,0,0.05)' : 'none'
+                        }}
+                      >PRODUITS</button>
+                      <button 
+                        onClick={() => setSimplisticTab('PACKAGING')}
+                        style={{ 
+                          padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                          fontWeight: 800, fontSize: '14px',
+                          background: simplisticTab === 'PACKAGING' ? '#fff' : 'transparent',
+                          color: simplisticTab === 'PACKAGING' ? '#6366F1' : '#64748B',
+                          boxShadow: simplisticTab === 'PACKAGING' ? '0 4px 6px rgba(0,0,0,0.05)' : 'none'
+                        }}
+                      >EMBALLAGES</button>
                     </div>
                   </div>
                   
-                  <button onClick={resetSimplistic} style={{ width: '52px', height: '52px', borderRadius: '16px', background: '#FEF2F2', color: '#EF4444', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <button onClick={() => setShowResetConfirm(true)} style={{ width: '52px', height: '52px', borderRadius: '16px', background: '#FEF2F2', color: '#EF4444', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Trash2 size={24} />
                   </button>
                 </div>
 
                 <div style={{ flex: 1, overflow: 'auto' }} className="no-scrollbar">
                   <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? '160px' : '220px'}, 1fr))`, gap: isMobile ? '12px' : '20px' }}>
-                    {initialProducts.map(p => {
+                    {(simplisticTab === 'PRODUCTS' ? initialProducts.slice(0, 10).filter(p => !packagingProducts.find(pp => pp.id === p.id)) : packagingProducts).map(p => {
                       const qty = simplisticSession[p.id] || 0;
+                      const isTakeawayActive = !!simplisticProductTakeaway[p.id];
                       
-                      // Handling long press logic
+                      // Handling long press logic with Ref for stability
                       const startPress = () => {
-                        longPressHandledRef.current = false; // Reset for new press
+                        longPressHandledRef.current = false;
                         setPressingProductId(p.id);
-                        const timer = setTimeout(() => {
+                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                        
+                        longPressTimerRef.current = setTimeout(() => {
                            removeSimplistic(p.id);
-                           longPressHandledRef.current = true; // Mark as handled
-                           setLongPressTimer(null);
+                           longPressHandledRef.current = true;
+                           longPressTimerRef.current = null;
                            setPressingProductId(null);
                            setLastProcessedLongPress(Date.now()); 
                            if (navigator.vibrate) navigator.vibrate(50);
-                        }, 600); // 600ms for safety
-                        setLongPressTimer(timer);
+                        }, 600);
                       };
                       
                       const cancelPress = () => {
                         setPressingProductId(null);
-                        if (longPressTimer) {
-                          clearTimeout(longPressTimer);
-                          setLongPressTimer(null);
+                        if (longPressTimerRef.current) {
+                          clearTimeout(longPressTimerRef.current);
+                          longPressTimerRef.current = null;
                         }
                       };
 
@@ -997,35 +1161,106 @@ export default function POSClient({
                           onTouchStart={startPress}
                           onTouchEnd={cancelPress}
                           onClick={(e) => {
-                            // If a long press was handled during this touch/click cycle, block the addition
                             if (longPressHandledRef.current) {
                                longPressHandledRef.current = false;
                                return;
                             }
-                            // Fallback safety check with timestamp
                             if (Date.now() - lastProcessedLongPress < 400) return;
                             
-                            if (!longPressTimer) addSimplistic(p.id);
+                            // Check the Ref directly instead of stale state
+                            if (!longPressTimerRef.current) {
+                              addSimplistic(p.id);
+                            }
                           }}
                           style={{ 
-                            height: isMobile ? '140px' : '180px', borderRadius: isMobile ? '20px' : '30px', background: '#fff', border: '2px solid #E2E8F0', 
+                            height: isMobile ? '240px' : '320px', borderRadius: isMobile ? '20px' : '30px', background: '#fff', border: '2px solid #E2E8F0', 
                             cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', 
-                            justifyContent: 'center', gap: isMobile ? '8px' : '12px', transition: 'all 0.2s', position: 'relative',
+                            padding: '16px', gap: '12px', transition: 'all 0.2s', position: 'relative',
                             boxShadow: (qty > 0) ? '0 10px 15px -3px rgba(99, 102, 241, 0.1)' : 'none',
                             borderColor: (qty > 0 ? '#6366F1' : '#E2E8F0'),
                             transform: (pressingProductId === p.id ? 'scale(0.95)' : 'scale(1)'),
-                            userSelect: 'none'
+                            userSelect: 'none',
+                            overflow: 'hidden'
                           }}>
+                          {/* PRODUCT INFO HEADER */}
+                          <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 5, gap: '8px', minHeight: isMobile ? '60px' : '80px' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ 
+                                fontWeight: 950, 
+                                fontSize: isMobile ? '13px' : '17px', 
+                                color: '#1E1B4B', 
+                                textAlign: 'left', 
+                                lineHeight: 1.1,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                marginBottom: '2px',
+                                textTransform: 'uppercase'
+                              }}>
+                                {p.name}
+                              </div>
+                              <div style={{ color: '#6366F1', fontWeight: 900, fontSize: isMobile ? '12px' : '15px', textAlign: 'left' }}>
+                                {p.price.toFixed(3)}
+                              </div>
+                            </div>
+                            
+                            {/* ACTION AREA (TOGGLE & BUBBLE) */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                              {simplisticTab === 'PRODUCTS' && (
+                                <div 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSimplisticProductTakeaway(prev => ({ ...prev, [p.id]: !prev[p.id] }));
+                                  }}
+                                  style={{ 
+                                    width: isMobile ? '34px' : '40px', height: isMobile ? '34px' : '40px', borderRadius: '10px', 
+                                    background: isTakeawayActive ? '#F59E0B' : '#F1F5F9',
+                                    color: isTakeawayActive ? '#fff' : '#94A3B8',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    transition: 'all 0.2s',
+                                    boxShadow: isTakeawayActive ? '0 4px 10px rgba(245,158,11,0.2)' : 'none'
+                                  }}>
+                                  <ShoppingBag size={isMobile ? 16 : 20} />
+                                </div>
+                              )}
+
+                              {(() => {
+                                const history = simplisticHistory[p.id] || [];
+                                const totalAdds = history.filter(a => a === 'ADD' || a === 'ADD_TAKEAWAY').length;
+                                const totalVoids = history.filter(a => a === 'VOID').length;
+                                if (totalAdds === 0 && totalVoids === 0) return null;
+                                
+                                return (
+                                  <div style={{ 
+                                    minWidth: isMobile ? '30px' : '36px', height: isMobile ? '30px' : '36px', borderRadius: '10px', background: '#6366F1', color: '#fff', 
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '12px' : '15px', 
+                                    fontWeight: 950, boxShadow: '0 4px 10px rgba(99,102,241,0.3)', padding: '0 8px' 
+                                  }}>
+                                    {totalAdds}{totalVoids > 0 ? ` (-${totalVoids})` : ''}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </div>
+
+                          {/* THE TALLY GRID */}
+                          <div style={{ flex: 1, width: '100%', minHeight: 0 }}>
+                            <TallyGrid 
+                              productId={p.id} 
+                              actions={simplisticHistory[p.id] || []} 
+                              gridPage={simplisticGridPage[p.id]} 
+                              onPageChange={(pid, pg) => setSimplisticGridPage(prev => ({ ...prev, [pid]: pg }))}
+                              isMobile={isMobile}
+                            />
+                          </div>
+
                           {isTakeawayMode && packagingId && (
-                             <div style={{ position: 'absolute', top: 12, left: 12 }}>
+                             <div style={{ position: 'absolute', bottom: 12, right: 12, opacity: 0.5 }}>
                                 <ShoppingBag size={14} color="#6366F1" />
                              </div>
                           )}
-                          <div style={{ fontWeight: 800, fontSize: isMobile ? '16px' : '20px', color: '#1E293B', textAlign: 'center', padding: '0 8px' }}>{p.name}</div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            {qty > 0 && <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#6366F1', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 900 }}>{(qty as number)}</div>}
-                          </div>
-                          <div style={{ color: '#6366F1', fontWeight: 800, fontSize: isMobile ? '14px' : '18px' }}>{p.price.toFixed(3)}</div>
                         </button>
                       );
                     })}
@@ -1179,6 +1414,50 @@ export default function POSClient({
                 Retour à la connexion
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL RESET CONFIRMATION */}
+      {showResetConfirm && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#fff', width: '100%', maxWidth: '360px', borderRadius: '32px', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', textAlign: 'center' }}>
+            <div style={{ width: 64, height: 64, borderRadius: '20px', background: '#EF444410', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+               <Trash2 size={32} color="#EF4444" />
+            </div>
+            <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#1E1B4B', margin: '0 0 8px' }}>Confirmer Réinitialisation</h3>
+            <p style={{ fontSize: '14px', color: '#64748B', margin: '0 0 24px' }}>Saisissez votre PIN pour vider la session</p>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '24px' }}>
+              {[0, 1, 2, 3].map(i => (
+                <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: resetPin.length > i ? '#6366F1' : '#E2E8F0', transition: 'all 0.2s' }} />
+              ))}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '24px' }}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, '✓'].map(n => (
+                <button key={n} onClick={() => {
+                  if (n === 'C') setResetPin("");
+                  else if (n === '✓') handleResetPinSubmit();
+                  else if (resetPin.length < 4) {
+                    const nextPin = resetPin + n;
+                    setResetPin(nextPin);
+                    if (nextPin.length === 4) handleResetPinSubmit(nextPin);
+                  }
+                }}
+                style={{ height: '56px', borderRadius: '14px', background: '#F8FAFC', color: '#1E293B', border: '1px solid #E2E8F0', fontSize: '18px', fontWeight: 800, cursor: 'pointer' }}>
+                  {n}
+                </button>
+              ))}
+            </div>
+
+            {resetError && <div style={{ color: '#EF4444', fontWeight: 700, fontSize: '13px', marginBottom: '16px' }}>{resetError}</div>}
+
+            <button 
+              onClick={() => { setShowResetConfirm(false); setResetPin(""); setResetError(""); }} 
+              style={{ width: '100%', height: '50px', borderRadius: '14px', background: 'transparent', color: '#64748B', border: '1px solid #E2E8F0', fontWeight: 700, cursor: 'pointer' }}
+            >
+              ANNULER
+            </button>
           </div>
         </div>
       )}

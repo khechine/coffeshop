@@ -10,12 +10,16 @@ export default function LayoutShell({
   children, 
   storeName, 
   storeCity,
-  hasMarketplace = true
+  hasMarketplace = true,
+  planName = '',
+  isFiscalEnabled = false
 }: { 
   children: React.ReactNode; 
   storeName: string; 
   storeCity: string;
   hasMarketplace?: boolean;
+  planName?: string;
+  isFiscalEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -103,7 +107,7 @@ export default function LayoutShell({
       <div className={`mobile-overlay ${isMenuOpen ? 'active' : ''}`} onClick={() => setIsMenuOpen(false)} />
       
       {/* Sidebar with mobile-open class */}
-      <Sidebar storeName={storeName} isMobileOpen={isMenuOpen} hasMarketplace={hasMarketplace} />
+      <Sidebar storeName={storeName} isMobileOpen={isMenuOpen} hasMarketplace={hasMarketplace} planName={planName} isFiscalEnabled={isFiscalEnabled} />
 
       <div className={`main-content ${isCollapsed ? 'collapsed' : ''}`}>
         <header className="topbar">

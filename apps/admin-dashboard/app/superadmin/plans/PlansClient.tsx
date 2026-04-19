@@ -4,6 +4,7 @@ import React, { useState, useTransition } from 'react';
 import { PlusCircle, Edit2, Trash2, Save, ToggleLeft, ToggleRight, X, Crown, Check } from 'lucide-react';
 import Modal from '../../../components/Modal';
 import { createPlanAction, updatePlanAction, deletePlanAction, togglePlanStatusAction } from '../../actions';
+import { getPlanFeatures } from '../../../lib/planFeatures';
 
 export default function PlansClient({ initialPlans }: { initialPlans: any[] }) {
   const [isPending, startTransition] = useTransition();
@@ -140,6 +141,24 @@ export default function PlansClient({ initialPlans }: { initialPlans: any[] }) {
                   </div>
                 ))}
               </div>
+
+              {/* Plan Features */}
+              {(() => {
+                const planDef = getPlanFeatures(plan.name);
+                return (
+                  <div style={{ marginBottom: '16px', padding: '12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Fonctionnalités du plan</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {planDef.features.map(f => (
+                        <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: f.included ? '#1E293B' : '#CBD5E1' }}>
+                          <span style={{ fontSize: '14px' }}>{f.included ? '✅' : '❌'}</span>
+                          <span style={{ fontWeight: f.included ? 600 : 400 }}>{f.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div style={{ padding: '12px', borderRadius: '10px', background: '#F8FAFC', display: 'flex', justifyContent: 'space-between' }}>
                 <div style={{ fontSize: '12px', color: '#64748B' }}>Abonnés Actifs: <strong>{plan.activeCount ?? 0}</strong></div>

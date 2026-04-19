@@ -1,7 +1,7 @@
 import { prisma } from '@coffeeshop/database';
 import { getStore } from '../actions';
 import PremiumPOSClient from './PremiumPOSClient';
-
+import POSClient from './POSClient';
 export const dynamic = 'force-dynamic';
 
 export default async function POSPage() {
@@ -15,10 +15,7 @@ export default async function POSPage() {
 
   const categories = await prisma.category.findMany({
     where: { 
-      OR: [
-        { storeId: store.id },
-        { storeId: null } // Global categories
-      ]
+      storeId: store.id
     }
   });
 
@@ -35,7 +32,11 @@ export default async function POSPage() {
       storeId: store.id,
       createdAt: { gte: new Date(new Date().setHours(0,0,0,0)) }
     },
-    include: { items: true, barista: true, takenBy: true },
+    include: { 
+      items: { include: { product: true } }, 
+      barista: true, 
+      takenBy: true 
+    },
     orderBy: { createdAt: 'desc' }
   });
 
@@ -78,23 +79,57 @@ export default async function POSPage() {
     takenById: (s as any).takenById || s.baristaId,
     cashierId: s.baristaId,
     time: new Date(s.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-    items: s.items.map((i: any) => ({ name: i.name, quantity: Number(i.quantity), price: Number(i.price) }))
+    items: s.items.map((i: any) => ({ name: i.product?.name || 'Inconnu', quantity: Number(i.quantity), price: Number(i.price) }))
   }));
   
+  // Règle métier : Rachma/STARTER ou Pas de plan + Pas de fiscalité = Système Simpliste (Rachma)
+  const planNameUpper = (store.subscription?.plan?.name || '').toUpperCase();
+  const isFiscal = !!store.isFiscalEnabled;
+  const isRachmaPlan = !planNameUpper || planNameUpper === 'RACHMA' || planNameUpper === 'STARTER';
+  
+  if (isRachmaPlan && !isFiscal) {
+    return (
+      <>
+        <POSClient
+          storeId={store.id}
+          storeName={store?.name || 'CoffeeSaaS Rachma'} 
+          planName={planNameUpper}
+          isFiscalEnabled={isFiscal}
+          initialProducts={serializedProducts} 
+          initialBaristas={baristas as any} 
+          initialSales={serializedSales}
+          initialTables={tables}
+          terminals={terminals}
+        />
+        {/* Debug indicator for development */}
+        <div style={{ position: 'fixed', bottom: 5, right: 5, fontSize: '10px', color: '#ccc', zIndex: 9999, pointerEvents: 'none' }}>
+          Mode Rachma Active ({planNameUpper})
+        </div>
+      </>
+    );
+  }
+
+  // Sinon, Premium POS pour PRO ou si Fiscalité activée
   return (
-    <PremiumPOSClient 
-      storeId={store.id}
-      storeName={store?.name || 'CoffeeSaaS POS'} 
-      planName={store?.plan?.name || 'STARTER'}
-      isFiscalEnabled={store.isFiscalEnabled}
-      initialProducts={serializedProducts} 
-      initialCategories={categories}
-      initialBaristas={baristas as any} 
-      initialSales={serializedSales}
-      initialTables={tables}
-      terminals={terminals}
-      loyaltyEarnRate={Number(store.loyaltyEarnRate || 1)}
-      loyaltyRedeemRate={Number(store.loyaltyRedeemRate || 100)}
-    />
+    <>
+      <PremiumPOSClient 
+        storeId={store.id}
+        storeName={store?.name || 'CoffeeSaaS POS'} 
+        planName={planNameUpper}
+        isFiscalEnabled={isFiscal}
+        initialProducts={serializedProducts} 
+        initialCategories={categories}
+        initialBaristas={baristas as any} 
+        initialSales={serializedSales}
+        initialTables={tables}
+        terminals={terminals}
+        loyaltyEarnRate={Number(store.loyaltyEarnRate || 1)}
+        loyaltyRedeemRate={Number(store.loyaltyRedeemRate || 100)}
+      />
+      {/* Debug indicator for development */}
+      <div style={{ position: 'fixed', bottom: 5, right: 5, fontSize: '10px', color: '#ccc', zIndex: 9999, pointerEvents: 'none' }}>
+        Mode Premium Active ({planNameUpper}) {isFiscal ? '[FISC]' : ''}
+      </div>
+    </>
   );
 }

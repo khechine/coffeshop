@@ -7,6 +7,7 @@ import { Building2, MapPin, Store, Crosshair, Save, Clock, CheckCircle2, FileChe
 import 'leaflet/dist/leaflet.css';
 
 import FiscalSettings from './FiscalSettings';
+import { getPlanFeatures } from '../../../lib/planFeatures';
 
 interface StoreProps {
   id: string;
@@ -154,11 +155,41 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
          </div>
       </div>
 
-      <FiscalSettings 
-        storeId={store.id} 
-        isFiscalEnabled={store.isFiscalEnabled} 
-        planName={store.subscription?.plan?.name || 'FREE'}
-      />
+      {/* Plan Features Card */}
+      {(() => {
+        const currentPlan = store.subscription?.plan?.name || 'Rachma';
+        const planDef = getPlanFeatures(currentPlan);
+        return (
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '20px' }}>{planDef.icon}</span> Plan {currentPlan}
+              </span>
+              <span style={{ padding: '4px 12px', borderRadius: '20px', background: planDef.color + '15', color: planDef.color, fontSize: '11px', fontWeight: 800 }}>
+                {planDef.tagline}
+              </span>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {planDef.features.map(f => (
+                  <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '10px', background: f.included ? '#F0FDF4' : '#F8FAFC', border: `1px solid ${f.included ? '#DCFCE7' : '#F1F5F9'}` }}>
+                    <span>{f.included ? '✅' : '❌'}</span>
+                    <span style={{ fontSize: '12px', fontWeight: f.included ? 700 : 400, color: f.included ? '#1E293B' : '#94A3B8' }}>{f.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {(store.subscription?.plan?.name || '').toUpperCase() !== 'RACHMA' && (
+        <FiscalSettings 
+          storeId={store.id} 
+          isFiscalEnabled={store.isFiscalEnabled} 
+          planName={store.subscription?.plan?.name || 'FREE'}
+        />
+      )}
 
       {/* Official Documents Section */}
       <div className="card">

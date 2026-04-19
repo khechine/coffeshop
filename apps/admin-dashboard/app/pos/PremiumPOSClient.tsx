@@ -6,10 +6,14 @@ import {
   History, User, Coffee, LogOut, Lock, LayoutGrid, CreditCard,
   ChevronRight, AlertCircle, Save, ArrowLeft, MoreVertical, ClipboardList,
   ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, Search,
-  X, Wallet, Banknote, Smartphone, Receipt
+  X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon
 } from 'lucide-react';
 import { recordSale, searchCustomers, createCustomer } from '../actions';
 import './pos-premium.css';
+
+const ICONS: Record<string, React.FC<any>> = {
+  Tag, Coffee, Star, Heart, Smile, Zap, Home, Box, ShoppingBag
+};
 
 interface Product { 
   id: string; 
@@ -63,15 +67,46 @@ export default function PremiumPOSClient({
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [selectedTerminalId, setSelectedTerminalId] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // --- Theme Management ---
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('pos_theme');
+    if (savedTheme === 'dark') {
+      setIsDarkMode(true);
+      document.body.setAttribute('data-theme', 'dark');
+    } else {
+      document.body.removeAttribute('data-theme');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    setIsDarkMode(prev => {
+      const newVal = !prev;
+      localStorage.setItem('pos_theme', newVal ? 'dark' : 'light');
+      if (newVal) {
+        document.body.setAttribute('data-theme', 'dark');
+      } else {
+        document.body.removeAttribute('data-theme');
+      }
+      return newVal;
+    });
+  };
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [category, setCategory] = useState('Tous');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTable, setSelectedTable] = useState<any | null>(null);
   const [view, setView] = useState<'TABLES' | 'POS' | 'ORDERS' | 'CUSTOMERS'>('TABLES');
+  const [currentParentCategoryId, setCurrentParentCategoryId] = useState<string | null>(null);
   
   // Customer & Loyalty
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>({
+    id: 'passager',
+    name: 'Client Passager',
+    phone: '',
+    loyaltyPoints: 0
+  });
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerResults, setCustomerResults] = useState<Customer[]>([]);
   const [isRedeemingPoints, setIsRedeemingPoints] = useState(false);
@@ -280,12 +315,16 @@ export default function PremiumPOSClient({
 
   if (view === 'TABLES') {
     return (
-      <div className="pos-premium-container" style={{ background: 'var(--pos-sidebar)' }}>
+      <div className="pos-premium-container" data-theme={isDarkMode ? 'dark' : 'light'} style={{ background: 'var(--pos-sidebar)', transition: 'all 0.3s ease' }}>
          <aside className="pos-sidebar">
             <div className="pos-sidebar-icon active"><LayoutGrid size={24} /></div>
             <div className="pos-sidebar-icon" onClick={() => setView('ORDERS')}><History size={24} /></div>
             <div className="pos-sidebar-icon" onClick={() => setView('CUSTOMERS')}><Users size={24} /></div>
             <div style={{ flex: 1 }} />
+            {/* Theme Toggle in Sidebar for Tables view */}
+            <div className="pos-sidebar-icon" onClick={toggleTheme}>
+              {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+            </div>
             <div className="pos-sidebar-icon" style={{ color: '#EF4444' }} onClick={handleLogout}><LogOut size={24} /></div>
          </aside>
 
@@ -325,39 +364,108 @@ export default function PremiumPOSClient({
   }
 
   return (
-    <div className="pos-premium-container">
+    <div className="pos-premium-container" data-theme={isDarkMode ? 'dark' : 'light'} style={{ transition: 'all 0.3s ease' }}>
       {/* Module Navigation (Sidebar Fine) */}
       <aside className="pos-sidebar">
+        <div className="pos-sidebar-icon" onClick={() => router.push('/')} title="Dashboard" style={{ marginBottom: 20 }}>
+          <LayoutDashboard size={28} />
+        </div>
         <div className="pos-sidebar-icon" onClick={() => setView('TABLES')} title="Tables"><LayoutGrid size={24} /></div>
         <div className={`pos-sidebar-icon ${view === 'POS' ? 'active' : ''}`} onClick={() => setView('POS')} title="Vente"><ShoppingCart size={24} /></div>
         <div className={`pos-sidebar-icon ${view === 'ORDERS' ? 'active' : ''}`} onClick={() => setView('ORDERS')} title="Commandes"><History size={24} /></div>
         <div className={`pos-sidebar-icon ${view === 'CUSTOMERS' ? 'active' : ''}`} onClick={() => setView('CUSTOMERS')} title="Clientèle"><Users size={24} /></div>
         <div style={{ flex: 1 }} />
-        <div className="pos-sidebar-icon" style={{ color: '#EF4444' }} onClick={handleLogout} title="Déconnexion"><LogOut size={24} /></div>
+        
+        {/* Theme Toggle */}
+        <div className="pos-sidebar-icon" onClick={toggleTheme} title="Changer de thème" style={{ cursor: 'pointer', marginBottom: 10 }}>
+           {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+        </div>
+
+        <div className="pos-sidebar-icon" style={{ color: '#EF4444', height: 70, borderTop: '1px solid rgba(255,255,255,0.1)', borderRadius: 0 }} onClick={handleLogout} title="Clôturer Session">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <LogOut size={28} />
+            <span style={{ fontSize: 9, fontWeight: 900 }}>CLÔTURER</span>
+          </div>
+        </div>
       </aside>
 
       {/* NEW: Vertical Category Hybrid Navigation */}
       {view === 'POS' && (
         <div className="pos-categories-column">
-           <button 
-             className={`category-vertical-pill ${category === 'Tous' ? 'active' : ''}`}
-             onClick={() => setCategory('Tous')}
-           >
-             <LayoutDashboard size={24} />
-             <span>Tous</span>
-           </button>
-           {initialCategories.map((cat: any) => (
-              <button 
-                key={cat.id} 
-                className={`category-vertical-pill ${category === cat.name ? 'active' : ''}`}
-                onClick={() => setCategory(cat.name)}
-              >
-                <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Coffee size={20} />
-                </div>
-                <span>{cat.name}</span>
-              </button>
-            ))}
+           {currentParentCategoryId ? (
+             <>
+               <button 
+                 className={`category-vertical-pill`}
+                 onClick={() => {
+                   setCurrentParentCategoryId(null);
+                   setCategory('Tous');
+                 }}
+               >
+                 <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                   <ArrowLeft size={20} />
+                 </div>
+                 <span>Retour</span>
+               </button>
+               {initialCategories.filter(c => c.parentId === currentParentCategoryId).map((cat: any) => {
+                  const CatIcon = ICONS[cat.icon || 'Tag'] || Tag;
+                  const catColor = cat.color || '#6366F1';
+                  const isActive = category === cat.name;
+                  return (
+                    <button 
+                      key={cat.id} 
+                      className={`category-vertical-pill ${isActive ? 'active' : ''}`}
+                      onClick={() => setCategory(cat.name)}
+                      style={isActive ? { backgroundColor: catColor, color: '#fff', borderColor: catColor } : { color: catColor, borderColor: catColor + '40' }}
+                    >
+                      <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CatIcon size={20} />
+                      </div>
+                      <span>{cat.name}</span>
+                    </button>
+                  );
+               })}
+             </>
+           ) : (
+             <>
+               <button 
+                 className={`category-vertical-pill ${category === 'Tous' ? 'active' : ''}`}
+                 onClick={() => setCategory('Tous')}
+               >
+                 <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                   <LayoutDashboard size={20} />
+                 </div>
+                 <span>Tous</span>
+               </button>
+               {initialCategories.filter(c => !c.parentId).map((cat: any) => {
+                  const hasChildren = initialCategories.some(c => c.parentId === cat.id);
+                  const CatIcon = ICONS[cat.icon || 'Tag'] || Tag;
+                  const catColor = cat.color || '#6366F1';
+                  const isActive = category === cat.name && !hasChildren;
+                  
+                  return (
+                    <button 
+                      key={cat.id} 
+                      className={`category-vertical-pill ${isActive ? 'active' : ''}`}
+                      onClick={() => {
+                        if (hasChildren) {
+                          setCurrentParentCategoryId(cat.id);
+                          setCategory(cat.name); // Filter by parent category initially
+                        } else {
+                          setCategory(cat.name);
+                        }
+                      }}
+                      style={isActive ? { backgroundColor: catColor, color: '#fff', borderColor: catColor } : { color: catColor, borderColor: catColor + '40' }}
+                    >
+                      <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CatIcon size={20} />
+                      </div>
+                      <span style={{ flex: 1, textAlign: 'left' }}>{cat.name}</span>
+                      {hasChildren && <ChevronRight size={16} />}
+                    </button>
+                  );
+                })}
+             </>
+           )}
         </div>
       )}
 
@@ -366,12 +474,12 @@ export default function PremiumPOSClient({
         {view === 'POS' ? (
         <>
           <header className="pos-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <button style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8 }} onClick={() => setView('TABLES')} title="Retour au plan de salle">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
+              <button style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, color: 'var(--pos-text-main)' }} onClick={() => setView('TABLES')} title="Retour au plan de salle">
                  <ArrowLeft size={24} />
               </button>
               <div>
-                 <h1 style={{ fontWeight: 900, margin: 0, color: 'var(--pos-sidebar)', fontSize: 22 }}>
+                 <h1 style={{ fontWeight: 900, margin: 0, color: 'var(--pos-text-main)', fontSize: 22 }}>
                    {selectedTable?.label || 'Vente Directe'}
                  </h1>
                  <p style={{ margin: 0, fontSize: 11, color: 'var(--pos-text-muted)', fontWeight: 700 }}>{storeName.toUpperCase()}</p>
@@ -383,11 +491,32 @@ export default function PremiumPOSClient({
                   type="text" 
                   placeholder="Trouver un produit..." 
                   className="category-pill" 
-                  style={{ width: 300, paddingLeft: 44, borderRadius: 14, background: '#F1F5F9', border: 'none', height: 48, fontWeight: 600 }}
+                  style={{ width: 300, paddingLeft: 44, borderRadius: 14, background: 'var(--pos-input-bg)', color: 'var(--pos-text-main)', border: 'none', height: 48, fontWeight: 600 }}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
+
+              {/* MODE INDICATOR CENTERED */}
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                 <div style={{ 
+                   padding: '8px 24px', 
+                   background: 'rgba(99, 102, 241, 0.05)', 
+                   border: '1px solid rgba(99, 102, 241, 0.2)', 
+                   borderRadius: '50px',
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: '10px'
+                 }}>
+                   <ShieldCheck size={18} color="var(--pos-primary)" />
+                   <span style={{ fontSize: '13px', fontWeight: 900, color: 'var(--pos-text-main)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Mode Premium Active
+                   </span>
+                 </div>
+              </div>
+
+              {/* Extra spacer to balance the header flex if needed */}
+              <div style={{ width: 100 }} />
             </div>
           </header>
 
@@ -417,9 +546,9 @@ export default function PremiumPOSClient({
           </div>
         </>
         ) : view === 'CUSTOMERS' ? (
-          <div style={{ flex: 1, padding: 40, background: '#F8FAFC', overflowY: 'auto' }}>
+          <div style={{ flex: 1, padding: 40, background: 'var(--pos-bg)', overflowY: 'auto' }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                <h2 style={{ fontWeight: 900, fontSize: 32, margin: 0 }}>Gestion Clientèle & Fidélité</h2>
+                <h2 style={{ fontWeight: 900, fontSize: 32, margin: 0, color: 'var(--pos-text-main)' }}>Gestion Clientèle & Fidélité</h2>
                 <button className="btn-premium btn-premium-primary" onClick={() => setView('POS')}>Retour au POS</button>
              </div>
 
@@ -451,7 +580,7 @@ export default function PremiumPOSClient({
                          {customerResults.length > 0 ? customerResults.map((c: any) => (
                            <tr key={c.id} style={{ borderBottom: '1px solid var(--pos-bg)' }}>
                               <td style={{ padding: '16px' }}>
-                                 <div style={{ fontWeight: 800 }}>{c.name}</div>
+                                 <div style={{ fontWeight: 800, color: 'var(--pos-text-main)' }}>{c.name}</div>
                                  <div style={{ fontSize: 12, color: 'var(--pos-text-muted)' }}>{c.phone}</div>
                               </td>
                               <td style={{ padding: '16px' }}>

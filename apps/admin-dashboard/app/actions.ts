@@ -40,14 +40,26 @@ export async function getStore() {
         }
      }
    } catch (err) {
-      console.error("getStore error, trying raw fallback", err);
-      // Use direct storeId from user record instead of relation table
+      console.error("getStore error, trying robust fallback", err);
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { storeId: true }
       });
+      
       if (user?.storeId) {
-        return await prisma.store.findUnique({ where: { id: user.storeId } });
+        const store = await prisma.store.findUnique({
+          where: { id: user.storeId },
+          include: {
+            subscription: {
+              include: { plan: true }
+            }
+          }
+        });
+        if (store) {
+          const storeObj: any = store;
+          storeObj.hasMarketplace = (storeObj.subscription?.plan?.hasMarketplace === true) || (storeObj.forceMarketplaceAccess === true);
+          return storeObj;
+        }
       }
    }
   return null;
@@ -95,18 +107,7 @@ export async function toggleFiscalMode(enabled: boolean, pinCode?: string) {
     data: { isFiscalEnabled: enabled }
   });
 
-  // 3. Log the change
-  await prisma.fiscalLog.create({
-    data: {
-      action: enabled ? 'FISCAL_ACTIVATION' : 'FISCAL_DEACTIVATION',
-      saleId: 'CONFIG',
-      data: { 
-        storeId: store.id, 
-        plan: planName, 
-        timestamp: new Date().toISOString() 
-      }
-    }
-  });
+  // Store setting has been updated. No need to tie a configuration change to a FiscalLog which explicitly requires a valid Sale ID.
 
   revalidatePath('/admin/settings');
   return { success: true };
@@ -2015,17 +2016,43 @@ export async function deleteActivityPole(id: string) {
 // ══════════════════════════════════════════════════════════════
 //  PRODUCT CATEGORIES (SuperAdmin managed, used by store products)
 // ══════════════════════════════════════════════════════════════
-export async function createProductCategoryAction(name: string) {
+export async function createProductCategoryAction(data: { name: string; color?: string; icon?: string; parentId?: string }) {
   const store = await getStore();
   if (!store) throw new Error('Action non autorisée : Aucun magasin trouvé.');
 
   await prisma.category.create({ 
     data: { 
-      name,
+      name: data.name,
+      color: data.color || "#6366F1",
+      icon: data.icon || null,
+      parentId: data.parentId || null,
       storeId: store.id
     } 
   });
-  revalidatePath('/admin/products');
+  revalidatePath('/admin/products/categories');
+  revalidatePath('/pos');
+}
+
+export async function updateProductCategoryAction(id: string, data: { name: string; color?: string; icon?: string; parentId?: string }) {
+  const store = await getStore();
+  if (!store) throw new Error('Action non autorisée : Aucun magasin trouvé.');
+
+  // Validate ownership
+  const cat = await prisma.category.findUnique({ where: { id } });
+  if (cat?.storeId !== store.id) throw new Error('Non autorisé');
+
+  await prisma.category.update({
+    where: { id },
+    data: {
+      name: data.name,
+      color: data.color || "#6366F1",
+      icon: data.icon || null,
+      parentId: data.parentId || null,
+    }
+  });
+
+  revalidatePath('/admin/products/categories');
+  revalidatePath('/pos');
 }
 
 export async function deleteProductCategoryAction(id: string) {
@@ -2227,67 +2254,238 @@ export async function deleteTerminalAction(id: string) {
 }
 
 export async function seedDemoProductsAction(storeId: string) {
-  const store = await (prisma as any).store.findUnique({ where: { id: storeId } });
+  const store = await prisma.store.findUnique({ where: { id: storeId } });
   if (!store) throw new Error('Store not found');
 
-  const demoCategories = [
-    { name: 'Café', storeId },
-    { name: 'Lait', storeId },
-    { name: 'Sirop', storeId },
-    { name: 'Gobelets', storeId },
+  // 5.0 Units
+  const unitsData = ['kg', 'litre', 'pièce', 'pack', 'g'];
+  const unitsMap: Record<string, string> = {};
+  for (const u of unitsData) {
+    const created = await prisma.globalUnit.upsert({ where: { name: u }, update: {}, create: { name: u } });
+    unitsMap[u] = created.id;
+  }
+
+  // 5.1 Raw Material Categories
+  const rawMaterialCategories = [
+    { parent: 'Boissons chaudes', child: 'Café' },
+    { parent: 'Boissons chaudes', child: 'Thé & Infusions' },
+    { parent: 'Boissons chaudes', child: 'Chocolat' },
+    { parent: 'Produits laitiers', child: 'Lait' },
+    { parent: 'Produits laitiers', child: 'Crème' },
+    { parent: 'Produits laitiers', child: 'Fromage' },
+    { parent: 'Sucrants', child: 'Sucre' },
+    { parent: 'Sucrants', child: 'Édulcorants' },
+    { parent: 'Sucrants', child: 'Arômes' },
+    { parent: 'Fruits & Jus', child: 'Fruits frais' },
+    { parent: 'Fruits & Jus', child: 'Jus & concentrés' },
+    { parent: 'Boissons froides', child: 'Eau' },
+    { parent: 'Boissons froides', child: 'Sodas' },
+    { parent: 'Boissons froides', child: 'Énergétiques' },
+    { parent: 'Pâtisserie', child: 'Ingrédients de base' },
+    { parent: 'Pâtisserie', child: 'Chocolat & toppings' },
+    { parent: 'Pâtisserie', child: 'Produits semi-finis' },
+    { parent: 'Snack salé', child: 'Viandes' },
+    { parent: 'Snack salé', child: 'Légumes' },
+    { parent: 'Snack salé', child: 'Sauces' },
+    { parent: 'Snack salé', child: 'Pain & pâte' },
+    { parent: 'Chicha', child: 'Tabac' },
+    { parent: 'Chicha', child: 'Charbon' },
+    { parent: 'Chicha', child: 'Accessoires' },
+    { parent: 'Nettoyage', child: 'Cuisine' },
+    { parent: 'Nettoyage', child: 'Salle' },
+    { parent: 'Nettoyage', child: 'Hygiène' },
+    { parent: 'Consommables', child: 'Service' },
+    { parent: 'Consommables', child: 'Emballage' },
   ];
 
-  const categories = await Promise.all(
-    demoCategories.map(c => 
-      (prisma as any).category.upsert({
-        where: { id: `${storeId}-${c.name.toLowerCase()}` },
-        update: {},
-        create: { id: `${storeId}-${c.name.toLowerCase()}`, name: c.name, storeId: c.storeId }
-      })
-    )
-  );
+  const posCategoriesMap: Record<string, string> = {};
 
-  const demoProducts = [
-    { name: 'Expresso', price: 3.000, categoryId: categories[0].id },
-    { name: 'Cappuccino', price: 4.500, categoryId: categories[0].id },
-    { name: 'Americano', price: 3.500, categoryId: categories[0].id },
-    { name: 'Lait Entier', price: 1.500, categoryId: categories[1].id },
-    { name: 'Lait Amande', price: 2.000, categoryId: categories[1].id },
-    { name: 'Sirop Vanille', price: 0.500, categoryId: categories[2].id },
-    { name: 'Sirop Caramel', price: 0.500, categoryId: categories[2].id },
-    { name: 'Gobelet Carton', price: 0.300, categoryId: categories[3].id },
-  ];
-
-  await Promise.all(
-    demoProducts.map(p =>
-      (prisma as any).product.create({
-        data: { name: p.name, price: String(p.price), categoryId: p.categoryId, storeId }
-      })
-    )
-  );
-
-  const demoStockItems = [
-    { name: 'Café Grains 1kg', quantity: 10, cost: 25.000, minThreshold: 3, unit: 'kg' },
-    { name: 'Lait 1L', quantity: 20, cost: 1.500, minThreshold: 5, unit: 'L' },
-    { name: 'Gobelets 50pcs', quantity: 5, cost: 8.000, minThreshold: 2, unit: 'pack' },
-    { name: 'Sirop Vanille 1L', quantity: 3, cost: 12.000, minThreshold: 1, unit: 'L' },
-    { name: 'Sucre 1kg', quantity: 5, cost: 2.500, minThreshold: 2, unit: 'kg' },
-  ];
-
-  for (const item of demoStockItems) {
-    let unit = await (prisma as any).globalUnit.findUnique({ where: { name: item.unit } });
-    if (!unit) {
-      unit = await (prisma as any).globalUnit.create({ data: { name: item.unit } });
+  for (const rel of rawMaterialCategories) {
+    if (!posCategoriesMap[rel.parent]) {
+      const p = await prisma.category.create({
+        data: { name: rel.parent, storeId: store.id }
+      });
+      posCategoriesMap[rel.parent] = p.id;
     }
-    await (prisma as any).stockItem.create({
-      data: { name: item.name, quantity: item.quantity, cost: String(item.cost), minThreshold: item.minThreshold, storeId, unitId: unit.id }
+    const childKey = `${rel.parent} > ${rel.child}`;
+    if (!posCategoriesMap[childKey]) {
+      const c = await prisma.category.create({
+        data: { name: rel.child, storeId: store.id, parentId: posCategoriesMap[rel.parent] }
+      });
+      posCategoriesMap[childKey] = c.id;
+    }
+  }
+
+  // 5.2 Stock Items
+  const rawMaterials = [
+    { name: 'Café grain', cat: 'Boissons chaudes > Café', unit: 'kg' },
+    { name: 'Café moulu', cat: 'Boissons chaudes > Café', unit: 'kg' },
+    { name: 'Capsules café', cat: 'Boissons chaudes > Café', unit: 'pièce' },
+    { name: 'Thé vrac', cat: 'Boissons chaudes > Thé & Infusions', unit: 'kg' },
+    { name: 'Sachet thé', cat: 'Boissons chaudes > Thé & Infusions', unit: 'pièce' },
+    { name: 'Menthe', cat: 'Boissons chaudes > Thé & Infusions', unit: 'kg' },
+    { name: 'Chocolat poudre', cat: 'Boissons chaudes > Chocolat', unit: 'kg' },
+    { name: 'Sirop chocolat', cat: 'Boissons chaudes > Chocolat', unit: 'litre' },
+    { name: 'Lait frais', cat: 'Produits laitiers > Lait', unit: 'litre' },
+    { name: 'Lait UHT', cat: 'Produits laitiers > Lait', unit: 'litre' },
+    { name: 'Lait concentré', cat: 'Produits laitiers > Lait', unit: 'litre' },
+    { name: 'Crème liquide', cat: 'Produits laitiers > Crème', unit: 'litre' },
+    { name: 'Chantilly', cat: 'Produits laitiers > Crème', unit: 'litre' },
+    { name: 'Fromage râpé', cat: 'Produits laitiers > Fromage', unit: 'kg' },
+    { name: 'Fromage tranche', cat: 'Produits laitiers > Fromage', unit: 'pièce' },
+    { name: 'Sucre blanc', cat: 'Sucrants > Sucre', unit: 'kg' },
+    { name: 'Sucre roux', cat: 'Sucrants > Sucre', unit: 'kg' },
+    { name: 'Sucre sachet', cat: 'Sucrants > Sucre', unit: 'pièce' },
+    { name: 'Édulcorant', cat: 'Sucrants > Édulcorants', unit: 'pièce' },
+    { name: 'Sirop vanille', cat: 'Sucrants > Arômes', unit: 'litre' },
+    { name: 'Sirop caramel', cat: 'Sucrants > Arômes', unit: 'litre' },
+    { name: 'Sirop noisette', cat: 'Sucrants > Arômes', unit: 'litre' },
+    { name: 'Orange', cat: 'Fruits & Jus > Fruits frais', unit: 'kg' },
+    { name: 'Fraise', cat: 'Fruits & Jus > Fruits frais', unit: 'kg' },
+    { name: 'Banane', cat: 'Fruits & Jus > Fruits frais', unit: 'kg' },
+    { name: 'Citron', cat: 'Fruits & Jus > Fruits frais', unit: 'kg' },
+    { name: 'Jus concentré', cat: 'Fruits & Jus > Jus & concentrés', unit: 'litre' },
+    { name: 'Sirop fruits', cat: 'Fruits & Jus > Jus & concentrés', unit: 'litre' },
+    { name: 'Eau minérale', cat: 'Boissons froides > Eau', unit: 'litre' },
+    { name: 'Eau gazeuse', cat: 'Boissons froides > Eau', unit: 'litre' },
+    { name: 'Soda cola', cat: 'Boissons froides > Sodas', unit: 'litre' },
+    { name: 'Soda orange', cat: 'Boissons froides > Sodas', unit: 'litre' },
+    { name: 'Boisson énergétique', cat: 'Boissons froides > Énergétiques', unit: 'litre' },
+    { name: 'Farine', cat: 'Pâtisserie > Ingrédients de base', unit: 'kg' },
+    { name: 'Œufs', cat: 'Pâtisserie > Ingrédients de base', unit: 'pièce' },
+    { name: 'Beurre', cat: 'Pâtisserie > Ingrédients de base', unit: 'kg' },
+    { name: 'Chocolat noir', cat: 'Pâtisserie > Chocolat & toppings', unit: 'kg' },
+    { name: 'Nutella', cat: 'Pâtisserie > Chocolat & toppings', unit: 'kg' },
+    { name: 'Génoise', cat: 'Pâtisserie > Produits semi-finis', unit: 'pièce' },
+    { name: 'Crème pâtissière', cat: 'Pâtisserie > Produits semi-finis', unit: 'kg' },
+    { name: 'Viande poulet', cat: 'Snack salé > Viandes', unit: 'kg' },
+    { name: 'Viande thon', cat: 'Snack salé > Viandes', unit: 'kg' },
+    { name: 'Tomate', cat: 'Snack salé > Légumes', unit: 'kg' },
+    { name: 'Salade', cat: 'Snack salé > Légumes', unit: 'kg' },
+    { name: 'Mayonnaise', cat: 'Snack salé > Sauces', unit: 'litre' },
+    { name: 'Ketchup', cat: 'Snack salé > Sauces', unit: 'litre' },
+    { name: 'Pain sandwich', cat: 'Snack salé > Pain & pâte', unit: 'pièce' },
+    { name: 'Pâte pizza', cat: 'Snack salé > Pain & pâte', unit: 'kg' },
+    { name: 'Tabac chicha', cat: 'Chicha > Tabac', unit: 'kg' },
+    { name: 'Charbon chicha', cat: 'Chicha > Charbon', unit: 'kg' },
+    { name: 'Aluminium chicha', cat: 'Chicha > Accessoires', unit: 'pièce' },
+    { name: 'Liquide vaisselle', cat: 'Nettoyage > Cuisine', unit: 'litre' },
+    { name: 'Dégraissant', cat: 'Nettoyage > Cuisine', unit: 'litre' },
+    { name: 'Produit sol', cat: 'Nettoyage > Salle', unit: 'litre' },
+    { name: 'Désinfectant', cat: 'Nettoyage > Salle', unit: 'litre' },
+    { name: 'Savon main', cat: 'Nettoyage > Hygiène', unit: 'litre' },
+    { name: 'Papier toilette', cat: 'Nettoyage > Hygiène', unit: 'pièce' },
+    { name: 'Gobelet', cat: 'Consommables > Service', unit: 'pièce' },
+    { name: 'Verre jetable', cat: 'Consommables > Service', unit: 'pièce' },
+    { name: 'Paille', cat: 'Consommables > Service', unit: 'pièce' },
+    { name: 'Serviette', cat: 'Consommables > Service', unit: 'pièce' },
+    { name: 'Sac emballage', cat: 'Consommables > Emballage', unit: 'pièce' },
+    { name: 'Boite gâteau', cat: 'Consommables > Emballage', unit: 'pièce' },
+  ];
+
+  for (const mat of rawMaterials) {
+    await prisma.stockItem.create({
+      data: {
+        name: mat.name,
+        unitId: unitsMap[mat.unit],
+        quantity: 100, // mock quantity
+        storeId: store.id
+      }
     });
   }
 
+  // 5.3 Finished Products Categories
+  const finishedProductCategoriesDef = [
+    { name: 'Cafés', color: '#8B5CF6', icon: 'Coffee' },
+    { name: 'Thés', color: '#10B981', icon: 'Coffee' },
+    { name: 'Boissons chaudes', color: '#F59E0B', icon: 'Coffee' },
+    { name: 'Boissons froides', color: '#3B82F6', icon: 'Coffee' },
+    { name: 'Jus', color: '#F97316', icon: 'Coffee' },
+    { name: 'Milkshake', color: '#EC4899', icon: 'Coffee' },
+    { name: 'Pâtisserie', color: '#D946EF', icon: 'Cake' },
+    { name: 'Snack', color: '#EF4444', icon: 'Pizza' },
+    { name: 'Crêpes', color: '#EAB308', icon: 'Utensils' },
+    { name: 'Chicha', color: '#64748B', icon: 'Box' },
+    { name: 'Extras', color: '#94A3B8', icon: 'Tag' }
+  ];
+
+  for (const c of finishedProductCategoriesDef) {
+    const cat = await prisma.category.create({
+      data: { name: c.name, color: c.color, icon: c.icon, storeId: store.id }
+    });
+    posCategoriesMap[c.name] = cat.id;
+  }
+  
+  // 5.4 Finished Products (Menu Import)
+  const finishedProductsData = [
+    { name: 'Café express', cat: 'Cafés', price: 1.2 },
+    { name: 'Café direct', cat: 'Cafés', price: 1.5 },
+    { name: 'Capucin', cat: 'Cafés', price: 2.0 },
+    { name: 'Cappuccino', cat: 'Cafés', price: 3.5 },
+    { name: 'Café crème', cat: 'Cafés', price: 3.0 },
+    
+    { name: 'Thé nature', cat: 'Thés', price: 1.0 },
+    { name: 'Thé menthe', cat: 'Thés', price: 1.2 },
+    { name: 'Thé amande', cat: 'Thés', price: 2.5 },
+    
+    { name: 'Chocolat chaud', cat: 'Boissons chaudes', price: 3.0 },
+    { name: 'Latte', cat: 'Boissons chaudes', price: 3.5 },
+    { name: 'Mokaccino', cat: 'Boissons chaudes', price: 4.0 },
+    
+    { name: 'Eau 0.5L', cat: 'Boissons froides', price: 1.0 },
+    { name: 'Eau gazeuse', cat: 'Boissons froides', price: 1.5 },
+    { name: 'Soda', cat: 'Boissons froides', price: 2.0 },
+    
+    { name: 'Jus orange', cat: 'Jus', price: 4.0 },
+    { name: 'Jus citron', cat: 'Jus', price: 3.5 },
+    { name: 'Jus fraise', cat: 'Jus', price: 5.0 },
+    { name: 'Cocktail fruits', cat: 'Jus', price: 6.0 },
+    
+    { name: 'Milkshake fraise', cat: 'Milkshake', price: 6.0 },
+    { name: 'Milkshake chocolat', cat: 'Milkshake', price: 6.0 },
+    { name: 'Milkshake banane', cat: 'Milkshake', price: 5.5 },
+    
+    { name: 'Gâteau chocolat', cat: 'Pâtisserie', price: 4.5 },
+    { name: 'Tarte', cat: 'Pâtisserie', price: 4.0 },
+    { name: 'Millefeuille', cat: 'Pâtisserie', price: 3.5 },
+    { name: 'Cheesecake', cat: 'Pâtisserie', price: 5.0 },
+    { name: 'Croissant', cat: 'Pâtisserie', price: 1.5 },
+    
+    { name: 'Sandwich thon', cat: 'Snack', price: 4.0 },
+    { name: 'Sandwich poulet', cat: 'Snack', price: 5.0 },
+    { name: 'Panini', cat: 'Snack', price: 5.5 },
+    { name: 'Pizza', cat: 'Snack', price: 8.0 },
+    
+    { name: 'Crêpe chocolat', cat: 'Crêpes', price: 3.5 },
+    { name: 'Crêpe nutella', cat: 'Crêpes', price: 4.0 },
+    { name: 'Gaufre', cat: 'Crêpes', price: 4.0 },
+    
+    { name: 'Chicha simple', cat: 'Chicha', price: 10.0 },
+    { name: 'Chicha premium', cat: 'Chicha', price: 15.0 },
+    
+    { name: 'Supplément lait', cat: 'Extras', price: 0.5 },
+    { name: 'Supplément chocolat', cat: 'Extras', price: 0.5 },
+    { name: 'Supplément fruit', cat: 'Extras', price: 1.0 },
+  ];
+
+  for (const fp of finishedProductsData) {
+    if (posCategoriesMap[fp.cat]) {
+      await prisma.product.create({
+        data: {
+          name: fp.name,
+          price: fp.price,
+          categoryId: posCategoriesMap[fp.cat],
+          storeId: store.id
+        }
+      });
+    }
+  }
+
+  // Also create demo tables
   const demoTables = ['T1', 'T2', 'T3', 'T4', 'T5'];
   await Promise.all(
     demoTables.map(label =>
-      (prisma as any).storeTable.create({
+      prisma.storeTable.create({
         data: { label, capacity: 4, storeId }
       })
     )
@@ -2296,28 +2494,39 @@ export async function seedDemoProductsAction(storeId: string) {
   revalidatePath('/admin/products');
   revalidatePath('/admin/stock');
   revalidatePath('/admin/tables');
-  return { success: true, message: 'Données demo ajoutées successfully' };
+  revalidatePath('/admin/products/categories');
+  return { success: true, message: 'Données demo ajoutées avec succès' };
 }
 
 export async function resetDemoDataAction(storeId: string) {
-  const products: any[] = await (prisma as any).product.findMany({ where: { storeId }, select: { id: true } });
+  const store = await prisma.store.findUnique({ where: { id: storeId } });
+  if (store?.isFiscalEnabled) {
+    throw new Error("Impossible : Le mode fiscal NACEF est actif, l'historique des ventes est scellé et ne peut pas être effacé.");
+  }
+
+  const products: any[] = await prisma.product.findMany({ where: { storeId }, select: { id: true } });
   const productIds = products.map((p: any) => p.id);
 
   if (productIds.length > 0) {
-    await (prisma as any).recipeItem.deleteMany({ where: { productId: { in: productIds } } });
+    await prisma.recipeItem.deleteMany({ where: { productId: { in: productIds } } });
   }
 
-  await (prisma as any).saleItem.deleteMany({ where: { sale: { storeId } } });
-  await (prisma as any).sale.deleteMany({ where: { storeId } });
-  await (prisma as any).stockItem.deleteMany({ where: { storeId } });
-  await (prisma as any).product.deleteMany({ where: { storeId } });
-  await (prisma as any).category.deleteMany({ where: { storeId } });
-  await (prisma as any).storeTable.deleteMany({ where: { storeId } });
+  await prisma.saleItem.deleteMany({ where: { sale: { storeId } } });
+  await prisma.sale.deleteMany({ where: { storeId } });
+  await prisma.stockItem.deleteMany({ where: { storeId } });
+  await prisma.product.deleteMany({ where: { storeId } });
+
+  // Delete children first, then parents to avoid FK constraint errors
+  await prisma.category.deleteMany({ where: { storeId, parentId: { not: null } } });
+  await prisma.category.deleteMany({ where: { storeId } });
+  
+  await prisma.storeTable.deleteMany({ where: { storeId } });
 
   revalidatePath('/admin/products');
   revalidatePath('/admin/stock');
   revalidatePath('/admin/tables');
   revalidatePath('/admin/sales');
+  revalidatePath('/admin/products/categories');
   return { success: true, message: 'Données demo supprimées' };
 }
 
