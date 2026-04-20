@@ -32,8 +32,8 @@ export async function getStore() {
            const storeObj: any = store;
            const plan = storeObj?.subscription?.plan;
            
-           // Combined access: from Plan OR manual override
-           const hasMarketplace = (plan?.hasMarketplace === true) || (storeObj?.forceMarketplaceAccess === true);
+           // Combined access: from Plan OR manual override (Forced TRUE for all plans as per requirement)
+           const hasMarketplace = true; // (plan?.hasMarketplace === true) || (storeObj?.forceMarketplaceAccess === true);
            storeObj.hasMarketplace = hasMarketplace;
            
            return storeObj;
@@ -57,7 +57,7 @@ export async function getStore() {
         });
         if (store) {
           const storeObj: any = store;
-          storeObj.hasMarketplace = (storeObj.subscription?.plan?.hasMarketplace === true) || (storeObj.forceMarketplaceAccess === true);
+          storeObj.hasMarketplace = true; // (storeObj.subscription?.plan?.hasMarketplace === true) || (storeObj.forceMarketplaceAccess === true);
           return storeObj;
         }
       }
