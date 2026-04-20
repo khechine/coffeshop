@@ -124,38 +124,38 @@ export default function StockClient({ stockItems, vendors, suppliers, globalUnit
                 
                 return (
                   <tr key={item.id}>
-                    <td>
+                    <td data-label="Article">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: 36, height: 36, borderRadius: '10px', background: isCritical ? '#FEE2E2' : '#D1FAE5', color: isCritical ? '#EF4444' : '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div className="mobile-hide" style={{ width: 36, height: 36, borderRadius: '10px', background: isCritical ? '#FEE2E2' : '#D1FAE5', color: isCritical ? '#EF4444' : '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {isCritical ? <AlertTriangle size={16} /> : <Layers size={16} />}
                         </div>
-                        <div>
+                        <div style={{ textAlign: 'left' }}>
                           <div style={{ fontWeight: 700, color: '#1E293B' }}>{item.name}</div>
                           <div style={{ fontSize: '11px', color: '#94A3B8' }}>Unité: {item.unit?.name || '—'}</div>
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <div style={{ fontWeight: 800, color: isCritical ? '#EF4444' : '#1E293B' }}>
+                    <td data-label="Quantité">
+                      <div style={{ fontWeight: 800, color: isCritical ? '#EF4444' : '#1E293B', textAlign: 'right' }}>
                         {Number(item.quantity).toFixed(2)} {item.unit?.name || ''}
                       </div>
-                      <div className="progress-track" style={{ marginTop: 6, width: 60 }}>
+                      <div className="progress-track" style={{ marginTop: 6, width: 60, marginLeft: 'auto' }}>
                         <div className="progress-fill" style={{ width: `${pct}%`, background: isCritical ? '#EF4444' : pct < 60 ? '#F59E0B' : '#10B981' }} />
                       </div>
                     </td>
-                    <td>
+                    <td data-label="Coût Unitaire">
                       <span style={{ fontWeight: 600, color: '#64748B' }}>{Number(item.cost || 0).toFixed(3)} DT</span>
                     </td>
-                    <td>
+                    <td data-label="Valeur Sum">
                       <span style={{ fontWeight: 800, color: '#10B981' }}>{value.toFixed(3)} DT</span>
                     </td>
-                    <td>
+                    <td data-label="Statut B2B">
                       {isCritical
                         ? <span className="badge red">⚠ Réappro</span>
                         : <span className="badge green">✓ OK</span>
                       }
                     </td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td data-label="Actions" style={{ textAlign: 'right' }}>
                       <button className="btn btn-ghost" title="Ajuster le stock" style={{ padding: '6px 10px', color: '#10B981', marginRight: '4px' }} onClick={() => { setAdjustTarget(item); setAdjustDelta(''); }}>
                         <PlusCircle size={14} />
                       </button>

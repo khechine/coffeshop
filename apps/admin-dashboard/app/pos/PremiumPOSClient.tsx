@@ -131,6 +131,7 @@ export default function PremiumPOSClient({
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '' });
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const [isCartOpenMobile, setIsCartOpenMobile] = useState(false);
   
   // --- Derived ---
   const filteredProducts = initialProducts.filter(p => {
@@ -237,6 +238,7 @@ export default function PremiumPOSClient({
       });
       setIsPaymentModalOpen(false);
       setIsRedeemingPoints(false);
+      setIsCartOpenMobile(false);
     } catch (err) {
       alert("Erreur lors du paiement");
     }
@@ -531,17 +533,27 @@ export default function PremiumPOSClient({
                  <p style={{ margin: 0, fontSize: 11, color: 'var(--pos-text-muted)', fontWeight: 700 }}>{storeName.toUpperCase()}</p>
               </div>
               
-              <div style={{ position: 'relative', marginLeft: 20 }}>
-                <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--pos-text-muted)' }} />
+              <div className="pos-search-wrapper" style={{ position: 'relative', marginLeft: 20 }}>
+                <Search size={18} className="pos-search-icon" style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--pos-text-muted)' }} />
                 <input 
                   type="text" 
-                  placeholder="Trouver un produit..." 
-                  className="category-pill" 
+                  placeholder="Produit..." 
+                  className="category-pill pos-search-input" 
                   style={{ width: 300, paddingLeft: 44, borderRadius: 14, background: 'var(--pos-input-bg)', color: 'var(--pos-text-main)', border: 'none', height: 48, fontWeight: 600 }}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
+
+              {/* Mobile Cart Toggle */}
+              <button 
+                className="btn-premium btn-premium-primary mobile-cart-toggle" 
+                onClick={() => setIsCartOpenMobile(true)}
+                style={{ display: 'none', padding: '0 16px', height: 48, borderRadius: 14, position: 'relative' }}
+              >
+                 <ShoppingCart size={20} />
+                 {cart.length > 0 && <span className="cart-badge-dot">{cart.length}</span>}
+              </button>
 
               {/* MODE INDICATOR CENTERED */}
               <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
@@ -836,7 +848,7 @@ export default function PremiumPOSClient({
 
       {/* Cart Sidebar (Stay functional always during POS) */}
       {view === 'POS' && (
-      <aside className="pos-cart-sidebar">
+      <aside className={`pos-cart-sidebar ${isCartOpenMobile ? 'mobile-open' : ''}`}>
         <div className="cart-header">
            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -845,7 +857,10 @@ export default function PremiumPOSClient({
                  </div>
                  <h2 style={{ margin: 0, fontWeight: 900, fontSize: 18 }}>Panier</h2>
               </div>
-              <button style={{ background: 'none', border: 'none', color: 'var(--pos-danger)', cursor: 'pointer' }} onClick={() => setCart([])}><Trash2 size={20} /></button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button style={{ background: 'none', border: 'none', color: 'var(--pos-text-muted)', cursor: 'pointer' }} className="mobile-only-btn" onClick={() => setIsCartOpenMobile(false)}><X size={24} /></button>
+                <button style={{ background: 'none', border: 'none', color: 'var(--pos-danger)', cursor: 'pointer' }} onClick={() => setCart([])}><Trash2 size={20} /></button>
+              </div>
            </div>
            
            {/* Customer Selector Integration */}

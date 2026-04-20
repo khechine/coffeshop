@@ -67,36 +67,38 @@ export default function TerminalsClient({ terminals, storeId }: { terminals: Ter
         </div>
 
         {storeId && (
-          <div style={{ background: 'linear-gradient(135deg, #F8FAFC, #EFF6FF)', border: '1px solid #BFDBFE', borderRadius: '24px', padding: '32px', marginBottom: '40px', display: 'flex', gap: '32px', alignItems: 'center' }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <QrCode size={20} color="#3B82F6" />
-                <span style={{ fontWeight: 900, color: '#1E3A8A', fontSize: '15px' }}>Appairage Instantané</span>
+          <div className="terminal-pairing-box" style={{ background: 'linear-gradient(135deg, #F8FAFC, #EFF6FF)', border: '1px solid #BFDBFE', borderRadius: '24px', padding: '32px', marginBottom: '40px' }}>
+            <div className="pairing-content" style={{ display: 'flex', flexWrap: 'wrap', gap: '32px', alignItems: 'center' }}>
+              <div style={{ flex: '1 1 300px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <QrCode size={20} color="#3B82F6" />
+                  <span style={{ fontWeight: 900, color: '#1E3A8A', fontSize: '15px' }}>Appairage Instantané</span>
+                </div>
+                <h3 style={{ fontSize: '24px', fontWeight: 1000, color: '#1E293B', marginBottom: '8px' }}>Scannez pour activer</h3>
+                <p style={{ color: '#64748B', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
+                  Ouvrez l'application POS sur votre tablette et scannez ce code. L'identifiant <b>{storeId}</b> sera configuré automatiquement.
+                </p>
+                
+                <div style={{ marginTop: '24px', display: 'inline-flex', alignItems: 'center', gap: '12px', background: '#DBEAFE', padding: '10px 18px', borderRadius: '14px', border: '1px solid #BFDBFE' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E40AF', opacity: 0.7 }}>ID BOUTIQUE:</span>
+                  <span style={{ fontSize: '18px', fontWeight: 1000, color: '#1E40AF', fontFamily: 'monospace' }}>{storeId}</span>
+                </div>
               </div>
-              <h3 style={{ fontSize: '24px', fontWeight: 1000, color: '#1E293B', marginBottom: '8px' }}>Scannez pour activer</h3>
-              <p style={{ color: '#64748B', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
-                Ouvrez l'application POS sur votre tablette et scannez ce code. L'identifiant <b>{storeId}</b> sera configuré automatiquement.
-              </p>
               
-              <div style={{ marginTop: '24px', display: 'inline-flex', alignItems: 'center', gap: '12px', background: '#DBEAFE', padding: '10px 18px', borderRadius: '14px', border: '1px solid #BFDBFE' }}>
-                <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E40AF', opacity: 0.7 }}>ID BOUTIQUE:</span>
-                <span style={{ fontSize: '18px', fontWeight: 1000, color: '#1E40AF', fontFamily: 'monospace' }}>{storeId}</span>
+              <div style={{ background: '#FFF', padding: '20px', borderRadius: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)', border: '1px solid #FFF', margin: '0 auto' }}>
+                <QRCodeSVG 
+                  value={JSON.stringify({ type: 'coffeeshop-pair', storeId })} 
+                  size={160}
+                  level="H"
+                  includeMargin={false}
+                />
               </div>
-            </div>
-            
-            <div style={{ background: '#FFF', padding: '20px', borderRadius: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)', border: '1px solid #FFF' }}>
-              <QRCodeSVG 
-                value={JSON.stringify({ type: 'coffeeshop-pair', storeId })} 
-                size={160}
-                level="H"
-                includeMargin={false}
-              />
             </div>
           </div>
         )}
 
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '24px' }}>
+        <div className="terminals-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
           {terminals.map(t => (
             <div key={t.id} style={{ border: '1.5px solid #F1F5F9', borderRadius: '24px', padding: '24px', background: '#FFF', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'all 0.2s' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -122,23 +124,23 @@ export default function TerminalsClient({ terminals, storeId }: { terminals: Ter
               {t.activationCode && t.status !== 'ACTIVE' && (
                 <div style={{ background: '#EEF2FF', padding: '16px', borderRadius: '16px', border: '1px solid #E0E7FF' }}>
                   <div style={{ fontSize: '11px', color: '#4338CA', textTransform: 'uppercase', fontWeight: 900, marginBottom: '4px', letterSpacing: '0.05em' }}>Code d'activation :</div>
-                  <div style={{ fontSize: '28px', fontWeight: 1000, color: '#4F46E5', letterSpacing: '6px', fontFamily: 'monospace' }}>{t.activationCode}</div>
+                  <div style={{ fontSize: '28px', fontWeight: 1000, color: '#4F46E5', letterSpacing: '6px', fontFamily: 'monospace' }}>{codeModal.code || t.activationCode}</div>
                 </div>
               )}
             </div>
           ))}
 
           {terminals.length === 0 && (
-            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '80px 40px', background: '#F8FAFC', border: '2px dashed #E2E8F0', borderRadius: '32px' }}>
+            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 20px', background: '#F8FAFC', border: '2px dashed #E2E8F0', borderRadius: '32px' }}>
               <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)' }}>
                 <Smartphone size={36} color="#CBD5E1" />
               </div>
               <p style={{ fontWeight: 900, color: '#1E293B', fontSize: '18px', marginBottom: '12px' }}>Aucun terminal configuré</p>
               <p style={{ fontSize: '14px', color: '#64748B', maxWidth: '400px', margin: '0 auto', lineHeight: 1.6 }}>
-                Ajoutez votre première tablette pour commencer à transformer votre établissement. Chaque appareil nécessite une activation sécurisée.
+                Ajoutez votre première tablette pour commencer à transformer votre établissement.
               </p>
               <button className="btn btn-primary" style={{ marginTop: '24px', padding: '12px 24px' }} onClick={() => setModalOpen(true)}>
-                <Plus size={16} /> Configurer ma première tablette
+                <Plus size={16} /> Configurer tablette
               </button>
             </div>
           )}

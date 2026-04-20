@@ -93,39 +93,39 @@ export default function ProductsClient({ products, categories, stockItems, globa
                 const isActive = p.active ?? true;
                 return (
                   <tr key={p.id} style={{ opacity: isActive ? 1 : 0.6 }}>
-                    <td>
+                    <td data-label="Produit">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: 38, height: 38, borderRadius: '10px', background: `${catColor}18`, color: catColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div className="mobile-hide" style={{ width: 38, height: 38, borderRadius: '10px', background: `${catColor}18`, color: catColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {p.category.name.toLowerCase() === PACKAGING_CATEGORY ? <Package size={16} /> : <Coffee size={16} />}
                         </div>
-                        <div>
+                        <div style={{ textAlign: 'left' }}>
                           <div style={{ fontWeight: 700, color: '#1E293B' }}>{p.name}</div>
-                          <div style={{ fontSize: '11px', color: '#94A3B8' }}>{p.recipe.length} ingrédients · Vendu par {p.unit || 'unité'}</div>
+                          <div style={{ fontSize: '11px', color: '#94A3B8' }}>{p.recipe.length} ingrédients · {p.unit || 'unité'}</div>
                         </div>
                       </div>
                     </td>
-                    <td>
+                    <td data-label="Statut">
                       {isActive ? (
                         <span className="badge" style={{ background: '#D1FAE5', color: '#065F46' }}>Actif</span>
                       ) : (
                         <span className="badge" style={{ background: '#F1F5F9', color: '#64748B' }}>Archivé</span>
                       )}
                     </td>
-                    <td>
+                    <td data-label="Catégorie">
                       <span className="badge" style={{ background: `${catColor}18`, color: catColor }}>
                         {p.category.name}
                       </span>
                     </td>
-                    <td>
+                    <td data-label="HT / TVA">
                       <div style={{ fontWeight: 700, color: '#475569', fontSize: '14px' }}>{priceHt.toFixed(3)} DT</div>
                       <div style={{ fontSize: '10px', color: '#6366F1', fontWeight: 800 }}>TVA: {Math.round(taxRate * 100)}% (+{taxAmount.toFixed(3)})</div>
                     </td>
-                    <td><strong style={{ fontSize: '16px', color: '#1E293B' }}>{Number(p.price).toFixed(3)}</strong><span style={{ color: '#94A3B8', fontSize: '12px' }}> DT</span></td>
-                    <td>
+                    <td data-label="Prix TTC"><strong style={{ fontSize: '16px', color: '#1E293B' }}>{Number(p.price).toFixed(3)}</strong><span style={{ color: '#94A3B8', fontSize: '12px' }}> DT</span></td>
+                    <td data-label="Profit">
                       <div style={{ fontWeight: 800, color: pProfitHt > 0 ? '#10B981' : '#EF4444', fontSize: '15px' }}>{pProfitHt > 0 ? '+' : ''}{pProfitHt.toFixed(3)} DT</div>
                       <div style={{ fontSize: '10px', color: '#94A3B8' }}>Marge/HT: {priceHt > 0 ? ((pProfitHt / priceHt) * 100).toFixed(0) : 0}%</div>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td data-label="Actions" style={{ textAlign: 'right' }}>
                       <button className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEdit(p)}><Edit2 size={14} /></button>
                       <button className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteTarget(p)}><Trash2 size={14} /></button>
                     </td>

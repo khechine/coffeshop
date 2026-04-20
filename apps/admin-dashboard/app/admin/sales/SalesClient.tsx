@@ -76,13 +76,13 @@ export default function SalesClient({ initialSales, storeName, storeAddress, sto
               </tr>
             </thead>
             <tbody>
-              {filtered.map(sale => (
+               {filtered.map(sale => (
                 <tr key={sale.id}>
-                   <td className="mobile-hide" style={{ whiteSpace: 'nowrap' }}>
+                   <td className="mobile-hide" data-label="Date" style={{ whiteSpace: 'nowrap' }}>
                       <div style={{ fontWeight: 800, color: '#1E293B', fontSize: '13px' }}>{new Date(sale.createdAt).toLocaleDateString('fr-FR')}</div>
                       <div style={{ fontSize: '11px', color: '#94A3B8' }}>{new Date(sale.createdAt).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}</div>
                    </td>
-                   <td>
+                   <td data-label="Référence">
                       <div style={{ fontWeight: 800, color: '#6366F1', fontSize: '14px' }}>#{sale.id.slice(-6).toUpperCase()}</div>
                       {sale.isFiscal && (
                         <div style={{ fontSize: '11px', fontWeight: 900, color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
@@ -90,7 +90,7 @@ export default function SalesClient({ initialSales, storeName, storeAddress, sto
                         </div>
                       )}
                    </td>
-                   <td style={{ maxWidth: '250px' }}>
+                   <td data-label="Commande" style={{ maxWidth: '250px' }}>
                       <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569', lineHeight: '1.4' }}>
                         {sale.items.map((i: any) => `${i.quantity}x ${i.product?.name || 'Produit'}`).join(', ')}
                       </div>
@@ -98,7 +98,7 @@ export default function SalesClient({ initialSales, storeName, storeAddress, sto
                         {sale.consumeType === 'TAKEAWAY' ? '🥡 À Emporter' : '☕ Sur Place'}
                       </div>
                    </td>
-                   <td>
+                   <td data-label="Fiscalité">
                       <div style={{ fontSize: '11px', color: '#64748B' }}>
                         HT: <span style={{fontWeight:700}}>{Number(sale.totalHt || 0).toFixed(3)} DT</span>
                       </div>
@@ -111,7 +111,7 @@ export default function SalesClient({ initialSales, storeName, storeAddress, sto
                         </div>
                       )}
                    </td>
-                   <td style={{ whiteSpace: 'nowrap' }}>
+                   <td data-label="Staff">
                       <div style={{ fontSize: '11px', color: '#64748B' }}>
                         Barista: <span style={{fontWeight:700, color:'#1E1B4B'}}>{sale.takenBy?.name || 'Inconnu'}</span>
                       </div>
@@ -119,10 +119,10 @@ export default function SalesClient({ initialSales, storeName, storeAddress, sto
                         <span style={{ padding: '2px 6px', background: '#F1F5F9', borderRadius: '4px' }}>{sale.tableName || 'Directe'}</span>
                       </div>
                    </td>
-                   <td style={{ textAlign: 'right', fontWeight: 900, color: '#1E1B4B', fontSize: '15px' }}>
+                   <td data-label="Total" style={{ textAlign: 'right', fontWeight: 900, color: '#1E1B4B', fontSize: '15px' }}>
                       {Number(sale.total).toFixed(3)} DT
                    </td>
-                   <td style={{ textAlign: 'center' }}>
+                   <td data-label="Action" style={{ textAlign: 'center' }}>
                       <button 
                         onClick={() => handleReprint(sale)}
                         style={{ padding: '8px', borderRadius: '8px', background: '#6366F1', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}

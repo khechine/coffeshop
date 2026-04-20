@@ -140,6 +140,7 @@ html, body {
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
+    width: 280px !important;
   }
   .sidebar.mobile-open {
     transform: translateX(0);
@@ -403,6 +404,9 @@ html, body {
 @media (max-width: 768px) {
   .menu-toggle {
     display: flex;
+  }
+  .topbar-info-desktop {
+    display: none;
   }
 }
 
@@ -946,4 +950,91 @@ html, body {
 
 .mobile-overlay.active {
   display: block;
+}
+/* ===== RESPONSIVE TABLE PATTERN ===== */
+@media (max-width: 768px) {
+  .data-table, .data-table thead, .data-table tbody, .data-table th, .data-table td, .data-table tr {
+    display: block;
+  }
+  
+  .data-table thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+  
+  .data-table tr {
+    border-radius: 16px;
+    margin-bottom: 16px;
+    background: #fff;
+    border: 1px solid #E2E8F0 !important;
+    padding: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .data-table td {
+    border: none;
+    position: relative;
+    padding-left: 50% !important;
+    text-align: right !important;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  
+  .data-table td:before {
+    position: absolute;
+    left: 12px;
+    width: 45%;
+    padding-right: 10px;
+    white-space: nowrap;
+    text-align: left;
+    font-weight: 700;
+    color: #64748B;
+    content: attr(data-label);
+  }
+
+  .mobile-hide {
+    display: none !important;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .page-header .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Specific Table Tweaks */
+  .data-table td div {
+    text-align: right;
+  }
+}
+
+@media (max-width: 768px) {
+  .dark .data-table tr {
+    background: rgba(30, 41, 59, 0.4);
+    border-color: rgba(51, 65, 85, 0.5) !important;
+  }
+}
+
+.mobile-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 90;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s;
+}
+
+.mobile-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
 }

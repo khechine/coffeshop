@@ -132,8 +132,8 @@ export default function LayoutShell({
               <span className="alert-dot" />
             </div>
             
-            <div className="topbar-user-profile">
-               <div className="user-info-text">
+            <div className={`topbar-user-profile ${mounted ? '' : 'loading'}`}>
+               <div className="user-info-text topbar-info-desktop">
                   <span className="user-name">{mounted ? cashierName : 'Administrateur'}</span>
                   <span className="user-role">{(role || user?.role || 'STORE_OWNER').replace('_', ' ')}</span>
                </div>

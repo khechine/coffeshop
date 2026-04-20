@@ -121,29 +121,33 @@ export default function ProductForm({ initialData, categories, stockItems, globa
   const inputStyle: React.CSSProperties = { width: '100%', padding: '12px 16px', borderRadius: '12px', border: '2px solid #E2E8F0', fontSize: '15px', fontWeight: 600, outline: 'none', transition: 'all 0.2s', background: '#fff' };
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '100px' }}>
+    <div className="product-form-container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 16px 100px' }}>
       {/* Top Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
-        <button 
-          onClick={() => router.back()}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', background: '#fff', border: '1px solid #E2E8F0', color: '#64748B', fontWeight: 800, cursor: 'pointer', fontSize: '14px' }}
-        >
-          <ArrowLeft size={18} /> Retour à la liste
-        </button>
-        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 900, color: '#1E293B' }}>
-          {initialData ? 'Modifier le Produit' : 'Créer un nouveau Produit'}
+      <div className="product-form-header" style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px', borderBottom: '1px solid #E2E8F0', paddingBottom: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <button 
+            onClick={() => router.back()}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', background: '#fff', border: '1px solid #E2E8F0', color: '#64748B', fontWeight: 800, cursor: 'pointer', fontSize: '14px' }}
+          >
+            <ArrowLeft size={18} /> <span className="mobile-hide">Retour</span>
+          </button>
+          
+          <button 
+            onClick={handleSubmit}
+            disabled={isPending}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', background: '#6366F1', color: '#fff', border: 'none', fontWeight: 900, cursor: 'pointer', fontSize: '15px', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)' }}
+          >
+            <Save size={18} /> {isPending ? '...' : 'Enregistrer'}
+          </button>
+        </div>
+        
+        <h1 style={{ margin: 0, fontSize: '22px', md: '28px', fontWeight: 1000, color: '#0F172A', letterSpacing: '-0.02em' }}>
+          {initialData ? 'Modifier le Produit' : 'Nouveau Produit'}
         </h1>
-        <button 
-          onClick={handleSubmit}
-          disabled={isPending}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', background: '#6366F1', color: '#fff', border: 'none', fontWeight: 900, cursor: 'pointer', fontSize: '15px', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)' }}
-        >
-          <Save size={18} /> {isPending ? 'Enregistrement...' : 'Enregistrer le Produit'}
-        </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '32px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      <div className="product-form-layout" style={{ display: 'flex', flexDirection: 'column', lg: 'row', gap: '32px' }}>
+        <div className="form-main-column" style={{ flex: '1.5', order: 2, lg: 1, display: 'flex', flexDirection: 'column', gap: '32px' }}>
           {/* Section 1: Informations Générales */}
           <section style={{ background: '#fff', padding: '32px', borderRadius: '24px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
@@ -165,8 +169,8 @@ export default function ProductForm({ initialData, categories, stockItems, globa
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+                <div style={{ flex: '1 1 200px' }}>
                   <label style={labelStyle}>Catégorie</label>
                   <select 
                     style={inputStyle} 
@@ -178,7 +182,7 @@ export default function ProductForm({ initialData, categories, stockItems, globa
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
-                <div>
+                <div style={{ flex: '1 1 200px' }}>
                   <label style={labelStyle}>Unité de Vente</label>
                   <select 
                     style={inputStyle} 
@@ -193,20 +197,20 @@ export default function ProductForm({ initialData, categories, stockItems, globa
 
               <div>
                 <label style={labelStyle}>Statut du Produit</label>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', md: 'row', gap: '12px' }}>
                   <button 
                     type="button" 
                     onClick={() => setForm(f => ({ ...f, active: true }))}
-                    style={{ flex: 1, padding: '12px', borderRadius: '12px', border: form.active ? '2px solid #10B981' : '2px solid #E2E8F0', background: form.active ? '#F0FDF4' : '#fff', color: form.active ? '#15803D' : '#64748B', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                    style={{ flex: 1, padding: '14px', borderRadius: '12px', border: form.active ? '2px solid #10B981' : '2px solid #E2E8F0', background: form.active ? '#F0FDF4' : '#fff', color: form.active ? '#15803D' : '#64748B', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
-                    <CheckCircle size={18} /> Actif (Visible sur POS)
+                    <CheckCircle size={18} /> Actif <span className="mobile-hide">(Visible sur POS)</span>
                   </button>
                   <button 
                     type="button" 
                     onClick={() => setForm(f => ({ ...f, active: false }))}
-                    style={{ flex: 1, padding: '12px', borderRadius: '12px', border: !form.active ? '2px solid #EF4444' : '2px solid #E2E8F0', background: !form.active ? '#FEF2F2' : '#fff', color: !form.active ? '#B91C1C' : '#64748B', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                    style={{ flex: 1, padding: '14px', borderRadius: '12px', border: !form.active ? '2px solid #EF4444' : '2px solid #E2E8F0', background: !form.active ? '#FEF2F2' : '#fff', color: !form.active ? '#B91C1C' : '#64748B', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
-                    <Archive size={18} /> Archivé (Caché)
+                    <Archive size={18} /> Archivé <span className="mobile-hide">(Caché)</span>
                   </button>
                 </div>
               </div>
@@ -242,15 +246,15 @@ export default function ProductForm({ initialData, categories, stockItems, globa
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {form.recipe.map((item, idx) => {
                 const stock = stockItems.find(s => s.id === item.stockItemId);
                 return (
-                  <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'center', background: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-                    <div style={{ flex: 3 }}>
-                      <label style={{ fontSize: '10px', fontWeight: 900, color: '#94A3B8', marginBottom: '4px', display: 'block' }}>MATIÈRE PREMIÈRE</label>
+                  <div key={idx} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-start', background: '#F8FAFC', padding: '20px', borderRadius: '20px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ flex: '1 1 250px' }}>
+                      <label style={{ fontSize: '10px', fontWeight: 900, color: '#94A3B8', marginBottom: '6px', display: 'block', textTransform: 'uppercase' }}>Matière Première</label>
                       <select 
-                        style={{ ...inputStyle, padding: '8px 12px', fontSize: '14px', border: '1.5px solid #CBD5E1' }} 
+                        style={{ ...inputStyle, padding: '10px 14px', fontSize: '14px', border: '1.5px solid #CBD5E1' }} 
                         value={item.stockItemId} 
                         onChange={e => updateRecipeItem(idx, 'stockItemId', e.target.value)} 
                         required
@@ -259,11 +263,11 @@ export default function ProductForm({ initialData, categories, stockItems, globa
                         {stockItems.map(s => <option key={s.id} value={s.id}>{s.name} ({s.unit})</option>)}
                       </select>
                     </div>
-                    <div style={{ flex: 1.5 }}>
-                      <label style={{ fontSize: '10px', fontWeight: 900, color: '#94A3B8', marginBottom: '4px', display: 'block' }}>QUANTITÉ</label>
+                    <div style={{ flex: '1 1 120px' }}>
+                      <label style={{ fontSize: '10px', fontWeight: 900, color: '#94A3B8', marginBottom: '6px', display: 'block', textTransform: 'uppercase' }}>Quantité</label>
                       <div style={{ position: 'relative' }}>
                         <input 
-                          style={{ ...inputStyle, padding: '8px 40px 8px 12px', fontSize: '14px', border: '1.5px solid #CBD5E1', textAlign: 'right' }} 
+                          style={{ ...inputStyle, padding: '10px 40px 10px 14px', fontSize: '14px', border: '1.5px solid #CBD5E1', textAlign: 'right' }} 
                           type="number" step="0.001" 
                           value={item.quantity} 
                           onChange={e => updateRecipeItem(idx, 'quantity', parseFloat(e.target.value))} 
@@ -274,10 +278,10 @@ export default function ProductForm({ initialData, categories, stockItems, globa
                         </span>
                       </div>
                     </div>
-                    <div style={{ flex: 2 }}>
-                      <label style={{ fontSize: '10px', fontWeight: 900, color: '#94A3B8', marginBottom: '4px', display: 'block' }}>CONDITION</label>
+                    <div style={{ flex: '1 1 150px' }}>
+                      <label style={{ fontSize: '10px', fontWeight: 900, color: '#94A3B8', marginBottom: '6px', display: 'block', textTransform: 'uppercase' }}>Condition</label>
                       <select 
-                        style={{ ...inputStyle, padding: '8px 12px', fontSize: '13px', border: '1.5px solid #CBD5E1' }} 
+                        style={{ ...inputStyle, padding: '10px 14px', fontSize: '13px', border: '1.5px solid #CBD5E1' }} 
                         value={item.consumeType} 
                         onChange={e => updateRecipeItem(idx, 'consumeType', e.target.value)}
                       >
@@ -286,13 +290,15 @@ export default function ProductForm({ initialData, categories, stockItems, globa
                         <option value="TAKEAWAY">À emporter</option>
                       </select>
                     </div>
-                    <button 
-                      type="button" 
-                      onClick={() => removeRecipeItem(idx)} 
-                      style={{ marginTop: '18px', width: '36px', height: '36px', borderRadius: '10px', border: 'none', background: '#FEE2E2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', paddingTop: '24px' }}>
+                      <button 
+                        type="button" 
+                        onClick={() => removeRecipeItem(idx)} 
+                        style={{ width: '40px', height: '40px', borderRadius: '12px', border: 'none', background: '#FEE2E2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -306,9 +312,9 @@ export default function ProductForm({ initialData, categories, stockItems, globa
           </section>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div className="form-sidebar" style={{ flex: '1', order: 1, lg: 2, display: 'flex', flexDirection: 'column', gap: '32px' }}>
           {/* Section 3: Finance & TVA */}
-          <section style={{ background: '#fff', padding: '32px', borderRadius: '24px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'sticky', top: '32px' }}>
+          <section className="finance-section sticky-top" style={{ background: '#fff', padding: '32px', borderRadius: '24px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'static', lg: 'sticky', top: '32px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Percent size={20} />

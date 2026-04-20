@@ -85,7 +85,7 @@ export default async function VendorDashboard() {
         </div>
       </div>
 
-      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginBottom: '24px' }}>
+      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px', marginBottom: '24px' }}>
         <div className="kpi-card orange">
           <div className="kpi-icon orange"><Clock size={22} /></div>
           <div><div className="kpi-label">À Livrer</div><div className="kpi-value">{pendingCount}</div></div>

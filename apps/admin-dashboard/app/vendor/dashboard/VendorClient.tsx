@@ -170,8 +170,8 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
               {allOrders.map((order) => {
                 const statusConf = STATUS_MAP[order.status] || STATUS_MAP.PENDING;
                 return (
-                  <div key={order.id} className="p-6 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div key={order.id} className="p-4 md:p-6 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 md:gap-6">
                       <div className="space-y-2">
                         <div className="flex items-center gap-3">
                           <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
@@ -187,25 +187,25 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
                             #{order.id.slice(-6).toUpperCase()}
                           </span>
                         </div>
-                        <div className="text-lg font-black text-slate-900 dark:text-white leading-tight">
+                        <div className="text-base md:text-lg font-black text-slate-900 dark:text-white leading-tight">
                           {order.supplier.name} <span className="text-slate-400 dark:text-slate-600 mx-1">→</span> {order.store.name}
                         </div>
-                        <div className="text-xs text-slate-500 flex items-center gap-2 font-medium">
+                        <div className="text-[10px] md:text-xs text-slate-500 flex items-center gap-2 font-medium">
                           <Calendar size={12} />
                           {new Date(order.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <div className="text-2xl font-black text-indigo-400">{Number(order.total).toFixed(3)} <span className="text-xs opacity-50">DT</span></div>
+                      <div className="flex items-center justify-between lg:justify-end gap-6 border-t lg:border-none pt-4 lg:pt-0">
+                        <div className="lg:text-right">
+                          <div className="text-xl md:text-2xl font-black text-indigo-400">{Number(order.total).toFixed(3)} <span className="text-xs opacity-50">DT</span></div>
                         </div>
                         <div className="flex items-center gap-2">
                           <select 
                             value={order.status} 
                             onChange={e => handleStatusChange(order.id, e.target.value)} 
                             disabled={isPending}
-                            className="bg-slate-100 dark:bg-slate-800 border-none text-slate-600 dark:text-slate-300 text-xs font-bold py-2 px-3 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer"
+                            className="bg-slate-100 dark:bg-slate-800 border-none text-slate-600 dark:text-slate-300 text-[10px] md:text-xs font-bold py-2 px-3 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer"
                           >
                             {Object.entries(STATUS_MAP).map(([val, conf]) => <option key={val} value={val}>{conf.label}</option>)}
                           </select>
@@ -221,7 +221,7 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
                     
                     <div className="mt-4 flex flex-wrap gap-2">
                       {order.items.map((item: any) => (
-                        <div key={item.id} className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/30 px-3 py-1.5 rounded-xl text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-2 transition-all">
+                        <div key={item.id} className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/30 px-3 py-1.5 rounded-xl text-[10px] md:text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-2 transition-all">
                           <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
                           {Number(item.quantity)} {item.stockItem?.unit || ''} {item.stockItem?.name || item.name} 
                           <span className="text-slate-400 dark:text-slate-500">×</span>
@@ -250,51 +250,52 @@ export default function VendorClient({ suppliers, allOrders, stockItems }: { sup
             </button>
           </div>
           
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="table-responsive">
+            <table className="data-table">
               <thead>
-                <tr className="bg-slate-50 dark:bg-white/[0.02]">
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider">Fournisseur</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider">Contact</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider">Téléphone</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider text-center">Commandes</th>
-                  <th className="px-6 py-4 text-[11px] font-black text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                <tr>
+                  <th>Fournisseur</th>
+                  <th className="mobile-hide">Contact</th>
+                  <th className="mobile-hide">Téléphone</th>
+                  <th style={{ textAlign: 'center' }}>Commandes</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+              <tbody>
                 {suppliers.map(s => (
-                  <tr key={s.id} className="hover:bg-white/[0.01] transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-black text-sm">
+                  <tr key={s.id}>
+                    <td data-label="Fournisseur">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(99, 102, 241, 0.1)', color: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px' }}>
                           {s.name.charAt(0).toUpperCase()}
                         </div>
-                        <span className="font-bold text-slate-900 dark:text-white text-sm">{s.name}</span>
+                        <div style={{ textAlign: 'left' }}>
+                          <div style={{ fontWeight: 700, color: '#1E293B' }}>{s.name}</div>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-400 font-medium">{s.contact || '—'}</td>
-                    <td className="px-6 py-4 text-sm text-slate-400 font-medium font-mono">{s.phone || '—'}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="bg-indigo-500/10 text-indigo-400 px-2.5 py-1 rounded-lg text-[10px] font-black border border-indigo-500/20 uppercase">
+                    <td className="mobile-hide" data-label="Contact">{s.contact || '—'}</td>
+                    <td className="mobile-hide" data-label="Téléphone" style={{ fontFamily: 'monospace' }}>{s.phone || '—'}</td>
+                    <td data-label="Commandes" style={{ textAlign: 'center' }}>
+                      <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366F1', fontSize: '10px', fontWeight: 900 }}>
                         {s.orders.length} commandes
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" onClick={() => openEditSupp(s)}>
-                          <Edit2 size={16} />
-                        </button>
-                        <button className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-all" onClick={() => setDeleteSuppTarget(s)}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                    <td data-label="Actions" style={{ textAlign: 'right' }}>
+                      <button className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEditSupp(s)}>
+                        <Edit2 size={14} />
+                      </button>
+                      <button className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteSuppTarget(s)}>
+                        <Trash2 size={14} />
+                      </button>
                     </td>
                   </tr>
                 ))}
                 {suppliers.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-20 text-center text-slate-500 font-bold">
-                      Aucun fournisseur ajouté
+                    <td colSpan={5} style={{ padding: '60px', textAlign: 'center', color: '#94A3B8' }}>
+                      <Truck size={32} style={{ opacity: 0.1, marginBottom: '12px' }} />
+                      <div>Aucun fournisseur ajouté</div>
                     </td>
                   </tr>
                 )}
