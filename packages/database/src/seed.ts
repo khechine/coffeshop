@@ -28,6 +28,8 @@ async function main() {
   await safeDelete('productStandard');
   await safeDelete('activityPole');
   await safeDelete('globalUnit');
+  await safeDelete('mktSubcategory');
+  await safeDelete('mktCategory');
 
   // 2. UNITS OF MEASURE
   console.log('📏 Seeding Units of Measure...');
