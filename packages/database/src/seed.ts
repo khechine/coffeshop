@@ -15,9 +15,14 @@ async function main() {
       if ((prisma as any)[model]) {
         await (prisma as any)[model].deleteMany();
       }
-    } catch (e) {}
+    } catch (e: any) {
+      console.warn(`⚠️ Could not clean ${model}: ${e.message}`);
+    }
   };
 
+  await safeDelete('marketplaceSettlement');
+  await safeDelete('supplierOrderItem');
+  await safeDelete('supplierOrder');
   await safeDelete('mktBundleItem');
   await safeDelete('mktBundle');
   await safeDelete('vendorProduct');
@@ -26,10 +31,10 @@ async function main() {
   await safeDelete('walletDepositRequest');
   await safeDelete('vendorProfile');
   await safeDelete('productStandard');
-  await safeDelete('activityPole');
-  await safeDelete('globalUnit');
   await safeDelete('mktSubcategory');
   await safeDelete('mktCategory');
+  await safeDelete('activityPole');
+  await safeDelete('globalUnit');
 
   // 2. UNITS OF MEASURE
   console.log('📏 Seeding Units of Measure...');
