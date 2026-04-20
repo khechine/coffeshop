@@ -1377,7 +1377,7 @@ export async function createMarketplaceCategoryAction(data: { name: string; icon
   revalidatePath('/marketplace');
 }
 
-export async function placeMarketplaceOrder(data: { vendorId: string; total: number; items: { productId: string; quantity: number; price: number; name: string }[] }) {
+export async function placeMarketplaceOrder(data: { vendorId: string; total: number; items: { productId?: string; bundleId?: string; quantity: number; price: number; name: string }[] }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
 
@@ -1418,7 +1418,9 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
         create: data.items.map(i => ({
           name: i.name,
           quantity: i.quantity,
-          price: i.price
+          price: i.price,
+          mktBundleId: i.bundleId || null,
+          mktProductId: i.productId || null
         }))
       }
     }
@@ -2129,39 +2131,32 @@ export async function updateSupplierOrderStatus(orderId: string, status: OrderSt
 
     // 2. Update Stock
     for (const item of order.items) {
-      let stockItem;
-      if (item.stockItemId) {
-        stockItem = await (prisma as any).stockItem.findUnique({ where: { id: item.stockItemId } });
+      if ((item as any).mktBundleId) {
+        // Fetch bundle components
+        const bundle = await (prisma as any).mktBundle.findUnique({
+          where: { id: (item as any).mktBundleId },
+          include: { 
+            items: { 
+              include: { vendorProduct: true } 
+            } 
+          }
+        });
+
+        if (bundle) {
+          for (const bundleItem of bundle.items) {
+            const finalQty = Number(bundleItem.quantity) * Number(item.quantity);
+            const itemName = bundleItem.vendorProduct.name || "Produit sans nom";
+            const itemPrice = Number(bundleItem.vendorProduct.price);
+
+            await upsertStockItem(order.storeId, itemName, finalQty, itemPrice);
+          }
+          continue; // Move to next order item
+        }
       }
 
-      if (!stockItem && item.name) {
-        stockItem = await (prisma as any).stockItem.findFirst({
-          where: { 
-            storeId: order.storeId,
-            name: { equals: item.name, mode: 'insensitive' }
-          }
-        });
-      }
-
-      if (stockItem) {
-        await (prisma as any).stockItem.update({
-          where: { id: stockItem.id },
-          data: {
-            quantity: { increment: item.quantity },
-            cost: item.price 
-          }
-        });
-      } else if (item.name) {
-        await (prisma as any).stockItem.create({
-          data: {
-            storeId: order.storeId,
-            name: item.name,
-            quantity: item.quantity,
-            cost: item.price,
-            minThreshold: 0
-          }
-        });
-      }
+      // Individual product or fallback
+      const itemName = item.name || "Produit sans nom";
+      await upsertStockItem(order.storeId, itemName, Number(item.quantity), Number(item.price));
     }
   }
 
@@ -2169,6 +2164,36 @@ export async function updateSupplierOrderStatus(orderId: string, status: OrderSt
   revalidatePath('/admin/orders');
   revalidatePath('/admin/stock');
   revalidatePath('/admin/expenses');
+}
+
+// Helper for atomic stock updates
+async function upsertStockItem(storeId: string, name: string, quantity: number, price: number) {
+  let stockItem = await (prisma as any).stockItem.findFirst({
+    where: { 
+      storeId,
+      name: { equals: name, mode: 'insensitive' }
+    }
+  });
+
+  if (stockItem) {
+    await (prisma as any).stockItem.update({
+      where: { id: stockItem.id },
+      data: {
+        quantity: { increment: quantity },
+        cost: price 
+      }
+    });
+  } else {
+    await (prisma as any).stockItem.create({
+      data: {
+        storeId,
+        name,
+        quantity: quantity,
+        cost: price,
+        minThreshold: 0
+      }
+    });
+  }
 }
 
 export async function updateMarketplaceProductAction(id: string, data: any) {

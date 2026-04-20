@@ -135,7 +135,13 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
         await placeMarketplaceOrder({
           vendorId,
           total,
-          items: items.map(i => ({ productId: i.id, quantity: i.quantity, price: Number(i.price), name: i.name }))
+          items: items.map(i => ({ 
+            productId: i.isBundle ? undefined : i.id, 
+            bundleId: i.isBundle ? i.id : undefined,
+            quantity: i.quantity, 
+            price: Number(i.price), 
+            name: i.name 
+          }))
         });
       }
       setCart([]);
