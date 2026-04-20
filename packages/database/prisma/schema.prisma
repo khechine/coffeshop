@@ -745,6 +745,8 @@ model SupplierOrderItem {
   name        String? // Name of product if not linked to stockItem
   quantity    Decimal
   price       Decimal
+  mktBundleId String?
+  mktProductId String?
 }
 model GlobalUnit {
   id        String      @id @default(cuid())
