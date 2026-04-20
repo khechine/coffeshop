@@ -690,10 +690,11 @@ export async function recordSale(data: {
     let finalSequenceNumber: number | null = null;
 
     if (store.isFiscalEnabled) {
-      // 1. Plan Verification (Solo available on PRO & STARTER)
+      // 1. Plan Verification (Solo available on PRO, STARTER & RACHMA in production)
       const planName = store.subscription?.plan?.name?.toUpperCase();
-      if (planName !== 'PRO' && planName !== 'STARTER') {
-        throw new Error(`Le mode fiscal NACEF nécessite un abonnement STARTER ou PRO. Votre plan actuel est : ${planName || 'FREE'}`);
+      const validPlans = ['PRO', 'STARTER', 'RACHMA'];
+      if (!validPlans.includes(planName || '')) {
+        throw new Error(`Le mode fiscal NACEF nécessite un abonnement STARTER ou PRO. Votre plan actuel est : ${planName || 'FREE'}.`);
       }
 
       // 2. Terminal Verification

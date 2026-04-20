@@ -8,6 +8,7 @@ import {
   ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, Search,
   X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale } from '../actions';
 import './pos-premium.css';
 
@@ -61,6 +62,9 @@ export default function PremiumPOSClient({
   loyaltyEarnRate?: number;
   loyaltyRedeemRate?: number;
 }) {
+  // --- Misc ---
+  const router = useRouter();
+
   // --- States ---
   const [cashierId, setCashierId] = useState<string | null>(null);
   const [cashierName, setCashierName] = useState<string | null>(null);
