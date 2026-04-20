@@ -80,7 +80,7 @@ html, body {
 /* ===== SIDEBAR ===== */
 .sidebar {
   width: var(--sidebar-w);
-  min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(180deg, #1E1B4B 0%, #312E81 100%);
   display: flex;
   flex-direction: column;
@@ -92,6 +92,7 @@ html, body {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   backdrop-filter: blur(12px);
   border-right: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
 }
 
 .sidebar:hover:not(.mobile-open) {
@@ -184,6 +185,25 @@ html, body {
   flex-direction: column;
   gap: 20px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+}
+
+.sidebar-nav:hover::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
 }
 
 .nav-group {

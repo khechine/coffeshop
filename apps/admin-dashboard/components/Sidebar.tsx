@@ -19,7 +19,7 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
   const [mounted, setMounted] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [openSections, setOpenSections] = useState<string[]>(['VENTES', 'PILOTAGE', 'PRODUITS', 'B2B']);
+  const [openSections, setOpenSections] = useState<string[]>([]);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -42,7 +42,11 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
     if (storedSections) {
       setOpenSections(JSON.parse(storedSections));
     } else {
-      setOpenSections(['VENTES', 'PILOTAGE', 'PRODUITS', 'B2B']);
+      // Default open section based on pathname
+      if (pathname.startsWith('/pos') || pathname.startsWith('/admin/sales')) setOpenSections(['VENTES']);
+      else if (pathname.startsWith('/admin/products') || pathname.startsWith('/admin/stock')) setOpenSections(['PRODUITS']);
+      else if (pathname.startsWith('/marketplace') || pathname.startsWith('/vendor')) setOpenSections(['B2B']);
+      else setOpenSections(['PILOTAGE']);
     }
     
     if (storedPerms) {
@@ -96,9 +100,11 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
 
   const toggleSection = (section: string) => {
     setOpenSections(prev => {
-      const newSections = prev.includes(section)
-        ? prev.filter(s => s !== section)
-        : [...prev, section];
+      // Accordion behavior: if we're opening a section, close others. 
+      // If we're closing the current one, just close it.
+      const isCurrentlyOpen = prev.includes(section);
+      const newSections = isCurrentlyOpen ? [] : [section];
+      
       if (typeof window !== 'undefined') {
         localStorage.setItem('sidebar_open_sections', JSON.stringify(newSections));
       }
