@@ -59,8 +59,10 @@ async function main() {
   ];
   const poleIds: string[] = [];
   for (const p of poles) {
-    const created = await (prisma as any).activityPole.create({
-      data: p
+    const created = await (prisma as any).activityPole.upsert({
+      where: { name: p.name },
+      update: p,
+      create: p
     });
     poleIds.push(created.id);
   }
@@ -79,8 +81,14 @@ async function main() {
 
   const catMap: Record<string, any> = {};
   for (const c of categories) {
-    const created = await (prisma as any).mktCategory.create({
-      data: {
+    const created = await (prisma as any).mktCategory.upsert({
+      where: { slug: c.slug },
+      update: {
+        name: c.name,
+        icon: c.icon,
+        description: `Solutions professionnelles pour ${c.name}`
+      },
+      create: {
         name: c.name,
         slug: c.slug,
         icon: c.icon,
