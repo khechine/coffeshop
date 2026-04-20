@@ -7,7 +7,7 @@ import MarketplaceClient from './MarketplaceClient';
 
 export default async function MarketplacePage() {
   const store = await getStore();
-  const hasMarketplace = store && (store as any)?.subscription?.plan?.hasMarketplace !== false;
+  const hasMarketplace = store && (store as any)?.hasMarketplace === true;
   const data = await getMarketplaceData();
 
   if (!hasMarketplace) {
