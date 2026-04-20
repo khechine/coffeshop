@@ -43,10 +43,10 @@ ssh $ssh_server << EOF
   docker compose exec -T postgres psql -U postgres -d coffeeshop -c "ALTER USER postgres WITH PASSWORD '$POSTGRES_PASSWORD';"
 
   echo "🗄️ Synchronizing Prisma schema..."
-  docker compose exec -T api npx prisma@5.14.0 db push --schema=packages/database/prisma/schema.prisma --accept-data-loss
+  docker compose exec -T api npx prisma@5.14.0 db push --schema=packages/database/prisma/schema.prisma --accept-data-loss --skip-generate
   
   echo "🌱 Seeding data..."
-  docker compose exec -T api npx prisma db seed
+  docker compose exec -T api /bin/sh -c "cd packages/database && npx prisma db seed"
   
   echo "🧹 Cleaning up unused images..."
   docker image prune -f
