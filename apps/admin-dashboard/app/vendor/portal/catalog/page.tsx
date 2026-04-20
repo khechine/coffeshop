@@ -27,6 +27,7 @@ export default async function VendorCatalogPage() {
 
       <VendorCatalogClient
         initialProducts={JSON.parse(JSON.stringify(portalData?.products || []))}
+        initialBundles={JSON.parse(JSON.stringify(portalData?.bundles || []))}
         categoryTree={JSON.parse(JSON.stringify(categoryTree))}
         globalUnits={JSON.parse(JSON.stringify(globalUnits))}
         benchmarkData={JSON.parse(JSON.stringify(benchmarkData))}

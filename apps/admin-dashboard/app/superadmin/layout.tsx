@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Store, ShieldCheck, MapPin, Package, CreditCard, LogOut, CheckCircle, Truck, Database } from 'lucide-react';
+import { LayoutDashboard, Users, Store, ShieldCheck, MapPin, Package, CreditCard, LogOut, CheckCircle, Truck, Database, Wallet } from 'lucide-react';
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const sidebarItems = [
@@ -15,6 +15,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     { label: 'Carte de Tunisie', icon: MapPin, href: '/superadmin/map' },
     { label: 'Plans & Abonnements', icon: CreditCard, href: '/superadmin/plans' },
     { label: 'Référentiels Globaux', icon: Database, href: '/superadmin/referentiels' },
+    { label: 'Gestion Portefeuilles', icon: Wallet, href: '/superadmin/wallet', badge: 'Dépôts' },
     { label: 'Gestion Utilisateurs', icon: Users, href: '/superadmin/users' },
   ];
 

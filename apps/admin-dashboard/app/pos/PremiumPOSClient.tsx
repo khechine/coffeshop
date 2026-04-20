@@ -8,7 +8,7 @@ import {
   ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, Search,
   X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck
 } from 'lucide-react';
-import { recordSale, searchCustomers, createCustomer } from '../actions';
+import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale } from '../actions';
 import './pos-premium.css';
 
 const ICONS: Record<string, React.FC<any>> = {
@@ -111,6 +111,13 @@ export default function PremiumPOSClient({
   const [customerResults, setCustomerResults] = useState<Customer[]>([]);
   const [isRedeemingPoints, setIsRedeemingPoints] = useState(false);
   
+  // Orders Module State
+  const [orders, setOrders] = useState<any[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [orderSearch, setOrderSearch] = useState('');
+  const [orderFilter, setOrderFilter] = useState<'ALL' | 'PAID' | 'VOID'>('ALL');
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  
   // Payment Modal
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'MIXED'>('CASH');
@@ -136,6 +143,36 @@ export default function PremiumPOSClient({
   const change = Number(amountReceived) > total ? Number(amountReceived) - total : 0;
 
   // --- Handlers ---
+  useEffect(() => {
+    if (view === 'ORDERS') {
+      fetchOrders();
+    }
+  }, [view]);
+
+  const fetchOrders = async () => {
+    setIsLoadingOrders(true);
+    try {
+      const data = await getRecentOrders();
+      setOrders(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingOrders(false);
+    }
+  };
+
+  const handleVoidOrder = async (id: string) => {
+    if (!confirm("Êtes-vous sûr de vouloir annuler cette commande ? Cette action est irréversible et les stocks seront restaurés.")) return;
+    try {
+      await voidSale(id);
+      alert("Commande annulée avec succès");
+      setSelectedOrder(null);
+      fetchOrders();
+    } catch (err) {
+      alert("Erreur lors de l'annulation");
+    }
+  };
+
   const addToCart = (product: Product) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
@@ -647,10 +684,148 @@ export default function PremiumPOSClient({
              </div>
           </div>
         ) : (
-          <div style={{ flex: 1, padding: 40, background: '#fff' }}>
-             <h2 style={{ fontWeight: 900, fontSize: 32 }}>Module {view}</h2>
-             <p style={{ color: 'var(--pos-text-muted)' }}>Ce module est en cours de déploiement premium...</p>
-             <button className="btn-premium btn-premium-primary" onClick={() => setView('POS')}>Retour à la vente</button>
+          <div style={{ flex: 1, padding: 40, background: 'var(--pos-bg)', display: 'flex', gap: 32, overflow: 'hidden' }}>
+             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+                   <div>
+                      <h2 style={{ fontWeight: 900, fontSize: 32, margin: 0, color: 'var(--pos-text-main)' }}>Historique des Ventes</h2>
+                      <p style={{ margin: '4px 0 0', color: 'var(--pos-text-muted)', fontSize: 14 }}>Consultez et gérez les transactions récentes</p>
+                   </div>
+                   <div style={{ display: 'flex', gap: 12 }}>
+                      <button className="btn-premium btn-premium-primary" onClick={() => fetchOrders()}>Rafraîchir</button>
+                      <button className="btn-premium" style={{ background: '#fff', border: '1px solid var(--pos-border)' }} onClick={() => setView('POS')}>Nouvelle Vente</button>
+                   </div>
+                </div>
+
+                <div style={{ background: '#fff', borderRadius: 24, padding: 24, border: '1px solid var(--pos-border)', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                   <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+                      <div style={{ flex: 1, position: 'relative' }}>
+                         <Search style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--pos-text-muted)' }} size={18} />
+                         <input 
+                           type="text" 
+                           placeholder="Rechercher par ID ou Client..." 
+                           className="customer-selector" 
+                           style={{ width: '100%', paddingLeft: 48, borderStyle: 'solid' }}
+                           value={orderSearch}
+                           onChange={e => setOrderSearch(e.target.value)}
+                         />
+                      </div>
+                      <select 
+                        className="customer-selector" 
+                        style={{ width: 180, borderStyle: 'solid' }}
+                        value={orderFilter}
+                        onChange={(e: any) => setOrderFilter(e.target.value)}
+                      >
+                         <option value="ALL">Tous les statuts</option>
+                         <option value="PAID">Payés uniquement</option>
+                         <option value="VOID">Annulés uniquement</option>
+                      </select>
+                   </div>
+
+                   <div style={{ flex: 1, overflowY: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                         <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 10 }}>
+                            <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--pos-bg)' }}>
+                               <th style={{ padding: '12px 16px', fontSize: 12, color: 'var(--pos-text-muted)' }}>ID COMMANDE</th>
+                               <th style={{ padding: '12px 16px', fontSize: 12, color: 'var(--pos-text-muted)' }}>CLIENT / TABLE</th>
+                               <th style={{ padding: '12px 16px', fontSize: 12, color: 'var(--pos-text-muted)' }}>TOTAL</th>
+                               <th style={{ padding: '12px 16px', fontSize: 12, color: 'var(--pos-text-muted)' }}>DATE</th>
+                               <th style={{ padding: '12px 16px', fontSize: 12, color: 'var(--pos-text-muted)' }}>STATUT</th>
+                            </tr>
+                         </thead>
+                         <tbody>
+                            {orders.filter(o => {
+                              if (orderFilter === 'PAID') return !o.isVoid;
+                              if (orderFilter === 'VOID') return o.isVoid;
+                              return true;
+                            }).filter(o => {
+                               const term = orderSearch.toLowerCase();
+                               return o.id.toLowerCase().includes(term) || (o.customer?.name || '').toLowerCase().includes(term);
+                            }).map((o: any) => (
+                              <tr 
+                                key={o.id} 
+                                onClick={() => setSelectedOrder(o)}
+                                style={{ 
+                                  borderBottom: '1px solid var(--pos-bg)', 
+                                  cursor: 'pointer', 
+                                  background: selectedOrder?.id === o.id ? 'var(--pos-bg)' : 'transparent'
+                                }}
+                                className="order-row-hover"
+                              >
+                                 <td style={{ padding: '16px', fontWeight: 800, fontSize: 13 }}>#{o.id.slice(-6).toUpperCase()}</td>
+                                 <td style={{ padding: '16px' }}>
+                                    <div style={{ fontWeight: 700 }}>{o.customer?.name || 'Passager'}</div>
+                                    <div style={{ fontSize: 11, color: 'var(--pos-text-muted)' }}>{o.tableName || 'Vente directe'}</div>
+                                 </td>
+                                 <td style={{ padding: '16px', fontWeight: 900, color: 'var(--pos-primary)' }}>{o.total.toFixed(3)} DT</td>
+                                 <td style={{ padding: '16px', fontSize: 12, color: 'var(--pos-text-muted)' }}>
+                                    {new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                 </td>
+                                 <td style={{ padding: '16px' }}>
+                                    <span className={o.isVoid ? 'badge-void' : 'badge-paid'}>
+                                       {o.isVoid ? 'Annulé' : 'Payé'}
+                                    </span>
+                                 </td>
+                              </tr>
+                            ))}
+                         </tbody>
+                      </table>
+                   </div>
+                </div>
+             </div>
+
+             {/* Order Details Panel */}
+             {selectedOrder && (
+               <div className="order-details-sidebar" style={{ borderRadius: 24, border: '1px solid var(--pos-border)', overflow: 'hidden' }}>
+                  <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid var(--pos-border)' }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                        <h3 style={{ margin: 0, fontWeight: 900 }}>Détails Commande</h3>
+                        <X size={24} style={{ cursor: 'pointer', color: 'var(--pos-text-muted)' }} onClick={() => setSelectedOrder(null)} />
+                     </div>
+                     <div style={{ background: 'var(--pos-bg)', padding: 16, borderRadius: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                           <span style={{ fontSize: 12, color: 'var(--pos-text-muted)' }}>#ID</span>
+                           <span style={{ fontSize: 12, fontWeight: 800 }}>{selectedOrder.id}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                           <span style={{ fontSize: 12, color: 'var(--pos-text-muted)' }}>Serveur</span>
+                           <span style={{ fontSize: 12, fontWeight: 800 }}>{selectedOrder.takenBy?.name || 'Système'}</span>
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="order-items-list">
+                     <label style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase' }}>Articles</label>
+                     {selectedOrder.items.map((item: any) => (
+                       <div key={item.id} className="order-item-row">
+                          <div>
+                             <div className="order-item-name">{item.product.name}</div>
+                             <div style={{ fontSize: 12, color: 'var(--pos-text-muted)' }}>{item.quantity} x {Number(item.price).toFixed(3)}</div>
+                          </div>
+                          <div style={{ fontWeight: 800 }}>{(item.quantity * Number(item.price)).toFixed(3)} DT</div>
+                       </div>
+                     ))}
+
+                     <div style={{ marginTop: 'auto', paddingTop: 20, borderTop: '1px dashed var(--pos-border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                           <span style={{ color: 'var(--pos-text-muted)', fontSize: 14 }}>Sous-total</span>
+                           <span style={{ fontWeight: 700 }}>{selectedOrder.subtotal.toFixed(3)} DT</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+                           <span style={{ fontWeight: 900, fontSize: 18 }}>Total TTC</span>
+                           <span style={{ fontWeight: 900, fontSize: 20, color: 'var(--pos-primary)' }}>{selectedOrder.total.toFixed(3)} DT</span>
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: 12 }}>
+                           <button className="btn-premium" style={{ flex: 1, background: '#fff', border: '1px solid var(--pos-border)' }} onClick={() => alert("Impression ticket...")}>Exporter</button>
+                           {!selectedOrder.isVoid && (
+                             <button className="btn-premium btn-premium-secondary" style={{ flex: 1, backgroundColor: 'var(--pos-danger)', color: '#fff' }} onClick={() => handleVoidOrder(selectedOrder.id)}>Annuler</button>
+                           )}
+                        </div>
+                     </div>
+                  </div>
+               </div>
+             )}
           </div>
         )}
       </div>

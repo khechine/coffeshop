@@ -965,12 +965,72 @@ export async function generateZReport() {
 //  MARKETPLACE
 // ══════════════════════════════════════════════════════════════
 export async function getMarketplaceData() {
-  const [categories, featuredRaw, flashSalesRaw, productsRaw] = await Promise.all([
+  const hasWalletModel = !!(prisma as any).vendorWallet;
+  let activeVendorIds: Set<string> | null = null;
+
+  if (hasWalletModel) {
+    try {
+      // 1. Vendors with balance > 0
+      const positiveWallets = await (prisma as any).vendorWallet.findMany({
+        where: { balance: { gt: 0 } },
+        select: { vendorId: true }
+      });
+
+      // 2. Vendors with pending deposit in last 72h (Grace Period)
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+      const graceRequests = await (prisma as any).walletDepositRequest.findMany({
+        where: {
+          status: 'PENDING',
+          createdAt: { gte: threeDaysAgo }
+        },
+        select: { vendorId: true }
+      });
+
+      const ids = [
+        ...positiveWallets.map((w: any) => w.vendorId),
+        ...graceRequests.map((r: any) => r.vendorId)
+      ];
+      activeVendorIds = new Set(ids);
+    } catch (e) {
+      console.error('Marketplace visibility query failed:', e);
+    }
+  }
+
+  const [categories, featuredRaw, flashSalesRaw, productsRaw, bundlesRaw] = await Promise.all([
     (prisma as any).mktCategory.findMany({ include: { subcategories: true } }),
-    (prisma as any).vendorProduct.findMany({ where: { isFeatured: true }, include: { vendor: true }, orderBy: { createdAt: 'desc' } }),
-    (prisma as any).vendorProduct.findMany({ where: { isFlashSale: true }, include: { vendor: true }, orderBy: { createdAt: 'desc' } }),
-    (prisma as any).vendorProduct.findMany({ include: { vendor: true }, orderBy: { createdAt: 'desc' } })
+    (prisma as any).vendorProduct.findMany({ 
+      where: { isFeatured: true }, 
+      include: { vendor: true, productStandard: true }, 
+      orderBy: { createdAt: 'desc' } 
+    }),
+    (prisma as any).vendorProduct.findMany({ 
+      where: { isFlashSale: true }, 
+      include: { vendor: true, productStandard: true }, 
+      orderBy: { createdAt: 'desc' } 
+    }),
+    (prisma as any).vendorProduct.findMany({ 
+      include: { vendor: true, productStandard: true }, 
+      orderBy: { createdAt: 'desc' } 
+    }),
+    (prisma as any).mktBundle.findMany({ 
+      where: { isActive: true }, 
+      include: { 
+        vendor: true, 
+        items: { include: { vendorProduct: { include: { productStandard: true } } } } 
+      } 
+    })
   ]);
+
+  // Filter in memory if we have wallet data, otherwise show all (graceful degradation)
+  const filterByWallet = (list: any[]) => {
+    if (!activeVendorIds) return list;
+    return list.filter(item => activeVendorIds!.has(item.vendorId));
+  };
+
+  const featured = filterByWallet(featuredRaw);
+  const flashSales = filterByWallet(flashSalesRaw);
+  const products = filterByWallet(productsRaw);
+  const bundles = filterByWallet(bundlesRaw);
 
   const mapProduct = (p: any) => {
     const vendorData = p.vendor ? {
@@ -981,10 +1041,10 @@ export async function getMarketplaceData() {
     
     const result: any = {
       id: p.id,
-      name: p.name,
-      unit: p.unit,
-      categoryId: p.categoryId,
-      subcategoryId: p.subcategoryId,
+      name: p.name || p.productStandard?.name || 'Produit sans nom',
+      unit: p.unit || p.productStandard?.unit || 'unité',
+      categoryId: p.categoryId || p.productStandard?.categoryId,
+      subcategoryId: p.subcategoryId || p.productStandard?.subcategoryId,
       vendorId: p.vendorId,
       price: Number(p.price),
       minOrderQty: p.minOrderQty ? Number(p.minOrderQty) : 1,
@@ -1010,7 +1070,19 @@ export async function getMarketplaceData() {
     categories, 
     featured: featuredRaw.map(mapProduct), 
     flashSales: flashSalesRaw.map(mapProduct), 
-    products: productsRaw.map(mapProduct) 
+    products: productsRaw.map(mapProduct),
+    bundles: bundlesRaw.map(b => ({
+      ...b,
+      price: Number(b.price),
+      items: b.items.map((i: any) => ({
+        ...i,
+        quantity: Number(i.quantity),
+        vendorProduct: {
+          ...i.vendorProduct,
+          price: Number(i.vendorProduct.price)
+        }
+      }))
+    }))
   };
 }
 
@@ -1415,12 +1487,6 @@ export async function registerVendorAction(data: any) {
       city: city,
       description: description,
       status: 'PENDING'
-      // VendorProfile currently doesn't have an officialDocs field in the schema, 
-      // but we might want to store it in a generic way or update the schema later.
-      // For now, I'll stick to what the schema allows.
-      // Note: Store model HAS officialDocs, but VendorProfile HAS NO officialDocs.
-      // I should update the schema if needed, but the user requested "subscription" improvements.
-      // For vendors, it's also important. I'll check the schema again.
     }
   });
 
@@ -1462,25 +1528,90 @@ export async function getVendorPortalData() {
   const vendor = await (prisma as any).vendorProfile.findUnique({
     where: { id: vendorProfile.id },
     include: { 
-      vendorProducts: true,
+      vendorProducts: {
+        include: { productStandard: true }
+      },
       activityPoles: true,
       mktSectors: true,
+      bundles: {
+        include: { 
+          items: { 
+            include: { 
+              vendorProduct: { 
+                include: { productStandard: true } 
+              } 
+            } 
+          } 
+        }
+      },
       orders: { 
         include: { items: true, store: true },
         orderBy: { createdAt: 'desc' }
-      } 
+      }
     }
   });
 
   if (vendor) {
+    const hasWalletModel = !!(prisma as any).vendorWallet;
+    let wallet: any = null;
+    let settlements: any[] = [];
+    let isGracePeriodActive = false;
+    let depositRequests: any[] = [];
+
+    if (hasWalletModel) {
+      try {
+        wallet = await (prisma as any).vendorWallet.findUnique({
+          where: { vendorId: vendor.id },
+          include: { transactions: { orderBy: { createdAt: 'desc' }, take: 10 } }
+        });
+
+        if (!wallet) {
+          wallet = await (prisma as any).vendorWallet.create({
+            data: { vendorId: vendor.id, balance: 0 },
+            include: { transactions: true }
+          });
+        }
+
+        const orderIds = vendor.orders.map((o: any) => o.id);
+        settlements = await (prisma as any).marketplaceSettlement.findMany({
+          where: { orderId: { in: orderIds } }
+        });
+
+        // Grace period check
+        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+        const pendingRecentDeposit = await (prisma as any).walletDepositRequest.findFirst({
+          where: {
+            vendorId: vendor.id,
+            status: 'PENDING',
+            createdAt: { gte: threeDaysAgo }
+          }
+        });
+        isGracePeriodActive = !!pendingRecentDeposit;
+
+        // Independent fetch for depositRequests if model exists
+        if ((prisma as any).walletDepositRequest) {
+          depositRequests = await (prisma as any).walletDepositRequest.findMany({
+            where: { vendorId: vendor.id },
+            orderBy: { createdAt: 'desc' },
+            take: 10
+          });
+        }
+
+      } catch (e) {
+        console.error('Wallet/Settlement fetch failed:', e);
+      }
+    }
+
+    const settlementMap = new Map(settlements.map((s: any) => [s.orderId, s]));
     const mapProduct = (p: any) => {
+      if (!p) return null;
       return {
         id: p.id,
         productStandardId: p.productStandardId,
-        name: p.name,
-        unit: p.unit,
-        categoryId: p.categoryId,
-        subcategoryId: p.subcategoryId,
+        name: p.name || p.productStandard?.name || 'Produit sans nom',
+        unit: p.unit || p.productStandard?.unit || 'unité',
+        categoryId: p.categoryId || p.productStandard?.categoryId,
+        subcategoryId: p.subcategoryId || p.productStandard?.subcategoryId,
         vendorId: p.vendorId,
         price: Number(p.price),
         minOrderQty: Number(p.minOrderQty),
@@ -1490,26 +1621,312 @@ export async function getVendorPortalData() {
         discount: p.discountPrice ? Number(p.discountPrice) : null,
         flashStart: p.flashStart,
         flashEnd: p.flashEnd,
-        image: p.image,
-        description: p.description,
-        tags: p.tags || [],
+        image: p.image || p.productStandard?.image,
+        description: p.description || p.productStandard?.description,
+        tags: p.tags || p.productStandard?.tags || [],
         deliveryAreas: p.deliveryAreas || [],
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
       };
     };
+
+    const mapBundle = (b: any) => ({
+      ...b,
+      price: Number(b.price),
+      items: (b.items || []).map((i: any) => ({
+        ...i,
+        quantity: Number(i.quantity),
+        vendorProduct: mapProduct(i.vendorProduct)
+      }))
+    });
     
     return {
       ...vendor,
       products: (vendor.vendorProducts || []).map(mapProduct),
+      bundles: (vendor.bundles || []).map(mapBundle),
       orders: vendor.orders.map((o: any) => ({
         ...o,
         total: Number(o.total),
-        items: o.items.map((it: any) => ({ ...it, quantity: Number(it.quantity), price: Number(it.price) }))
+        items: o.items.map((it: any) => ({ ...it, quantity: Number(it.quantity), price: Number(it.price) })),
+        settlement: o.settlement ? {
+          ...o.settlement,
+          commissionAmount: Number(o.settlement.commissionAmount)
+        } : null
       })),
+      wallet: wallet ? {
+        ...wallet,
+        balance: Number(wallet.balance),
+        transactions: (wallet.transactions || []).map((t: any) => ({
+          ...t,
+          amount: Number(t.amount)
+        }))
+      } : {
+        balance: 0,
+        transactions: [],
+        status: 'PENDING_SERVER_RESTART'
+      },
+      depositRequests: depositRequests.map((r: any) => ({
+        ...r,
+        amount: Number(r.amount)
+      })),
+      isGracePeriodActive
     };
   }
   return null;
+}
+
+export async function createMarketplaceBundleAction(data: {
+  name: string;
+  description?: string;
+  price: number;
+  discountPercent?: number;
+  image?: string;
+  items: { vendorProductId: string; quantity: number }[];
+}) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('Utilisateur non trouvé');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({
+    where: { userId: user.id }
+  });
+  if (!vendor) throw new Error('Profil vendeur introuvable');
+
+  const bundle = await (prisma as any).mktBundle.create({
+    data: {
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      discountPercent: data.discountPercent,
+      image: data.image,
+      vendorId: vendor.id,
+      items: {
+        create: data.items.map(it => ({
+          vendorProductId: it.vendorProductId,
+          quantity: it.quantity
+        }))
+      }
+    }
+  });
+
+  revalidatePath('/vendor/portal/catalog');
+  revalidatePath('/marketplace');
+  return bundle;
+}
+
+export async function deleteMarketplaceBundleAction(id: string) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('Utilisateur non trouvé');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({
+    where: { userId: user.id }
+  });
+  if (!vendor) throw new Error('Profil vendeur introuvable');
+
+  // Verify ownership
+  const bundle = await (prisma as any).mktBundle.findUnique({ where: { id } });
+  if (!bundle || bundle.vendorId !== vendor.id) throw new Error('Non autorisé');
+
+  await (prisma as any).mktBundle.delete({ where: { id } });
+  
+  revalidatePath('/vendor/portal/catalog');
+  revalidatePath('/marketplace');
+}
+
+export async function approveMarketplaceOrderAction(orderId: string, role: 'VENDOR' | 'SUPERADMIN') {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('Utilisateur non trouvé');
+
+  const order = await (prisma as any).supplierOrder.findUnique({
+    where: { id: orderId },
+    include: { 
+      vendor: { include: { wallet: true } },
+      settlement: true 
+    }
+  });
+
+  if (!order) throw new Error('Commande introuvable');
+  if (!order.vendorId) throw new Error('Commande non lié à un vendeur marketplace');
+
+  // 1. Handle Settlement Creation if missing
+  let currentSettlement = order.settlement;
+  if (!currentSettlement) {
+    const commissionAmount = Number(order.total) * Number(order.vendor.commissionRate || 0);
+    currentSettlement = await (prisma as any).marketplaceSettlement.create({
+      data: {
+        orderId: order.id,
+        commissionAmount: commissionAmount,
+      }
+    });
+  }
+
+  // 2. Apply Approval
+  const updateData: any = {};
+  if (role === 'VENDOR') {
+    const vendorProfile = await (prisma as any).vendorProfile.findFirst({ where: { userId: user.id } });
+    if (!vendorProfile || vendorProfile.id !== order.vendorId) throw new Error('Non autorisé');
+    updateData.vendorApproved = true;
+  } else if (role === 'SUPERADMIN') {
+    if (user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+    updateData.superadminApproved = true;
+  }
+
+  const updatedSettlement = await (prisma as any).marketplaceSettlement.update({
+    where: { id: currentSettlement.id },
+    data: updateData
+  });
+
+  // 3. Finalize if both approved
+  if (updatedSettlement.vendorApproved && updatedSettlement.superadminApproved && !updatedSettlement.isProcessed) {
+    const wallet = order.vendor.wallet;
+    
+    if (!wallet) throw new Error('Portefeuille introuvable');
+
+    const amountToDeduct = Number(updatedSettlement.commissionAmount);
+
+    await (prisma as any).$transaction([
+      (prisma as any).vendorWallet.update({
+        where: { id: wallet.id },
+        data: { balance: { decrement: amountToDeduct } }
+      }),
+      (prisma as any).walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          amount: -amountToDeduct,
+          type: 'COMMISSION',
+          description: `Commission sur commande #${order.id.slice(-5)}`,
+          settlementId: updatedSettlement.id
+        }
+      }),
+      (prisma as any).marketplaceSettlement.update({
+        where: { id: updatedSettlement.id },
+        data: { isProcessed: true, processedAt: new Date() }
+      })
+    ]);
+  }
+
+  revalidatePath('/vendor/portal/orders');
+  revalidatePath('/superadmin/orders');
+}
+
+export async function depositToWalletAction(vendorId: string, amount: number, description: string = 'Rechargement compte') {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (user.role !== 'SUPERADMIN') throw new Error('Action réservée aux administrateurs');
+
+  const wallet = await (prisma as any).vendorWallet.findUnique({ where: { vendorId } });
+  if (!wallet) throw new Error('Portefeuille introuvable');
+
+  await (prisma as any).$transaction([
+    (prisma as any).vendorWallet.update({
+      where: { id: wallet.id },
+      data: { balance: { increment: amount } }
+    }),
+    (prisma as any).walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        amount: amount,
+        type: 'DEPOSIT',
+        description: description
+      }
+    })
+  ]);
+
+  revalidatePath('/vendor/portal');
+  revalidatePath('/marketplace');
+}
+
+export async function createWalletDepositRequestAction(data: { amount: number, proofImage: string }) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  const vendor = await (prisma as any).vendorProfile.findUnique({
+    where: { userId }
+  });
+  if (!vendor) throw new Error('Profil vendeur non trouvé');
+
+  await (prisma as any).walletDepositRequest.create({
+    data: {
+      vendorId: vendor.id,
+      amount: data.amount,
+      proofImage: data.proofImage,
+      status: 'PENDING'
+    }
+  });
+
+  revalidatePath('/vendor/portal/wallet');
+}
+
+export async function getPendingDepositsAction() {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (user?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  return (prisma as any).walletDepositRequest.findMany({
+    where: { status: 'PENDING' },
+    include: { vendor: true },
+    orderBy: { createdAt: 'desc' }
+  });
+}
+
+export async function processDepositRequestAction(requestId: string, status: 'APPROVED' | 'REJECTED', adminNotes?: string) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (user?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  const request = await (prisma as any).walletDepositRequest.findUnique({
+    where: { id: requestId },
+    include: { vendor: { include: { wallet: true } } }
+  });
+
+  if (!request) throw new Error('Demande introuvable');
+  if (request.status !== 'PENDING') throw new Error('Demande déjà traitée');
+
+  if (status === 'APPROVED') {
+    const wallet = request.vendor.wallet;
+    if (!wallet) throw new Error('Portefeuille introuvable');
+
+    const amount = Number(request.amount);
+
+    await (prisma as any).$transaction([
+      (prisma as any).vendorWallet.update({
+        where: { id: wallet.id },
+        data: { balance: { increment: amount } }
+      }),
+      (prisma as any).walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          amount: amount,
+          type: 'DEPOSIT',
+          description: `Dépôt approuvé #${request.id.slice(-5)}`,
+        }
+      }),
+      (prisma as any).walletDepositRequest.update({
+        where: { id: requestId },
+        data: { status: 'APPROVED', adminNotes, updatedAt: new Date() }
+      })
+    ]);
+  } else {
+    await (prisma as any).walletDepositRequest.update({
+      where: { id: requestId },
+      data: { status: 'REJECTED', adminNotes, updatedAt: new Date() }
+    });
+  }
+
+  revalidatePath('/superadmin/wallet');
+  revalidatePath('/vendor/portal/wallet');
+  revalidatePath('/marketplace');
 }
 
 export async function createMarketplaceProductAction(data: any) {
@@ -1691,12 +2108,66 @@ export async function importCsvProductsAction(rows: {
 import { OrderStatus } from '@coffeeshop/database';
 
 export async function updateSupplierOrderStatus(orderId: string, status: OrderStatus) {
-  await prisma.supplierOrder.update({
+  const order = await prisma.supplierOrder.update({
     where: { id: orderId },
-    data: { status }
+    data: { status },
+    include: { items: true }
   });
+
+  // If order is delivered, update stock and create expense
+  if (status === 'DELIVERED') {
+    // 1. Create Expense
+    await (prisma as any).expense.create({
+      data: {
+        storeId: order.storeId,
+        category: 'ACHAT',
+        amount: order.total,
+        description: `Automatique: Réception Commande Marketplace #${orderId}`
+      }
+    });
+
+    // 2. Update Stock
+    for (const item of order.items) {
+      let stockItem;
+      if (item.stockItemId) {
+        stockItem = await (prisma as any).stockItem.findUnique({ where: { id: item.stockItemId } });
+      }
+
+      if (!stockItem && item.name) {
+        stockItem = await (prisma as any).stockItem.findFirst({
+          where: { 
+            storeId: order.storeId,
+            name: { equals: item.name, mode: 'insensitive' }
+          }
+        });
+      }
+
+      if (stockItem) {
+        await (prisma as any).stockItem.update({
+          where: { id: stockItem.id },
+          data: {
+            quantity: { increment: item.quantity },
+            cost: item.price 
+          }
+        });
+      } else if (item.name) {
+        await (prisma as any).stockItem.create({
+          data: {
+            storeId: order.storeId,
+            name: item.name,
+            quantity: item.quantity,
+            cost: item.price,
+            minThreshold: 0
+          }
+        });
+      }
+    }
+  }
+
   revalidatePath('/vendor/portal/orders');
   revalidatePath('/admin/orders');
+  revalidatePath('/admin/stock');
+  revalidatePath('/admin/expenses');
 }
 
 export async function updateMarketplaceProductAction(id: string, data: any) {
@@ -2609,4 +3080,93 @@ export async function generateZReportAction(terminalId?: string) {
 
   revalidatePath('/admin/reports');
   return JSON.parse(JSON.stringify(result));
+}
+
+// ══════════════════════════════════════════════════════════════
+//  POS ORDERS MANAGEMENT
+// ══════════════════════════════════════════════════════════════
+
+export async function getRecentOrders() {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  const sales = await prisma.sale.findMany({
+    where: { storeId: store.id },
+    include: {
+      items: { include: { product: true } },
+      customer: true,
+      takenBy: true
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 50
+  });
+
+  return sales.map(s => ({
+    ...s,
+    total: Number(s.total),
+    subtotal: Number(s.subtotal),
+    discount: Number(s.discount),
+    totalHt: Number(s.totalHt || 0),
+    totalTax: Number(s.totalTax || 0),
+  }));
+}
+
+export async function voidSale(saleId: string) {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  // Mark as void
+  const sale = await prisma.sale.update({
+    where: { id: saleId, storeId: store.id },
+    data: { isVoid: true },
+    include: { items: { include: { product: true } } }
+  });
+
+  // Optional: Restore stock if desired
+  for (const item of (sale as any).items) {
+    const recipes = await prisma.recipeItem.findMany({
+      where: { productId: item.productId }
+    });
+
+    for (const recipe of recipes) {
+      const restoreQty = Number(recipe.quantity) * item.quantity;
+      await prisma.stockItem.update({
+        where: { id: recipe.stockItemId },
+        data: { quantity: { increment: restoreQty } }
+      });
+    }
+  }
+
+  revalidatePath('/pos');
+  return { success: true };
+}
+
+export async function getMarketplaceBundles() {
+  const bundles = await (prisma as any).mktBundle.findMany({
+    where: { isActive: true },
+    include: {
+      vendor: true,
+      items: {
+        include: {
+          vendorProduct: {
+            include: { productStandard: true }
+          }
+        }
+      }
+    }
+  });
+
+  return bundles.map((b: any) => ({
+    ...b,
+    price: Number(b.price),
+    items: b.items.map((i: any) => ({
+      ...i,
+      quantity: Number(i.quantity),
+      vendorProduct: {
+        ...i.vendorProduct,
+        name: i.vendorProduct.name || i.vendorProduct.productStandard?.name || 'Produit sans nom',
+        price: Number(i.vendorProduct.price)
+      }
+    }))
+  }));
 }

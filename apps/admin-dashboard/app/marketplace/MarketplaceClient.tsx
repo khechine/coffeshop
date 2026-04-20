@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Star, Zap, ChevronRight, Package, Store, MapPin, CheckCircle, Clock, Send, Plus, Search, Filter, ArrowRight, X, Phone, Mail, Info, Globe, Building2, LayoutGrid, Users } from 'lucide-react';
-import { placeMarketplaceOrder } from '../actions';
+import { placeMarketplaceOrder, getMarketplaceBundles } from '../actions';
 import './marketplace.css';
 
 interface MarketplaceProduct {
@@ -23,12 +23,12 @@ interface MarketplaceProduct {
     description?: string;
     address?: string;
   };
-  minOrderQuantity: any;
+  minOrderQty: any;
   categoryId: string;
 }
 
 export default function MarketplaceClient({ initialData }: { initialData: any }) {
-  const [viewMode, setViewMode] = useState<'products' | 'vendors'>('products');
+  const [viewMode, setViewMode] = useState<'products' | 'vendors' | 'bundles'>('products');
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<any[]>([]);
@@ -41,9 +41,21 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
   // Advanced filters
   const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [selectedCity, setSelectedCity] = useState<string>('all');
+  const [selectedProduct, setSelectedProduct] = useState<MarketplaceProduct | null>(null);
+  const [bundles, setBundles] = useState<any[]>(initialData.bundles || []);
+  const [selectedBundle, setSelectedBundle] = useState<any>(null);
 
   const products = initialData.products || [];
   const categories = initialData.categories || [];
+
+  const filteredBundles = useMemo(() => {
+    return bundles.filter((b: any) => {
+      const matchesSearch = b.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          b.vendor.companyName.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesVendor = selectedCity === 'all' || b.vendor.city === selectedCity;
+      return matchesSearch && matchesVendor;
+    });
+  }, [bundles, searchQuery, selectedCity]);
   
   const vendors = useMemo(() => {
     const vMap: Record<string, any> = {};
@@ -84,14 +96,26 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
     });
   }, [vendors, searchQuery, selectedCity]);
 
-  const addToCart = (p: MarketplaceProduct) => {
-    const minQty = Number(p.minOrderQuantity || 1);
+  const addToCart = (p: any, isBundle = false) => {
+    const minQty = isBundle ? 1 : Number(p.minOrderQty || 1);
     setCart(prev => {
       const existing = prev.find(i => i.id === p.id);
       if (existing) return prev.map(i => i.id === p.id ? { ...i, quantity: i.quantity + 1 } : i);
-      return [...prev, { ...p, quantity: minQty }];
+      return [...prev, { ...p, quantity: minQty, isBundle }];
     });
-    setIsCartOpen(true);
+    if (window.innerWidth < 1280) {
+      setIsCartOpen(true);
+    }
+  };
+
+  const updateQuantity = (id: string, delta: number) => {
+    setCart(prev => prev.map(item => {
+      if (item.id === id) {
+        const newQty = Math.max(1, item.quantity + delta);
+        return { ...item, quantity: newQty };
+      }
+      return item;
+    }));
   };
 
   const removeFromCart = (id: string) => setCart(prev => prev.filter(i => i.id !== id));
@@ -127,7 +151,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
   const cartTotal = cart.reduce((sum, i) => sum + Number(i.price) * i.quantity, 0);
 
   return (
-    <div style={{ background: '#F8FAFC', minHeight: '100vh' }}>
+    <div className="marketplace-premium-wrapper">
       
       {/* Top Navbar */}
       <nav className="glass-nav" style={{ position: 'sticky', top: 0, zIndex: 100 }}>
@@ -150,6 +174,9 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
               </button>
               <button className={`view-tab ${viewMode === 'vendors' ? 'active' : ''}`} onClick={() => setViewMode('vendors')}>
                 <Users size={16} /> <span className="hide-mobile">Fournisseurs</span>
+              </button>
+              <button className={`view-tab ${viewMode === 'bundles' ? 'active' : ''}`} onClick={() => setViewMode('bundles')}>
+                <Zap size={16} /> <span className="hide-mobile">Packs</span>
               </button>
             </div>
 
@@ -174,37 +201,72 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
         </div>
       </nav>
 
-      <div style={{ display: 'flex', maxWidth: '1400px', margin: '0 auto' }}>
+      <div className="marketplace-main-layout">
         
-        {/* Sidebar Filters */}
-        <aside className="sidebar-filter">
-          <SidebarFiltersContent 
-            activeCategory={activeCategory} 
-            setActiveCategory={setActiveCategory}
-            categories={categories}
-            maxPrice={maxPrice}
-            setMaxPrice={setMaxPrice}
-            selectedCity={selectedCity}
-            setSelectedCity={setSelectedCity}
-            cities={cities}
-          />
+        {/* Sidebar Categories (Left) */}
+        <aside className="marketplace-sidebar-left">
+          <button 
+            className={`mkt-category-vertical ${activeCategory === 'all' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('all')}
+          >
+            <div className="mkt-category-icon"><LayoutGrid size={24} /></div>
+            <span>Tout</span>
+          </button>
+          {categories.map((c: any) => (
+            <button 
+              key={c.id} 
+              className={`mkt-category-vertical ${activeCategory === c.id ? 'active' : ''}`}
+              onClick={() => setActiveCategory(c.id)}
+            >
+              <div className="mkt-category-icon">
+                {c.icon ? <span>{c.icon}</span> : <Package size={24} />}
+              </div>
+              <span style={{ fontSize: '10px' }}>{c.name}</span>
+            </button>
+          ))}
 
-          <div style={{ marginTop: '40px', padding: '20px', background: '#EEF2FF', borderRadius: '16px', border: '1px solid #E0E7FF' }}>
-            <div style={{ color: '#4338CA', fontWeight: 800, fontSize: '13px', marginBottom: '8px' }}>Besoin d'aide ?</div>
-            <div style={{ color: '#6366F1', fontSize: '12px', lineHeight: 1.5 }}>Contactez notre support B2B pour une recherche personnalisée.</div>
+          <div style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="filter-section" style={{ padding: '0 8px' }}>
+              <span className="filter-label" style={{ fontSize: '9px' }}>Mkt. City</span>
+              <select 
+                value={selectedCity} 
+                onChange={(e) => setSelectedCity(e.target.value)}
+                style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#fff', fontSize: '11px', fontWeight: 700 }}
+              >
+                <option value="all">Tout Tunis</option>
+                {cities.map((city: any) => <option key={city} value={city}>{city}</option>)}
+              </select>
+            </div>
+            
+            <div className="filter-section" style={{ padding: '0 8px' }}>
+              <span className="filter-label" style={{ fontSize: '9px' }}>Prix Max</span>
+              <input 
+                type="range" min="0" max="1000" step="50" 
+                value={maxPrice} 
+                onChange={(e) => setMaxPrice(parseInt(e.target.value))}
+                style={{ width: '100%', accentColor: '#1E1B4B' }}
+              />
+              <div style={{ fontSize: '10px', fontWeight: 800, textAlign: 'center', marginTop: '4px' }}>{maxPrice} DT</div>
+            </div>
           </div>
         </aside>
 
         {/* Main Content Area */}
-        <main style={{ flex: 1, padding: '32px' }}>
+        <main className="mkt-content-area">
+          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           
           {viewMode === 'products' ? (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px' }}>
+              <div className="product-grid-mkt">
                 {filteredProducts.map((p: any) => (
                   <div key={p.id} className="premium-card">
-                    <div className="product-image-container">
-                      <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} className="product-image" alt={p.name} />
+                    <div className="product-image-container" onClick={() => setSelectedProduct(p)} style={{ cursor: 'pointer' }}>
+                      <img 
+                        src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'} 
+                        className="product-image" 
+                        alt={p.name} 
+                        onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400'; }}
+                      />
                       {p.isFlashSale && <span className="badge-base badge-flash">FLASH</span>}
                       {p.isFeatured && <span className="badge-base badge-featured" style={{ top: 40 }}>BEST</span>}
                       <div className="add-to-cart-overlay">
@@ -222,7 +284,12 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
                           <Building2 size={12} /> {p.vendor?.companyName}
                         </div>
                       </button>
-                      <h4 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: '#1E293B', height: '44px', overflow: 'hidden' }}>{p.name}</h4>
+                      <button 
+                        onClick={() => setSelectedProduct(p)}
+                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%' }}
+                      >
+                        <h4 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: '#1E293B', height: '44px', overflow: 'hidden' }}>{p.name}</h4>
+                      </button>
                       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                         <div>
                           <span style={{ fontSize: '20px', fontWeight: 950, color: '#1E1B4B' }}>{Number(p.price).toFixed(3)}</span>
@@ -238,7 +305,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
               </div>
               {filteredProducts.length === 0 && <EmptyState />}
             </>
-          ) : (
+          ) : viewMode === 'vendors' ? (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
                 {filteredVendors.map((v: any) => (
@@ -261,122 +328,206 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
               </div>
               {filteredVendors.length === 0 && <EmptyState />}
             </>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '32px' }}>
+                {filteredBundles.map((b: any) => (
+                  <div key={b.id} className="premium-card bundle-card" onClick={() => setSelectedBundle(b)}>
+                    <div className="bundle-image-container">
+                       <img 
+                         src={b.image || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=600'} 
+                         className="bundle-image" 
+                         alt={b.name} 
+                         onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=600'; }}
+                       />
+                       <div className="bundle-glass-overlay">
+                          <div style={{ display: 'flex', gap: -10 }}>
+                             {b.items.slice(0, 3).map((item: any, idx: number) => (
+                               <div key={idx} style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid #fff', overflow: 'hidden', marginLeft: idx > 0 ? -12 : 0, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                                  <img src={item.vendorProduct.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                               </div>
+                             ))}
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 800, color: '#fff' }}>{b.items.length} Produits</span>
+                       </div>
+                    </div>
+                    <div style={{ padding: 24 }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                          <span style={{ color: '#6366F1', fontWeight: 800, fontSize: 11, textTransform: 'uppercase' }}>{b.vendor.companyName}</span>
+                          <span style={{ background: '#FEF3C7', color: '#92400E', padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 900 }}>ÉCO. {b.discountPercent}%</span>
+                       </div>
+                       <h3 style={{ fontSize: 18, fontWeight: 900, color: '#1E1B4B', margin: '0 0 16px', lineHeight: 1.3 }}>{b.name}</h3>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                             <div style={{ fontSize: 12, color: '#94A3B8', textDecoration: 'line-through' }}>
+                                {(b.price / (1 - b.discountPercent / 100)).toFixed(3)} DT
+                             </div>
+                             <div style={{ fontSize: 24, fontWeight: 950, color: '#1E1B4B' }}>{b.price.toFixed(3)} DT</div>
+                          </div>
+                          <button className="btn-premium btn-premium-primary" style={{ padding: '10px 20px' }}>Voir Pack</button>
+                       </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {filteredBundles.length === 0 && <EmptyState />}
+            </>
           )}
 
+          </div>
         </main>
+
+        {/* Sidebar Cart (Right) */}
+        <aside className="marketplace-sidebar-right">
+          <div className="mkt-cart-sidebar-header">
+            <h2>Votre Panier</h2>
+            <div className="cart-count" style={{ background: '#1E1B4B', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '12px' }}>{cart.length}</div>
+          </div>
+          
+          <div className="mkt-cart-items-container">
+            {cart.length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#94A3B8', paddingTop: '100px' }}>
+                <ShoppingCart size={48} style={{ opacity: 0.1, marginBottom: '20px' }} />
+                <p style={{ fontSize: '14px', fontWeight: 600 }}>Le panier est vide</p>
+              </div>
+            ) : (
+              cart.map((item: any) => (
+                <div key={item.id} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <img src={item.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100&auto=format&fit=crop'} style={{ width: '50px', height: '50px', borderRadius: '12px', objectFit: 'cover' }} alt={item.name} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E1B4B' }}>{item.name}</div>
+                      {item.isBundle && <span style={{ background: '#EEF2FF', color: '#4F46E5', fontSize: '8px', fontWeight: 900, padding: '2px 4px', borderRadius: '4px' }}>PACK</span>}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>{item.vendor?.companyName}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F1F5F9', padding: '4px', borderRadius: '8px' }}>
+                        <button onClick={() => updateQuantity(item.id, -1)} style={{ width: '20px', height: '20px', borderRadius: '4px', border: 'none', background: '#fff', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+                        <span style={{ fontSize: '12px', fontWeight: 800, minWidth: '15px', textAlign: 'center' }}>{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.id, 1)} style={{ width: '20px', height: '20px', borderRadius: '4px', border: 'none', background: '#fff', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                      </div>
+                      <div style={{ fontSize: '13px', fontWeight: 900, color: '#6366F1' }}>{(Number(item.price) * item.quantity).toFixed(3)} DT</div>
+                    </div>
+                  </div>
+                  <button onClick={() => removeFromCart(item.id)} style={{ background: '#F1F5F9', border: 'none', borderRadius: '8px', width: '28px', height: '28px', color: '#EF4444', cursor: 'pointer' }}><X size={14} /></button>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="mkt-cart-footer">
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <span style={{ fontWeight: 900, color: '#1E1B4B', fontSize: '18px' }}>Total TTC</span>
+              <span style={{ fontSize: '24px', fontWeight: 950, color: '#1E1B4B' }}>{cartTotal.toFixed(3)} DT</span>
+            </div>
+            <button 
+              onClick={handleCheckout}
+              disabled={isOrdering || cart.length === 0}
+              style={{ width: '100%', padding: '18px', borderRadius: '16px', background: orderStatus === 'SUCCESS' ? '#10B981' : '#1E1B4B', color: '#fff', border: 'none', fontWeight: 900, fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+            >
+              {isOrdering ? 'Traitement...' : orderStatus === 'SUCCESS' ? <><CheckCircle size={20} /> Réussi !</> : <><Send size={18} /> Commander</>}
+            </button>
+          </div>
+        </aside>
       </div>
 
-      {/* --- VENDOR DETAILS DRAWER --- */}
-      {selectedVendor && (
-        <>
-          <div className="drawer-overlay" onClick={() => setSelectedVendor(null)} />
-          <div className="drawer-content" style={{ transform: selectedVendor ? 'translateX(0)' : 'translateX(100%)' }}>
-            <div style={{ padding: '32px', borderBottom: '1px solid #F1F5F9', background: '#1E1B4B', color: '#fff', position: 'relative' }}>
-              <button 
-                onClick={() => setSelectedVendor(null)}
-                style={{ position: 'absolute', top: '24px', right: '24px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
-              <div style={{ width: '80px', height: '80px', background: 'rgba(255,255,255,0.1)', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', marginBottom: '20px' }}>
-                🏢
+        {/* Modals & Drawers */}
+        {selectedProduct && <ProductDetailsModal product={selectedProduct} onClose={() => setSelectedProduct(null)} addToCart={addToCart} categories={categories} />}
+        {selectedBundle && <BundleDetailsModal bundle={selectedBundle} onClose={() => setSelectedBundle(null)} addToCart={addToCart} />}
+        {selectedVendor && <VendorDetailsDrawer vendor={selectedVendor} products={products} onClose={() => setSelectedVendor(null)} addToCart={addToCart} />}
+        {isCartOpen && <CartDrawer cart={cart} removeFromCart={removeFromCart} updateQuantity={updateQuantity} cartTotal={cartTotal} isOrdering={isOrdering} handleCheckout={handleCheckout} orderStatus={orderStatus} onClose={() => setIsCartOpen(false)} />}
+        {isFiltersOpen && (
+          <>
+            <div className="drawer-overlay" onClick={() => setIsFiltersOpen(false)} />
+            <div className="drawer-content mobile-filters-drawer">
+              <div style={{ padding: '24px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontWeight: 800, color: '#1E1B4B' }}>Filtres Avancés</h3>
+                <button onClick={() => setIsFiltersOpen(false)} style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: 32, height: 32 }}><X size={18} /></button>
               </div>
-              <h2 style={{ fontSize: '28px', fontWeight: 900, marginBottom: '8px' }}>{selectedVendor.companyName}</h2>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', opacity: 0.8 }}>
-                  <MapPin size={14} /> {selectedVendor.city || 'Ville non spécifiée'}
-                </div>
-                {selectedVendor.phone && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', opacity: 0.8 }}>
-                    <Phone size={14} /> {selectedVendor.phone}
-                  </div>
-                )}
+              <div style={{ padding: '24px' }}>
+                <SidebarFiltersContent 
+                  activeCategory={activeCategory} 
+                  setActiveCategory={setActiveCategory}
+                  categories={categories}
+                  maxPrice={maxPrice}
+                  setMaxPrice={setMaxPrice}
+                  selectedCity={selectedCity}
+                  setSelectedCity={setSelectedCity}
+                  cities={cities}
+                />
               </div>
             </div>
+          </>
+        )}
+    </div>
+  );
+}
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
-              <section style={{ marginBottom: '40px' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#1E1B4B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Info size={16} color="#4F46E5" /> À Propos
-                </h3>
-                <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6 }}>
-                  {selectedVendor.description || "Ce fournisseur n'a pas encore ajouté de description détaillée."}
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '24px' }}>
-                  <div style={{ padding: '16px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', marginBottom: '4px' }}>ADRESSE</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>{selectedVendor.address || 'Non spécifiée'}</div>
-                  </div>
-                  <div style={{ padding: '16px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', marginBottom: '4px' }}>CONTACT DIRECT</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>{selectedVendor.phone || 'Non spécifié'}</div>
-                  </div>
-                </div>
-              </section>
-
-              <section>
-                <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#1E1B4B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Package size={16} color="#4F46E5" /> Catalogue Produits
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  {products.filter((p: any) => p.vendorId === selectedVendor.id).map((p: any) => (
-                    <div key={p.id} style={{ padding: '12px', border: '1px solid #F1F5F9', borderRadius: '12px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                      <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=60&auto=format&fit=crop'} style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover' }} alt={p.name} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', marginBottom: '2px' }}>{p.name}</div>
-                        <div style={{ fontSize: '14px', fontWeight: 900, color: '#1E1B4B' }}>{Number(p.price).toFixed(3)} DT</div>
-                      </div>
-                      <button 
-                        onClick={() => addToCart(p)}
-                        style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#EEF2FF', border: 'none', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                      >
-                        <Plus size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-            
-            <div style={{ padding: '24px', borderTop: '1px solid #F1F5F9', display: 'flex', gap: '12px' }}>
-              <button style={{ flex: 1, padding: '14px', borderRadius: '12px', background: '#F1F5F9', color: '#1E293B', border: 'none', fontWeight: 800, fontSize: '14px', cursor: 'pointer' }}>
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><Mail size={16} /> Contacter</span>
-              </button>
-              <button style={{ flex: 1, padding: '14px', borderRadius: '12px', background: '#1E1B4B', color: '#fff', border: 'none', fontWeight: 800, fontSize: '14px', cursor: 'pointer' }}>
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><Plus size={16} /> Suivre</span>
-              </button>
-            </div>
+function BundleDetailsModal({ bundle, onClose, addToCart }: any) {
+  return (
+    <div className="product-modal-backdrop" onClick={onClose}>
+      <div className="product-modal-content" onClick={e => e.stopPropagation()}>
+        <button className="product-modal-close" onClick={onClose}><X size={20} /></button>
+        
+        <div className="modal-gallery">
+          <div className="carousel-slide">
+            <img 
+              src={bundle.image || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=600'} 
+              alt={bundle.name} 
+              onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=600'; }}
+            />
           </div>
-        </>
-      )}
-
-      {/* --- CART DRAWER --- */}
-      {isCartOpen && <CartDrawer cart={cart} removeFromCart={removeFromCart} cartTotal={cartTotal} isOrdering={isOrdering} handleCheckout={handleCheckout} orderStatus={orderStatus} onClose={() => setIsCartOpen(false)} />}
-      
-      {/* --- MOBILE FILTERS DRAWER --- */}
-      {isFiltersOpen && (
-        <>
-          <div className="drawer-overlay" onClick={() => setIsFiltersOpen(false)} />
-          <div className="drawer-content mobile-filters-drawer">
-            <div style={{ padding: '24px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontWeight: 800, color: '#1E1B4B' }}>Filtres Avancés</h3>
-              <button onClick={() => setIsFiltersOpen(false)} style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: 32, height: 32 }}><X size={18} /></button>
-            </div>
-            <div style={{ padding: '24px' }}>
-              <SidebarFiltersContent 
-                activeCategory={activeCategory} 
-                setActiveCategory={setActiveCategory}
-                categories={categories}
-                maxPrice={maxPrice}
-                setMaxPrice={setMaxPrice}
-                selectedCity={selectedCity}
-                setSelectedCity={setSelectedCity}
-                cities={cities}
-              />
-            </div>
+          <div style={{ position: 'absolute', bottom: 20, right: 20, background: '#1E1B4B', color: '#fff', padding: '12px 24px', borderRadius: 16, fontWeight: 900, fontSize: 18, boxShadow: '0 10px 20px rgba(0,0,0,0.2)' }}>
+            {bundle.price.toFixed(3)} DT
           </div>
-        </>
-      )}
+        </div>
+
+        <div className="modal-details">
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+             <span style={{ background: '#EEF2FF', color: '#4F46E5', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 800 }}>PACK PRO</span>
+             <span style={{ background: '#FEF3C7', color: '#92400E', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 800 }}>ÉCO. {bundle.discountPercent}%</span>
+          </div>
+          
+          <h2 style={{ fontSize: 32, fontWeight: 950, color: '#1E1B4B', margin: '0 0 16px', lineHeight: 1.1 }}>{bundle.name}</h2>
+          <p style={{ fontSize: 15, color: '#64748B', lineHeight: 1.6, marginBottom: 32 }}>{bundle.description}</p>
+          
+          <div style={{ background: '#F8FAFC', borderRadius: 24, padding: 24, marginBottom: 32 }}>
+             <h4 style={{ fontSize: 13, fontWeight: 900, color: '#1E1B4B', textTransform: 'uppercase', marginBottom: 16, letterSpacing: '0.05em' }}>Produits inclus :</h4>
+             <div style={{ dispay: 'flex', flexDirection: 'column', gap: 12 }}>
+                {bundle.items.map((item: any, idx: number) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 12, borderBottom: idx === bundle.items.length - 1 ? 'none' : '1px solid #E2E8F0', marginBottom: 12 }}>
+                     <div style={{ width: 48, height: 48, borderRadius: 12, overflow: 'hidden', flexShrink: 0 }}>
+                        <img src={item.vendorProduct.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                     </div>
+                     <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: '#1E1B4B' }}>{item.vendorProduct.productStandard?.name || 'Produit'}</div>
+                        <div style={{ fontSize: 12, color: '#64748B' }}>Quantité: {item.quantity} {item.vendorProduct.unit || 'unité'}</div>
+                     </div>
+                  </div>
+                ))}
+             </div>
+          </div>
+
+          <div className="mkt-vendor-badge">
+             <div className="vendor-avatar" style={{ width: 42, height: 42, fontSize: 20, marginBottom: 0 }}>🏪</div>
+             <div>
+                <div style={{ fontSize: 12, color: '#64748B', fontWeight: 600 }}>Vendeur</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#1E1B4B' }}>{bundle.vendor.companyName}</div>
+             </div>
+          </div>
+
+          <button 
+            className="btn-premium btn-premium-primary" 
+            style={{ width: '100%', padding: 20, marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, fontSize: 16 }}
+            onClick={() => {
+              addToCart(bundle, true);
+              onClose();
+            }}
+          >
+            <Zap size={20} /> Ajouter le Pack au Panier
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -435,7 +586,7 @@ function EmptyState() {
   );
 }
 
-function CartDrawer({ cart, removeFromCart, cartTotal, isOrdering, handleCheckout, orderStatus, onClose }: any) {
+function CartDrawer({ cart, removeFromCart, updateQuantity, cartTotal, isOrdering, handleCheckout, orderStatus, onClose }: any) {
   return (
     <>
       <div className="drawer-overlay" onClick={onClose} />
@@ -457,14 +608,30 @@ function CartDrawer({ cart, removeFromCart, cartTotal, isOrdering, handleCheckou
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {cart.map((item: any) => (
-                <div key={item.id} style={{ display: 'flex', gap: '16px', position: 'relative' }}>
-                  <img src={item.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100&auto=format&fit=crop'} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} alt={item.name} />
+                <div key={item.id} style={{ display: 'flex', gap: '16px', position: 'relative', alignItems: 'center' }}>
+                  <img 
+                    src={item.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'} 
+                    style={{ width: '60px', height: '60px', borderRadius: '12px', objectFit: 'cover' }} 
+                    alt={item.name} 
+                    onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=100'; }}
+                  />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E1B4B', marginBottom: '2px' }}>{item.quantity}x {item.name}</div>
-                    <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>{item.vendor.companyName}</div>
-                    <div style={{ fontSize: '14px', fontWeight: 850, color: '#4F46E5', marginTop: '6px' }}>{(Number(item.price) * item.quantity).toFixed(3)} DT</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#1E1B4B', marginBottom: '2px' }}>{item.name}</div>
+                      {item.isBundle && <span style={{ background: '#EEF2FF', color: '#4F46E5', fontSize: '9px', fontWeight: 900, padding: '2px 6px', borderRadius: '4px' }}>PACK</span>}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600, marginBottom: '8px' }}>{item.vendor.companyName}</div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#F1F5F9', padding: '6px', borderRadius: '10px' }}>
+                        <button onClick={() => updateQuantity(item.id, -1)} style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: '#fff', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>-</button>
+                        <span style={{ fontSize: '14px', fontWeight: 900, minWidth: '20px', textAlign: 'center' }}>{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.id, 1)} style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: '#fff', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>+</button>
+                      </div>
+                      <div style={{ fontSize: '15px', fontWeight: 950, color: '#4F46E5' }}>{(Number(item.price) * item.quantity).toFixed(3)} DT</div>
+                    </div>
                   </div>
-                  <button onClick={() => removeFromCart(item.id)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>Supprimer</button>
+                  <button onClick={() => removeFromCart(item.id)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: '12px', fontWeight: 800 }}>Supprimer</button>
                 </div>
               ))}
             </div>
@@ -487,6 +654,123 @@ function CartDrawer({ cart, removeFromCart, cartTotal, isOrdering, handleCheckou
           >
             {isOrdering ? 'Traitement...' : orderStatus === 'SUCCESS' ? <><CheckCircle size={20} /> Réussi !</> : <><Send size={18} /> Commander</>}
           </button>
+        </div>
+      </div>
+    </>
+  );
+}
+function ProductDetailsModal({ product, onClose, addToCart, categories }: any) {
+  return (
+    <div className="product-modal-backdrop" onClick={onClose}>
+      <div className="product-modal-content" onClick={e => e.stopPropagation()}>
+        <button className="product-modal-close" onClick={onClose}><X size={20} /></button>
+
+        <div className="modal-gallery">
+          <div className="img-carousel">
+            <div className="carousel-slide">
+              <img 
+                src={product.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800'} 
+                alt={product.name} 
+                onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800'; }}
+              />
+            </div>
+            <div className="carousel-slide">
+              <img 
+                src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800' 
+                alt="Detail View" 
+              />
+            </div>
+          </div>
+          <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#1E1B4B' }} />
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#CBD5E1' }} />
+          </div>
+        </div>
+
+        <div className="modal-details">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: '#6366F1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {categories.find((c: any) => c.id === product.categoryId)?.name || 'Produit'}
+            </span>
+            <span className="badge-base badge-featured" style={{ position: 'static' }}>Selection Elite</span>
+          </div>
+          
+          <h2 style={{ fontSize: 28, fontWeight: 900, color: '#1E1B4B', margin: '0 0 16px', lineHeight: 1.2 }}>{product.name}</h2>
+          
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 24 }}>
+            <span style={{ fontSize: 32, fontWeight: 950, color: '#1E1B4B' }}>{Number(product.price).toFixed(3)} DT</span>
+            <span style={{ fontSize: 16, color: '#94A3B8', fontWeight: 700 }}>/ {product.unit}</span>
+          </div>
+
+          <div style={{ background: '#F8FAFC', padding: 20, borderRadius: 20, border: '1px solid #F1F5F9', marginBottom: 32 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                <Package size={20} color="#6366F1" />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Commande Minimum</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#1E293B' }}>{product.minOrderQty} {product.unit}</div>
+              </div>
+            </div>
+            <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.5, margin: 0 }}>
+              Ce produit professionnel est disponible pour livraison immédiate. Qualité certifiée.
+            </p>
+          </div>
+
+          <button 
+            onClick={() => { addToCart(product); onClose(); }}
+            style={{ width: '100%', padding: '20px', borderRadius: 20, background: '#1E1B4B', color: '#fff', border: 'none', fontWeight: 900, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, boxShadow: '0 10px 20px rgba(30, 27, 75, 0.2)' }}
+          >
+            <Plus size={20} /> Ajouter au Panier
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VendorDetailsDrawer({ vendor, products, onClose, addToCart }: any) {
+  return (
+    <>
+      <div className="drawer-overlay" onClick={onClose} />
+      <div className="drawer-content" style={{ maxWidth: 500 }}>
+        <div style={{ padding: '32px', borderBottom: '1px solid #F1F5F9', background: '#1E1B4B', color: '#fff', position: 'relative' }}>
+          <button 
+            onClick={onClose}
+            style={{ position: 'absolute', top: '24px', right: '24px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}
+          >
+            <X size={20} />
+          </button>
+          <div style={{ width: '70px', height: '70px', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', marginBottom: '20px' }}>🏢</div>
+          <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '4px' }}>{vendor.companyName}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', opacity: 0.8 }}>
+            <MapPin size={14} /> {vendor.city}
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+             <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#1E1B4B', textTransform: 'uppercase', marginBottom: '16px' }}>Catalogue du vendeur</h3>
+             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {products.filter((p: any) => p.vendorId === vendor.id).map((p: any) => (
+                  <div key={p.id} style={{ display: 'flex', gap: 16, alignItems: 'center', padding: 12, background: '#F8FAFC', borderRadius: 16 }}>
+                    <img 
+                      src={p.image} 
+                      style={{ width: 50, height: 50, borderRadius: 10, objectFit: 'cover' }} 
+                      onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=100'; }}
+                    />
+                    <div style={{ flex: 1 }}>
+                       <div style={{ fontSize: 13, fontWeight: 800 }}>{p.name}</div>
+                       <div style={{ fontSize: 14, fontWeight: 900, color: '#4F46E5' }}>{Number(p.price).toFixed(3)} DT</div>
+                    </div>
+                    <button 
+                      onClick={() => addToCart(p)}
+                      style={{ background: '#1E1B4B', color: '#fff', border: 'none', width: 32, height: 32, borderRadius: 8, cursor: 'pointer' }}
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                ))}
+             </div>
         </div>
       </div>
     </>

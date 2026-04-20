@@ -330,10 +330,107 @@ model VendorProduct {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
+  bundleItems     MktBundleItem[]
+  
   @@unique([productStandardId, vendorId])
   @@index([vendorId])
   @@index([stockStatus])
   @@index([categoryId])
+}
+
+model MktBundle {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  price           Decimal
+  discountPercent Int?     // Optionnel: pour afficher l'économie
+  image           String?
+  
+  vendorId        String
+  vendor          VendorProfile @relation(fields: [vendorId], references: [id])
+  
+  items           MktBundleItem[]
+  
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([vendorId])
+}
+
+model VendorWallet {
+  id        String   @id @default(cuid())
+  vendorId  String   @unique
+  vendor    VendorProfile @relation(fields: [vendorId], references: [id])
+  balance   Decimal  @default(0)
+  currency  String   @default("DT")
+  status    String   @default("ACTIVE") // ACTIVE, SUSPENDED
+  updatedAt DateTime @updatedAt
+  
+  transactions WalletTransaction[]
+}
+
+model WalletTransaction {
+  id           String   @id @default(cuid())
+  walletId     String
+  wallet       VendorWallet @relation(fields: [walletId], references: [id])
+  amount       Decimal  // positive for credit, negative for debit
+  type         String   // DEPOSIT, COMMISSION, WITHDRAWAL, PENALTY, REFUND
+  description  String?
+  settlementId String?  @unique
+  settlement   MarketplaceSettlement? @relation(fields: [settlementId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([walletId])
+}
+
+model MarketplaceSettlement {
+  id              String   @id @default(cuid())
+  orderId         String   @unique
+  order           SupplierOrder @relation(fields: [orderId], references: [id])
+  
+  commissionAmount Decimal
+  
+  vendorApproved     Boolean @default(false)
+  superadminApproved Boolean @default(false)
+  
+  isProcessed      Boolean @default(false)
+  processedAt      DateTime?
+  
+  transaction      WalletTransaction?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model WalletDepositRequest {
+  id          String   @id @default(cuid())
+  vendorId    String
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id])
+  amount      Decimal
+  proofImage  String?  // URL to the uploaded proof
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  adminNotes  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([vendorId])
+}
+
+model MktBundleItem {
+  id              String   @id @default(cuid())
+  bundleId        String
+  bundle          MktBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  
+  vendorProductId String
+  vendorProduct   VendorProduct @relation(fields: [vendorProductId], references: [id])
+  
+  quantity        Decimal
+  
+  createdAt       DateTime @default(now())
+
+  @@index([bundleId])
+  @@index([vendorProductId])
 }
 
 model Category {
@@ -573,8 +670,13 @@ model VendorProfile {
   mktSectors    MktCategory[]  @relation("VendorSectors")
 
   vendorProducts VendorProduct[]
+  bundles        MktBundle[]
   orders         SupplierOrder[]
   stockItems     StockItem[]
+  
+  wallet         VendorWallet?
+  commissionRate Decimal @default(0) // Negotiation margin (per order total)
+  depositRequests WalletDepositRequest[]
 }
 
 model CourierProfile {
@@ -629,6 +731,7 @@ model SupplierOrder {
   courier       CourierProfile? @relation(fields: [courierId], references: [id])
   needsDelivery Boolean           @default(false)
   items         SupplierOrderItem[]
+  settlement    MarketplaceSettlement?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 }

@@ -4,13 +4,13 @@ import React, { useState, useTransition, useMemo } from 'react';
 import {
   Plus, Edit2, Trash2, Package, Clock, FileSpreadsheet, Download,
   CheckCircle2, AlertCircle, Loader2, BarChart3, TrendingUp, TrendingDown,
-  Minus, ChevronDown, Tag, Sparkles
+  Minus, ChevronDown, Tag, Sparkles, ShoppingBag
 } from 'lucide-react';
 import Modal from '../../../../components/Modal';
 import {
   createMarketplaceProductAction, updateMarketplaceProductAction,
   deleteMarketplaceProductAction, importCsvProductsAction,
-  proposeSubCategoryAction,
+  proposeSubCategoryAction, createMarketplaceBundleAction, deleteMarketplaceBundleAction
 } from '../../../actions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -127,17 +127,19 @@ function CategorySelector({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function VendorCatalogClient({
-  initialProducts, categoryTree, globalUnits, benchmarkData = [], vendorId, mktSectors = [],
+  initialProducts, initialBundles = [], categoryTree, globalUnits, benchmarkData = [], vendorId, mktSectors = [],
 }: {
   initialProducts: any[];
+  initialBundles?: any[];
   categoryTree: RootCategory[];
   globalUnits: any[];
   benchmarkData?: BenchmarkRow[];
   vendorId: string;
   mktSectors?: any[];
 }) {
-  const [activeTab, setActiveTab]           = useState<'catalog' | 'benchmark'>('catalog');
+  const [activeTab, setActiveTab]           = useState<'catalog' | 'benchmark' | 'bundles'>('catalog');
   const [modalOpen, setModalOpen]           = useState(false);
+  const [bundleModalOpen, setBundleModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [proposeModalOpen, setProposeModalOpen] = useState(false);
   const [toast, setToast]                   = useState<{ show: boolean; message: string; error?: boolean } | null>(null);
@@ -152,7 +154,10 @@ export default function VendorCatalogClient({
   const [csvErrors, setCsvErrors] = useState<string[]>([]);
   const [csvResult, setCsvResult] = useState<{ created: number; updated: number; skipped: number; errors: string[]; newCategories: string[] } | null>(null);
 
-  // Propose subcategory state
+  // Bundle state
+  const [bundleForm, setBundleForm] = useState<any>({
+    name: '', description: '', price: '', image: '', imagePreview: '', showUrlInput: false, items: [] 
+  });
   const [proposeParentId, setProposeParentId]   = useState('');
   const [proposeSubName, setProposeSubName]     = useState('');
   const [proposeStatus, setProposeStatus]       = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
@@ -346,6 +351,57 @@ export default function VendorCatalogClient({
     else { setProposeStatus('done'); showToast('Proposition envoyée — en attente de validation admin'); }
   };
 
+  // ── Bundle Actions ──
+  const handleCreateBundle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (bundleForm.items.length === 0) return alert('Ajoutez au moins un produit au pack');
+    
+    startTransition(async () => {
+      await createMarketplaceBundleAction({
+        name: bundleForm.name,
+        description: bundleForm.description,
+        price: parseFloat(bundleForm.price),
+        image: bundleForm.imagePreview || bundleForm.image,
+        items: bundleForm.items
+      });
+      setBundleModalOpen(false);
+      showToast('Pack créé avec succès ✓');
+    });
+  };
+
+  const handleDeleteBundle = (id: string) => {
+    if (confirm('Voulez-vous vraiment supprimer ce pack ?')) {
+      startTransition(async () => {
+        await deleteMarketplaceBundleAction(id);
+        showToast('Pack supprimé');
+      });
+    }
+  };
+
+  const addProductToBundle = (productId: string) => {
+    if (bundleForm.items.find((it: any) => it.vendorProductId === productId)) return;
+    setBundleForm({
+      ...bundleForm,
+      items: [...bundleForm.items, { vendorProductId: productId, quantity: 1 }]
+    });
+  };
+
+  const removeProductFromBundle = (productId: string) => {
+    setBundleForm({
+      ...bundleForm,
+      items: bundleForm.items.filter((it: any) => it.vendorProductId !== productId)
+    });
+  };
+
+  const updateBundleItemQty = (productId: string, qty: number) => {
+    setBundleForm({
+      ...bundleForm,
+      items: bundleForm.items.map((it: any) => 
+        it.vendorProductId === productId ? { ...it, quantity: Math.max(1, qty) } : it
+      )
+    });
+  };
+
   // ── Benchmark filters ──
   const benchCats  = useMemo(() => Array.from(new Set(benchmarkData.map(r => r.displayCategory).filter(Boolean))), [benchmarkData]);
   const benchBrands = useMemo(() => Array.from(new Set(benchmarkData.map(r => r.brand).filter(Boolean))) as string[], [benchmarkData]);
@@ -367,9 +423,11 @@ export default function VendorCatalogClient({
           <button onClick={() => setActiveTab('catalog')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'catalog' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
             <Package size={16} /> Catalogue
           </button>
+          <button onClick={() => setActiveTab('bundles')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'bundles' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            <Sparkles size={16} /> Packs & Offres
+          </button>
           <button onClick={() => setActiveTab('benchmark')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'benchmark' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
             <BarChart3 size={16} /> Benchmark
-            {benchmarkData.length > 0 && <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full text-xs font-bold">{benchmarkData.length}</span>}
           </button>
         </div>
         {activeTab === 'catalog' && (
@@ -382,6 +440,13 @@ export default function VendorCatalogClient({
             </button>
             <button onClick={handleCreateNew} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-all shadow-md">
               <Plus size={16} /> Ajouter
+            </button>
+          </div>
+        )}
+        {activeTab === 'bundles' && (
+          <div className="flex gap-2 w-full md:w-auto">
+            <button onClick={() => { setBundleForm({name:'', description:'', price:'', image:'', items:[]}); setBundleModalOpen(true); }} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 transition-all shadow-md">
+              <Sparkles size={16} /> Créer un Pack
             </button>
           </div>
         )}
@@ -433,6 +498,57 @@ export default function VendorCatalogClient({
               <button onClick={handleCreateNew} className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 shadow-lg shadow-indigo-600/20">
                 <Plus size={16} className="inline mr-2" />Ajouter un produit
               </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── BUNDLES TAB ── */}
+      {activeTab === 'bundles' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {initialBundles.map((b: any) => (
+            <div key={b.id} className="bg-white rounded-3xl border border-slate-100 overflow-hidden flex flex-col hover:shadow-xl transition-all group">
+              <div className="h-48 bg-slate-100 relative">
+                <img src={b.image || 'https://images.unsplash.com/photo-1541167760496-162955ed8a9f?q=80&w=400&auto=format&fit=crop'} className="w-full h-full object-cover" />
+                <div className="absolute top-4 left-4">
+                  <div className="bg-indigo-600 text-white px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-lg">
+                    <Sparkles size={12} /> Pack Promo
+                  </div>
+                </div>
+                <button onClick={() => handleDeleteBundle(b.id)} className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur rounded-2xl flex items-center justify-center text-rose-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-500 hover:text-white shadow-xl">
+                  <Trash2 size={18} />
+                </button>
+              </div>
+              <div className="p-6 flex flex-col flex-1">
+                <h3 className="text-xl font-black text-slate-900 mb-2 truncate">{b.name}</h3>
+                <p className="text-sm text-slate-500 mb-4 line-clamp-2">{b.description || 'Offre spéciale groupée'}</p>
+                
+                <div className="space-y-2 mb-6">
+                  {b.items?.map((it: any) => (
+                    <div key={it.id} className="flex items-center justify-between text-xs font-bold text-slate-600 bg-slate-50 p-2 rounded-xl">
+                      <span className="truncate flex-1 pr-2">{it.vendorProduct?.name}</span>
+                      <span className="shrink-0 text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg">x{it.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-auto flex justify-between items-end">
+                  <div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Prix du Pack</div>
+                    <div className="text-3xl font-black text-slate-900">{Number(b.price).toFixed(3)} <span className="text-sm">DT</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+          {initialBundles.length === 0 && (
+            <div className="col-span-full py-20 text-center bg-slate-50 rounded-[40px] border-2 border-dashed border-slate-200">
+               <Sparkles size={48} className="mx-auto text-slate-300 mb-4" />
+               <div className="text-lg font-black text-slate-900 mb-2">Aucun pack configuré</div>
+               <p className="text-slate-500 text-sm mb-6">Augmentez votre volume de vente en créant des offres groupées.</p>
+               <button onClick={() => { setBundleForm({name:'', description:'', price:'', image:'', items:[]}); setBundleModalOpen(true); }} className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-xl shadow-indigo-600/20">
+                 Créer mon premier pack
+               </button>
             </div>
           )}
         </div>
@@ -865,6 +981,178 @@ export default function VendorCatalogClient({
             </div>
           )}
         </div>
+      </Modal>
+
+      {/* ── MODAL CRÉATION DE PACK ── */}
+      <Modal open={bundleModalOpen} onClose={() => setBundleModalOpen(false)} title="Créer un Pack Promotionnel" width={800}>
+        <form onSubmit={handleCreateBundle} className="grid grid-cols-1 lg:grid-cols-2 gap-8 outline-none focus:outline-none">
+          {/* Gauche : Infos */}
+          <div className="space-y-5">
+            <div>
+              <label className={labelClass}>Nom du Pack</label>
+              <input className={inputClass} value={bundleForm.name} onChange={e => setBundleForm({...bundleForm, name: e.target.value})} placeholder="ex: Pack Barista Pro" required />
+            </div>
+            <div>
+              <label className={labelClass}>Description détaillée</label>
+              <textarea className={`${inputClass} h-24 resize-none`} value={bundleForm.description} onChange={e => setBundleForm({...bundleForm, description: e.target.value})} placeholder="Décrivez les avantages de ce pack..." />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Prix Final (DT)</label>
+                <input className={inputClass} type="number" step="0.001" value={bundleForm.price} onChange={e => setBundleForm({...bundleForm, price: e.target.value})} required />
+              </div>
+            </div>
+
+            {/* Image Selection for Bundle */}
+            <div className="space-y-4 pt-2">
+              <label className={labelClass}>Image du Pack</label>
+              
+              {/* Preview Block */}
+              <div className="relative w-full h-40 bg-slate-50 dark:bg-slate-900 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 overflow-hidden group">
+                {bundleForm.imagePreview || bundleForm.image ? (
+                  <>
+                    <img 
+                      src={bundleForm.imagePreview || bundleForm.image} 
+                      className="w-full h-full object-cover" 
+                      alt="Preview" 
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setBundleForm({...bundleForm, image: '', imagePreview: ''})}
+                      className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur rounded-xl flex items-center justify-center text-rose-500 shadow-lg hover:bg-rose-500 hover:text-white transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400">
+                    <Sparkles size={32} className="opacity-20" />
+                    <span className="text-xs font-bold uppercase tracking-widest">Aperçu du pack</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {/* Upload Button */}
+                <label className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-500/30 transition-all text-sm font-bold">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          setBundleForm({...bundleForm, image: file.name, imagePreview: reader.result as string});
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <ShoppingBag size={14} /> Mobile/PC
+                </label>
+
+                {/* Camera Button */}
+                <label className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-500/30 transition-all text-sm font-bold">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          setBundleForm({...bundleForm, image: file.name, imagePreview: reader.result as string});
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Prendre Photo
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => setBundleForm({...bundleForm, showUrlInput: !bundleForm.showUrlInput})}
+                  className="px-4 py-2.5 text-slate-500 hover:text-slate-700 text-sm font-medium"
+                >
+                  {bundleForm.showUrlInput ? '← Masquer URL' : 'Lien URL'}
+                </button>
+              </div>
+
+              {bundleForm.showUrlInput && (
+                <input 
+                  className={inputClass} 
+                  value={bundleForm.image} 
+                  onChange={e => setBundleForm({...bundleForm, image: e.target.value, imagePreview: ''})} 
+                  placeholder="https://exemple.com/image.jpg" 
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Droite : Sélection produits */}
+          <div className="bg-slate-50 dark:bg-slate-900 rounded-[32px] p-6 border border-slate-100 dark:border-slate-800 flex flex-col h-[450px]">
+             <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center justify-between">
+               Produits dans le pack 
+               <span className="bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-lg lowercase font-bold">{bundleForm.items.length} sélectionné(s)</span>
+             </label>
+             
+             <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide">
+               {bundleForm.items.map((item: any) => {
+                 const product = initialProducts.find(p => p.id === item.vendorProductId);
+                 return (
+                   <div key={item.vendorProductId} className="bg-white dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                     <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden shrink-0">
+                       <img src={product?.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} className="w-full h-full object-cover" />
+                     </div>
+                     <div className="flex-1 min-w-0">
+                       <div className="text-sm font-bold text-slate-900 dark:text-white truncate">{product?.name}</div>
+                       <div className="text-[10px] text-slate-500 font-bold">{Number(product?.price).toFixed(3)} DT / {product?.unit}</div>
+                     </div>
+                     <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => updateBundleItemQty(item.vendorProductId, item.quantity - 1)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50">-</button>
+                        <span className="w-6 text-center text-sm font-black">{item.quantity}</span>
+                        <button type="button" onClick={() => updateBundleItemQty(item.vendorProductId, item.quantity + 1)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50">+</button>
+                        <button type="button" onClick={() => removeProductFromBundle(item.vendorProductId)} className="w-8 h-8 rounded-lg text-rose-500 hover:bg-rose-50 flex items-center justify-center ml-2 border border-transparent hover:border-rose-100"><Trash2 size={14} /></button>
+                     </div>
+                   </div>
+                 );
+               })}
+               
+               {bundleForm.items.length === 0 && (
+                 <div className="flex flex-col items-center justify-center h-full text-slate-400 text-sm italic py-10">
+                   Cliquez sur "+" pour ajouter des produits
+                 </div>
+               )}
+             </div>
+
+             <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Ajouter de votre catalogue</label>
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto pr-1">
+                  {initialProducts.filter(p => !bundleForm.items.find((it: any) => it.vendorProductId === p.id)).map(p => (
+                    <button key={p.id} type="button" onClick={() => addProductToBundle(p.id)} className="bg-white dark:bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:border-indigo-500 hover:text-indigo-600 transition-all">
+                      + {p.name}
+                    </button>
+                  ))}
+                </div>
+             </div>
+          </div>
+
+          <div className="lg:col-span-2 pt-4 flex gap-3">
+             <button type="button" onClick={() => setBundleModalOpen(false)} className="flex-1 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 font-bold hover:bg-slate-50">Annuler</button>
+             <button type="submit" disabled={isPending || bundleForm.items.length === 0} className="flex-[2] py-4 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-500 shadow-xl shadow-indigo-600/20 disabled:opacity-50 uppercase tracking-widest">
+               {isPending ? 'Création...' : 'Créer le Pack Publicitaire'}
+             </button>
+          </div>
+        </form>
       </Modal>
 
       {/* ── TOAST ── */}
