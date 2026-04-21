@@ -41,6 +41,31 @@ header {
 
 .brand-title { font-size: 20px; font-weight: 900; letter-spacing: -1px; }
 
+/* User Badge & Actions */
+.user-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-name { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+
+.logout-btn {
+    background: transparent;
+    border: 1px solid var(--border-glass);
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: var(--transition);
+}
+
+.logout-btn:active { background: rgba(255,255,255,0.05); }
+
 /* Dashboard Counters */
 .dash-counters {
     display: flex;
