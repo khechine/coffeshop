@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, BadRequestException, UseGuards } from '@nestjs/common';
 import { prisma } from '@coffeeshop/database';
+import { MarketplaceAuthGuard } from './auth/marketplace.guard';
 
 interface CreateMarketplaceProductDto {
   name: string;
@@ -411,7 +412,7 @@ export class ManagementController {
     return notifications;
   }
   // ═══════════════════════════════════════════════════════════
-  // MARKETPLACE / VENDOR SPECIFIC
+  // MARKETPLACE / VENDOR SPECIFIC  🔒 Protected by MarketplaceAuthGuard
   // ═══════════════════════════════════════════════════════════
 
   @Get('xyz-categories-test')
@@ -422,6 +423,7 @@ export class ManagementController {
     });
   }
 
+  @UseGuards(MarketplaceAuthGuard)
   @Get('marketplace/categories')
   async getMarketplaceCategories(@Query('vendorId') vendorId?: string): Promise<any> {
     if (vendorId) {
@@ -441,14 +443,19 @@ export class ManagementController {
     });
   }
 
+  @UseGuards(MarketplaceAuthGuard)
   @Get('marketplace/products')
   async getMarketplaceProducts(@Query('vendorId') vendorId: string): Promise<any> {
     return prisma.vendorProduct.findMany({
       where: vendorId ? { vendorId } : {},
       include: { 
         vendor: { 
-          include: { 
-            user: { select: { email: true } }
+          select: {
+            id: true,
+            companyName: true,
+            city: true,
+            description: true,
+            // ✅ Anti-leakage: email, phone, address, lat/lng masked
           }
         } 
       },
@@ -456,6 +463,7 @@ export class ManagementController {
     });
   }
 
+  @UseGuards(MarketplaceAuthGuard)
   @Post('marketplace/products')
   async createMarketplaceProduct(@Body() body: CreateMarketplaceProductDto): Promise<any> {
     return prisma.vendorProduct.create({
@@ -510,15 +518,28 @@ export class ManagementController {
     });
   }
 
+  @UseGuards(MarketplaceAuthGuard)
   @Get('vendor/orders/:vendorId')
   async getVendorOrders(@Param('vendorId') vendorId: string): Promise<any> {
-    return prisma.supplierOrder.findMany({
+    const orders = await prisma.supplierOrder.findMany({
       where: { vendorId },
       include: {
-        store: { select: { id: true, name: true, address: true, city: true, phone: true, lat: true, lng: true } },
+        // ✅ Anti-leakage: city only — no phone, address, GPS before confirmed delivery
+        store: { select: { id: true, name: true, city: true } },
         items: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    // Reveal phone only when order is CONFIRMED or SHIPPED (needed for delivery)
+    return orders.map((order: any) => ({
+      ...order,
+      store: {
+        ...order.store,
+        ...(order.status === 'CONFIRMED' || order.status === 'SHIPPED'
+          ? { deliveryContact: '📞 Disponible à la confirmation' } // Reveal via secure channel
+          : {}),
+      },
+    }));
   }
 }
