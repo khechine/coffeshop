@@ -137,6 +137,10 @@ model Store {
   activityPoleId String?
 
   activityPole   ActivityPole? @relation(fields: [activityPoleId], references: [id])
+
+  // Anti-leakage tracking
+  vendorInteractions     VendorInteraction[]     @relation("StoreInteractions")
+  vendorRelationships    StoreVendorRelationship[] @relation("StoreRelationships")
 }
 
 model StoreTable {
@@ -403,6 +407,81 @@ model MarketplaceSettlement {
   updatedAt       DateTime @updatedAt
 }
 
+// ============================================
+// ANTI-LEAKAGE TRACKING — Phase 2
+// ============================================
+
+// Every touchpoint between a CoffeeShop and a Vendor is logged here.
+// This is both an audit trail and the foundation for BehaviorScoring.
+model VendorInteraction {
+  id        String   @id @default(cuid())
+
+  storeId   String
+  store     Store    @relation("StoreInteractions", fields: [storeId], references: [id])
+
+  vendorId  String
+  vendor    VendorProfile @relation("VendorInteractions", fields: [vendorId], references: [id])
+
+  // Type of interaction
+  type      String
+  // VIEW_PROFILE | VIEW_PRODUCT | SEND_MESSAGE | REQUEST_QUOTE | PLACE_ORDER | VIEW_CATALOG
+
+  // Optional contextual data
+  metadata  Json?
+  // { productId, duration, source: 'search'|'featured'|'recommendation', sessionId }
+
+  createdAt DateTime @default(now())
+
+  @@index([storeId, vendorId])
+  @@index([storeId])
+  @@index([vendorId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// Formal relationship between a CoffeeShop and a Vendor.
+// Status lifecycle: DISCOVERED → CONTACTED → ORDERED → ACTIVE → CHURNED
+// discoveredAt is the legal proof the relationship started on-platform.
+model StoreVendorRelationship {
+  id              String   @id @default(cuid())
+
+  storeId         String
+  store           Store    @relation("StoreRelationships", fields: [storeId], references: [id])
+
+  vendorId        String
+  vendor          VendorProfile @relation("VendorRelationships", fields: [vendorId], references: [id])
+
+  // Lifecycle status
+  status          String   @default("DISCOVERED")
+  // DISCOVERED | CONTACTED | ORDERED | ACTIVE | CHURNED | SUSPENDED
+
+  // Key timestamps (immutable once set — legal proof)
+  discoveredAt    DateTime @default(now())
+  firstContactAt  DateTime?
+  firstOrderAt    DateTime?
+  lastOrderAt     DateTime?
+  lastActivityAt  DateTime?
+
+  // Aggregated metrics (updated on each interaction/order)
+  totalInteractions Int    @default(0)
+  totalOrders       Int    @default(0)
+  totalRevenue      Decimal @default(0)
+
+  // BehaviorScoring — 0 (safe) to 100 (high leakage risk)
+  leakageRiskScore  Int    @default(0)
+
+  // Flags
+  isFlagged         Boolean @default(false)  // Manually flagged by superadmin
+  flagReason        String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([storeId, vendorId])
+  @@index([leakageRiskScore])
+  @@index([status])
+  @@index([isFlagged])
+}
 model WalletDepositRequest {
   id          String   @id @default(cuid())
   vendorId    String
@@ -677,6 +756,10 @@ model VendorProfile {
   wallet         VendorWallet?
   commissionRate Decimal @default(0) // Negotiation margin (per order total)
   depositRequests WalletDepositRequest[]
+
+  // Anti-leakage tracking
+  interactions   VendorInteraction[]     @relation("VendorInteractions")
+  relationships  StoreVendorRelationship[] @relation("VendorRelationships")
 }
 
 model CourierProfile {
