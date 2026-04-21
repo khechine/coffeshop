@@ -60,6 +60,7 @@ services:
       - "8443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./apps/rachma-lite:/usr/share/nginx/html/rachma-lite:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
     depends_on:
