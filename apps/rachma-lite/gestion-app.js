@@ -70,27 +70,44 @@ async function refreshData() {
     if (!storeId) return;
     
     showLoading();
+    console.log("Rachma Management: Refreshing data for store", storeId);
+
     try {
-        const [prodRes, stockRes, finRes, mktRes] = await Promise.all([
-            fetch(`${CONFIG.API_URL}/management/products/${storeId}`),
-            fetch(`${CONFIG.API_URL}/management/stock/${storeId}`),
-            fetch(`${CONFIG.API_URL}/management/reports/summary/${storeId}`),
-            fetch(`${CONFIG.API_URL}/management/marketplace/products`)
+        // Individual fetchers to allow partial failures
+        const fetchData = async (url) => {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (e) {
+                console.warn(`Failed to fetch ${url}:`, e);
+                return null;
+            }
+        };
+
+        const [products, stock, summary, mktProducts, categories] = await Promise.all([
+            fetchData(`${CONFIG.API_URL}/management/products/${storeId}`),
+            fetchData(`${CONFIG.API_URL}/management/stock/${storeId}`),
+            fetchData(`${CONFIG.API_URL}/management/reports/summary/${storeId}`),
+            fetchData(`${CONFIG.API_URL}/management/marketplace/products`),
+            fetchData(`${CONFIG.API_URL}/management/categories/${storeId}`)
         ]);
 
-        state.products = await prodRes.json();
-        state.stock = await stockRes.json();
-        state.finance.summary = await finRes.json();
-        state.marketplace.products = await mktRes.json();
-
-        // Extra context
-        const catRes = await fetch(`${CONFIG.API_URL}/management/categories/${storeId}`);
-        state.categories = await catRes.json();
+        state.products = products || [];
+        state.stock = stock || [];
+        state.finance.summary = summary;
+        state.marketplace.products = mktProducts || [];
+        state.categories = categories || [];
 
         renderView();
     } catch (e) {
-        console.error("Fetch error", e);
-        document.getElementById('mgmt-viewport').innerHTML = `<p class='error'>Erreur de connexion API.</p>`;
+        console.error("Critical error in refreshData", e);
+        document.getElementById('mgmt-viewport').innerHTML = `
+            <div class="error-state">
+                <p>⚠️ Erreur de chargement.</p>
+                <button class="primary-btn" onclick="refreshData()">Réessayer</button>
+            </div>
+        `;
     }
 }
 
@@ -160,7 +177,10 @@ function renderStocks(container) {
 
 function renderFinance(container) {
     const sum = state.finance.summary;
-    if (!sum) return;
+    if (!sum) {
+        container.innerHTML = `<div class="error-state"><p>Données financières indisponibles.</p></div>`;
+        return;
+    }
 
     let html = `<h2>Performance Financière</h2>`;
     html += `
