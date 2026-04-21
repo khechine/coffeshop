@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View, ViewProps, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { usePOSStore } from '../../store/posStore';
+import { GlassyTheme } from '../../theme/GlassyTheme';
 
 interface GlassPanelProps extends ViewProps {
   children: React.ReactNode;
@@ -51,6 +52,6 @@ export const GlassPanel: React.FC<GlassPanelProps> = ({
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 0.8,
   }
 });

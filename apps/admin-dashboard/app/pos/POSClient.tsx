@@ -6,7 +6,8 @@ import {
   Plus, Minus, ShoppingCart, Trash2, CheckCircle, Clock, 
   History, User, Coffee, LogOut, Lock, LayoutGrid, CreditCard,
   ChevronRight, AlertCircle, Save, ArrowLeft, MoreVertical, ClipboardList,
-  ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, ShieldCheck, Sun, Moon
+  ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, ShieldCheck, Sun, Moon,
+  CupSoda, GlassWater, Ghost
 } from 'lucide-react';
 import { recordSale, logStaffSessionAction } from '../actions';
 import { PrintService } from './PrintService';
@@ -21,83 +22,7 @@ interface TableOrder {
 const TIMEOUT_DURATION = 10 * 60 * 1000; // 10 minutes
 type ViewMode = 'tables' | 'order' | 'simplistic' | 'history' | 'journal';
 
-// === OPTIMIZED TALLY GRID ===
-// Memoized component outside main render loop to prevent redundant redraws
-const TallyGrid = React.memo(({ productId, actions = [], gridPage, onPageChange, isMobile }: { 
-  productId: string, 
-  actions: ('ADD' | 'VOID' | 'ADD_TAKEAWAY')[], 
-  gridPage?: number,
-  onPageChange: (productId: string, page: number) => void,
-  isMobile: boolean
-}) => {
-  const cols = isMobile ? 5 : 6;
-  const rows = isMobile ? 5 : 6;
-  const pageSize = cols * rows; 
-  const totalPages = Math.max(1, Math.ceil(actions.length / pageSize));
-  // Determine active page: user choice OR the page containing the latest action
-  const currentDisplayPage = gridPage ?? (totalPages - 1);
-  
-  const pageActions = actions.slice(currentDisplayPage * pageSize, (currentDisplayPage + 1) * pageSize);
-  const cells = Array(pageSize).fill(null);
-
-  return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '4px', padding: '2px' }}>
-      {/* Pagination Area - Always rendered with fixed height to prevent layout shift */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        gap: '4px', 
-        marginBottom: '8px',
-        minHeight: '26px', // Reserve space for dots
-        visibility: totalPages > 1 ? 'visible' : 'hidden'
-      }}>
-        {totalPages > 1 && Array.from({ length: totalPages }).map((_, idx) => (
-          <div key={idx} 
-            onMouseDown={e => e.stopPropagation()}
-            onMouseUp={e => e.stopPropagation()}
-            onTouchStart={e => e.stopPropagation()}
-            onTouchEnd={e => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onPageChange(productId, idx);
-            }}
-            style={{ padding: '6px 4px', cursor: 'pointer' }}
-          >
-            <div style={{ 
-              width: '12px', height: '12px', borderRadius: '50%', 
-              background: (currentDisplayPage === idx) ? 'var(--pos-primary)' : 'var(--pos-border)',
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              transform: (currentDisplayPage === idx) ? 'scale(1.2)' : 'scale(1)',
-              boxShadow: (currentDisplayPage === idx) ? '0 0 0 6px rgba(99, 102, 241, 0.1)' : 'none',
-              border: (currentDisplayPage === idx) ? 'none' : '1px solid rgba(0,0,0,0.05)'
-            }} />
-          </div>
-        ))}
-      </div>
-
-      <div style={{ 
-        display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '1px', 
-        background: 'var(--pos-border)', border: '1px solid var(--pos-border)', borderRadius: '4px', overflow: 'hidden', flex: 1
-      }}>
-        {cells.map((_, i) => {
-          const action = pageActions[i];
-          if (!action) return <div key={i} style={{ aspectRatio: '1', background: 'var(--pos-card-bg)' }} />;
-          
-          return (
-            <div key={i} style={{ 
-              aspectRatio: '1', background: 'var(--pos-card-bg)', display: 'flex', alignItems: 'center', 
-              justifyContent: 'center'
-            }}>
-              <svg width="80%" height="80%" viewBox="0 0 24 24" fill="none" strokeWidth={4} strokeLinecap="round">
-                <path d="M18 6L6 18M6 6l12 12" stroke={action === 'ADD' ? '#10B981' : action === 'ADD_TAKEAWAY' ? '#F59E0B' : '#EF4444'} />
-              </svg>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-});
+// The Tally grid was removed to improve visibility. A large quantity centered counter is now used instead.
 
 export default function POSClient({ 
   storeId,
@@ -149,9 +74,7 @@ export default function POSClient({
   const [selectedSale, setSelectedSale] = useState<any | null>(null);
   const [expandedSaleId, setExpandedSaleId] = useState<string | null>(null);
   const [simplisticTakeaway, setSimplisticTakeaway] = useState<Record<string, number>>({});
-  const [simplisticHistory, setSimplisticHistory] = useState<Record<string, ('ADD' | 'VOID' | 'ADD_TAKEAWAY')[]>>({});
-  const [simplisticProductTakeaway, setSimplisticProductTakeaway] = useState<Record<string, boolean>>({});
-  const [simplisticTab, setSimplisticTab] = useState<'PRODUCTS' | 'PACKAGING'>('PRODUCTS');
+  const [simplisticHistory, setSimplisticHistory] = useState<Record<string, ('ADD' | 'VOID' | 'ADD_SMALL' | 'ADD_LARGE')[]>>({});
   const [simplisticGridPage, setSimplisticGridPage] = useState<Record<string, number>>({});
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetPin, setResetPin] = useState("");
@@ -500,22 +423,12 @@ export default function POSClient({
     return acc + (prod?.price || 0) * qty;
   }, 0);
 
-  const addSimplistic = (productId: string, packagingProduct?: any) => {
+  const addSimplistic = (productId: string, actionOverride?: 'ADD_SMALL' | 'ADD_LARGE', packagingProduct?: any) => {
     if (!cashierId) return;
 
     const product = initialProducts.find(p => p.id === productId);
     if (!product) return;
  
-    // Check for popup trigger if Takeaway ON but NO packagingId selected
-    if (needsPackaging(product) && isTakeawayMode && !packagingId && typeof packagingProduct === 'undefined' && !packagingProducts.find(p => p.id === productId)) {
-      setPendingProduct(product);
-      setPopupTriggerMode('SIMPLISTIC');
-      setShowPackagingPopup(true);
-      return;
-    }
- 
-    const isTakeawayForThisTap = !!simplisticProductTakeaway[productId];
-    
     setSimplisticSession(prev => {
       const next = { ...prev, [productId]: (prev[productId] || 0) + 1 };
       localStorage.setItem(`pos_simplistic_${cashierId}`, JSON.stringify(next));
@@ -524,27 +437,12 @@ export default function POSClient({
 
     setSimplisticHistory(prev => {
       const current = prev[productId] || [];
-      const action = isTakeawayForThisTap ? 'ADD_TAKEAWAY' : 'ADD';
-      const next = { ...prev, [productId]: [...current, action as 'ADD' | 'VOID' | 'ADD_TAKEAWAY'] };
+      const action = actionOverride || 'ADD';
+      const next = { ...prev, [productId]: [...current, action] as ('ADD' | 'VOID' | 'ADD_SMALL' | 'ADD_LARGE')[] };
       localStorage.setItem(`pos_history_${cashierId}`, JSON.stringify(next));
       return next;
     });
 
-    // Automatically handle packaging item in simplistic mode
-    // Either from per-product toggle OR global mode
-    const finalPackId = packagingProduct ? packagingProduct.id : ((isTakeawayMode || isTakeawayForThisTap) && packagingId ? packagingId : null);
-    if (finalPackId) {
-      setSimplisticTakeaway(prev => {
-        const next = { ...prev, [finalPackId]: (prev[finalPackId] || 0) + 1 };
-        localStorage.setItem(`pos_takeaway_${cashierId}`, JSON.stringify(next));
-        return next;
-      });
-    }
-
-    // AUTO-RESET per-product toggle & Force Jump to latest grid page
-    if (isTakeawayForThisTap) {
-      setSimplisticProductTakeaway(prev => ({ ...prev, [productId]: false }));
-    }
     setSimplisticGridPage(prev => {
        const { [productId]: _, ...rest } = prev;
        return rest;
@@ -567,12 +465,11 @@ export default function POSClient({
 
     setSimplisticHistory(prev => {
       const current = prev[productId] || [];
-      // Only add a VOID if there's something to void (active items > voids)
-      const adds = current.filter(a => a === 'ADD').length;
+      const adds = current.filter(a => a.startsWith('ADD')).length;
       const voids = current.filter(a => a === 'VOID').length;
       if (adds <= voids) return prev;
 
-      const next = { ...prev, [productId]: [...current, 'VOID' as const] };
+      const next = { ...prev, [productId]: [...current, 'VOID'] as ('ADD' | 'VOID' | 'ADD_SMALL' | 'ADD_LARGE')[] };
       localStorage.setItem(`pos_history_${cashierId}`, JSON.stringify(next));
       return next;
     });
@@ -622,28 +519,51 @@ export default function POSClient({
   };
 
   const validateSimplistic = async () => {
-    const items = Object.entries(simplisticSession)
-      .filter(([_, qty]) => (qty as number) > 0)
-      .map(([id, qty]) => {
-        const prod = initialProducts.find(p => p.id === id);
-        return { productId: id, name: prod?.name || '?', price: prod?.price || 0, quantity: qty as number };
-      });
- 
-    const packagingItems = Object.entries(simplisticTakeaway)
-      .filter(([_, qty]) => (qty as number) > 0)
-      .map(([id, qty]) => {
-        const prod = initialProducts.find(p => p.id === id);
-        return { productId: id, name: `${prod?.name} (Emballage)`, price: 0, quantity: qty as number };
-      });
- 
-    if (items.length === 0 && packagingItems.length === 0) return;
+    const itemsToRecord: any[] = [];
+
+    Object.entries(simplisticHistory).forEach(([prodId, actions]) => {
+      if (actions.length === 0) return;
+      const product = initialProducts.find(p => p.id === prodId);
+      if (!product) return;
+
+      const dineIn = actions.filter(a => a === 'ADD').length;
+      const small = actions.filter(a => a === 'ADD_SMALL').length;
+      const large = actions.filter(a => a === 'ADD_LARGE').length;
+      const voids = actions.filter(a => a === 'VOID').length;
+
+      // Prioritize voiding dine-ins, then small, then large
+      let remainingVoids = voids;
+      
+      const processType = (count: number, type: string) => {
+        let finalQty = count;
+        if (remainingVoids > 0) {
+          const removed = Math.min(finalQty, remainingVoids);
+          finalQty -= removed;
+          remainingVoids -= removed;
+        }
+        if (finalQty > 0) {
+          itemsToRecord.push({
+            productId: prodId,
+            name: product.name,
+            quantity: finalQty,
+            price: product.price,
+            consumeType: type
+          });
+        }
+      };
+
+      processType(dineIn, 'DINE_IN');
+      processType(small, 'TAKEAWAY_SMALL');
+      processType(large, 'TAKEAWAY_LARGE');
+    });
+
+    if (itemsToRecord.length === 0) return;
  
     try {
-      const finalItems = [...items, ...packagingItems];
-      if (finalItems.length > 0) {
+      if (itemsToRecord.length > 0) {
         await recordSale({
           total: simplisticTotal,
-          items: finalItems,
+          items: itemsToRecord,
           tableName: 'Session Simpliste',
           baristaId: cashierId!,
           takenById: cashierId!,
@@ -653,7 +573,7 @@ export default function POSClient({
  
       // Update local history
       const newLogs = [];
-      if (finalItems.length > 0) {
+      if (itemsToRecord.length > 0) {
         newLogs.push({
           id: Math.random().toString(),
           total: simplisticTotal,
@@ -663,7 +583,7 @@ export default function POSClient({
           takenBy: cashierName,
           takenById: cashierId,
           time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-          items: finalItems
+          items: itemsToRecord
         });
       }
  
@@ -1081,43 +1001,15 @@ export default function POSClient({
 
             {viewMode === 'simplistic' && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: isMobile ? '12px' : '32px', background: '#F8FAFC' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '20px' : '40px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                    <div>
-                      <h2 style={{ fontSize: isMobile ? '28px' : '40px', fontWeight: 950, color: '#1E1B4B', margin: 0, letterSpacing: '-1.5px' }}>Session Rachma</h2>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981' }} />
-                         <span style={{ color: '#64748B', fontSize: '15px', fontWeight: 700 }}>{simplisticTab === 'PRODUCTS' ? 'Vente de produits' : 'Comptage emballages'}</span>
-                      </div>
-                    </div>
-
-                    {/* TAB SWITCHER */}
-                    <div style={{ 
-                      display: 'flex', background: '#F1F5F9', padding: '6px', borderRadius: '16px', gap: '4px'
-                    }}>
-                      <button 
-                        onClick={() => setSimplisticTab('PRODUCTS')}
-                        style={{ 
-                          padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                          fontWeight: 800, fontSize: '14px',
-                          background: simplisticTab === 'PRODUCTS' ? '#fff' : 'transparent',
-                          color: simplisticTab === 'PRODUCTS' ? '#6366F1' : '#64748B',
-                          boxShadow: simplisticTab === 'PRODUCTS' ? '0 4px 6px rgba(0,0,0,0.05)' : 'none'
-                        }}
-                      >PRODUITS</button>
-                      <button 
-                        onClick={() => setSimplisticTab('PACKAGING')}
-                        style={{ 
-                          padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                          fontWeight: 800, fontSize: '14px',
-                          background: simplisticTab === 'PACKAGING' ? '#fff' : 'transparent',
-                          color: simplisticTab === 'PACKAGING' ? '#6366F1' : '#64748B',
-                          boxShadow: simplisticTab === 'PACKAGING' ? '0 4px 6px rgba(0,0,0,0.05)' : 'none'
-                        }}
-                      >EMBALLAGES</button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '12px' : '20px' }}>
+                  <div>
+                    <h2 style={{ fontSize: isMobile ? '24px' : '40px', fontWeight: 950, color: '#1E1B4B', margin: 0, letterSpacing: '-1.5px' }}>Session Rachma</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981' }} />
+                       <span style={{ color: '#64748B', fontSize: isMobile ? '13px' : '15px', fontWeight: 700 }}>Actif : {cashierName}</span>
                     </div>
                   </div>
-                  
+
                   <button onClick={() => setShowResetConfirm(true)} style={{ width: '52px', height: '52px', borderRadius: '16px', background: '#FEF2F2', color: '#EF4444', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Trash2 size={24} />
                   </button>
@@ -1125,9 +1017,11 @@ export default function POSClient({
 
                 <div style={{ flex: 1, overflow: 'auto' }} className="no-scrollbar">
                   <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? '160px' : '220px'}, 1fr))`, gap: isMobile ? '12px' : '20px' }}>
-                    {(simplisticTab === 'PRODUCTS' ? initialProducts.slice(0, 10).filter(p => !packagingProducts.find(pp => pp.id === p.id)) : packagingProducts).map(p => {
+                    {(posCategory === 'Tous' 
+                        ? initialProducts.filter(p => !packagingProducts.find(pp => pp.id === p.id)) 
+                        : initialProducts.filter(p => p.category === posCategory)
+                    ).map(p => {
                       const qty = simplisticSession[p.id] || 0;
-                      const isTakeawayActive = !!simplisticProductTakeaway[p.id];
                       
                       // Handling long press logic with Ref for stability
                       const startPress = () => {
@@ -1173,11 +1067,16 @@ export default function POSClient({
                             }
                           }}
                           style={{ 
-                            height: isMobile ? '240px' : '320px', borderRadius: isMobile ? '20px' : '30px', background: '#fff', border: '2px solid #E2E8F0', 
+                            height: isMobile ? '240px' : '320px', borderRadius: isMobile ? '20px' : '30px', 
+                            backgroundColor: '#fff',
+                            backgroundImage: 'linear-gradient(rgba(99, 102, 241, 0.12) 1.5px, transparent 1.5px), linear-gradient(90deg, rgba(99, 102, 241, 0.12) 1.5px, transparent 1.5px)',
+                            backgroundSize: '24px 24px',
+                            backgroundPosition: 'center center',
+                            border: '3px solid #E2E8F0', 
                             cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', 
                             padding: '16px', gap: '12px', transition: 'all 0.2s', position: 'relative',
                             boxShadow: (qty > 0) ? '0 10px 15px -3px rgba(99, 102, 241, 0.1)' : 'none',
-                            borderColor: (qty > 0 ? '#6366F1' : '#E2E8F0'),
+                            borderColor: (qty > 0 ? '#6366F1' : '#CBD5E1'),
                             transform: (pressingProductId === p.id ? 'scale(0.95)' : 'scale(1)'),
                             userSelect: 'none',
                             overflow: 'hidden'
@@ -1206,54 +1105,95 @@ export default function POSClient({
                               </div>
                             </div>
                             
-                            {/* ACTION AREA (TOGGLE & BUBBLE) */}
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                              {simplisticTab === 'PRODUCTS' && (
-                                <div 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSimplisticProductTakeaway(prev => ({ ...prev, [p.id]: !prev[p.id] }));
-                                  }}
-                                  style={{ 
-                                    width: isMobile ? '34px' : '40px', height: isMobile ? '34px' : '40px', borderRadius: '10px', 
-                                    background: isTakeawayActive ? '#F59E0B' : '#F1F5F9',
-                                    color: isTakeawayActive ? '#fff' : '#94A3B8',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    transition: 'all 0.2s',
-                                    boxShadow: isTakeawayActive ? '0 4px 10px rgba(245,158,11,0.2)' : 'none'
-                                  }}>
-                                  <ShoppingBag size={isMobile ? 16 : 20} />
+                            {/* ACTION AREA (CUP SELECTION & COUNTERS) */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                              {!packagingProducts.find(pp => pp.id === p.id) && !p.category?.toLowerCase()?.includes('invisible') && (
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                  <div 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      addSimplistic(p.id, 'ADD_SMALL');
+                                    }}
+                                    style={{ 
+                                      width: isMobile ? '38px' : '44px', height: isMobile ? '38px' : '44px', borderRadius: '12px', 
+                                      background: '#F1F5F9', color: '#94A3B8',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      transition: 'all 0.2s', border: '1.5px solid #E2E8F0'
+                                    }}>
+                                    <CupSoda size={isMobile ? 18 : 22} />
+                                  </div>
+                                  <div 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      addSimplistic(p.id, 'ADD_LARGE');
+                                    }}
+                                    style={{ 
+                                      width: isMobile ? '38px' : '44px', height: isMobile ? '38px' : '44px', borderRadius: '12px', 
+                                      background: '#F1F5F9', color: '#94A3B8',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      transition: 'all 0.2s', border: '1.5px solid #E2E8F0'
+                                    }}>
+                                    <GlassWater size={isMobile ? 18 : 22} />
+                                  </div>
                                 </div>
                               )}
 
                               {(() => {
                                 const history = simplisticHistory[p.id] || [];
-                                const totalAdds = history.filter(a => a === 'ADD' || a === 'ADD_TAKEAWAY').length;
+                                const totalDineIn = history.filter(a => a === 'ADD').length;
+                                const totalSmall = history.filter(a => a === 'ADD_SMALL').length;
+                                const totalLarge = history.filter(a => a === 'ADD_LARGE').length;
                                 const totalVoids = history.filter(a => a === 'VOID').length;
-                                if (totalAdds === 0 && totalVoids === 0) return null;
+                                if (totalDineIn === 0 && totalSmall === 0 && totalLarge === 0 && totalVoids === 0) return null;
                                 
                                 return (
-                                  <div style={{ 
-                                    minWidth: isMobile ? '30px' : '36px', height: isMobile ? '30px' : '36px', borderRadius: '10px', background: '#6366F1', color: '#fff', 
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '12px' : '15px', 
-                                    fontWeight: 950, boxShadow: '0 4px 10px rgba(99,102,241,0.3)', padding: '0 8px' 
-                                  }}>
-                                    {totalAdds}{totalVoids > 0 ? ` (-${totalVoids})` : ''}
+                                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                    {totalDineIn > 0 && (
+                                      <div style={{ 
+                                        minWidth: isMobile ? '30px' : '36px', height: isMobile ? '30px' : '36px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.4)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '13px' : '15px', 
+                                        fontWeight: 950, padding: '0 8px' 
+                                      }}>+{totalDineIn}</div>
+                                    )}
+                                    {totalSmall > 0 && (
+                                      <div style={{ 
+                                        minWidth: isMobile ? '30px' : '36px', height: isMobile ? '30px' : '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', border: '1px solid rgba(245, 158, 11, 0.4)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '13px' : '15px', 
+                                        fontWeight: 950, padding: '0 8px' 
+                                      }}>S:{totalSmall}</div>
+                                    )}
+                                    {totalLarge > 0 && (
+                                      <div style={{ 
+                                        minWidth: isMobile ? '30px' : '36px', height: isMobile ? '30px' : '36px', borderRadius: '10px', background: '#FFEDD5', color: '#EA580C', border: '1px solid rgba(249, 115, 22, 0.4)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '13px' : '15px', 
+                                        fontWeight: 950, padding: '0 8px' 
+                                      }}>G:{totalLarge}</div>
+                                    )}
+                                    {totalVoids > 0 && (
+                                      <div style={{ 
+                                        minWidth: isMobile ? '30px' : '36px', height: isMobile ? '30px' : '36px', borderRadius: '10px', background: '#fef2f2', color: '#e11d48', border: '1px solid rgba(244, 63, 94, 0.4)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '13px' : '15px', 
+                                        fontWeight: 950, padding: '0 8px' 
+                                      }}>-{totalVoids}</div>
+                                    )}
                                   </div>
                                 );
                               })()}
                             </div>
                           </div>
 
-                          {/* THE TALLY GRID */}
-                          <div style={{ flex: 1, width: '100%', minHeight: 0 }}>
-                            <TallyGrid 
-                              productId={p.id} 
-                              actions={simplisticHistory[p.id] || []} 
-                              gridPage={simplisticGridPage[p.id]} 
-                              onPageChange={(pid, pg) => setSimplisticGridPage(prev => ({ ...prev, [pid]: pg }))}
-                              isMobile={isMobile}
-                            />
+                          {/* LARGE QUANTITY DISPLAY INSTEAD OF GRID */}
+                          <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ 
+                              fontSize: isMobile ? '64px' : '96px', 
+                              fontWeight: 900, 
+                              color: qty > 0 ? '#1E1B4B' : 'rgba(226, 232, 240, 0.4)',
+                              letterSpacing: '-4px',
+                              lineHeight: 1,
+                              userSelect: 'none'
+                            }}>
+                              {qty > 0 ? qty : 0}
+                            </span>
                           </div>
 
                           {isTakeawayMode && packagingId && (
@@ -1261,6 +1201,48 @@ export default function POSClient({
                                 <ShoppingBag size={14} color="#6366F1" />
                              </div>
                           )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* STICKY BOTTOM CATEGORY BAR */}
+                <div style={{ 
+                  marginTop: 'auto', 
+                  padding: isMobile ? '12px 0' : '16px 0',
+                  borderTop: '1px solid #E2E8F0',
+                  background: '#F8FAFC',
+                  zIndex: 50
+                }}>
+                  <div style={{ 
+                    display: 'flex', background: '#F1F5F9', padding: '6px', borderRadius: '20px', gap: '6px', maxWidth: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch'
+                  }} className="no-scrollbar">
+                    {categories.map(cat => {
+                      const isActive = posCategory === cat;
+                      const label = cat.replace(/^\d+\.\s*/, '').toUpperCase();
+                      
+                      return (
+                        <button key={cat}
+                          onClick={() => setPosCategory(cat)}
+                          style={{ 
+                            padding: isMobile ? '14px 24px' : '12px 24px', 
+                            borderRadius: '16px', border: 'none', cursor: 'pointer',
+                            fontWeight: 900, 
+                            fontSize: isMobile ? '15px' : '15px', 
+                            whiteSpace: 'nowrap',
+                            display: 'flex', alignItems: 'center', gap: '10px',
+                            background: isActive ? '#fff' : 'transparent',
+                            color: isActive ? '#6366F1' : '#64748B',
+                            boxShadow: isActive ? '0 8px 15px -3px rgba(0,0,0,0.06)' : 'none',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {cat === 'Tous' && <LayoutGrid size={isMobile ? 18 : 20} />}
+                          {cat.toLowerCase().includes('cafe') && <Coffee size={isMobile ? 18 : 20} />}
+                          {cat.toLowerCase().includes('jus') && <CupSoda size={isMobile ? 18 : 20} />}
+                          {cat.toLowerCase().includes('the') && <GlassWater size={isMobile ? 18 : 20} />}
+                          <span>{label}</span>
                         </button>
                       );
                     })}
@@ -1302,7 +1284,7 @@ export default function POSClient({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <button 
-                onClick={() => popupTriggerMode === 'ORDER' ? addItem(pendingProduct, null) : addSimplistic(pendingProduct.id, null)}
+                onClick={() => popupTriggerMode === 'ORDER' ? addItem(pendingProduct, undefined) : addSimplistic(pendingProduct.id, undefined, undefined)}
                 style={{ height: '70px', borderRadius: '20px', background: '#F8FAFC', border: '2px solid #E2E8F0', padding: '0 20px', display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer', transition: 'all 0.2s' }}
                 onMouseOver={(e) => { e.currentTarget.style.borderColor = '#6366F1'; e.currentTarget.style.background = '#F0F9FF'; }}
                 onMouseOut={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.background = '#F8FAFC'; }}
@@ -1329,7 +1311,7 @@ export default function POSClient({
                       onClick={() => {
                         setPackagingId(pack.id);
                         if (popupTriggerMode === 'ORDER') addItem(pendingProduct, pack);
-                        else addSimplistic(pendingProduct.id, pack);
+                        else addSimplistic(pendingProduct.id, undefined, pack);
                       }}
                       style={{ height: '100px', borderRadius: '20px', background: '#6366F110', border: '2px solid #6366F120', padding: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
                     >

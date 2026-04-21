@@ -7,6 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { usePOSStore } from '../../store/posStore';
 import { TallyGrid } from './TallyGrid';
+import { GlassPanel } from './GlassPanel';
 
 interface FloatingCardProps {
   id: string; // Add id
@@ -61,47 +62,51 @@ export const FloatingCard: React.FC<FloatingCardProps> = ({
         delayLongPress={300}
       >
         <Animated.View style={[
-          styles.card, 
+          styles.cardContainer, 
           animatedStyle,
-          isSelected && styles.cardSelected
         ]}>
-          <Text style={styles.icon}>{icon}</Text>
-          <Text style={styles.name} numberOfLines={2}>{name}</Text>
-          <Text style={styles.price}>{price.toFixed(3)} DT</Text>
-          
-          {isSelected && (
-            <>
-              {onLongPress && (
-                <>
-                  <TouchableOpacity 
-                    onPress={onLongPress}
-                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                    style={styles.actionButtonLeft}
-                  >
-                    <Text style={styles.actionText}>-</Text>
-                  </TouchableOpacity>
-
-                  {onToggleTakeaway && (
+          <GlassPanel intensity={40} style={[
+            styles.card,
+            isSelected && styles.cardSelected
+          ]}>
+            <Text style={styles.icon}>{icon}</Text>
+            <Text style={styles.name} numberOfLines={2}>{name}</Text>
+            <Text style={styles.price}>{price.toFixed(3)} DT</Text>
+            
+            {isSelected && (
+              <>
+                {onLongPress && (
+                  <>
                     <TouchableOpacity 
-                      onPress={onToggleTakeaway}
-                      style={styles.actionButtonRight}
+                      onPress={onLongPress}
+                      hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                      style={styles.actionButtonLeft}
                     >
-                      <Text style={{ fontSize: 16 }}>{takeawayQty > 0 ? '🛍️' : '🏠'}</Text>
+                      <Text style={styles.actionText}>-</Text>
                     </TouchableOpacity>
-                  )}
 
-                  <View style={{ width: '100%', paddingHorizontal: 4 }}>
-                    <TallyGrid count={qty} theme={theme} themeMode={themeMode} takeawayQty={takeawayQty} />
+                    {onToggleTakeaway && (
+                      <TouchableOpacity 
+                        onPress={onToggleTakeaway}
+                        style={styles.actionButtonRight}
+                      >
+                        <Text style={{ fontSize: 16 }}>{takeawayQty > 0 ? '🛍️' : '🏠'}</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    <View style={{ width: '100%', paddingHorizontal: 4 }}>
+                      <TallyGrid count={qty} theme={theme} themeMode={themeMode} takeawayQty={takeawayQty} />
+                    </View>
+                  </>
+                )}
+                {!onLongPress && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{qty}</Text>
                   </View>
-                </>
-              )}
-              {!onLongPress && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{qty}</Text>
-                </View>
-              )}
-            </>
-          )}
+                )}
+              </>
+            )}
+          </GlassPanel>
         </Animated.View>
       </TouchableWithoutFeedback>
     </View>
@@ -113,8 +118,12 @@ const createStyles = (theme: any) => StyleSheet.create({
     width: '33.33%',
     padding: 6,
   },
+  cardContainer: {
+    borderRadius: theme.shapes.radiusLg,
+    overflow: 'hidden',
+  },
   card: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: 'transparent',
     borderRadius: theme.shapes.radiusLg,
     padding: 12,
     alignItems: 'center',

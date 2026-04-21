@@ -6,6 +6,7 @@ import { NeonFoodTheme } from '../theme/NeonFoodTheme';
 import { NeonFoodThemeLight } from '../theme/NeonFoodThemeLight';
 import { VendorTheme } from '../theme/VendorTheme';
 import { VendorThemeLight } from '../theme/VendorThemeLight';
+import { GlassyTheme } from '../theme/GlassyTheme';
 import { ITheme } from '../theme/ThemeInterface';
 
 export interface Product {
@@ -58,7 +59,7 @@ export interface POSState {
   vendorId: string | null;
   vendorName: string | null;
   userRole: UserRole;
-  themeName: 'antigravity' | 'neon-food' | 'vendor';
+  themeName: 'antigravity' | 'neon-food' | 'vendor' | 'glassy';
   themeMode: 'light' | 'dark';
   theme: ITheme;
   isFiscalEnabled: boolean;
@@ -148,13 +149,14 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     defaultPosMode?: string
   } | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
-  const [themeName, setThemeName] = useState<'antigravity' | 'neon-food' | 'vendor'>('antigravity');
+  const [themeName, setThemeName] = useState<'antigravity' | 'neon-food' | 'vendor' | 'glassy'>('glassy');
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>('dark');
   const [hasBarSupport, setHasBarSupport] = useState(false);
   const [mktCart, setMktCart] = useState<Record<string, number>>({});
   
   const theme = useMemo(() => {
     const isLight = themeMode === 'light';
+    if (themeName === 'glassy') return GlassyTheme;
     if (themeName === 'vendor') return isLight ? VendorThemeLight : VendorTheme;
     if (themeName === 'neon-food') return isLight ? NeonFoodThemeLight : NeonFoodTheme;
     return isLight ? AntigravityThemeLight : AntigravityTheme;
@@ -198,7 +200,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (storedRole) setUserRole(storedRole as UserRole);
         if (storedRachma) setRachmaCart(JSON.parse(storedRachma));
         if (storedRachmaTakeaway) setRachmaTakeawayCart(JSON.parse(storedRachmaTakeaway));
-        if (storedTheme === 'neon-food' || storedTheme === 'antigravity' || storedTheme === 'vendor') {
+        if (storedTheme === 'neon-food' || storedTheme === 'antigravity' || storedTheme === 'vendor' || storedTheme === 'glassy') {
           setThemeName(storedTheme as any);
         }
         if (storedThemeMode === 'light' || storedThemeMode === 'dark') {
@@ -367,7 +369,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setUserRole(null);
   };
 
-  const setTheme = (name: 'antigravity' | 'neon-food' | 'vendor') => {
+  const setTheme = (name: 'antigravity' | 'neon-food' | 'vendor' | 'glassy') => {
     setThemeName(name);
   };
 

@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { StyleSheet, Text, View, Pressable, Platform, Animated } from 'react-native';
 import { usePOSStore, Product } from '../store/posStore';
+import { GlassPanel } from './Antigravity/GlassPanel';
 
 interface ProductButtonProps {
   product: Product;
@@ -23,8 +24,8 @@ const CATEGORY_PALETTE: Record<string, string> = {
 };
 
 const FALLBACK_COLORS = [
-  '#4F46E5', '#0891B2', '#059669', '#7C3AED',
-  '#DB2777', '#D97706', '#DC2626', '#15803D'
+  '#A1887F', '#8D6E63', '#795548', '#6D4C41',
+  '#5D4037', '#4E342E', '#3E2723', '#212121'
 ];
 
 function getCategoryColor(categoryName?: string | null): string {
@@ -68,30 +69,31 @@ export const ProductButton: React.FC<ProductButtonProps> = ({ product }) => {
     <Animated.View style={[
       styles.container, 
       { 
-        backgroundColor: bgColor,
         transform: [{ scale: scale }]
       }
     ]}>
-      <Pressable 
-        onPress={handlePress}
-        onLongPress={handleLongPress}
-        delayLongPress={300}
-        style={({ pressed }) => [
-          styles.pressable,
-          pressed && Platform.OS === 'web' ? { opacity: 0.8 } : {}
-        ]}
-      >
-        <Text style={styles.name} numberOfLines={2}>
-          {product.name}
-        </Text>
-        <Text style={styles.price}>{product.price.toFixed(3)} DT</Text>
-        
-        {!activeTable && quantity > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>x{quantity}</Text>
-          </View>
-        )}
-      </Pressable>
+      <GlassPanel intensity={40} style={[styles.glass, { backgroundColor: bgColor + '40' }]}>
+        <Pressable 
+          onPress={handlePress}
+          onLongPress={handleLongPress}
+          delayLongPress={300}
+          style={({ pressed }) => [
+            styles.pressable,
+            pressed && Platform.OS === 'web' ? { opacity: 0.8 } : {}
+          ]}
+        >
+          <Text style={styles.name} numberOfLines={2}>
+            {product.name}
+          </Text>
+          <Text style={styles.price}>{product.price.toFixed(3)} DT</Text>
+          
+          {!activeTable && quantity > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>x{quantity}</Text>
+            </View>
+          )}
+        </Pressable>
+      </GlassPanel>
     </Animated.View>
   );
 };
@@ -103,11 +105,13 @@ const styles = StyleSheet.create({
     height: 130, 
     borderRadius: 20, 
     margin: 6, 
-    elevation: 4, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2, 
-    shadowRadius: 5
+    overflow: 'hidden'
+  },
+  glass: {
+    flex: 1,
+    borderRadius: 20,
+    borderWidth: 0.8,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   pressable: { 
     flex: 1, 

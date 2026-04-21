@@ -11,7 +11,9 @@ import { MarketplaceScreen } from './src/screens/MarketplaceScreen';
 import { AntigravityTheme } from './src/theme/AntigravityTheme';
 import { FloatingCard } from './src/components/Antigravity/FloatingCard';
 import { GlassPanel } from './src/components/Antigravity/GlassPanel';
+import { GlassBackground } from './src/components/Antigravity/GlassBackground';
 import { RachmaButton } from './src/components/Antigravity/RachmaButton';
+import { StatusBar } from 'expo-status-bar';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -123,7 +125,7 @@ function LoginView() {
   }
 
   return (
-    <SafeAreaView style={loginStyles.loginContainer}>
+    <SafeAreaView style={{ flex: 1 }}>
       <TouchableOpacity 
         onPress={toggleThemeMode}
         style={{ 
@@ -138,21 +140,21 @@ function LoginView() {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ width: '85%', maxWidth: 400, backgroundColor: theme.colors.surface, padding: 32, borderRadius: 30, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.glassBorder }}>
+          <GlassPanel intensity={60} style={{ width: '85%', maxWidth: 400, padding: 32, borderRadius: 30, alignItems: 'center' }}>
             <Text style={{ fontSize: 60, marginBottom: 20 }}>☕</Text>
             
-            <View style={{ flexDirection: 'row', backgroundColor: theme.colors.background, borderRadius: 12, padding: 4, marginBottom: 24, width: '100%' }}>
+            <View style={{ flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: 4, marginBottom: 24, width: '100%' }}>
               <TouchableOpacity 
                 style={{ flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: loginMode === 'terminal' ? theme.colors.caramel : 'transparent', alignItems: 'center' }}
                 onPress={() => setLoginMode('terminal')}
               >
-                <Text style={{ color: loginMode === 'terminal' ? theme.colors.background : theme.colors.cream, fontWeight: '800', fontSize: 13 }}>Caisse</Text>
+                <Text style={{ color: loginMode === 'terminal' ? '#FFF' : theme.colors.cream, fontWeight: '800', fontSize: 13 }}>Caisse</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={{ flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: loginMode === 'account' ? theme.colors.caramel : 'transparent', alignItems: 'center' }}
                 onPress={() => setLoginMode('account')}
               >
-                <Text style={{ color: loginMode === 'account' ? theme.colors.background : theme.colors.cream, fontWeight: '800', fontSize: 13 }}>Partenaire</Text>
+                <Text style={{ color: loginMode === 'account' ? '#FFF' : theme.colors.cream, fontWeight: '800', fontSize: 13 }}>Partenaire</Text>
               </TouchableOpacity>
             </View>
 
@@ -292,7 +294,7 @@ function PinLoginView() {
 
   return (
     <SafeAreaView style={loginStyles.loginContainer}>
-      <View style={loginStyles.loginBox}>
+      <View style={[loginStyles.loginBox, { backgroundColor: 'transparent', borderWidth: 0 }]}>
         <Text style={loginStyles.loginTitle}>Session Barista</Text>
         <Text style={loginStyles.loginSub}>Boutique: {storeId}</Text>
         
@@ -425,14 +427,14 @@ function LocalTablesScreen({ onSelectTable }: { onSelectTable: (id: string) => v
   const { tables, getTableTotal, currentBarista, userRole, storeTables, theme } = usePOSStore();
   const posStyles = useMemo(() => createPosStyles(theme), [theme]);
   
-  const isOwner = userRole === 'owner';
+  const isOwner = userRole === 'owner' || userRole === 'superadmin';
   const assigned = currentBarista?.assignedTables || [];
   
   const baseTables = storeTables.length > 0 ? storeTables.map(t => t.label) : Array.from({ length: 48 }, (_, i) => `T${i + 1}`);
   const tableIds = isOwner ? baseTables : baseTables.filter(id => assigned.includes(id));
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <View style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: 'transparent', borderBottomWidth: 1, borderBottomColor: theme.colors.glassBorder }}>
         <Text style={{ fontSize: 13, fontWeight: '900', color: theme.colors.caramel, textTransform: 'uppercase', letterSpacing: 1 }}>Plan de Salle</Text>
         <Text style={{ fontSize: 12, color: theme.colors.creamMuted }}>{tableIds.length} tables disponibles</Text>
@@ -557,7 +559,7 @@ function LocalCaisseScreen({ onBackToTables }: {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       
       {activeTable && (
         <View style={{ backgroundColor: theme.colors.caramel, padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -664,18 +666,18 @@ function LocalCaisseScreen({ onBackToTables }: {
         activeTable={activeTable}
       />
 
-      <View style={posStyles.checkoutFooter}>
+      <GlassPanel intensity={50} style={posStyles.checkoutFooter}>
         <View style={{ flex: 1 }}>
           <TouchableOpacity 
             style={{ 
-              backgroundColor: theme.colors.surface, 
+              backgroundColor: 'rgba(255, 255, 255, 0.1)', 
               paddingHorizontal: 12, 
               paddingVertical: 8, 
               borderRadius: 12,
               marginBottom: 4,
               alignSelf: 'flex-start',
               borderWidth: 1,
-              borderColor: theme.colors.glassBorder
+              borderColor: 'rgba(255, 255, 255, 0.1)'
             }}
             onPress={() => setShowOrderModal(true)}
           >
@@ -686,7 +688,7 @@ function LocalCaisseScreen({ onBackToTables }: {
         <TouchableOpacity style={[posStyles.payBtn, { backgroundColor: theme.colors.caramel }]} onPress={handleCheckout}>
           <Text style={[posStyles.payBtnText, { color: theme.colors.background }]}>ENCAISSER</Text>
         </TouchableOpacity>
-      </View>
+      </GlassPanel>
     </View>
   );
 }
@@ -974,7 +976,7 @@ function OrderItemsModal({ visible, onClose, activeTable }: { visible: boolean; 
 
 // ─── STYLE FACTORIES ───────────────────────────
 const createLoginStyles = (theme: any) => StyleSheet.create({
-  loginContainer: { flex: 1, backgroundColor: theme.colors.background, paddingBottom: Platform.OS === 'android' ? 20 : 0 },
+  loginContainer: { flex: 1, backgroundColor: 'transparent', paddingBottom: Platform.OS === 'android' ? 20 : 0 },
   loginBox: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   loginTitle: { fontSize: 36, fontWeight: '900', color: theme.colors.cream, marginBottom: 8 },
   loginSub: { fontSize: 16, color: theme.colors.creamMuted, marginBottom: 48, fontWeight: '600', letterSpacing: 1 },
@@ -982,7 +984,7 @@ const createLoginStyles = (theme: any) => StyleSheet.create({
   pinDot: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: theme.colors.glassBorder, backgroundColor: 'transparent' },
   pinDotFilled: { backgroundColor: theme.colors.caramel, borderColor: theme.colors.caramel },
   keypad: { flexDirection: 'row', flexWrap: 'wrap', width: 280, justifyContent: 'space-between', gap: 20 },
-  key: { width: 80, height: 80, borderRadius: 40, backgroundColor: theme.colors.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: theme.colors.glassBorder },
+  key: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255, 255, 255, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' },
   keyText: { fontSize: 28, fontWeight: '700', color: theme.colors.cream },
 });
 
@@ -1005,22 +1007,22 @@ const createMainStyles = (theme: any) => StyleSheet.create({
 });
 
 const createPosStyles = (theme: any) => StyleSheet.create({
-  categoryCard: { width: (Platform.OS === 'web' || Platform.OS === 'android' ? 140 : 110), height: 120, backgroundColor: theme.colors.surface, borderRadius: theme.shapes.radiusMd, padding: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.glassBorder, marginBottom: 8, ...(theme.shadows.floating as any) },
+  categoryCard: { width: (Platform.OS === 'web' || Platform.OS === 'android' ? 140 : 110), height: 120, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: theme.shapes.radiusMd, padding: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 0.8, borderColor: 'rgba(255, 255, 255, 0.15)', marginBottom: 8, ...(theme.shadows.floating as any) },
   categoryEmoji: { fontSize: 32, marginBottom: 8 },
   categoryText: { fontSize: 13, fontWeight: '800', color: theme.colors.cream, textAlign: 'center' },
   categoryCount: { fontSize: 10, color: theme.colors.caramel, marginTop: 4, fontWeight: '600' },
-  tableCard: { width: '23%', aspectRatio: 1, backgroundColor: theme.colors.surface, borderRadius: theme.shapes.radiusMd, marginBottom: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: theme.colors.glassBorder, ...(theme.shadows.floating as any) },
+  tableCard: { width: '23%', aspectRatio: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: theme.shapes.radiusMd, marginBottom: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 0.8, borderColor: 'rgba(255, 255, 255, 0.15)', ...(theme.shadows.floating as any) },
   tableNumber: { fontSize: 18, fontWeight: '900', color: theme.colors.caramel },
   tableTotal: { fontSize: 10, fontWeight: '700', color: theme.colors.cream, marginTop: 4 },
   tableStatus: { fontSize: 11, color: theme.colors.softOrange, marginTop: 2, fontWeight: '700' },
-  checkoutFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: theme.colors.background, borderTopWidth: 1, borderTopColor: theme.colors.glassBorder, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, paddingBottom: Platform.OS === 'ios' ? 30 : (Platform.OS === 'android' ? 64 : 16), justifyContent: 'space-between', ...(theme.shadows.floating as any) },
+  checkoutFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'transparent', borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.1)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, paddingBottom: Platform.OS === 'ios' ? 30 : (Platform.OS === 'android' ? 64 : 16), justifyContent: 'space-between', ...(theme.shadows.floating as any) },
   totalPrice: { fontSize: 26, fontWeight: '900', color: theme.colors.cream, letterSpacing: -0.5 },
   payBtn: { backgroundColor: theme.colors.caramel, paddingHorizontal: 28, paddingVertical: 16, borderRadius: 16, minWidth: 150, alignItems: 'center', ...(theme.shadows.glow as any) },
   payBtnText: { color: theme.colors.background, fontSize: 15, fontWeight: '900', letterSpacing: 1 },
 });
 
 const createMgStyles = (theme: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flex: 1, backgroundColor: 'transparent' },
   title: { fontSize: 26, fontWeight: '900', color: theme.colors.cream, marginBottom: 4 },
   subtitle: { fontSize: 14, color: theme.colors.creamMuted, marginBottom: 20 },
   cardRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
@@ -1028,7 +1030,7 @@ const createMgStyles = (theme: any) => StyleSheet.create({
   cardLabel: { fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: '600', marginBottom: 8 },
   cardValue: { fontSize: 28, fontWeight: '900', color: '#FFF' },
   emptyText: { color: '#94A3B8', fontSize: 15, textAlign: 'center', marginTop: 40 },
-  saleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: theme.colors.surface, padding: 16, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: theme.colors.glassBorder },
+  saleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: 16, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' },
   saleId: { fontSize: 16, fontWeight: '700', color: theme.colors.cream },
   saleTime: { fontSize: 13, color: theme.colors.creamMuted, marginTop: 2 },
   saleTotal: { fontSize: 18, fontWeight: '800', color: theme.colors.caramel },
@@ -1108,13 +1110,13 @@ function LocalRachmaScreen() {
   });
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       {/* Category Ribbon */}
       <View style={{ 
         paddingVertical: 12, 
         borderBottomWidth: 1, 
         borderBottomColor: theme.colors.glassBorder,
-        backgroundColor: `${theme.colors.surface}40`
+        backgroundColor: theme.colors.surface
       }}>
         <ScrollView 
           horizontal 
@@ -1132,7 +1134,7 @@ function LocalRachmaScreen() {
                 onPress={() => setSelectedCat(cat)}
                 style={{ 
                   paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, 
-                  backgroundColor: isActive ? theme.colors.caramel : `${theme.colors.surface}80`,
+                  backgroundColor: isActive ? theme.colors.caramel : theme.colors.surface,
                   alignItems: 'center',
                   borderWidth: 1, 
                   borderColor: isActive ? theme.colors.softOrange : theme.colors.glassBorder,
@@ -1287,9 +1289,9 @@ function LocalPreparateurScreen({ onBack }: { onBack: () => void }) {
   const readySales = sales.filter(s => s.preparationStatus === 'READY' && s.preparationStation === station);
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <View style={{ backgroundColor: theme.colors.surface, padding: 16, paddingTop: 60, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-        <TouchableOpacity onPress={onBack} style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: theme.colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: 16, paddingTop: 60, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+        <TouchableOpacity onPress={onBack} style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255, 255, 255, 0.1)', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 18 }}>⬅️</Text>
         </TouchableOpacity>
         <View style={{ flex: 1, flexDirection: 'row', gap: 8 }}>
@@ -1584,7 +1586,7 @@ function LocalMenuScreen({ onSelect }: { onSelect: (tab: TabId) => void }) {
   const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   
   const permissions = currentBarista?.permissions || [];
-  const isOwner = userRole === 'owner';
+  const isOwner = userRole === 'owner' || userRole === 'superadmin';
 
   const menuItems: { id: TabId, label: string, icon: string, permission?: string }[] = [
     { id: 'tables', label: 'Plan Salle', icon: '🪑', permission: 'TABLES' },
@@ -1633,7 +1635,7 @@ function LocalMenuScreen({ onSelect }: { onSelect: (tab: TabId) => void }) {
 function POSRoot() {
   const { storeId, currentBarista, userRole, setActiveTable, theme, activeTable, isFiscalEnabled } = usePOSStore();
   const { confirm } = useConfirm();
-  const isOwner = userRole === 'owner';
+  const isOwner = userRole === 'owner' || userRole === 'superadmin';
   
   const permissions = currentBarista?.permissions || [];
   // Mode Rachma Pur: Only if they have RACHMA and nothing else that is functional (POS, TABLES, BAR, DASHBOARD)
@@ -1678,7 +1680,7 @@ function POSRoot() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
       <POSHeader />
       <View style={{ flex: 1 }}>
         {renderScreen()}
@@ -1749,11 +1751,12 @@ function MainApp() {
   // Vendors don't have storeId, they have vendorId (which is used in ManagementRoot)
   if (userRole !== 'vendor' && !storeId) return <LoginView />;
 
-  if (authMode === 'TERMINAL') {
-    return <POSRoot />;
-  }
-
-  return <ManagementRoot />;
+  return (
+    <View style={{ flex: 1 }}>
+      <GlassBackground />
+      {authMode === 'TERMINAL' ? <POSRoot /> : <ManagementRoot />}
+    </View>
+  );
 }
 
 export default function App() {
@@ -1782,6 +1785,7 @@ export default function App() {
       <ConfirmProvider>
         <NotificationWatcher />
         <MainApp />
+        <StatusBar style="light" />
       </ConfirmProvider>
     </POSProvider>
   );

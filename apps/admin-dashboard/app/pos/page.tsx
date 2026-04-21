@@ -86,8 +86,9 @@ export default async function POSPage() {
   const planNameUpper = (store.subscription?.plan?.name || '').toUpperCase();
   const isFiscal = !!store.isFiscalEnabled;
   const isRachmaPlan = !planNameUpper || planNameUpper === 'RACHMA' || planNameUpper === 'STARTER';
+  const isRachmaOnly = planNameUpper === 'RACHMA';
   
-  if (isRachmaPlan && !isFiscal) {
+  if (isRachmaOnly || (isRachmaPlan && !isFiscal)) {
     return (
       <>
         <POSClient

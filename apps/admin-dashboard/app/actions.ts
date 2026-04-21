@@ -667,7 +667,7 @@ export async function recordSale(data: {
   discount?: number;
   paymentMethod?: string;
   paymentDetails?: any;
-  items: { productId: string; quantity: number; price: number }[];
+  items: { productId: string; quantity: number; price: number; consumeType?: string }[];
   tableName?: string;
   baristaId?: string;
   takenById?: string;
@@ -839,8 +839,9 @@ export async function recordSale(data: {
       });
 
       for (const recipe of recipes) {
-        // Filter: only deduct if BOTH or matches sale consumeType
-        const modeMatches = recipe.consumeType === 'BOTH' || recipe.consumeType === s.consumeType;
+        // Filter: only deduct if BOTH or matches sale consumeType (prefer item-level consumeType)
+        const itemConsumeType = (item as any).consumeType || s.consumeType;
+        const modeMatches = recipe.consumeType === 'BOTH' || recipe.consumeType === itemConsumeType;
         if (!modeMatches) continue;
 
         const totalToDeduct = Number(recipe.quantity) * item.quantity;
@@ -2752,8 +2753,93 @@ export async function deleteTerminalAction(id: string) {
 }
 
 export async function seedDemoProductsAction(storeId: string) {
-  const store = await prisma.store.findUnique({ where: { id: storeId } });
+  const store = await prisma.store.findUnique({ 
+    where: { id: storeId },
+    include: { subscription: { include: { plan: true } } }
+  });
   if (!store) throw new Error('Store not found');
+
+  const isRachma = store.subscription?.plan?.name?.toUpperCase() === 'RACHMA';
+
+  if (isRachma) {
+    const rachmaCategories = [
+      { name: '1. CAFÉS', color: '#8B5CF6', icon: 'Coffee' },
+      { name: '2. THÉS', color: '#10B981', icon: 'Coffee' },
+      { name: '3. EAUX', color: '#3B82F6', icon: 'CupSoda' },
+      { name: '4. BOISSONS FROIDES SIMPLES', color: '#F97316', icon: 'CupSoda' },
+      { name: '5. BIÈRE', color: '#EAB308', icon: 'Beer' },
+      { name: '6. TABAC', color: '#64748B', icon: 'Cigarette' },
+      { name: '7. PETITS ACCOMPAGNEMENTS', color: '#D946EF', icon: 'Croissant' },
+      { name: '8. PRODUITS INVISIBLES', color: '#94A3B8', icon: 'Ghost' }
+    ];
+
+    const posCategoriesMap: Record<string, string> = {};
+    for (const c of rachmaCategories) {
+      const cat = await prisma.category.create({
+        data: { name: c.name, color: c.color, icon: c.icon, storeId: store.id }
+      });
+      posCategoriesMap[c.name] = cat.id;
+    }
+
+    const rachmaProducts = [
+      { name: 'Café express', price: 1.5, cat: '1. CAFÉS' },
+      { name: 'Café direct', price: 1.5, cat: '1. CAFÉS' },
+      { name: 'Café allongé', price: 1.8, cat: '1. CAFÉS' },
+      { name: 'Capucin', price: 2.0, cat: '1. CAFÉS' },
+      { name: 'Thé nature', price: 1.2, cat: '2. THÉS' },
+      { name: 'Thé à la menthe', price: 1.5, cat: '2. THÉS' },
+      { name: 'Thé amande', price: 2.5, cat: '2. THÉS' },
+      { name: 'Eau minérale 0.5L', price: 1.0, cat: '3. EAUX' },
+      { name: 'Eau minérale 1L', price: 1.5, cat: '3. EAUX' },
+      { name: 'Eau gazeuse', price: 1.8, cat: '3. EAUX' },
+      { name: 'Soda', price: 3.0, cat: '4. BOISSONS FROIDES SIMPLES' },
+      { name: 'Jus industriel', price: 3.5, cat: '4. BOISSONS FROIDES SIMPLES' },
+      { name: 'Bière locale', price: 4.5, cat: '5. BIÈRE' },
+      { name: 'Bière sans alcool', price: 3.5, cat: '5. BIÈRE' },
+      { name: 'Cigarettes', price: 10.0, cat: '6. TABAC' },
+      { name: 'Briquet', price: 2.0, cat: '6. TABAC' },
+      { name: 'Croissant', price: 1.5, cat: '7. PETITS ACCOMPAGNEMENTS' },
+      { name: 'Biscuit', price: 1.0, cat: '7. PETITS ACCOMPAGNEMENTS' },
+      { name: 'Cake simple', price: 2.0, cat: '7. PETITS ACCOMPAGNEMENTS' },
+      { name: 'Café + sucre', price: 0.0, cat: '8. PRODUITS INVISIBLES' },
+      { name: 'Verre d\'eau', price: 0.0, cat: '8. PRODUITS INVISIBLES' },
+      { name: 'Service table', price: 0.0, cat: '8. PRODUITS INVISIBLES' }
+    ];
+
+    const productIds: Record<string, string> = {};
+    for (const p of rachmaProducts) {
+      if (posCategoriesMap[p.cat]) {
+        const prod = await prisma.product.create({
+          data: { name: p.name, price: p.price, categoryId: posCategoriesMap[p.cat], storeId: store.id }
+        });
+        productIds[p.name] = prod.id;
+      }
+    }
+
+    // Add Cups Stock & Recipes
+    const smallCup = await prisma.stockItem.create({
+      data: { name: 'Petit Gobelet', quantity: 1000, storeId: store.id }
+    });
+    const largeCup = await prisma.stockItem.create({
+      data: { name: 'Grand Gobelet', quantity: 1000, storeId: store.id }
+    });
+
+    const coffeeProds = ['Café express', 'Café direct', 'Café allongé', 'Capucin', 'Thé nature', 'Thé à la menthe', 'Thé amande'];
+    for (const name of coffeeProds) {
+      if (productIds[name]) {
+        await prisma.recipeItem.create({
+          data: { productId: productIds[name], stockItemId: smallCup.id, quantity: 1, consumeType: 'TAKEAWAY_SMALL' }
+        });
+        await prisma.recipeItem.create({
+          data: { productId: productIds[name], stockItemId: largeCup.id, quantity: 1, consumeType: 'TAKEAWAY_LARGE' }
+        });
+      }
+    }
+
+    revalidatePath('/admin/products');
+    revalidatePath('/admin/products/categories');
+    return { success: true, message: 'Inventaire Rachma installé avec succès !' };
+  }
 
   // 5.0 Units
   const unitsData = ['kg', 'litre', 'pièce', 'pack', 'g'];
