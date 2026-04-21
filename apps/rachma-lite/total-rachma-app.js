@@ -63,7 +63,18 @@ function renderPackagingConsumption() {
     }
 
     entries.forEach(([pkgId, count]) => {
-        const pkg = CONFIG.PACKAGING[pkgId];
+        let pkg = CONFIG.PACKAGING[pkgId];
+        if (!pkg) {
+            for (const prod of state.products) {
+                if (prod.packagings) {
+                    const found = prod.packagings.find(p => p.id === pkgId);
+                    if (found) {
+                        pkg = found;
+                        break;
+                    }
+                }
+            }
+        }
         if (!pkg) return;
         
         const row = document.createElement('div');
