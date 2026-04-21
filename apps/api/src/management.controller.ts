@@ -551,4 +551,119 @@ export class ManagementController {
       },
     }));
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // EXPENSES CRUD
+  // ═══════════════════════════════════════════════════════════
+
+  @Get('expenses/:storeId')
+  async getExpenses(@Param('storeId') storeId: string, @Query('limit') limit?: number): Promise<any> {
+    return prisma.expense.findMany({
+      where: { storeId },
+      orderBy: { date: 'desc' },
+      take: limit ? Number(limit) : 50,
+    });
+  }
+
+  @Post('expenses')
+  async createExpense(@Body() body: {
+    storeId: string; category: string; amount: number; description?: string; date?: string;
+  }): Promise<any> {
+    return prisma.expense.create({
+      data: {
+        storeId: body.storeId,
+        category: body.category,
+        amount: body.amount,
+        description: body.description,
+        date: body.date ? new Date(body.date) : new Date(),
+      }
+    });
+  }
+
+  @Put('expenses/:id')
+  async updateExpense(@Param('id') id: string, @Body() body: {
+    category?: string; amount?: number; description?: string; date?: string;
+  }): Promise<any> {
+    return prisma.expense.update({
+      where: { id },
+      data: {
+        ...(body.category && { category: body.category }),
+        ...(body.amount !== undefined && { amount: body.amount }),
+        ...(body.description !== undefined && { description: body.description }),
+        ...(body.date && { date: new Date(body.date) }),
+      }
+    });
+  }
+
+  @Delete('expenses/:id')
+  async deleteExpense(@Param('id') id: string): Promise<any> {
+    return prisma.expense.delete({ where: { id } });
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // REPORTING SUMMARY
+  // ═══════════════════════════════════════════════════════════
+
+  @Get('reports/summary/:storeId')
+  async getReportSummary(@Param('storeId') storeId: string): Promise<any> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    // 1. Sales summaries
+    const [todaySales, monthSales] = await Promise.all([
+      prisma.sale.aggregate({
+        where: { storeId, createdAt: { gte: today } },
+        _sum: { total: true },
+        _count: true,
+      }),
+      prisma.sale.aggregate({
+        where: { storeId, createdAt: { gte: firstDayOfMonth } },
+        _sum: { total: true },
+        _count: true,
+      }),
+    ]);
+
+    // 2. Expense summaries
+    const [monthExpenses] = await Promise.all([
+      prisma.expense.aggregate({
+        where: { storeId, date: { gte: firstDayOfMonth } },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    // 3. Last 7 days chart data
+    const chartData = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      const nextD = new Date(d);
+      nextD.setDate(nextD.getDate() + 1);
+
+      const dayTotal = await prisma.sale.aggregate({
+        where: { storeId, createdAt: { gte: d, lt: nextD } },
+        _sum: { total: true },
+      });
+
+      chartData.push({
+        date: d.toISOString().split('T')[0],
+        total: Number(dayTotal._sum.total || 0),
+      });
+    }
+
+    return {
+      today: {
+        total: Number(todaySales._sum.total || 0),
+        count: todaySales._count,
+      },
+      month: {
+        total: Number(monthSales._sum.total || 0),
+        expenses: Number(monthExpenses._sum.amount || 0),
+        net: Number(monthSales._sum.total || 0) - Number(monthExpenses._sum.amount || 0),
+      },
+      chart: chartData,
+    };
+  }
 }

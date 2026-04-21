@@ -21,14 +21,16 @@
         "backgroundColor": "#0A0A0B"
       },
       "package": "com.elkassa.rachmalite",
-      "permissions": ["INTERNET"]
+      "permissions": [
+        "INTERNET"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "c5f266aa-3f36-453b-8ed0-7555f758d5b5"
       }
     }
   }

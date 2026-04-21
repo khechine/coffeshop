@@ -112,6 +112,13 @@ function applyPermissions() {
             window.location.href = 'index.html';
         }
     }
+
+    // Gestion tab visibility (STORE_OWNER only)
+    const isOwner = user.role === 'STORE_OWNER' || user.role === 'SUPERADMIN';
+    const gestionTab = document.getElementById('tab-gestion');
+    if (gestionTab) {
+        gestionTab.style.display = isOwner ? 'flex' : 'none';
+    }
 }
 
 function getStaffLogKey() {

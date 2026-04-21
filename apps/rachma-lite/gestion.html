@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Rachma Lite | Gestion</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="gestion-style.css">
+</head>
+<body>
+
+    <script src="shared.js"></script>
+    <script>
+        const user = loadUser();
+        const storeId = localStorage.getItem('rachma_store_id');
+        if (!storeId) window.location.href = 'pairing.html';
+        if (user.role !== 'STORE_OWNER' && user.role !== 'SUPERADMIN') window.location.href = 'index.html';
+    </script>
+
+    <div class="app-container">
+        <header class="glass-header">
+            <div class="header-content">
+                <h1 id="page-title">Centre de Gestion</h1>
+                <div class="header-tabs">
+                    <button class="header-tab active" onclick="switchMgmtTab('catalogue')">📦 Catalogue</button>
+                    <button class="header-tab" onclick="switchMgmtTab('stocks')">📊 Stocks</button>
+                    <button class="header-tab" onclick="switchMgmtTab('marketplace')">🛒 Marché</button>
+                    <button class="header-tab" onclick="switchMgmtTab('finance')">💰 Finance</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="mgmt-content" id="mgmt-viewport">
+            <!-- Content dynamicly loaded by gestion-app.js -->
+            <div id="loading-view" class="loading-state">
+                <div class="spinner"></div>
+                <p>Chargement des données...</p>
+            </div>
+        </main>
+
+        <nav class="nav-tabs" id="main-nav">
+            <a href="index.html" class="nav-tab">⚡ RACHMA</a>
+            <a href="tables.html" class="nav-tab" id="tab-tables">🪑 TABLES</a>
+            <a href="total-rachma.html" class="nav-tab">📈 RAPPORTS</a>
+            <a href="gestion.html" class="nav-tab active" id="tab-gestion">⚙️ GESTION</a>
+        </nav>
+
+        <!-- Smart FAB -->
+        <button id="smart-fab" class="smart-fab" onclick="handleFabAction()">
+            <span class="fab-icon">+</span>
+        </button>
+
+        <!-- Bottom Sheet Modal -->
+        <div id="bottom-sheet" class="bottom-sheet">
+            <div class="sheet-overlay" onclick="closeSheet()"></div>
+            <div class="sheet-content">
+                <div class="sheet-handle"></div>
+                <div class="sheet-header">
+                    <h2 id="sheet-title">Titre</h2>
+                    <button class="close-sheet-btn" onclick="closeSheet()">×</button>
+                </div>
+                <div id="sheet-body" class="sheet-body">
+                    <!-- Form goes here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="gestion-app.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            applyPermissions();
+        });
+    </script>
+</body>
+</html>
