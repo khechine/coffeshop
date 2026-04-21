@@ -99,25 +99,30 @@ function loadUser() {
 function applyPermissions() {
     const savedUser = localStorage.getItem('rachma_user');
     if (!savedUser) return;
-    const user = JSON.parse(savedUser);
-    const perms = user.permissions || [];
     
-    // Hide Tables tab if user lacks POS/TABLES perms
-    const hasPosAccess = perms.includes('POS') || perms.includes('TABLES');
-    const tablesTab = document.getElementById('tab-tables');
-    
-    if (tablesTab && !hasPosAccess) {
-        tablesTab.style.display = 'none';
-        if (window.location.pathname.includes('tables.html')) {
-            window.location.href = 'index.html';
+    try {
+        const user = JSON.parse(savedUser);
+        const perms = user.permissions || [];
+        
+        // Hide Tables tab if user lacks POS/TABLES perms
+        const hasPosAccess = perms.includes('POS') || perms.includes('TABLES');
+        const tablesTab = document.getElementById('tab-tables');
+        
+        if (tablesTab && !hasPosAccess) {
+            tablesTab.style.display = 'none';
+            if (window.location.pathname.includes('tables.html')) {
+                window.location.href = 'index.html';
+            }
         }
-    }
 
-    // Gestion tab visibility (STORE_OWNER only)
-    const isOwner = user.role === 'STORE_OWNER' || user.role === 'SUPERADMIN';
-    const gestionTab = document.getElementById('tab-gestion');
-    if (gestionTab) {
-        gestionTab.style.display = isOwner ? 'flex' : 'none';
+        // Gestion tab visibility (STORE_OWNER only)
+        const isOwner = user.role === 'STORE_OWNER' || user.role === 'SUPERADMIN';
+        const gestionTab = document.getElementById('tab-gestion');
+        if (gestionTab) {
+            gestionTab.style.display = isOwner ? 'flex' : 'none';
+        }
+    } catch (e) {
+        console.error("Rachma: applyPermissions failed", e);
     }
 }
 

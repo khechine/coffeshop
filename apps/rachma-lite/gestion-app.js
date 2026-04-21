@@ -125,23 +125,39 @@ function showLoading() {
 
 function renderView() {
     const viewport = document.getElementById('mgmt-viewport');
+    if (!viewport) return;
     
-    if (currentTab === 'catalogue') renderCatalogue(viewport);
-    else if (currentTab === 'stocks') renderStocks(viewport);
-    else if (currentTab === 'marketplace') renderMarketplace(viewport);
-    else if (currentTab === 'finance') renderFinance(viewport);
+    console.log("Rachma Management: Rendering view", currentTab);
+    
+    try {
+        if (currentTab === 'catalogue') renderCatalogue(viewport);
+        else if (currentTab === 'stocks') renderStocks(viewport);
+        else if (currentTab === 'marketplace') renderMarketplace(viewport);
+        else if (currentTab === 'finance') renderFinance(viewport);
+    } catch (e) {
+        console.error("Rendering error", e);
+        viewport.innerHTML = `<div class="error-state"><p>⚠️ Erreur d'affichage : ${e.message}</p></div>`;
+    }
 }
 
 function renderCatalogue(container) {
     let html = `<h2>Votre Catalogue</h2>`;
+    if (!state.products || state.products.length === 0) {
+        html += `<p class="item-meta">Aucun produit trouvé.</p>`;
+        container.innerHTML = html;
+        return;
+    }
+    
     html += `<div class="mgmt-grid">`;
     state.products.forEach(p => {
+        const price = Number(p.price || 0).toFixed(3);
+        const catName = p.category ? p.category.name : 'Général';
         html += `
             <div class="mgmt-card" onclick="openEditProductSheet('${p.id}')">
                 <span class="card-icon">${p.icon || '📦'}</span>
-                <div class="card-title">${p.category?.name || 'Général'}</div>
-                <div class="card-value">${Number(p.price).toFixed(3)} DT</div>
-                <div class="item-name">${p.name}</div>
+                <div class="card-title">${catName}</div>
+                <div class="card-value">${price} DT</div>
+                <div class="item-name">${p.name || 'Produit sans nom'}</div>
                 <div class="item-badge ${p.active ? 'badge-ok' : 'badge-low'}" style="margin-top:10px; display:inline-block;">
                     ${p.active ? 'ACTIF' : 'DÉSACTIVÉ'}
                 </div>
@@ -154,16 +170,22 @@ function renderCatalogue(container) {
 
 function renderStocks(container) {
     let html = `<h2>Gestion des Stocks</h2>`;
+    if (!state.stock || state.stock.length === 0) {
+        html += `<p class="item-meta">Aucun article en stock trouvé.</p>`;
+        container.innerHTML = html;
+        return;
+    }
+
     state.stock.forEach(s => {
-        const level = Number(s.quantity);
+        const level = Number(s.quantity || 0);
         const threshold = Number(s.minThreshold || 0);
         const isLow = level <= threshold;
         
         html += `
             <div class="list-item" onclick="openEditStockSheet('${s.id}')">
                 <div class="item-info">
-                    <div class="item-name">${s.name}</div>
-                    <div class="item-meta">Seuil: ${threshold} | Unité: ${s.unit?.name || 'u'}</div>
+                    <div class="item-name">${s.name || 'Article sans nom'}</div>
+                    <div class="item-meta">Seuil: ${threshold} | Unité: ${s.unit ? s.unit.name : 'u'}</div>
                 </div>
                 <div style="text-align:right;">
                     <div class="card-value" style="font-size:18px;">${level.toFixed(2)}</div>
@@ -183,16 +205,19 @@ function renderFinance(container) {
     }
 
     let html = `<h2>Performance Financière</h2>`;
+    const todayTotal = Number(sum.today?.total || 0).toFixed(3);
+    const monthNet = Number(sum.month?.net || 0).toFixed(3);
+
     html += `
         <div class="mgmt-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:24px;">
             <div class="mgmt-card">
                 <div class="card-title">Aujourd'hui</div>
-                <div class="card-value">${sum.today.total.toFixed(3)}</div>
-                <div class="item-meta">${sum.today.count} ventes</div>
+                <div class="card-value">${todayTotal}</div>
+                <div class="item-meta">${sum.today?.count || 0} ventes</div>
             </div>
             <div class="mgmt-card" style="border-color: var(--accent);">
                 <div class="card-title">Marge Mois</div>
-                <div class="card-value" style="color:var(--accent);">${sum.month.net.toFixed(3)}</div>
+                <div class="card-value" style="color:var(--accent);">${monthNet}</div>
                 <div class="item-meta">Ventes - Dépenses</div>
             </div>
         </div>
@@ -200,7 +225,7 @@ function renderFinance(container) {
         <h3>Dépenses Récentes</h3>
         <button class="primary-btn" onclick="openAddExpenseSheet()" style="background:var(--bg-surface); margin-bottom:16px;">Saisir une dépense</button>
         <div id="expense-list">
-            <!-- Loading expenses logic if needed -->
+            <!-- Liste des dépenses en cours... -->
         </div>
     `;
     container.innerHTML = html;
@@ -208,13 +233,18 @@ function renderFinance(container) {
 
 function renderMarketplace(container) {
     let html = `<h2>Marketplace B2B</h2>`;
+    if (!state.marketplace.products || state.marketplace.products.length === 0) {
+        html += `<p class="item-meta">Chargement du marché...</p>`;
+    }
+
     html += `<div class="mgmt-grid">`;
-    state.marketplace.products.forEach(p => {
+    (state.marketplace.products || []).forEach(p => {
+        const price = Number(p.price || 0).toFixed(3);
         html += `
             <div class="mgmt-card">
-                <div class="card-title">${p.vendor?.companyName || 'Fournisseur'}</div>
-                <div class="item-name">${p.name}</div>
-                <div class="card-value" style="font-size:16px;">${Number(p.price).toFixed(3)} DT / ${p.unit}</div>
+                <div class="card-title">${p.vendor ? p.vendor.companyName : 'Fournisseur'}</div>
+                <div class="item-name">${p.name || 'Produit'}</div>
+                <div class="card-value" style="font-size:16px;">${price} DT / ${p.unit || 'u'}</div>
                 <button class="primary-btn" style="margin-top:12px; padding:8px 12px; font-size:12px;" onclick="handleOrderFromMkt('${p.id}')">Commander</button>
             </div>
         `;

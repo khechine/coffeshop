@@ -14,7 +14,13 @@
         const user = loadUser();
         const storeId = localStorage.getItem('rachma_store_id');
         if (!storeId) window.location.href = 'pairing.html';
-        if (user.role !== 'STORE_OWNER' && user.role !== 'SUPERADMIN') window.location.href = 'index.html';
+        
+        // Safety check for user object
+        if (!user) {
+             window.location.href = 'login.html';
+        } else if (user.role !== 'STORE_OWNER' && user.role !== 'SUPERADMIN') {
+             window.location.href = 'index.html';
+        }
     </script>
 
     <div class="app-container">
