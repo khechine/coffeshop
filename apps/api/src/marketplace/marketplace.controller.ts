@@ -1,34 +1,26 @@
 import { Controller, Get, Param, Post, Body, UseGuards } from '@nestjs/common';
 import { InteractionService } from './interaction.service';
 import { ContractService } from './contract.service';
+import { AlertService } from './alert.service';
 import { MarketplaceAuthGuard } from '../auth/marketplace.guard';
+import { SuperAdminGuard } from '../auth/superadmin.guard';
 import { SubscriptionGuard } from './subscription.guard';
 import { prisma } from '@coffeeshop/database';
 
 const db = prisma as any;
 
-/**
- * MarketplaceController — Phase 2 & 3 Anti-Leakage
- *
- * Phase 2: Interaction logging + SuperAdmin risk monitoring
- * Phase 3: Subscription paywall + Exclusive platform services
- *          (Contract certificates, Vendor analytics, BNPL eligibility)
- */
 @Controller('marketplace')
 export class MarketplaceController {
   constructor(
     private readonly interactionService: InteractionService,
     private readonly contractService: ContractService,
+    private readonly alertService: AlertService,
   ) {}
 
   // ══════════════════════════════════════════════════════
   // PHASE 2 — Interaction Logging
   // ══════════════════════════════════════════════════════
 
-  /**
-   * Called by the frontend whenever a coffee shop views a vendor profile/product.
-   * Requires active subscription (SubscriptionGuard).
-   */
   @UseGuards(MarketplaceAuthGuard, SubscriptionGuard)
   @Post('interactions/log')
   async logInteraction(
@@ -48,10 +40,6 @@ export class MarketplaceController {
   // PHASE 3 — Exclusive Platform Services
   // ══════════════════════════════════════════════════════
 
-  /**
-   * 📄 Legal proof of first contact — Certificate of Relationship
-   * Only accessible to parties with an active subscription.
-   */
   @UseGuards(MarketplaceAuthGuard, SubscriptionGuard)
   @Get('contract/certificate/:storeId/:vendorId')
   async getRelationshipCertificate(
@@ -61,20 +49,12 @@ export class MarketplaceController {
     return this.contractService.getRelationshipCertificate(storeId, vendorId);
   }
 
-  /**
-   * 📊 Vendor analytics dashboard — Exclusive platform service
-   * Vendors can only see who viewed them through the platform.
-   */
   @UseGuards(MarketplaceAuthGuard)
   @Get('analytics/vendor/:vendorId')
   async getVendorAnalytics(@Param('vendorId') vendorId: string) {
     return this.contractService.getVendorAnalytics(vendorId);
   }
 
-  /**
-   * 💳 BNPL Eligibility — Available only for platform partners
-   * Stores that bypass the platform lose BNPL access.
-   */
   @UseGuards(MarketplaceAuthGuard, SubscriptionGuard)
   @Get('bnpl/eligibility/:storeId/:vendorId')
   async getBNPLEligibility(
@@ -85,12 +65,18 @@ export class MarketplaceController {
   }
 
   // ══════════════════════════════════════════════════════
-  // SUPERADMIN Monitoring
+  // PHASE 4 — SuperAdmin Monitoring (🔒 SUPERADMIN ONLY)
   // ══════════════════════════════════════════════════════
 
-  /**
-   * Dashboard SuperAdmin: all at-risk relationships (score ≥ 50).
-   */
+  /** Platform health summary — main dashboard widget */
+  @UseGuards(SuperAdminGuard)
+  @Get('admin/health')
+  async getPlatformHealth() {
+    return this.alertService.getPlatformHealthSummary();
+  }
+
+  /** Full risk report — relationships with score ≥ 50 */
+  @UseGuards(SuperAdminGuard)
   @Get('admin/risk-report')
   async getRiskReport() {
     const relationships = await db.storeVendorRelationship.findMany({
@@ -106,10 +92,14 @@ export class MarketplaceController {
     return relationships.map((r: any) => ({
       storeId: r.storeId,
       storeName: r.store?.name,
+      storeCity: r.store?.city,
       vendorId: r.vendorId,
       vendorName: r.vendor?.companyName,
       status: r.status,
       score: r.leakageRiskScore,
+      scoreLabel:
+        r.leakageRiskScore >= 85 ? 'CRITIQUE' :
+        r.leakageRiskScore >= 70 ? 'ÉLEVÉ' : 'MOYEN',
       isFlagged: r.isFlagged,
       flagReason: r.flagReason,
       discoveredAt: r.discoveredAt,
@@ -122,9 +112,45 @@ export class MarketplaceController {
     }));
   }
 
-  /**
-   * SuperAdmin: full interaction history for a specific store/vendor pair.
-   */
+  /** Run a full automated leakage scan */
+  @UseGuards(SuperAdminGuard)
+  @Post('admin/scan')
+  async runLeakageScan() {
+    return this.alertService.runLeakageScan();
+  }
+
+  /** Detect interaction spikes: > 5 views in 7d, 0 orders */
+  @UseGuards(SuperAdminGuard)
+  @Get('admin/spikes')
+  async detectSpikes() {
+    return this.alertService.detectSpikes();
+  }
+
+  /** Platform-wide quick stats */
+  @UseGuards(SuperAdminGuard)
+  @Get('admin/stats')
+  async getPlatformStats() {
+    const [total, highRisk, flagged, activeOrdered, recentInteractions] = await Promise.all([
+      db.storeVendorRelationship.count(),
+      db.storeVendorRelationship.count({ where: { leakageRiskScore: { gte: 70 } } }),
+      db.storeVendorRelationship.count({ where: { isFlagged: true } }),
+      db.storeVendorRelationship.count({ where: { status: 'ORDERED' } }),
+      db.vendorInteraction.count({
+        where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
+      }),
+    ]);
+    return {
+      totalRelationships: total,
+      activeOrdered,
+      highRiskCount: highRisk,
+      flaggedCount: flagged,
+      leakageRiskRate: total > 0 ? ((highRisk / total) * 100).toFixed(1) + '%' : '0%',
+      weeklyInteractions: recentInteractions,
+    };
+  }
+
+  /** Detail history for a store/vendor pair */
+  @UseGuards(SuperAdminGuard)
   @Get('admin/history/:storeId/:vendorId')
   async getRelationshipHistory(
     @Param('storeId') storeId: string,
@@ -134,8 +160,8 @@ export class MarketplaceController {
       db.storeVendorRelationship.findUnique({
         where: { storeId_vendorId: { storeId, vendorId } },
         include: {
-          store: { select: { name: true } },
-          vendor: { select: { companyName: true } },
+          store: { select: { name: true, city: true } },
+          vendor: { select: { companyName: true, city: true } },
         },
       }),
       db.vendorInteraction.findMany({
@@ -144,13 +170,11 @@ export class MarketplaceController {
         take: 50,
       }),
     ]);
-
     return { relationship, interactions };
   }
 
-  /**
-   * SuperAdmin: manually flag a suspicious relationship.
-   */
+  /** Manually flag a suspicious relationship */
+  @UseGuards(SuperAdminGuard)
   @Post('admin/flag/:storeId/:vendorId')
   async flagRelationship(
     @Param('storeId') storeId: string,
@@ -167,41 +191,17 @@ export class MarketplaceController {
     return { ok: true };
   }
 
-  /**
-   * SuperAdmin: platform-wide leakage summary stats.
-   */
-  @Get('admin/stats')
-  async getPlatformStats() {
-    const [
-      totalRelationships,
-      highRisk,
-      flagged,
-      activeOrdered,
-      recentInteractions,
-    ] = await Promise.all([
-      db.storeVendorRelationship.count(),
-      db.storeVendorRelationship.count({ where: { leakageRiskScore: { gte: 70 } } }),
-      db.storeVendorRelationship.count({ where: { isFlagged: true } }),
-      db.storeVendorRelationship.count({ where: { status: 'ORDERED' } }),
-      db.vendorInteraction.count({
-        where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
-      }),
-    ]);
-
-    return {
-      summary: {
-        totalRelationships,
-        activeOrdered,
-        highRiskCount: highRisk,
-        flaggedCount: flagged,
-        leakageRiskRate:
-          totalRelationships > 0
-            ? ((highRisk / totalRelationships) * 100).toFixed(1) + '%'
-            : '0%',
-      },
-      weeklyActivity: {
-        interactions7d: recentInteractions,
-      },
-    };
+  /** Unflag a relationship */
+  @UseGuards(SuperAdminGuard)
+  @Post('admin/unflag/:storeId/:vendorId')
+  async unflagRelationship(
+    @Param('storeId') storeId: string,
+    @Param('vendorId') vendorId: string,
+  ) {
+    await db.storeVendorRelationship.updateMany({
+      where: { storeId, vendorId },
+      data: { isFlagged: false, flagReason: null },
+    });
+    return { ok: true };
   }
 }

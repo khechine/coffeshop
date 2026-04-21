@@ -17,6 +17,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     { label: 'Référentiels Globaux', icon: Database, href: '/superadmin/referentiels' },
     { label: 'Gestion Portefeuilles', icon: Wallet, href: '/superadmin/wallet', badge: 'Dépôts' },
     { label: 'Gestion Utilisateurs', icon: Users, href: '/superadmin/users' },
+    { label: 'Monitoring Anti-Bypass', icon: ShieldCheck, href: '/superadmin/marketplace/monitoring', badge: 'Sécurité' },
   ];
 
   const handleLogout = async () => {
