@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Rachma Lite | Terminal Grid</title>
+    <link rel="stylesheet" href="style.css">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+
+    <script src="shared.js"></script>
+    <script>
+        // Initial setup via shared.js
+        const user = localStorage.getItem('rachma_user');
+        const storeId = localStorage.getItem('rachma_store_id');
+        if (!storeId) window.location.href = 'pairing.html';
+    </script>
+
+    <div class="app-container">
+        <header>
+            <div class="user-badge">
+                <div id="user-name" class="user-name">...</div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="handleLogout()" class="logout-btn">Session</button>
+                    <button onclick="handleUnpair()" class="logout-btn" style="border-color:var(--danger); color:var(--danger);">Oublier</button>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="dash-counters">
+                    <div class="counter-item">
+                        <span class="counter-label">Vendus</span>
+                        <span id="count-sold" class="counter-val sale">0</span>
+                    </div>
+                </div>
+                <button id="btn-sound-toggle" class="sound-toggle-btn">🔊</button>
+            </div>
+        </header>
+
+        <div class="mode-bar">
+            <div class="mode-switcher">
+                <button id="mode-sale" class="mode-btn active sale">VENTE</button>
+                <button id="mode-loss" class="mode-btn loss">PERTE</button>
+            </div>
+        </div>
+
+        <!-- Category Filter Bar -->
+        <div class="categories-bar" id="categories-bar">
+            <!-- Rendered by app.js -->
+        </div>
+
+        <!-- Scrollable Grid Area -->
+        <main id="product-list" class="product-list">
+            <!-- Rendered by app.js -->
+        </main>
+
+        <nav class="nav-tabs" id="main-nav">
+            <a href="index.html" class="nav-tab active">⚡ RACHMA</a>
+            <a href="tables.html" class="nav-tab" id="tab-tables">🪑 TABLES</a>
+            <a href="total-rachma.html" class="nav-tab">📈 RAPPORTS</a>
+        </nav>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -116,7 +116,7 @@ export async function toggleFiscalMode(enabled: boolean, pinCode?: string) {
 // ══════════════════════════════════════════════════════════════
 //  PRODUCTS
 // ══════════════════════════════════════════════════════════════
-export async function createProduct(data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; recipe?: { stockItemId: string; quantity: number; consumeType?: string }[] }) {
+export async function createProduct(data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; recipe?: { stockItemId: string; quantity: number; consumeType?: string; isPackaging?: boolean }[] }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
   
@@ -135,7 +135,8 @@ export async function createProduct(data: { name: string; price: number; categor
         create: data.recipe.map(r => ({
           stockItemId: r.stockItemId,
           quantity: r.quantity,
-          consumeType: r.consumeType || 'BOTH'
+          consumeType: r.consumeType || 'BOTH',
+          isPackaging: r.isPackaging || false
         }))
       } : undefined
     } 
@@ -144,7 +145,7 @@ export async function createProduct(data: { name: string; price: number; categor
 }
 
 
-export async function updateProduct(id: string, data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; recipe?: { stockItemId: string; quantity: number; consumeType?: string }[] }) {
+export async function updateProduct(id: string, data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; recipe?: { stockItemId: string; quantity: number; consumeType?: string; isPackaging?: boolean }[] }) {
   await prisma.recipeItem.deleteMany({ where: { productId: id } });
   await prisma.product.update({ 
     where: { id }, 
@@ -161,7 +162,8 @@ export async function updateProduct(id: string, data: { name: string; price: num
         create: data.recipe.map(r => ({
           stockItemId: r.stockItemId,
           quantity: r.quantity,
-          consumeType: r.consumeType || 'BOTH'
+          consumeType: r.consumeType || 'BOTH',
+          isPackaging: r.isPackaging || false
         }))
       } : undefined
     }

@@ -4,23 +4,24 @@ import { ITheme } from './ThemeInterface';
 export const AntigravityTheme: ITheme = {
   colors: {
     // Backgrounds (Dark Mode dominant)
-    background: '#120F0E',      // Deep Espresso
-    surface: '#1A1614',         // Lighter Espresso for cards
-    surfaceLight: '#2C1B18',    // Highlight Espresso
+    // Backgrounds (Dark Mode dominant)
+    background: '#0D0B0A',      // Pure Obsidian Espresso
+    surface: '#151210',         // Rich Charcoal 
+    surfaceLight: '#231E1B',    // Highlight Surface
     
     // Accents & Warm tones
-    caramel: '#D48446',         // Primary CTA, Highlights
-    cream: '#F5E6D3',           // Text primary
-    creamMuted: 'rgba(245, 230, 211, 0.6)', // Text secondary
-    softOrange: '#FF9F43',      // Warnings, Badges
+    caramel: '#D48446',         // Liquid Gold / Caramel
+    cream: '#F2E8DA',           // Warm Silky Cream
+    creamMuted: 'rgba(242, 232, 218, 0.5)', // Muted Silk
+    softOrange: '#E67E22',      // Deep Saffron / Warnings
     
     // Status
-    success: '#059669',
-    danger: '#EF4444',
+    success: '#10B981',
+    danger: '#F43F5E',
     
     // Glassmorphism overlays
-    glassBg: 'rgba(26, 22, 20, 0.6)', 
-    glassBorder: 'rgba(245, 230, 211, 0.1)',
+    glassBg: 'rgba(21, 18, 16, 0.75)', 
+    glassBorder: 'rgba(242, 232, 218, 0.08)',
   },
   
   shapes: {

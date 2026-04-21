@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Caisse Commerciale | Rachma Lite</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Specific overrides for professional POS */
+        .app-container { max-width: 1200px; height: 100vh; }
+        body { background-image: none; background-color: #050505; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button onclick="window.location.href='tables.html'" style="background: var(--bg-surface); border: none; font-size: 20px; color: white; padding: 10px; border-radius: 12px; cursor: pointer;">←</button>
+                <div class="user-badge">
+                    <div id="user-name" class="user-name" style="margin-right: 10px;">...</div>
+                    <button onclick="handleLogout()" class="logout-btn">Session</button>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="btn-print" class="sound-toggle-btn">🖨️</button>
+                <button id="btn-clear-pos" class="sound-toggle-btn">🗑️</button>
+            </div>
+        </header>
+
+        <main class="pos-layout">
+            <!-- Product Section -->
+            <section id="pos-product-grid" class="pos-products">
+                <!-- Rendered by pos-app.js -->
+            </section>
+
+            <!-- Cart Section -->
+            <section class="pos-cart">
+                <div class="cart-header">
+                    <div style="font-weight: 800; font-size: 14px; letter-spacing: 1px;">DÉTAIL COMMANDE</div>
+                </div>
+                
+                <div id="cart-items" class="cart-items">
+                    <!-- Items rendered here -->
+                </div>
+
+                <div class="cart-footer">
+                    <div class="tax-row">
+                        <span>Sous-total HT</span>
+                        <span id="subtotal-ht">0.000 DT</span>
+                    </div>
+                    <div class="tax-row">
+                        <span>TVA (19%)</span>
+                        <span id="tax-amount">0.000 DT</span>
+                    </div>
+                    <div class="final-total">
+                        <span>TOTAL TTC</span>
+                        <span id="total-ttc">0.000 DT</span>
+                    </div>
+                    <button id="btn-validate" class="btn-checkout" style="width: 100%; margin-top: 20px;">ENCAISSER & IMPRIMER</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Hidden Print Layout -->
+        <div id="print-area" class="print-receipt" style="display: none;">
+            <h2>COFFEESHOP B2B</h2>
+            <div id="print-date" style="text-align: center; font-size: 12px;"></div>
+            <div class="sep"></div>
+            <div id="print-table" style="font-weight: bold;"></div>
+            <div class="sep"></div>
+            <div id="print-items"></div>
+            <div class="sep"></div>
+            <div id="print-totals"></div>
+            <div class="sep"></div>
+            <p style="text-align: center; font-size: 10px;">Merci de votre visite !</p>
+        </div>
+    </div>
+
+    <script src="shared.js"></script>
+    <script>
+        const storeId = localStorage.getItem('rachma_store_id');
+        if (!storeId) window.location.href = 'pairing.html';
+    </script>
+    <script src="pos-app.js"></script>
+</body>
+</html>

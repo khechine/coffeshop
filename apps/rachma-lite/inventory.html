@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Rachma Lite | Inventaire & Pertes</title>
+    <link rel="stylesheet" href="inventory-style.css">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <div class="brand-title">LITE INVENTAIRE</div>
+            <div class="dash-counters">
+                <button id="btn-sound-toggle" class="sound-toggle-btn">🔊</button>
+                <a href="total-rachma.html" class="report-link">RAPPORT TOTAL</a>
+                <div class="counter-item">
+                    <span class="counter-label">Vendus</span>
+                    <span id="count-sold" class="counter-val sale">0</span>
+                </div>
+                <div class="counter-item">
+                    <span class="counter-label">Pertes</span>
+                    <span id="count-lost" class="counter-val loss">0</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="mode-bar">
+            <div class="mode-switcher">
+                <button id="mode-sale" class="mode-btn active sale">MODE VENTE</button>
+                <button id="mode-loss" class="mode-btn loss">MODE PERTE</button>
+            </div>
+        </div>
+
+        <!-- Section Navigation Rapide (Optionnel) -->
+        <!-- <nav class="category-nav" id="category-nav"></nav> -->
+
+        <main id="product-list" class="product-list">
+            <!-- Rendered by inventory-app.js -->
+        </main>
+
+        <nav class="nav-tabs">
+            <a href="index.html" class="nav-tab active">⚡ RACHMA</a>
+            <a href="tables.html" class="nav-tab">🪑 TABLES</a>
+            <a href="total-rachma.html" class="nav-tab">📈 RAPPORTS</a>
+        </nav>
+    </div>
+
+    <script src="inventory-app.js"></script>
+</body>
+</html>

@@ -259,7 +259,7 @@ function LoginView() {
                 </TouchableOpacity>
               </>
             )}
-          </View>
+          </GlassPanel>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -344,7 +344,7 @@ function PinLoginView() {
 
 // ─── POS HEADER COMPONENT ──────────────────────────────────
 function POSHeader({ title, sub }: { title?: string; sub?: string }) {
-  const { currentBarista, storeName, logoutBarista, clearRachma, theme } = usePOSStore();
+  const { currentBarista, storeName, userRole, logoutBarista, clearRachma, theme } = usePOSStore();
   const { confirm } = useConfirm();
   const [time, setTime] = useState(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
   const mainStyles = useMemo(() => createMainStyles(theme), [theme]);
@@ -407,10 +407,17 @@ function POSHeader({ title, sub }: { title?: string; sub?: string }) {
           borderTopColor: theme.colors.glassBorder
         }}>
           <View>
-            <Text style={{ color: theme.colors.caramel, fontSize: 11, fontWeight: '800' }}>
-              👤 {currentBarista?.name || 'Session'}
-            </Text>
-            <Text style={{ color: theme.colors.creamMuted, fontSize: 10, marginTop: 1 }}>{today}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ color: theme.colors.caramel, fontSize: 11, fontWeight: '900' }}>
+                👤 {currentBarista?.name || 'Session'}
+              </Text>
+              {userRole === 'superadmin' && (
+                <View style={{ backgroundColor: 'rgba(212, 132, 70, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: theme.colors.caramel }}>
+                  <Text style={{ color: theme.colors.caramel, fontSize: 8, fontWeight: '900' }}>🛡️ SUPERADMIN</Text>
+                </View>
+              )}
+            </View>
+            <Text style={{ color: theme.colors.creamMuted, fontSize: 10, marginTop: 1, fontWeight: '700' }}>{today}</Text>
           </View>
 
           <View style={{ backgroundColor: 'rgba(212, 132, 70, 0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(212, 132, 70, 0.3)' }}>
@@ -574,17 +581,17 @@ function LocalCaisseScreen({ onBackToTables }: {
         </View>
       )}
 
-      <View style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: 'transparent', borderBottomWidth: 1, borderBottomColor: theme.colors.glassBorder, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <View style={{ paddingHorizontal: 16, paddingVertical: 14, backgroundColor: 'transparent', borderBottomWidth: 1, borderBottomColor: 'rgba(242, 232, 218, 0.05)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View style={{ flex: 1 }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <TouchableOpacity onPress={() => setNavStack([])}>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: theme.colors.creamMuted }}>POS</Text>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: theme.colors.caramel, letterSpacing: 0.5 }}>TERMINAL</Text>
             </TouchableOpacity>
             {navStack.map((step, i) => (
               <View key={i} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ color: theme.colors.glassBorder, marginHorizontal: 6 }}>›</Text>
+                <Text style={{ color: 'rgba(242, 232, 218, 0.2)', marginHorizontal: 8 }}>/</Text>
                 <TouchableOpacity onPress={() => setNavStack(navStack.slice(0, i + 1))}>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: theme.colors.caramel }}>{step}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: theme.colors.cream, letterSpacing: 0.5 }}>{step.toUpperCase()}</Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -592,13 +599,14 @@ function LocalCaisseScreen({ onBackToTables }: {
         </View>
         <TouchableOpacity 
           style={{ 
-            backgroundColor: unsyncedCount > 0 ? theme.colors.caramel : theme.colors.surface, 
-            paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, marginLeft: 12
+            backgroundColor: unsyncedCount > 0 ? theme.colors.caramel : 'rgba(255,255,255,0.05)', 
+            paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, marginLeft: 12,
+            borderWidth: 1, borderColor: unsyncedCount > 0 ? theme.colors.caramel : 'rgba(242, 232, 218, 0.1)'
           }} 
           onPress={handleSync}
         >
-          <Text style={{ fontSize: 11, fontWeight: '900', color: unsyncedCount > 0 ? theme.colors.background : theme.colors.creamMuted }}>
-            {unsyncedCount > 0 ? `SYNC (${unsyncedCount})` : 'A JOUR'}
+          <Text style={{ fontSize: 10, fontWeight: '900', color: unsyncedCount > 0 ? theme.colors.background : theme.colors.creamMuted }}>
+            {unsyncedCount > 0 ? `SYNC (${unsyncedCount})` : 'SECURED'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -660,35 +668,37 @@ function LocalCaisseScreen({ onBackToTables }: {
   })()}
 </ScrollView>
 
+      <View style={posStyles.checkoutFooter} pointerEvents="box-none">
+        <GlassPanel intensity={90} style={{ 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          paddingHorizontal: 20, 
+          paddingVertical: 14, 
+          borderRadius: 24,
+          justifyContent: 'space-between',
+          borderWidth: 1,
+          borderColor: 'rgba(242, 232, 218, 0.1)',
+          ...(theme.shadows.floating as any)
+        }}>
+          <TouchableOpacity onPress={() => setShowOrderModal(true)} style={{ flex: 1, marginRight: 16 }}>
+            <Text style={posStyles.totalPrice}>{Number(totalPrice).toFixed(3)} <Text style={{ fontSize: 12 }}>DT</Text></Text>
+            <Text style={{ fontSize: 11, color: theme.colors.creamMuted, fontWeight: '800', textTransform: 'uppercase' }}>{totalItems} articles • Détails 📋</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={handleCheckout} 
+            activeOpacity={0.8}
+            style={posStyles.payBtn}
+          >
+            <Text style={posStyles.payBtnText}>ENCAISSER</Text>
+          </TouchableOpacity>
+        </GlassPanel>
+      </View>
+
       <OrderItemsModal 
         visible={showOrderModal} 
         onClose={() => setShowOrderModal(false)}
         activeTable={activeTable}
       />
-
-      <GlassPanel intensity={50} style={posStyles.checkoutFooter}>
-        <View style={{ flex: 1 }}>
-          <TouchableOpacity 
-            style={{ 
-              backgroundColor: 'rgba(255, 255, 255, 0.1)', 
-              paddingHorizontal: 12, 
-              paddingVertical: 8, 
-              borderRadius: 12,
-              marginBottom: 4,
-              alignSelf: 'flex-start',
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.1)'
-            }}
-            onPress={() => setShowOrderModal(true)}
-          >
-            <Text style={{ fontSize: 11, fontWeight: '900', color: theme.colors.creamMuted }}>VOIR COMMANDE ({totalItems})</Text>
-          </TouchableOpacity>
-          <Text style={[posStyles.totalPrice, { color: theme.colors.cream }]}>{Number(totalPrice).toFixed(3)} DT</Text>
-        </View>
-        <TouchableOpacity style={[posStyles.payBtn, { backgroundColor: theme.colors.caramel }]} onPress={handleCheckout}>
-          <Text style={[posStyles.payBtnText, { color: theme.colors.background }]}>ENCAISSER</Text>
-        </TouchableOpacity>
-      </GlassPanel>
     </View>
   );
 }
@@ -1007,18 +1017,56 @@ const createMainStyles = (theme: any) => StyleSheet.create({
 });
 
 const createPosStyles = (theme: any) => StyleSheet.create({
-  categoryCard: { width: (Platform.OS === 'web' || Platform.OS === 'android' ? 140 : 110), height: 120, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: theme.shapes.radiusMd, padding: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 0.8, borderColor: 'rgba(255, 255, 255, 0.15)', marginBottom: 8, ...(theme.shadows.floating as any) },
-  categoryEmoji: { fontSize: 32, marginBottom: 8 },
-  categoryText: { fontSize: 13, fontWeight: '800', color: theme.colors.cream, textAlign: 'center' },
-  categoryCount: { fontSize: 10, color: theme.colors.caramel, marginTop: 4, fontWeight: '600' },
-  tableCard: { width: '23%', aspectRatio: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: theme.shapes.radiusMd, marginBottom: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 0.8, borderColor: 'rgba(255, 255, 255, 0.15)', ...(theme.shadows.floating as any) },
-  tableNumber: { fontSize: 18, fontWeight: '900', color: theme.colors.caramel },
-  tableTotal: { fontSize: 10, fontWeight: '700', color: theme.colors.cream, marginTop: 4 },
-  tableStatus: { fontSize: 11, color: theme.colors.softOrange, marginTop: 2, fontWeight: '700' },
-  checkoutFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'transparent', borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.1)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, paddingBottom: Platform.OS === 'ios' ? 30 : (Platform.OS === 'android' ? 64 : 16), justifyContent: 'space-between', ...(theme.shadows.floating as any) },
-  totalPrice: { fontSize: 26, fontWeight: '900', color: theme.colors.cream, letterSpacing: -0.5 },
-  payBtn: { backgroundColor: theme.colors.caramel, paddingHorizontal: 28, paddingVertical: 16, borderRadius: 16, minWidth: 150, alignItems: 'center', ...(theme.shadows.glow as any) },
-  payBtnText: { color: theme.colors.background, fontSize: 15, fontWeight: '900', letterSpacing: 1 },
+  categoryCard: { 
+    width: (Platform.OS === 'web' || Platform.OS === 'android' ? 140 : 115), 
+    height: 110, 
+    backgroundColor: 'rgba(255, 255, 255, 0.03)', 
+    borderRadius: 20, 
+    padding: 12, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    borderWidth: 1, 
+    borderColor: 'rgba(242, 232, 218, 0.08)', 
+    marginBottom: 10, 
+    ...(theme.shadows.floating as any) 
+  },
+  categoryEmoji: { fontSize: 32, marginBottom: 6 },
+  categoryText: { fontSize: 11, fontWeight: '900', color: theme.colors.cream, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 },
+  categoryCount: { fontSize: 9, color: theme.colors.caramel, marginTop: 4, fontWeight: '800' },
+  tableCard: { 
+    width: '22%', 
+    aspectRatio: 1, 
+    backgroundColor: 'rgba(255, 255, 255, 0.04)', 
+    borderRadius: 20, 
+    marginBottom: 12, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    borderWidth: 1, 
+    borderColor: 'rgba(242, 232, 218, 0.08)', 
+    ...(theme.shadows.floating as any) 
+  },
+  tableNumber: { fontSize: 20, fontWeight: '900', color: theme.colors.caramel },
+  tableTotal: { fontSize: 10, fontWeight: '800', color: theme.colors.cream, marginTop: 4 },
+  tableStatus: { fontSize: 10, color: theme.colors.creamMuted, marginTop: 2, fontWeight: '700', textTransform: 'uppercase' },
+  checkoutFooter: { 
+    position: 'absolute', 
+    bottom: Platform.OS === 'android' ? 88 : 24, 
+    left: 12, 
+    right: 12, 
+    backgroundColor: 'transparent', 
+    zIndex: 100 
+  },
+  totalPrice: { fontSize: 28, fontWeight: '900', color: theme.colors.cream, letterSpacing: -1 },
+  payBtn: { 
+    backgroundColor: theme.colors.caramel, 
+    paddingHorizontal: 24, 
+    paddingVertical: 14, 
+    borderRadius: 20, 
+    minWidth: 140, 
+    alignItems: 'center', 
+    ...(theme.shadows.glow as any) 
+  },
+  payBtnText: { color: theme.colors.background, fontSize: 14, fontWeight: '900', letterSpacing: 1 },
 });
 
 const createMgStyles = (theme: any) => StyleSheet.create({
@@ -1113,10 +1161,10 @@ function LocalRachmaScreen() {
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       {/* Category Ribbon */}
       <View style={{ 
-        paddingVertical: 12, 
+        paddingVertical: 14, 
         borderBottomWidth: 1, 
-        borderBottomColor: theme.colors.glassBorder,
-        backgroundColor: theme.colors.surface
+        borderBottomColor: 'rgba(242, 232, 218, 0.05)',
+        backgroundColor: 'transparent'
       }}>
         <ScrollView 
           horizontal 
@@ -1133,19 +1181,19 @@ function LocalRachmaScreen() {
                 key={cat}
                 onPress={() => setSelectedCat(cat)}
                 style={{ 
-                  paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, 
-                  backgroundColor: isActive ? theme.colors.caramel : theme.colors.surface,
+                  paddingHorizontal: 20, paddingVertical: 10, borderRadius: 16, 
+                  backgroundColor: isActive ? theme.colors.caramel : 'rgba(255,255,255,0.03)',
                   alignItems: 'center',
                   borderWidth: 1, 
-                  borderColor: isActive ? theme.colors.softOrange : theme.colors.glassBorder,
-                  ...(isActive ? (theme.shadows.glow as any) : (theme.shadows.floating as any))
+                  borderColor: isActive ? theme.colors.caramel : 'rgba(242, 232, 218, 0.1)',
+                  ...(isActive ? (theme.shadows.glow as any) : {})
                 }}
               >
                 <Text style={{ 
-                  fontSize: 12, 
+                  fontSize: 11, 
                   fontWeight: '900', 
                   color: isActive ? theme.colors.background : theme.colors.cream, 
-                  letterSpacing: 1 
+                  letterSpacing: 0.8
                 }}>
                   {displayCat}
                 </Text>
@@ -1174,55 +1222,57 @@ function LocalRachmaScreen() {
         <View style={{ height: 160 }} />
       </ScrollView>
 
-      <View style={{ position: 'absolute', bottom: Platform.OS === 'android' ? 88 : 24, left: 16, right: 16, zIndex: 1000, elevation: 15 }} pointerEvents="box-none">
-        <GlassPanel intensity={85} style={{ padding: 16, flexDirection: 'column', alignItems: 'stretch' }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(245, 230, 211, 0.05)' }}>
-            <Text style={{ color: theme.colors.creamMuted, fontSize: 13, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' }}>Total Rachmet</Text>
+      <View style={{ position: 'absolute', bottom: Platform.OS === 'android' ? 88 : 24, left: 12, right: 12, zIndex: 1000 }} pointerEvents="box-none">
+        <GlassPanel intensity={90} style={{ 
+          padding: 16, 
+          borderRadius: 24,
+          borderWidth: 1,
+          borderColor: 'rgba(242, 232, 218, 0.1)',
+          ...(theme.shadows.floating as any)
+        }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(242, 232, 218, 0.05)' }}>
+            <View>
+              <Text style={{ color: theme.colors.caramel, fontSize: 10, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>Total Rachmet</Text>
+              <Text style={{ color: theme.colors.cream, fontSize: 11, fontWeight: '700' }}>{Object.keys(rachmaCart).length} articles en cours</Text>
+            </View>
             <Text style={{ color: theme.colors.cream, fontSize: 32, fontWeight: '900', letterSpacing: -1 }}>{Number(total).toFixed(3)} <Text style={{ fontSize: 14 }}>DT</Text></Text>
           </View>
           
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' }}>
             <TouchableOpacity 
               onPress={() => setShowHistory(true)}
-              activeOpacity={0.7}
-              style={{ width: '48%', backgroundColor: 'rgba(245, 230, 211, 0.05)', height: 60, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, borderWidth: 1, borderColor: 'rgba(245, 230, 211, 0.2)', flexDirection: 'row', gap: 8 }}
+              style={{ width: '48%', backgroundColor: 'rgba(255,255,255,0.04)', height: 50, justifyContent: 'center', alignItems: 'center', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(242, 232, 218, 0.1)', flexDirection: 'row', gap: 8 }}
             >
               <Text style={{ fontSize: 18 }}>📜</Text>
-              <Text style={{ fontSize: 13, fontWeight: '900', color: theme.colors.cream }}>JOURNAL</Text>
+              <Text style={{ fontSize: 11, fontWeight: '900', color: theme.colors.cream, letterSpacing: 0.5 }}>JOURNAL</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               onPress={() => setShowPastSales(true)}
-              activeOpacity={0.7}
-              style={{ width: '48%', backgroundColor: 'rgba(16, 185, 129, 0.1)', height: 60, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.2)', flexDirection: 'row', gap: 8 }}
+              style={{ width: '48%', backgroundColor: 'rgba(16, 185, 129, 0.08)', height: 50, justifyContent: 'center', alignItems: 'center', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.2)', flexDirection: 'row', gap: 8 }}
             >
               <Text style={{ fontSize: 18 }}>💰</Text>
-              <Text style={{ fontSize: 13, fontWeight: '900', color: '#10B981' }}>CLÔTURÉS</Text>
+              <Text style={{ fontSize: 11, fontWeight: '900', color: '#10B981', letterSpacing: 0.5 }}>CLÔTURÉS</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               onPress={handleClearRequest}
-              activeOpacity={0.7}
-              style={{ width: '48%', backgroundColor: 'rgba(239, 68, 68, 0.1)', height: 60, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)', flexDirection: 'row', gap: 8 }}
+              style={{ width: '30%', backgroundColor: 'rgba(244, 63, 94, 0.08)', height: 50, justifyContent: 'center', alignItems: 'center', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(244, 63, 94, 0.2)' }}
             >
-              <Text style={{ fontSize: 18 }}>💰</Text>
-              <Text style={{ fontSize: 13, fontWeight: '900', color: '#EF4444' }}>VIDER TOUT</Text>
+              <Text style={{ fontSize: 12, fontWeight: '900', color: theme.colors.danger }}>VIDER</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               onPress={handleFinish}
-              activeOpacity={0.9}
-              style={{ width: '48%', backgroundColor: theme.colors.caramel, height: 60, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, flexDirection: 'row', gap: 8 }}
+              style={{ flex: 1, backgroundColor: theme.colors.caramel, height: 50, justifyContent: 'center', alignItems: 'center', borderRadius: 16, ...(theme.shadows.glow as any) }}
             >
-              <Text style={{ fontSize: 18 }}>💰</Text>
-              <Text style={{ fontSize: 13, fontWeight: '900', color: theme.colors.background }}>ENCAISSER</Text>
+              <Text style={{ fontSize: 14, fontWeight: '900', color: theme.colors.background, letterSpacing: 1 }}>ENCAISSER</Text>
             </TouchableOpacity>
 
             {hasBarSupport && (
               <TouchableOpacity 
                 onPress={handlePrepare}
-                activeOpacity={0.9}
-                style={{ width: '100%', backgroundColor: 'rgba(212, 132, 70, 0.1)', height: 50, justifyContent: 'center', alignItems: 'center', borderRadius: theme.shapes.radiusLg, borderWidth: 1, borderColor: theme.colors.caramel, flexDirection: 'row', gap: 8, marginTop: 4 }}
+                style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.03)', height: 50, justifyContent: 'center', alignItems: 'center', borderRadius: 16, borderWidth: 1, borderColor: theme.colors.caramel, flexDirection: 'row', gap: 8 }}
               >
                 <Text style={{ fontSize: 18 }}>☕</Text>
                 <Text style={{ color: theme.colors.caramel, fontWeight: '900', fontSize: 13, letterSpacing: 0.5 }}>7ADHER</Text>
@@ -1582,7 +1632,7 @@ function LocalStaffScreen() {
 type TabId = 'tables' | 'caisse' | 'dashboard' | 'products' | 'categories' | 'stock' | 'suppliers' | 'orders' | 'staff' | 'notifs' | 'rachma' | 'menu' | 'bar' | 'marketplace';
 
 function LocalMenuScreen({ onSelect }: { onSelect: (tab: TabId) => void }) {
-  const { theme, currentBarista, userRole, authMode, isFiscalEnabled } = usePOSStore();
+  const { theme, currentBarista, userRole, authMode, isFiscalEnabled, planName } = usePOSStore();
   const mgStyles = useMemo(() => createMgStyles(theme), [theme]);
   
   const permissions = currentBarista?.permissions || [];
@@ -1604,8 +1654,18 @@ function LocalMenuScreen({ onSelect }: { onSelect: (tab: TabId) => void }) {
     const hasPerm = isOwner || !item.permission || permissions.includes(item.permission);
     // Explicit Marketplace restriction: only in Account mode
     if (item.id === 'marketplace' && authMode === 'TERMINAL') return false;
-    // Restriction: No Rachma mode if NACEF (Fiscal) is active
-    if (item.id === 'rachma' && isFiscalEnabled) return false;
+    
+    // Plan-based restrictions
+    if (planName === 'RACHMA') {
+        // Rachma plan: only Rachma mode allowed
+        if (item.id !== 'rachma' && item.id !== 'menu') return false;
+    }
+    if (planName === 'PRO' || isFiscalEnabled) {
+        // PRO or Fiscal: No Rachma mode
+        if (item.id === 'rachma') return false;
+    }
+    // STARTER (Implicit else): If FiscalEnabled, Rachma is already blocked above
+    
     return hasPerm;
   });
 
@@ -1633,17 +1693,22 @@ function LocalMenuScreen({ onSelect }: { onSelect: (tab: TabId) => void }) {
 
 // ─── POS ROOT (FORMERLY MAIN APP) ──────────────────────────
 function POSRoot() {
-  const { storeId, currentBarista, userRole, setActiveTable, theme, activeTable, isFiscalEnabled } = usePOSStore();
+  const { storeId, currentBarista, userRole, setActiveTable, theme, activeTable, isFiscalEnabled, planName } = usePOSStore();
   const { confirm } = useConfirm();
   const isOwner = userRole === 'owner' || userRole === 'superadmin';
   
   const permissions = currentBarista?.permissions || [];
-  // Mode Rachma Pur: Only if they have RACHMA and nothing else that is functional (POS, TABLES, BAR, DASHBOARD)
-  const functionalPerms = permissions.filter(p => ['POS', 'TABLES', 'BAR', 'DASHBOARD', 'STOCK', 'STAFF'].includes(p));
-  // Restriction: No Rachma mode if NACEF (Fiscal) is active
-  const hasRachmaModeOnly = !isOwner && permissions.includes('RACHMA') && functionalPerms.length === 0 && !isFiscalEnabled;
+  const permissions = currentBarista?.permissions || [];
+  // Force Rachma Mode if:
+  // 1. Plan is explicitly RACHMA
+  // 2. User is NOT an owner and does NOT have 'POS' permission (even if they have STOCK/STAFF)
+  // 3. Special case for STARTER plan users with only RACHMA
+  const hasPosPermission = permissions.includes('POS') || permissions.includes('TABLES');
+  const hasRachmaModeOnly = (planName === 'RACHMA') || 
+    (!isOwner && permissions.includes('RACHMA') && !hasPosPermission) ||
+    (!isOwner && !hasPosPermission && !isFiscalEnabled);
   
-  const initialTab: TabId = hasRachmaModeOnly ? 'rachma' : (isOwner ? 'menu' : ((currentBarista?.defaultPosMode?.toLowerCase() as TabId) || 'tables'));
+  const initialTab: TabId = hasRachmaModeOnly ? 'rachma' : (isOwner ? 'menu' : ((currentBarista?.defaultPosMode?.toLowerCase() as TabId) || (planName === 'PRO' || isFiscalEnabled ? 'tables' : 'rachma')));
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
 
   // Reset screen when user changes (PIN change)
@@ -1686,27 +1751,34 @@ function POSRoot() {
         {renderScreen()}
       </View>
       
-      {!hasRachmaModeOnly && (
-        <View style={{ padding: 12, paddingTop: 0, paddingBottom: Platform.OS === 'android' ? 88 : 24 }}>
-          <GlassPanel intensity={60} style={{ 
+      {!hasRachmaModeOnly && activeTab !== 'bar' && (
+        <View style={{ position: 'absolute', bottom: Platform.OS === 'android' ? 88 : 24, left: 12, right: 12, zIndex: 1000 }}>
+          <GlassPanel intensity={75} style={{ 
             flexDirection: 'row', 
-            height: 60, 
-            borderRadius: 20,
+            height: 64, 
+            borderRadius: 24,
             alignItems: 'center',
             justifyContent: 'space-around',
             borderWidth: 1,
-            borderColor: theme.colors.glassBorder
+            borderColor: 'rgba(242, 232, 218, 0.1)',
+            ...(theme.shadows.floating as any)
           }}>
             {[
-              { id: 'tables', label: 'SALLE', icon: '🪑', permission: 'TABLES' },
-              { id: 'caisse', label: 'VENTE', icon: '💰', permission: 'POS' },
-              { id: 'rachma', label: 'RACHMA', icon: '⚡', permission: 'RACHMA' },
+              { id: 'tables', label: 'PLAN SALLE', icon: '🪑', permission: 'TABLES' },
+              { id: 'caisse', label: 'CAISSE', icon: '💰', permission: 'POS' },
+              { id: 'rachma', label: 'RACHMET', icon: '⚡', permission: 'RACHMA' },
               { id: 'menu', label: 'MENU', icon: '📋' }
             ].filter(tab => {
-              // Basic permission check
               if (tab.permission && !permissions.includes(tab.permission) && !isOwner) return false;
-              // Restriction: No Rachma mode if NACEF (Fiscal) is active
-              if (tab.id === 'rachma' && isFiscalEnabled) return false;
+              
+              // Plan restrictions
+              if (planName === 'RACHMA') {
+                  if (tab.id !== 'rachma' && tab.id !== 'menu') return false;
+              }
+              if (planName === 'PRO' || isFiscalEnabled) {
+                  if (tab.id === 'rachma') return false;
+              }
+              
               return true;
             })
             .map(tab => {
@@ -1716,21 +1788,23 @@ function POSRoot() {
                   key={tab.id}
                   onPress={() => setActiveTab(tab.id as TabId)}
                   style={{ 
-                    alignItems: 'center', flex: 1, paddingVertical: 8,
-                    backgroundColor: isActive ? 'rgba(212, 132, 70, 0.1)' : 'transparent',
-                    borderRadius: 12,
-                    marginHorizontal: 4
+                    alignItems: 'center', flex: 1, height: '100%', justifyContent: 'center',
+                    backgroundColor: isActive ? 'rgba(212, 132, 70, 0.12)' : 'transparent',
+                    borderRadius: 20
                   }}
                 >
-                  <Text style={{ fontSize: 18, marginBottom: 1, opacity: isActive ? 1 : 0.4 }}>{tab.icon}</Text>
+                  <Text style={{ fontSize: 20, marginBottom: 1, opacity: isActive ? 1 : 0.4 }}>{tab.icon}</Text>
                   <Text style={{ 
                     fontSize: 8, 
                     fontWeight: '900', 
                     color: isActive ? theme.colors.caramel : theme.colors.creamMuted,
-                    letterSpacing: 1
+                    letterSpacing: 1.2
                   }}>
                     {tab.label}
                   </Text>
+                  {isActive && (
+                    <View style={{ position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: 2, backgroundColor: theme.colors.caramel }} />
+                  )}
                 </TouchableOpacity>
               );
             })}

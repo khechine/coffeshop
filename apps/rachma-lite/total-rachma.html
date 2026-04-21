@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Total Rachma | Rapport de Session</title>
+    <link rel="stylesheet" href="inventory-style.css">
+    <style>
+        .summary-card {
+            background: linear-gradient(135deg, var(--bg-row), #1A1A1C);
+            padding: 32px;
+            margin: 0 24px 32px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-glass);
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        .grand-total { font-size: 48px; font-weight: 900; margin: 12px 0; color: var(--primary); }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
+        .stat-box { background: rgba(255,255,255,0.03); padding: 16px; border-radius: 16px; border: 1px solid var(--border-glass); }
+        .stat-box p { font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+        .stat-box h2 { font-size: 20px; font-weight: 900; }
+        
+        .footer-nav {
+            padding: 24px;
+            display: flex;
+            gap: 16px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, var(--bg-main), transparent);
+        }
+        .btn-nav { flex: 1; height: 56px; border-radius: 16px; border: none; font-weight: 800; font-size: 14px; cursor: pointer; transition: var(--transition); }
+        .btn-back { background: var(--bg-row); color: white; border: 1px solid var(--border-glass); }
+        .btn-reset { background: rgba(255, 77, 77, 0.1); color: var(--danger); border: 1px solid rgba(255, 77, 77, 0.2); }
+
+        .summary-list {
+            margin: 0 24px 32px;
+            background: var(--bg-row);
+            border-radius: 16px;
+            border: 1px solid var(--border-glass);
+            overflow: hidden;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-glass);
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-info { display: flex; flex-direction: column; gap: 2px; }
+        .detail-name { font-size: 14px; font-weight: 800; color: white; }
+        .detail-cat { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+        .detail-badges { display: flex; gap: 8px; }
+        .badge-pill {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 900;
+        }
+        .badge-pill.sale { background: rgba(255, 127, 80, 0.1); color: var(--primary); }
+        .badge-pill.loss { background: rgba(255, 77, 77, 0.1); color: var(--danger); }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <div class="user-badge">
+                <div id="user-name" class="user-name">...</div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="handleLogout()" class="logout-btn">Session</button>
+                    <button onclick="handleUnpair()" class="logout-btn" style="border-color:var(--danger); color:var(--danger);">Oublier</button>
+                </div>
+            </div>
+            <div class="dash-counters">
+                <div class="counter-item">
+                    <span class="counter-label">ID SESSION</span>
+                    <span id="dynamic-session-id" class="counter-val" style="color: var(--primary); font-family: monospace;">---</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="product-list">
+            <!-- Session Info Card -->
+            <div id="session-info-card" class="summary-card" style="margin-bottom: 16px; padding: 20px; text-align: left; background: rgba(255,255,255,0.02);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">SESSION ACTIVE</div>
+                        <div id="report-user-name" style="font-size: 18px; font-weight: 900; color: white;">...</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">DÉBUT DE SHIFT</div>
+                        <div id="session-start-time" style="font-size: 14px; font-weight: 700; color: var(--primary);">--:--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <p style="font-size: 12px; font-weight: 800; opacity: 0.6;">CHIFFRE DU JOUR (SESSION)</p>
+                <div id="grand-total-dt" class="grand-total">0.000 DT</div>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <p>Articles Vendus</p>
+                        <h2 id="total-qty-sale" style="color: var(--primary);">0</h2>
+                    </div>
+                    <div class="stat-box">
+                        <p>Total Pertes</p>
+                        <h2 id="total-qty-loss" style="color: var(--danger);">0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="category-group">
+                <div class="category-title">DÉTAIL DE LA SESSION (TEMPS RÉEL)</div>
+                <div id="session-details-list" class="summary-list">
+                    <!-- Real-time tally rows will be rendered here -->
+                </div>
+            </div>
+
+            <div class="category-group">
+                <div class="category-title">CONSOMMATION EMBALLAGES (À EMPORTER)</div>
+                <div id="packaging-consumption-list" class="summary-list">
+                    <!-- Packaging totals will be rendered here -->
+                </div>
+            </div>
+
+            <div class="category-group" style="padding-bottom: 100px;">
+                <div class="category-title">ARCHIVES DES LOTS COMPLÉTÉS (🔒)</div>
+                <div id="archive-list">
+                    <!-- Full lots will be rendered here -->
+                </div>
+                
+                <button id="btn-session-reset" class="btn-checkout" style="width: 100%; margin-top: 40px; height: 60px; font-size: 16px; letter-spacing: 1px;">SYNCHRONISER & CLÔTURER</button>
+            </div>
+        </main>
+
+        <nav class="nav-tabs">
+            <a href="index.html" class="nav-tab">⚡ RACHMA</a>
+            <a href="tables.html" class="nav-tab" id="tab-tables">🪑 TABLES</a>
+            <a href="total-rachma.html" class="nav-tab active">📈 RAPPORTS</a>
+        </nav>
+    </div>
+
+    <script src="shared.js"></script>
+    <script>
+        const storeId = localStorage.getItem('rachma_store_id');
+        if (!storeId) window.location.href = 'pairing.html';
+    </script>
+    <script src="total-rachma-app.js"></script>
+</body>
+</html>

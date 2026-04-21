@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Identification Staff | Rachma Lite</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+            background: radial-gradient(circle at center, rgba(255,127,80,0.05), transparent 300px);
+        }
+        .pin-display {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 50px;
+        }
+        .dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-glass);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .dot.active {
+            background: var(--primary);
+            box-shadow: 0 0 20px var(--primary);
+            border-color: var(--primary);
+            transform: scale(1.2);
+        }
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            max-width: 300px;
+            width: 100%;
+        }
+        .num-btn {
+            aspect-ratio: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 50%;
+            color: white;
+            font-size: 26px;
+            font-weight: 900;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s;
+            backdrop-filter: blur(5px);
+        }
+        .num-btn:active {
+            transform: scale(0.9);
+            background: var(--primary);
+            color: black;
+            box-shadow: 0 0 30px rgba(255,127,80,0.4);
+        }
+        .btn-delete { color: var(--danger); font-size: 20px; }
+        .login-error {
+            color: var(--danger);
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin-top: 30px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .reset-terminal-link {
+            margin-top: auto;
+            margin-bottom: 20px;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            padding: 10px;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .reset-terminal-link:hover { opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <header style="background: none; backdrop-filter: none; margin-bottom: 40px; text-align: center;">
+            <div style="font-size: 10px; font-weight: 800; color: var(--primary); letter-spacing: 4px; margin-bottom: 8px;">RACHMA LITE</div>
+            <div class="brand-title" style="font-size: 24px; letter-spacing: -0.5px;">Accès Personnel</div>
+        </header>
+        
+        <div class="pin-display" id="pin-display">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+
+        <div class="numpad">
+            <button class="num-btn" onclick="press('1')">1</button>
+            <button class="num-btn" onclick="press('2')">2</button>
+            <button class="num-btn" onclick="press('3')">3</button>
+            <button class="num-btn" onclick="press('4')">4</button>
+            <button class="num-btn" onclick="press('5')">5</button>
+            <button class="num-btn" onclick="press('6')">6</button>
+            <button class="num-btn" onclick="press('7')">7</button>
+            <button class="num-btn" onclick="press('8')">8</button>
+            <button class="num-btn" onclick="press('9')">9</button>
+            <button class="num-btn" style="visibility: hidden;"></button>
+            <button class="num-btn" onclick="press('0')">0</button>
+            <button class="num-btn btn-delete" onclick="del()">⌫</button>
+        </div>
+
+        <div id="login-error" class="login-error">CODE PIN INCORRECT</div>
+
+        <div class="reset-terminal-link" onclick="handleUnpair()">Réinitialiser le terminal</div>
+    </div>
+
+    <script src="shared.js"></script>
+    <script>
+        let pin = "";
+        const dots = document.querySelectorAll('.dot');
+        const errorMsg = document.getElementById('login-error');
+
+        function press(num) {
+            if (pin.length >= 4) return;
+            pin += num;
+            updateDots();
+            haptic(15);
+            if (pin.length === 4) verify();
+        }
+
+        function del() {
+            if (pin.length === 0) return;
+            pin = pin.slice(0, -1);
+            updateDots();
+            haptic(10);
+        }
+
+        function updateDots() {
+            errorMsg.style.opacity = 0;
+            dots.forEach((dot, i) => {
+                dot.classList.toggle('active', i < pin.length);
+            });
+        }
+
+        function haptic(ms) { if (window.navigator.vibrate) window.navigator.vibrate(ms); }
+
+        async function verify() {
+            const storeId = localStorage.getItem('rachma_store_id');
+            if (!storeId) {
+                window.location.href = 'pairing.html';
+                return;
+            }
+            
+            try {
+                // Use centralized CONFIG.API_URL
+                const res = await fetch(`${CONFIG.API_URL}/auth/verify-staff-pin?pin=${pin}&storeId=${storeId}`);
+                
+                if (res.ok) {
+                    const user = await res.json();
+                    localStorage.setItem('rachma_user', JSON.stringify(user));
+                    haptic([30, 50, 30]);
+                    window.location.href = 'index.html';
+                } else {
+                    fail();
+                }
+            } catch (e) {
+                fail();
+            }
+        }
+
+        function fail() {
+            pin = "";
+            updateDots();
+            errorMsg.style.opacity = 1;
+            haptic([100, 50, 100]);
+            document.getElementById('pin-display').style.animation = 'shake 0.4s cubic-bezier(.36,.07,.19,.97) both';
+            setTimeout(() => { document.getElementById('pin-display').style.animation = ''; }, 450);
+        }
+
+        window.onload = () => {
+            if (!localStorage.getItem('rachma_store_id')) {
+                window.location.href = 'pairing.html';
+            }
+        };
+    </script>
+
+    <style>
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+    </style>
+</body>
+</html>

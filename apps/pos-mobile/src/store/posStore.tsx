@@ -106,6 +106,7 @@ export interface POSState {
   deleteItemFromCart: (productId: string) => void;
   deleteItemFromRachma: (productId: string) => void;
   hasBarSupport: boolean;
+  planName: string | null;
 }
 
 
@@ -152,6 +153,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [themeName, setThemeName] = useState<'antigravity' | 'neon-food' | 'vendor' | 'glassy'>('glassy');
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>('dark');
   const [hasBarSupport, setHasBarSupport] = useState(false);
+  const [planName, setPlanName] = useState<string | null>(null);
   const [mktCart, setMktCart] = useState<Record<string, number>>({});
   
   const theme = useMemo(() => {
@@ -185,6 +187,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const storedTheme = await AsyncStorage.getItem('pos-active-theme');
         const storedThemeMode = await AsyncStorage.getItem('pos-theme-mode');
         const storedFiscal = await AsyncStorage.getItem('pos-is-fiscal-enabled');
+        const storedPlan = await AsyncStorage.getItem('pos-plan-name');
         
         if (storedCart) setCart(JSON.parse(storedCart));
         if (storedTables) setTables(JSON.parse(storedTables));
@@ -207,6 +210,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           setThemeMode(storedThemeMode as any);
         }
         if (storedFiscal) setIsFiscalEnabled(storedFiscal === 'true');
+        if (storedPlan) setPlanName(storedPlan);
         
         const storedBarSupport = await AsyncStorage.getItem('pos-has-bar-support');
         if (storedBarSupport) setHasBarSupport(storedBarSupport === 'true');
@@ -261,12 +265,14 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       AsyncStorage.setItem('pos-active-theme', themeName).catch(() => {});
       AsyncStorage.setItem('pos-theme-mode', themeMode).catch(() => {});
       AsyncStorage.setItem('pos-is-fiscal-enabled', isFiscalEnabled ? 'true' : 'false').catch(() => {});
+      if (planName) AsyncStorage.setItem('pos-plan-name', planName).catch(() => {});
+      else AsyncStorage.removeItem('pos-plan-name');
       AsyncStorage.setItem('pos-has-bar-support', hasBarSupport ? 'true' : 'false').catch(() => {});
       AsyncStorage.setItem('pos-rachma-cart', JSON.stringify(rachmaCart)).catch(() => {});
       AsyncStorage.setItem('pos-rachma-takeaway', JSON.stringify(rachmaTakeawayCart)).catch(() => {});
       AsyncStorage.setItem('pos-mkt-cart', JSON.stringify(mktCart)).catch(() => {});
     }
-  }, [cart, tables, pendingSales, authToken, storeId, storeName, vendorId, vendorName, authMode, storeTables, currentBarista, userRole, themeName, themeMode, hasBarSupport, rachmaCart, isReady]);
+  }, [cart, tables, pendingSales, authToken, storeId, storeName, vendorId, vendorName, authMode, storeTables, currentBarista, userRole, themeName, themeMode, hasBarSupport, rachmaCart, isReady, planName]);
 
   const authenticate = (token: string, store: string) => {
     setAuthToken(token);
@@ -283,6 +289,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setStoreId(data.storeId);
         setStoreName(data.storeName);
         setIsFiscalEnabled(!!data.isFiscalEnabled);
+        setPlanName(data.planName || 'FREE');
         setAuthMode('TERMINAL');
         return true;
       }
@@ -306,6 +313,7 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setStoreId(data.user.storeId);
         setStoreName(data.user.storeName);
         setIsFiscalEnabled(!!data.user.isFiscalEnabled);
+        setPlanName(data.user.planName || 'FREE');
         setVendorId(data.user.vendorId || null);
         setVendorName(data.user.vendorName || null);
         setAuthMode('ACCOUNT');
@@ -907,7 +915,8 @@ export const POSProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       deleteItemFromCart,
       deleteItemFromRachma,
       hasBarSupport,
-      isFiscalEnabled
+      isFiscalEnabled,
+      planName
     }}>
       {children}
     </POSContext.Provider>

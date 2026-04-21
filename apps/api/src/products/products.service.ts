@@ -13,6 +13,11 @@ export class ProductsService {
       },
       include: {
         category: true,
+        recipe: {
+          include: {
+            stockItem: true
+          }
+        }
       },
       orderBy: {
         name: 'asc',

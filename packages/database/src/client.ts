@@ -8,9 +8,12 @@ export const prisma =
   (() => {
     if (globalForPrisma.prisma) {
       // In dev, sometimes the singleton survives schema pushes but misses new models.
-      // We check if a known new model exists on the singleton.
-      const hasMktBundle = 'mktBundle' in (globalForPrisma.prisma as any);
-      if (hasMktBundle) return globalForPrisma.prisma;
+      // We check if known new models exist on the singleton.
+      const hasNewModels = 
+        'storeVendorRelationship' in (globalForPrisma.prisma as any) &&
+        'vendorInteraction' in (globalForPrisma.prisma as any);
+      
+      if (hasNewModels) return globalForPrisma.prisma;
     }
     
     return new PrismaClient({

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Activation Terminal | Rachma Lite</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        .pairing-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+            background: radial-gradient(circle at top right, rgba(255,127,80,0.1), transparent 400px);
+        }
+        .pairing-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+            backdrop-filter: blur(25px);
+            position: relative;
+        }
+        .input-group {
+            margin-bottom: 24px;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            padding-left: 10px;
+        }
+        .pairing-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .pairing-input {
+            width: 100%;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            padding: 16px;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .pairing-input:focus {
+            border-color: var(--primary);
+            background: rgba(255,127,80,0.05);
+            box-shadow: 0 0 20px rgba(255,127,80,0.1);
+        }
+        .btn-scan-inline {
+            position: absolute;
+            right: 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            color: white;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+        .btn-scan-inline:active { transform: scale(0.9); }
+        
+        #reader {
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border-glass);
+            margin-bottom: 20px;
+            display: none;
+            background: black;
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 28px;
+            height: 28px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #ff6b6b;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="pairing-container">
+        <div class="pairing-card">
+            <header style="background:none; backdrop-filter:none; padding:0; margin-bottom:40px;">
+                <div style="font-size: 10px; font-weight: 800; color: var(--primary); letter-spacing: 4px; margin-bottom: 10px;">RACHMA LITE</div>
+                <div class="brand-title" style="font-size: 28px; letter-spacing: -0.5px;">Activer Terminal</div>
+            </header>
+
+            <div id="error-msg" class="error-box">Code ou ID invalide</div>
+            <div id="spinner" class="loading-spinner"></div>
+            
+            <div id="reader"></div>
+
+            <div class="input-group">
+                <label>ID Boutique</label>
+                <div class="pairing-input-wrapper">
+                    <input type="text" id="store-id" class="pairing-input" placeholder="ex: coffeeshop-paris" autocomplete="off">
+                    <button id="btn-show-scanner" class="btn-scan-inline">📷</button>
+                </div>
+            </div>
+
+            <div class="input-group" style="margin-bottom: 30px;">
+                <label>Code d'activation</label>
+                <input type="text" id="activation-code" class="pairing-input" maxlength="6" placeholder="000000" inputmode="numeric" autocomplete="off" style="text-align: center; letter-spacing: 4px; font-size: 20px;">
+            </div>
+
+            <button onclick="activate()" class="btn-checkout" style="width: 100%; height: 56px; font-size: 15px;">LIER LE TERMINAL</button>
+            
+            <p style="margin-top: 30px; font-size: 11px; color: var(--text-muted); line-height: 1.8; font-weight: 600;">
+                Scannez le QR Code depuis votre tableau de bord<br>ou saisissez les codes manuellement.
+            </p>
+        </div>
+        
+        <button onclick="window.location.href='login.html'" style="margin-top: 30px; background: none; border: 1px solid var(--border-glass); color: var(--text-muted); padding: 10px 20px; border-radius: 30px; font-size: 12px; font-weight: 700; cursor: pointer;">Déjà activé ? Se connecter</button>
+    </div>
+
+    <script src="shared.js"></script>
+    <script>
+        let html5QrCode;
+
+        async function activate() {
+            const storeId = document.getElementById('store-id').value.trim();
+            const code = document.getElementById('activation-code').value.trim();
+            const errorBox = document.getElementById('error-msg');
+            const spinner = document.getElementById('spinner');
+
+            if (!storeId || !code) {
+                showError("Veuillez remplir tous les champs");
+                return;
+            }
+
+            errorBox.style.display = 'none';
+            spinner.style.display = 'block';
+
+            try {
+                // Use centralized CONFIG.API_URL
+                const res = await fetch(`${CONFIG.API_URL}/auth/activate-terminal?code=${code}&storeId=${storeId}`);
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('rachma_pairing', JSON.stringify(data));
+                    localStorage.setItem('rachma_store_id', data.storeId);
+                    
+                    await syncProducts(data.storeId);
+                    
+                    document.querySelector('.pairing-card').style.borderColor = 'var(--success)';
+                    document.querySelector('.pairing-card').style.boxShadow = '0 0 50px rgba(78, 204, 163, 0.2)';
+                    
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 800);
+                } else {
+                    const err = await res.json();
+                    showError(err.message || "Code d'activation invalide");
+                }
+            } catch (e) {
+                showError("Connexion impossible à api.coffeeshop.elkassa.com");
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+
+        function showError(msg) {
+            const errorBox = document.getElementById('error-msg');
+            errorBox.innerText = msg;
+            errorBox.style.display = 'block';
+            if (window.navigator.vibrate) window.navigator.vibrate([50, 50, 50]);
+        }
+
+        document.getElementById('btn-show-scanner').onclick = () => {
+            const readerDiv = document.getElementById('reader');
+            if (readerDiv.style.display === 'block') {
+                stopScanner();
+            } else {
+                startScanner();
+            }
+        };
+
+        function startScanner() {
+            document.getElementById('reader').style.display = 'block';
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 15, qrbox: { width: 250, height: 250 } };
+
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config,
+                onScanSuccess
+            ).catch(err => {
+                showError("Impossible d'accéder à la caméra");
+                document.getElementById('reader').style.display = 'none';
+            });
+        }
+
+        function onScanSuccess(decodedText) {
+            if (window.navigator.vibrate) window.navigator.vibrate(30);
+            if (decodedText.includes('|')) {
+                const [sid, code] = decodedText.split('|');
+                document.getElementById('store-id').value = sid;
+                document.getElementById('activation-code').value = code;
+                stopScanner();
+                activate();
+            } else if (decodedText.startsWith('http')) {
+                try {
+                    const url = new URL(decodedText);
+                    const sid = url.searchParams.get('storeId');
+                    const code = url.searchParams.get('code');
+                    if (sid) document.getElementById('store-id').value = sid;
+                    if (code) {
+                        document.getElementById('activation-code').value = code;
+                        stopScanner();
+                        activate();
+                    }
+                } catch(e) {}
+            } else {
+                document.getElementById('store-id').value = decodedText;
+                stopScanner();
+            }
+        }
+
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('reader').style.display = 'none';
+                });
+            }
+        }
+    </script>
+</body>
+</html>

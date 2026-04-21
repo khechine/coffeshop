@@ -22,9 +22,9 @@ export class AuthController {
         pinCode: pin.trim(),
       },
       select: {
-        id: true,
         name: true,
         role: true,
+        permissions: true,
       }
     });
 
@@ -51,7 +51,13 @@ export class AuthController {
         activationCode: code,
         storeId: storeId.trim()
       },
-      include: { store: { select: { name: true, isFiscalEnabled: true } } }
+      include: { 
+        store: { 
+          include: { 
+            subscription: { include: { plan: true } } 
+          } 
+        } 
+      }
     });
 
     if (!terminal) {
@@ -72,6 +78,7 @@ export class AuthController {
       storeId: terminal.storeId, 
       storeName: terminal.store?.name,
       isFiscalEnabled: terminal.store?.isFiscalEnabled ?? false,
+      planName: terminal.store?.subscription?.plan?.name || 'FREE',
       terminalId: terminal.id,
       terminalNickname: terminal.nickname
     };
@@ -87,7 +94,11 @@ export class AuthController {
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
       include: { 
-        store: { select: { name: true, isFiscalEnabled: true } }
+        store: { 
+          include: { 
+            subscription: { include: { plan: true } } 
+          }
+        }
       }
     });
 
@@ -128,6 +139,7 @@ export class AuthController {
         storeId: user.storeId,
         storeName: user.store?.name,
         isFiscalEnabled: user.store?.isFiscalEnabled ?? false,
+        planName: user.store?.subscription?.plan?.name || 'FREE',
         vendorId,
         vendorName
       }

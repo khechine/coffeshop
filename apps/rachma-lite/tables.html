@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Plan de Salle | Rachma Lite</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container" style="max-width: 800px;">
+        <header>
+            <div class="user-badge">
+                <div id="user-name" class="user-name">...</div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="handleLogout()" class="logout-btn">Session</button>
+                    <button onclick="handleUnpair()" class="logout-btn" style="border-color:var(--danger); color:var(--danger);">Oublier</button>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="status-bar">50 TABLES</div>
+            </div>
+        </header>
+
+        <main id="tables-container" class="tables-grid">
+            <!-- Rendered by tables-app.js -->
+        </main>
+
+        <nav class="nav-tabs">
+            <a href="index.html" class="nav-tab">⚡ RACHMA</a>
+            <a href="tables.html" class="nav-tab active" id="tab-tables">🪑 TABLES</a>
+            <a href="total-rachma.html" class="nav-tab">📈 RAPPORTS</a>
+        </nav>
+    </div>
+
+    <script src="shared.js"></script>
+    <script>
+        const storeId = localStorage.getItem('rachma_store_id');
+        if (!storeId) window.location.href = 'pairing.html';
+    </script>
+    <script src="tables-app.js"></script>
+</body>
+</html>

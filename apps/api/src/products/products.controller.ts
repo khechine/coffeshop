@@ -10,15 +10,25 @@ export class ProductsController {
     const products = await this.productsService.getProducts(storeId);
     
     // Map to mobile store format
-    return products.map(p => ({
-      id: p.id,
-      name: p.name,
-      price: Number(p.price),
-      categoryId: p.categoryId,
-      categoryName: p.category?.name,
-      // Assign deterministic color based on category
-      color: this.getCategoryColor(p.category?.name || 'default')
-    }));
+    return products.map(p => {
+      const packagings = (p.recipe || []).filter(r => r.isPackaging).map(r => ({
+        id: r.stockItem?.id || r.id,
+        name: r.stockItem?.name || 'Emballage',
+        icon: (r.stockItem?.name || '').toLowerCase().includes('gobelet') || (r.stockItem?.name || '').toLowerCase().includes('cup') ? '🥤' : '🥡'
+      }));
+
+      return {
+        id: p.id,
+        name: p.name,
+        price: Number(p.price),
+        categoryId: p.categoryId,
+        categoryName: p.category?.name,
+        takeaway: p.canBeTakeaway,
+        packagings: packagings,
+        // Assign deterministic color based on category
+        color: this.getCategoryColor(p.category?.name || 'default')
+      };
+    });
   }
 
   @Get('categories')

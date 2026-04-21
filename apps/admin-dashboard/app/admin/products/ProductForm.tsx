@@ -53,7 +53,7 @@ export default function ProductForm({ initialData, categories, stockItems, globa
   const [form, setForm] = useState<{ 
     name: string; unitId: string; price: string; taxRate: number;
     categoryId: string; active: boolean; canBeTakeaway: boolean;
-    recipe: { stockItemId: string; quantity: number; consumeType: string }[] 
+    recipe: { stockItemId: string; quantity: number; consumeType: string; isPackaging: boolean }[] 
   }>({ 
     name: initialData?.name || '', 
     price: initialData ? String(Number(initialData.price)) : '', 
@@ -65,11 +65,12 @@ export default function ProductForm({ initialData, categories, stockItems, globa
     recipe: initialData ? initialData.recipe.map(r => ({ 
       stockItemId: r.stockItem.id, 
       quantity: Number(r.quantity),
-      consumeType: r.consumeType || 'BOTH'
+      consumeType: r.consumeType || 'BOTH',
+      isPackaging: r.isPackaging || false
     })) : []
   });
 
-  const addRecipeItem = () => setForm(f => ({ ...f, recipe: [...f.recipe, { stockItemId: '', quantity: 0, consumeType: 'BOTH' }] }));
+  const addRecipeItem = () => setForm(f => ({ ...f, recipe: [...f.recipe, { stockItemId: '', quantity: 0, consumeType: 'BOTH', isPackaging: false }] }));
   const removeRecipeItem = (index: number) => setForm(f => ({ ...f, recipe: f.recipe.filter((_, i) => i !== index) }));
   const updateRecipeItem = (index: number, field: string, value: any) => {
     setForm(f => {
@@ -107,7 +108,8 @@ export default function ProductForm({ initialData, categories, stockItems, globa
         recipe: form.recipe.filter(r => r.stockItemId && r.quantity > 0).map(r => ({
           stockItemId: r.stockItemId,
           quantity: r.quantity,
-          consumeType: r.consumeType
+          consumeType: r.consumeType,
+          isPackaging: r.isPackaging
         }))
       };
       if (initialData) await updateProduct(initialData.id, data);
@@ -290,7 +292,18 @@ export default function ProductForm({ initialData, categories, stockItems, globa
                         <option value="TAKEAWAY">À emporter</option>
                       </select>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', paddingTop: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', paddingTop: '20px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: item.isPackaging ? '#EEF2FF' : '#F1F5F9', padding: '10px', borderRadius: '12px', border: item.isPackaging ? '1.5px solid #6366F1' : '1.5px solid #E2E8F0' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={item.isPackaging} 
+                          onChange={e => updateRecipeItem(idx, 'isPackaging', e.target.checked)} 
+                          style={{ width: '16px', height: '16px', accentColor: '#6366F1' }} 
+                        />
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: item.isPackaging ? '#4F46E5' : '#64748B' }}>Emballage</span>
+                      </label>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', paddingTop: '20px' }}>
                       <button 
                         type="button" 
                         onClick={() => removeRecipeItem(idx)} 
