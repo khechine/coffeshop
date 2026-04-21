@@ -9,11 +9,9 @@ export class InventoryService {
   constructor(private readonly sourcingService: SourcingService) {}
 
   /**
-   * Deducts stock for a specific product logically using its recipe items.
-   * e.g., for an Express (Product), it will deduct 0.018kg of coffee beans and 1 cup (StockItems).
+   * Deduct stock for a specific product logically using its recipe items.
    */
   async deductStockFromProduct(productId: string, quantitySold: number, storeId: string) {
-    // Find recipes linked to this product
     const productRecipes = await prisma.recipeItem.findMany({
       where: { productId },
       include: { stockItem: true },
@@ -24,21 +22,26 @@ export class InventoryService {
       return;
     }
 
-    // Multiply the recipe component quantity by the amount sold and update the stock
     for (const recipeItem of productRecipes) {
-      const quantityToDeduct = Number(recipeItem.quantity) * quantitySold;
-      
-      const updatedStockItem = await prisma.stockItem.update({
-        where: { id: recipeItem.stockItemId },
-        data: {
-          quantity: { decrement: quantityToDeduct }
-        }
-      });
+      await this.deductStockItem(recipeItem.stockItemId, Number(recipeItem.quantity) * quantitySold, storeId);
+    }
+  }
 
-      // Simple low-stock alert trigger
-      if (Number(updatedStockItem.quantity) <= Number(updatedStockItem.minThreshold)) {
-        await this.triggerLowStockAlert(updatedStockItem);
-      }
+  /**
+   * Directly deducts a specific stock item from inventory.
+   */
+  async deductStockItem(stockItemId: string, quantityToDeduct: number, storeId: string) {
+    const updatedStockItem = await prisma.stockItem.update({
+      where: { id: stockItemId },
+      data: {
+        quantity: { decrement: quantityToDeduct }
+      },
+      include: { unit: true }
+    });
+
+    // Simple low-stock alert trigger
+    if (Number(updatedStockItem.quantity) <= Number(updatedStockItem.minThreshold)) {
+      await this.triggerLowStockAlert(updatedStockItem);
     }
   }
 

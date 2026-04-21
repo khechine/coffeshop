@@ -250,18 +250,31 @@ async function resetSession() {
     let totalDT = 0;
     let totalLoss = 0;
     const syncItems = [];
+    const rawStockItems = {}; // stockItemId -> quantity
 
     Object.entries(state.logs).forEach(([pid, items]) => {
         const product = state.products.find(p => p.id === pid);
         if (!product) return;
-        const sCount = items.filter(t => t && t.startsWith('sale')).length;
-        const lCount = items.filter(t => t === 'loss').length;
-        if (sCount > 0) {
-            totalQty += sCount;
-            totalDT += (sCount * product.price);
-            syncItems.push({ productId: pid, quantity: sCount, price: product.price });
-        }
-        totalLoss += lCount;
+
+        items.forEach(type => {
+            if (type === 'sale') {
+                // Main product sale
+                const existing = syncItems.find(i => i.productId === pid);
+                if (existing) {
+                    existing.quantity++;
+                } else {
+                    syncItems.push({ productId: pid, quantity: 1, price: product.price });
+                }
+                totalQty++;
+                totalDT += product.price;
+            } else if (type && type.startsWith('sale:')) {
+                // Packaging usage (StockItem ID)
+                const pkgId = type.split(':')[1];
+                rawStockItems[pkgId] = (rawStockItems[pkgId] || 0) + 1;
+            } else if (type === 'loss') {
+                totalLoss++;
+            }
+        });
     });
 
     const summaryMsg = `
@@ -302,7 +315,8 @@ async function resetSession() {
                 total: totalDT,
                 mode: 'RACHMA',
                 sessionId: sid,
-                items: syncItems
+                items: syncItems,
+                rawStockItems: Object.entries(rawStockItems).map(([id, qty]) => ({ stockItemId: id, quantity: qty }))
             })
         });
 

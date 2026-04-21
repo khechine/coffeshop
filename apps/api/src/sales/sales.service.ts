@@ -52,7 +52,7 @@ export class SalesService {
 
         const newSale = await tx.sale.create({
           data: {
-            id: dto.id || undefined, // Allow client-generated ID
+            id: dto.id || undefined,
             storeId: dto.storeId,
             total: dto.total,
             totalHt: Math.round(totalHtGlobal * 1000) / 1000,
@@ -61,6 +61,7 @@ export class SalesService {
             baristaId: dto.baristaId,
             takenById: dto.takenById || dto.baristaId,
             mode: dto.mode || 'NORMAL',
+            sessionId: dto.sessionId,
             items: {
               create: itemsWithTax
             }
@@ -68,14 +69,30 @@ export class SalesService {
           include: { items: true }
         });
 
+        // 4. Create Session Log if in RACHMA mode (closing session)
+        if (dto.mode === 'RACHMA' && dto.baristaId) {
+          await tx.staffSessionLog.create({
+            data: {
+              userId: dto.baristaId,
+              storeId: dto.storeId,
+              action: `SYNC_CLOSE_SESSION:${dto.sessionId || 'UNKNOWN'}`
+            }
+          });
+        }
+
         return newSale;
       });
 
       // Deduct stock for all items
-      // (Done outside transaction since it loops through sub-queries and updates)
-      // In a real-world high volume scenario, we could optimize this, but this works well.
       for (const item of sale.items) {
         await this.inventoryService.deductStockFromProduct(item.productId, item.quantity, dto.storeId);
+      }
+
+      // Deduct raw stock items (packagings etc)
+      if (dto.rawStockItems && dto.rawStockItems.length > 0) {
+        for (const raw of dto.rawStockItems) {
+          await this.inventoryService.deductStockItem(raw.stockItemId, raw.quantity, dto.storeId);
+        }
       }
 
       this.logger.log(`Sale ${sale.id} completed. Total: ${sale.total}`);

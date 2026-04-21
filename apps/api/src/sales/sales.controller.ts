@@ -23,6 +23,16 @@ export class SalesController {
       }
     });
     if (!user) throw new UnauthorizedException('Invalide');
+
+    // Create session log
+    await prisma.staffSessionLog.create({
+      data: {
+        userId: user.id,
+        storeId: storeId,
+        action: 'LOGIN'
+      }
+    });
+
     return user;
   }
 
