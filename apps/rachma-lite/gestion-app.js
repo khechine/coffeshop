@@ -313,5 +313,9 @@ async function submitAddExpense() {
     }
 }
 
-// Init
-refreshData();
+// Initial Load
+try {
+    refreshData();
+} catch (e) {
+    console.error("Critical initialization error", e);
+}

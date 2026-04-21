@@ -432,7 +432,6 @@ export class ManagementController {
     });
   }
 
-  @UseGuards(MarketplaceAuthGuard)
   @Get('marketplace/categories')
   async getMarketplaceCategories(@Query('vendorId') vendorId?: string): Promise<any> {
     if (vendorId) {
@@ -452,7 +451,6 @@ export class ManagementController {
     });
   }
 
-  @UseGuards(MarketplaceAuthGuard)
   @Get('marketplace/products')
   async getMarketplaceProducts(@Query('vendorId') vendorId: string): Promise<any> {
     return prisma.vendorProduct.findMany({
