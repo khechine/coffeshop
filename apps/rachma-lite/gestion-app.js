@@ -232,7 +232,11 @@ function renderFinance(container) {
 }
 
 function renderMarketplace(container) {
-    let html = `<h2>Marketplace B2B</h2>`;
+    let html = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h2>Marketplace B2B</h2>
+                    <button class="header-tab" onclick="fetchMarketplaceOrders()" style="font-size:11px; padding:4px 8px;">Mes Commandes</button>
+                </div>`;
+    
     if (!state.marketplace.products || state.marketplace.products.length === 0) {
         html += `<p class="item-meta">Chargement du marché...</p>`;
     }
@@ -251,6 +255,38 @@ function renderMarketplace(container) {
     });
     html += `</div>`;
     container.innerHTML = html;
+}
+
+async function fetchMarketplaceOrders() {
+    const orders = await (async (url) => {
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.json();
+        } catch (e) {
+            console.warn(`Failed to fetch ${url}:`, e);
+            return null;
+        }
+    })(`${CONFIG.API_URL}/management/orders/${storeId}`);
+    
+    if (!orders) return;
+
+    let html = `<div style="padding-bottom:20px;">`;
+    orders.forEach(o => {
+        const statusClass = o.status === 'DELIVERED' ? 'badge-ok' : 'badge-low';
+        html += `
+            <div class="list-item" style="flex-direction:column; align-items:flex-start; gap:8px;">
+                <div style="display:flex; justify-content:space-between; width:100%;">
+                    <div class="item-name">Cmd #${o.id.substring(0,6)}</div>
+                    <div class="item-badge ${statusClass}">${o.status}</div>
+                </div>
+                <div class="item-meta">${o.supplier?.name || o.vendor?.companyName || 'Fournisseur'} • ${Number(o.total).toFixed(3)} DT</div>
+                <div class="item-meta" style="font-size:10px;">${new Date(o.createdAt).toLocaleDateString()}</div>
+            </div>
+        `;
+    });
+    html += `</div>`;
+    openSheet("Historique Commandes", html);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -304,6 +340,55 @@ function openAddExpenseSheet() {
     openSheet("Nouvelle Dépense", html);
 }
 
+function openEditProductSheet(id) {
+    const p = state.products.find(x => x.id === id);
+    if (!p) return;
+
+    const catOptions = (state.categories || []).map(c => 
+        `<option value="${c.id}" ${c.id === p.categoryId ? 'selected' : ''}>${c.name}</option>`
+    ).join('');
+
+    const html = `
+        <div class="form-group">
+            <label>Nom du Produit</label>
+            <input type="text" id="edit-prod-name" value="${p.name}">
+        </div>
+        <div class="form-group">
+            <label>Prix (DT)</label>
+            <input type="number" id="edit-prod-price" step="0.001" value="${Number(p.price || 0).toFixed(3)}">
+        </div>
+        <div class="form-group">
+            <label>Catégorie</label>
+            <select id="edit-prod-cat">${catOptions}</select>
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:10px;">
+            <input type="checkbox" id="edit-prod-active" ${p.active ? 'checked' : ''} style="width:20px; height:20px;">
+            <label style="margin:0;">Produit Actif</label>
+        </div>
+        <button class="primary-btn" onclick="submitEditProduct('${p.id}')">Mettre à Jour</button>
+    `;
+    openSheet("Modifier Produit", html);
+}
+
+function openEditStockSheet(id) {
+    const s = state.stock.find(x => x.id === id);
+    if (!s) return;
+
+    const html = `
+        <div class="item-name" style="margin-bottom:15px;">${s.name}</div>
+        <div class="form-group">
+            <label>Quantité actuelle (${s.unit?.name || ''})</label>
+            <input type="number" id="edit-stock-qty" step="0.01" value="${Number(s.quantity).toFixed(2)}">
+        </div>
+        <div class="form-group">
+            <label>Seuil d'alerte</label>
+            <input type="number" id="edit-stock-min" step="0.01" value="${Number(s.minThreshold).toFixed(2)}">
+        </div>
+        <button class="primary-btn" onclick="submitEditStock('${s.id}')">Mettre à Jour le Stock</button>
+    `;
+    openSheet("Ajuster Stock", html);
+}
+
 // API Submission Mocks
 async function submitAddProduct() {
     const name = document.getElementById('new-prod-name').value;
@@ -340,6 +425,69 @@ async function submitAddExpense() {
     if (res.ok) {
         closeSheet();
         refreshData();
+    }
+}
+
+async function submitEditProduct(id) {
+    const name = document.getElementById('edit-prod-name').value;
+    const price = document.getElementById('edit-prod-price').value;
+    const catId = document.getElementById('edit-prod-cat').value;
+    const active = document.getElementById('edit-prod-active').checked;
+
+    const res = await fetch(`${CONFIG.API_URL}/management/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, price: Number(price), categoryId: catId, active })
+    });
+
+    if (res.ok) {
+        closeSheet();
+        refreshData();
+    }
+}
+
+async function submitEditStock(id) {
+    const quantity = document.getElementById('edit-stock-qty').value;
+    const minThreshold = document.getElementById('edit-stock-min').value;
+
+    const res = await fetch(`${CONFIG.API_URL}/management/stock/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: Number(quantity), minThreshold: Number(minThreshold) })
+    });
+
+    if (res.ok) {
+        closeSheet();
+        refreshData();
+    }
+}
+
+async function handleOrderFromMkt(productId) {
+    const p = state.marketplace.products.find(x => x.id === productId);
+    if (!p) return;
+
+    const ok = await ModernModal.confirm({
+        title: "Passer Commande",
+        message: `Commander ${p.name} auprès de ${p.vendor?.companyName} ?`,
+        icon: '🛒'
+    });
+
+    if (ok) {
+        const res = await fetch(`${CONFIG.API_URL}/management/orders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                storeId,
+                vendorId: p.vendorId,
+                total: Number(p.price),
+                items: [{ name: p.name, quantity: 1, price: Number(p.price) }]
+            })
+        });
+
+        if (res.ok) {
+            ModernModal.alert({title:"Commande Réussie", message:"Votre fournisseur a été notifié.", icon:"✅"});
+            refreshData();
+        }
     }
 }
 
