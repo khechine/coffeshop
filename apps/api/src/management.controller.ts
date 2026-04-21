@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, BadRequestException, UseGuards } from '@nestjs/common';
 import { prisma } from '@coffeeshop/database';
 import { MarketplaceAuthGuard } from './auth/marketplace.guard';
+import { InteractionService } from './marketplace/interaction.service';
 
 interface CreateMarketplaceProductDto {
   name: string;
@@ -20,6 +21,7 @@ interface CreateMarketplaceProductDto {
 
 @Controller('management')
 export class ManagementController {
+  constructor(private readonly interactionService: InteractionService) {}
 
   // ═══════════════════════════════════════════════════════════
   // PRODUCTS CRUD
@@ -308,7 +310,7 @@ export class ManagementController {
     total: number; needsDelivery?: boolean;
     items: { stockItemId?: string; name?: string; quantity: number; price: number }[];
   }): Promise<any> {
-    return prisma.supplierOrder.create({
+    const order = await prisma.supplierOrder.create({
       data: {
         storeId: body.storeId,
         supplierId: body.supplierId || null,
@@ -326,6 +328,13 @@ export class ManagementController {
       },
       include: { items: true, supplier: true },
     });
+
+    // ✅ Anti-leakage: log marketplace order interaction for BehaviorScoring
+    if (body.vendorId) {
+      this.interactionService.logOrder(body.storeId, body.vendorId, body.total).catch(() => {});
+    }
+
+    return order;
   }
 
   @Put('orders/:id/status')
