@@ -1,5 +1,5 @@
 let currentTab = 'catalogue';
-const storeId = localStorage.getItem('rachma_store_id');
+// storeId is already declared in gestion.html and available globally
 
 // View state
 let state = {
