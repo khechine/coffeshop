@@ -1,12 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { json } from 'express';
+import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.enableCors(); // Autoriser les requêtes depuis l'application mobile
+
+  // Serve static files (uploads)
+  app.useStaticAssets(join(__dirname, '..', 'public'));
 
   // Increase payload limit for image uploads (10MB)
   app.use(json({ limit: '10mb' }));

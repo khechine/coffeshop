@@ -1,4 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, BadRequestException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, BadRequestException, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { prisma } from '@coffeeshop/database';
 import { MarketplaceAuthGuard } from './auth/marketplace.guard';
 import { InteractionService } from './marketplace/interaction.service';
@@ -38,7 +42,9 @@ export class ManagementController {
 
   @Post('products')
   async createProduct(@Body() body: {
-    name: string; price: number; categoryId: string; storeId: string; unitId?: string;
+    name: string; price: number; categoryId: string; storeId: string; 
+    unitId?: string; taxRate?: number; canBeTakeaway?: boolean;
+    icon?: string; image?: string;
   }): Promise<any> {
     return prisma.product.create({
       data: {
@@ -47,6 +53,10 @@ export class ManagementController {
         categoryId: body.categoryId,
         storeId: body.storeId,
         unitId: body.unitId || null,
+        taxRate: body.taxRate !== undefined ? body.taxRate : 0.19,
+        canBeTakeaway: body.canBeTakeaway ?? true,
+        icon: body.icon || null,
+        image: body.image || null,
         active: true,
       },
       include: { category: true },
@@ -55,7 +65,9 @@ export class ManagementController {
 
   @Put('products/:id')
   async updateProduct(@Param('id') id: string, @Body() body: {
-    name?: string; price?: number; categoryId?: string; unitId?: string; active?: boolean;
+    name?: string; price?: number; categoryId?: string; unitId?: string; 
+    active?: boolean; taxRate?: number; canBeTakeaway?: boolean;
+    icon?: string; image?: string;
   }): Promise<any> {
     return prisma.product.update({
       where: { id },
@@ -65,6 +77,10 @@ export class ManagementController {
         ...(body.categoryId && { categoryId: body.categoryId }),
         ...(body.unitId !== undefined && { unitId: body.unitId || null }),
         ...(body.active !== undefined && { active: body.active }),
+        ...(body.taxRate !== undefined && { taxRate: body.taxRate }),
+        ...(body.canBeTakeaway !== undefined && { canBeTakeaway: body.canBeTakeaway }),
+        ...(body.icon !== undefined && { icon: body.icon || null }),
+        ...(body.image !== undefined && { image: body.image || null }),
       },
       include: { category: true },
     });
@@ -133,6 +149,29 @@ export class ManagementController {
     }
     return prisma.category.delete({ where: { id } });
   }
+  
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const uploadPath = join(__dirname, '..', '..', 'public', 'uploads');
+        if (!existsSync(uploadPath)) {
+          mkdirSync(uploadPath, { recursive: true });
+        }
+        cb(null, uploadPath);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
+      },
+    }),
+  }))
+  uploadFile(@UploadedFile() file: any) {
+    if (!file) throw new BadRequestException('Aucun fichier reçu');
+    return { 
+      url: `/uploads/${file.filename}` 
+    };
+  }
 
   // ═══════════════════════════════════════════════════════════
   // TABLES CRUD
@@ -153,7 +192,7 @@ export class ManagementController {
 
   @Post('products/:id/recipe')
   async updateRecipe(@Param('id') productId: string, @Body() body: {
-    items: { stockItemId: string; quantity: number }[];
+    items: { stockItemId: string; quantity: number; isPackaging?: boolean; consumeType?: string }[];
   }): Promise<any> {
     // Transaction to ensure atomicity
     return prisma.$transaction([
@@ -165,6 +204,8 @@ export class ManagementController {
           productId,
           stockItemId: item.stockItemId,
           quantity: item.quantity,
+          isPackaging: item.isPackaging || false,
+          consumeType: item.consumeType || 'BOTH',
         })),
       }),
     ]);
@@ -452,7 +493,11 @@ export class ManagementController {
   }
 
   @Get('marketplace/products')
-  async getMarketplaceProducts(@Query('vendorId') vendorId: string): Promise<any> {
+  async getMarketplaceProducts(
+    @Query('vendorId') vendorId: string,
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
+  ): Promise<any> {
     return prisma.vendorProduct.findMany({
       where: vendorId ? { vendorId } : {},
       include: { 
@@ -462,11 +507,13 @@ export class ManagementController {
             companyName: true,
             city: true,
             description: true,
-            // ✅ Anti-leakage: email, phone, address, lat/lng masked
           }
-        } 
+        },
+        productStandard: true // Include standard info for extra metadata
       },
       orderBy: { createdAt: 'desc' },
+      skip: skip ? Number(skip) : undefined,
+      take: take ? Number(take) : undefined,
     });
   }
 

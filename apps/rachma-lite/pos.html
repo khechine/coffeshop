@@ -37,7 +37,10 @@
             <!-- Cart Section -->
             <section class="pos-cart">
                 <div class="cart-header">
-                    <div style="font-weight: 800; font-size: 14px; letter-spacing: 1px;">DÉTAIL COMMANDE</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-weight: 800; font-size: 14px; letter-spacing: 1px;">DÉTAIL COMMANDE</div>
+                        <button class="close-cart-btn" onclick="toggleCart(false)">×</button>
+                    </div>
                 </div>
                 
                 <div id="cart-items" class="cart-items">
@@ -75,6 +78,12 @@
             <div class="sep"></div>
             <p style="text-align: center; font-size: 10px;">Merci de votre visite !</p>
         </div>
+        </div>
+
+        <!-- Floating Cart Toggle for Mobile -->
+        <button id="mobile-cart-toggle" class="cart-toggle-btn" onclick="toggleCart(true)">
+            🛒 <span id="cart-badge" style="position: absolute; top: -5px; right: -5px; background: white; color: var(--primary); font-size: 12px; font-weight: 900; width: 20px; height: 20px; border-radius: 10px; display: none; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">0</span>
+        </button>
     </div>
 
     <script src="shared.js"></script>

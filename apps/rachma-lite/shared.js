@@ -213,3 +213,76 @@ function getProducts() {
     if (cached) return JSON.parse(cached);
     return []; // Return empty if not synced
 }
+
+const Toast = {
+    show(message, type = 'success') {
+        const id = 'toast-' + Date.now();
+        const html = `<div id="${id}" class="toast toast-${type}">${message}</div>`;
+        document.body.insertAdjacentHTML('beforeend', html);
+        const el = document.getElementById(id);
+        setTimeout(() => el.classList.add('visible'), 10);
+        setTimeout(() => {
+            el.classList.remove('visible');
+            setTimeout(() => el.remove(), 400);
+        }, 3000);
+    }
+};
+
+// CSS for Toast
+const toastStyles = `
+.toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px);
+    background: rgba(8, 8, 8, 0.9); backdrop-filter: blur(15px); color: white;
+    padding: 12px 24px; border-radius: 14px; font-size: 14px; font-weight: 600;
+    z-index: 10000; opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: none; border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+.toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast-success { border-left: 4px solid #10B981; }
+.toast-error { border-left: 4px solid #EF4444; }
+`;
+const styleSheet = document.createElement("style");
+styleSheet.innerText = toastStyles;
+document.head.appendChild(styleSheet);
+
+// ═══════════════════════════════════════════════════════════
+// PWA — SERVICE WORKER & INSTALL PROMPT
+// ═══════════════════════════════════════════════════════════
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('[PWA] Service Worker registered:', reg.scope))
+            .catch(err => console.warn('[PWA] SW registration failed:', err));
+    });
+}
+
+// Capture install prompt (Android Chrome)
+let pwaInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    pwaInstallPrompt = e;
+    // Show install button if it exists on the page
+    const btn = document.getElementById('pwa-install-btn');
+    if (btn) btn.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+    pwaInstallPrompt = null;
+    console.log('[PWA] App installed successfully');
+    showToast('✅ Rachma Pro installée avec succès !', 'success');
+});
+
+function promptPwaInstall() {
+    if (!pwaInstallPrompt) {
+        showToast('ℹ️ Ouvrez ce menu dans Chrome > "Installer l\'application"', 'info');
+        return;
+    }
+    pwaInstallPrompt.prompt();
+    pwaInstallPrompt.userChoice.then(result => {
+        if (result.outcome === 'accepted') showToast('✅ Installation lancée !', 'success');
+        pwaInstallPrompt = null;
+    });
+}

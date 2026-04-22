@@ -1,0 +1,44 @@
+{
+  "name": "Rachma Pro — Gestion B2B",
+  "short_name": "Rachma Pro",
+  "description": "Gestion complète de votre établissement : caisse, stocks, marketplace B2B",
+  "start_url": "/gestion.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0f1e",
+  "theme_color": "#10b981",
+  "lang": "fr",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Marketplace",
+      "short_name": "Marché",
+      "description": "Accéder à la marketplace B2B",
+      "url": "/gestion.html#marketplace",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Stocks",
+      "short_name": "Stocks",
+      "description": "Gérer vos stocks",
+      "url": "/gestion.html#stocks",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -27,6 +27,12 @@ function init() {
     document.getElementById('btn-validate').onclick = checkout;
 }
 
+function toggleCart(show) {
+    const cart = document.querySelector('.pos-cart');
+    if (show) cart.classList.add('active');
+    else cart.classList.remove('active');
+}
+
 function loadCart() {
     const allCarts = JSON.parse(localStorage.getItem('rachma_table_carts') || '{}');
     state.cart = allCarts[state.tableId]?.items || {};
@@ -58,16 +64,19 @@ function renderProducts() {
         state.products.filter(p => p.category === cat).forEach(p => {
             const btn = document.createElement('button');
             btn.className = 'product-row';
-            btn.style.width = 'calc(50% - 5px)';
-            btn.style.marginBottom = '0';
             btn.onclick = () => addToCart(p.id);
+            
+            const iconContent = p.image 
+                ? `<img src="${p.image}" alt="${p.name}">` 
+                : `<span class="icon-fallback">${p.icon || '📦'}</span>`;
+
             btn.innerHTML = `
-                <div class="product-info">
-                    <div class="product-icon">${p.icon}</div>
-                    <div style="text-align: left;">
-                        <div class="product-name" style="font-size: 13px;">${p.name}</div>
-                        <div class="product-price">${p.price.toFixed(3)}</div>
-                    </div>
+                <div class="product-image-container">
+                    ${iconContent}
+                </div>
+                <div style="flex: 1; text-align: left;">
+                    <div class="product-name" style="font-weight: 700; font-size: 14px;">${p.name}</div>
+                    <div class="product-price" style="color: var(--primary); font-weight: 800; font-size: 12px; margin-top: 2px;">${Number(p.price).toFixed(3)} DT</div>
                 </div>
             `;
             grid.appendChild(btn);
@@ -128,6 +137,16 @@ function updateUI() {
     document.getElementById('subtotal-ht').innerText = `${totalHT.toFixed(3)} DT`;
     document.getElementById('tax-amount').innerText = `${totalTax.toFixed(3)} DT`;
     document.getElementById('total-ttc').innerText = `${subtotalTTC.toFixed(3)} DT`;
+
+    // Update Mobile Badge
+    const badge = document.getElementById('cart-badge');
+    const totalQty = Object.values(state.cart).reduce((a, b) => a + b, 0);
+    if (totalQty > 0) {
+        badge.innerText = totalQty;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
 }
 
 function clearCart() {

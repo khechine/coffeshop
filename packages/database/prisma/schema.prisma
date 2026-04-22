@@ -548,6 +548,8 @@ model Product {
   sales     SaleItem[]
   unitId     String?
   unit       GlobalUnit? @relation(fields: [unitId], references: [id])
+  icon       String?
+  image      String?
   active     Boolean  @default(true)
   canBeTakeaway Boolean @default(true)
   createdAt DateTime   @default(now())

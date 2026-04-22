@@ -3,7 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Rachma Lite | Gestion</title>
+    <title>Rachma Pro | Gestion B2B</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#10b981">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Rachma Pro">
+    <link rel="apple-touch-icon" href="icon-512.png">
+    <meta name="description" content="Gestion complète de votre établissement : caisse, stocks, marketplace B2B">
+
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="gestion-style.css">
 </head>
@@ -28,10 +39,11 @@
             <div class="header-content">
                 <h1 id="page-title">Centre de Gestion</h1>
                 <div class="header-tabs">
-                    <button class="header-tab active" onclick="switchMgmtTab('catalogue')">📦 Catalogue</button>
-                    <button class="header-tab" onclick="switchMgmtTab('stocks')">📊 Stocks</button>
-                    <button class="header-tab" onclick="switchMgmtTab('marketplace')">🛒 Marché</button>
-                    <button class="header-tab" onclick="switchMgmtTab('finance')">💰 Finance</button>
+                    <button class="header-tab active" onclick="switchMgmtTab('finance')">💰</button>
+                    <button class="header-tab" onclick="switchMgmtTab('catalogue')">📦</button>
+                    <button class="header-tab" onclick="switchMgmtTab('stocks')">📊</button>
+                    <button class="header-tab" onclick="switchMgmtTab('marketplace')">🛒</button>
+                    <button class="header-tab" onclick="switchMgmtTab('suppliers')">🤝</button>
                 </div>
             </div>
         </header>

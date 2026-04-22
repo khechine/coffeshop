@@ -3,10 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Rachma Lite | Terminal Grid</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Rachma Pro | Terminal Grid</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#10b981">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Rachma Pro">
+    <link rel="apple-touch-icon" href="icon-512.png">
+
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -28,6 +36,7 @@
                 </div>
             </div>
             <div class="header-actions">
+                <button id="pwa-install-btn" class="pwa-btn" onclick="promptPwaInstall()" style="display:none; background:rgba(255,127,80,0.1); border:1px solid var(--primary); color:var(--primary); border-radius:30px; font-size:10px; font-weight:800; padding:6px 12px; margin-right:8px;">📲 INSTALLER APP</button>
                 <div class="dash-counters">
                     <div class="counter-item">
                         <span class="counter-label">Vendus</span>
