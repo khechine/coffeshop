@@ -83,10 +83,15 @@ export default function SalesClient({ initialSales, storeName, storeAddress, sto
                       <div style={{ fontSize: '11px', color: '#94A3B8' }}>{new Date(sale.createdAt).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}</div>
                    </td>
                    <td data-label="Référence">
-                      <div style={{ fontWeight: 800, color: '#6366F1', fontSize: '14px' }}>#{sale.id.slice(-6).toUpperCase()}</div>
+                      <div style={{ fontWeight: 800, color: sale.isVoid ? '#94A3B8' : '#6366F1', fontSize: '14px', textDecoration: sale.isVoid ? 'line-through' : 'none' }}>#{sale.id.slice(-6).toUpperCase()}</div>
                       {sale.isFiscal && (
-                        <div style={{ fontSize: '11px', fontWeight: 900, color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 900, color: sale.isVoid ? '#94A3B8' : '#10B981', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
                           <CheckCircle size={10} /> {sale.fiscalNumber}
+                        </div>
+                      )}
+                      {sale.isVoid && (
+                        <div style={{ fontSize: '10px', fontWeight: 800, color: '#EF4444', background: '#FEF2F2', padding: '2px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', marginTop: '6px' }}>
+                          ANNULÉ
                         </div>
                       )}
                    </td>
@@ -115,11 +120,12 @@ export default function SalesClient({ initialSales, storeName, storeAddress, sto
                       <div style={{ fontSize: '11px', color: '#64748B' }}>
                         Barista: <span style={{fontWeight:700, color:'#1E1B4B'}}>{sale.takenBy?.name || 'Inconnu'}</span>
                       </div>
-                      <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
                         <span style={{ padding: '2px 6px', background: '#F1F5F9', borderRadius: '4px' }}>{sale.tableName || 'Directe'}</span>
+                        {sale.terminalId && <span style={{ padding: '2px 6px', background: '#EEF2FF', color: '#4F46E5', borderRadius: '4px', fontWeight: 800, fontSize: '9px' }}>T-{sale.terminalId.slice(-4).toUpperCase()}</span>}
                       </div>
                    </td>
-                   <td data-label="Total" style={{ textAlign: 'right', fontWeight: 900, color: '#1E1B4B', fontSize: '15px' }}>
+                   <td data-label="Total" style={{ textAlign: 'right', fontWeight: 900, color: sale.isVoid ? '#94A3B8' : '#1E1B4B', fontSize: '15px', textDecoration: sale.isVoid ? 'line-through' : 'none' }}>
                       {Number(sale.total).toFixed(3)} DT
                    </td>
                    <td data-label="Action" style={{ textAlign: 'center' }}>

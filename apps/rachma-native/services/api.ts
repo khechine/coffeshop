@@ -1,4 +1,4 @@
-const BASE_URL = __DEV__ ? 'http://localhost:3001' : 'https://api.coffeeshop.elkassa.com';
+const BASE_URL = 'https://api.coffeeshop.elkassa.com';
 
 export const ApiService = {
   async get(endpoint: string) {

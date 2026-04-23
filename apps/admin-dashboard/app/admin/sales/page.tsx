@@ -16,16 +16,25 @@ export default async function SalesPage() {
 
   const serializedSales = sales.map((s: any) => ({
     id: s.id,
+    createdAt: s.createdAt.toISOString(),
     total: Number(s.total),
-    table: s.tableName || 'Directe',
-    cashier: s.barista?.name || 'Inconnu',
-    takenBy: s.takenBy?.name || 'Inconnu',
-    date: new Date(s.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-    time: new Date(s.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+    totalHt: Number(s.total) / 1.19, // Approximation d'affichage HT
+    totalTax: Number(s.total) - (Number(s.total) / 1.19),
+    tableName: s.tableName || 'Directe',
+    isFiscal: s.isFiscal || false,
+    fiscalNumber: s.fiscalNumber || null,
+    isVoid: s.isVoid || false,
+    terminalId: s.terminalId || null,
+    hash: s.hash || null,
+    consumeType: s.consumeType || 'DINE_IN',
+    barista: { name: s.barista?.name || 'Inconnu' },
+    takenBy: { name: s.takenBy?.name || 'Inconnu' },
     items: s.items.map((i: any) => ({ 
-      name: i.product?.name || 'Produit Inconnu', 
+      productId: i.productId,
+      product: { name: i.product?.name || 'Produit Inconnu' },
       quantity: Number(i.quantity), 
-      price: Number(i.price) 
+      price: Number(i.price),
+      taxRate: Number(i.product?.taxRate || 0.19)
     }))
   }));
 
