@@ -201,6 +201,8 @@ export default function PosScreen() {
                 storeId: storeId,
                 total: subtotalTTC,
                 baristaId: session?.user?.id,
+                takenById: session?.user?.id,
+                terminalId: session?.terminalId,
                 mode: 'NORMAL',
                 items: cartItems.map(item => ({
                   productId: item.product.id,

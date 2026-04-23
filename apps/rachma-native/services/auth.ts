@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 const TOKEN_KEY = 'rachma_token';
 const STORE_ID_KEY = 'rachma_store_id';
 const USER_KEY = 'rachma_user';
+const TERMINAL_ID_KEY = 'rachma_terminal_id';
 
 // Web fallback: SecureStore is not available on web
 const storage = {
@@ -31,10 +32,13 @@ const storage = {
 
 export const AuthService = {
   // --- Device Level Auth ---
-  async saveSession(token: string, storeId: string) {
+  async saveSession(token: string, storeId: string, terminalId?: string) {
     try {
       await storage.setItem(TOKEN_KEY, token);
       await storage.setItem(STORE_ID_KEY, storeId);
+      if (terminalId) {
+        await storage.setItem(TERMINAL_ID_KEY, terminalId);
+      }
     } catch (error) {
       console.error('Failed to save session:', error);
     }
@@ -45,6 +49,7 @@ export const AuthService = {
       await storage.removeItem(TOKEN_KEY);
       await storage.removeItem(STORE_ID_KEY);
       await storage.removeItem(USER_KEY);
+      await storage.removeItem(TERMINAL_ID_KEY);
     } catch (error) {
       console.error('Failed to clear session:', error);
     }
@@ -72,6 +77,7 @@ export const AuthService = {
     try {
       const token = await storage.getItem(TOKEN_KEY);
       const storeId = await storage.getItem(STORE_ID_KEY);
+      const terminalId = await storage.getItem(TERMINAL_ID_KEY);
       const userStr = await storage.getItem(USER_KEY);
       const user = userStr ? JSON.parse(userStr) : null;
       
@@ -80,11 +86,12 @@ export const AuthService = {
         isUnlocked: !!user,
         token, 
         storeId,
+        terminalId,
         user 
       };
     } catch (error) {
       console.error('Failed to get session:', error);
-      return { isPaired: false, isUnlocked: false, token: null, storeId: null, user: null };
+      return { isPaired: false, isUnlocked: false, token: null, storeId: null, terminalId: null, user: null };
     }
   },
 

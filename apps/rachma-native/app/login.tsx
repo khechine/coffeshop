@@ -48,7 +48,7 @@ export default function LoginScreen() {
         
         // Terminal activation returns storeId and terminalId, not a standard token
         if (result.storeId && result.terminalId) {
-          await AuthService.saveSession(result.terminalId, result.storeId);
+          await AuthService.saveSession(result.terminalId, result.storeId, result.terminalId);
           await AuthService.clearUser(); // explicitly clear any previous user state so it prompts for PIN
           router.replace('/unlock');
         } else {

@@ -22,6 +22,7 @@ export class AuthController {
         pinCode: pin.trim(),
       },
       select: {
+        id: true,
         name: true,
         role: true,
         permissions: true,
