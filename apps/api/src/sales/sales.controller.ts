@@ -76,6 +76,14 @@ export class SalesController {
     );
   }
 
+  @Post(':id/cancel')
+  async cancelSale(
+    @Param('id') id: string,
+    @Body() body: { canceledById: string }
+  ) {
+    return this.salesService.cancelSale(id, body.canceledById);
+  }
+
   // ─── MOBILE MANAGEMENT ENDPOINTS ─────────────────────────
 
   @Get('management/stock/:storeId')

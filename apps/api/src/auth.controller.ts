@@ -70,7 +70,7 @@ export class AuthController {
       data: { 
         status: 'ACTIVE',
         lastUsedAt: new Date(),
-        // activationCode: null // On pourrait l'invalider, mais gardons-le pour debug pour l'instant
+        activationCode: null // Code invalidé après usage pour empêcher la réutilisation
       }
     });
 

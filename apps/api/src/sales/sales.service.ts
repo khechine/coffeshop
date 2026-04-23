@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { prisma } from '@coffeeshop/database';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { InventoryService } from '../inventory/inventory.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class SalesService {
@@ -50,6 +51,36 @@ export class SalesService {
           };
         });
 
+        // --- NACEF / FISCAL CHAINING ---
+        const store = await tx.store.findUnique({ where: { id: dto.storeId } });
+        if (!store) throw new Error('Store not found');
+
+        let fiscalSecret = store.fiscalSecret;
+        if (!fiscalSecret) {
+          fiscalSecret = crypto.randomBytes(32).toString('hex');
+          await tx.store.update({ where: { id: dto.storeId }, data: { fiscalSecret } });
+        }
+
+        const currentSeq = store.currentFiscalSequence + 1;
+        const fiscalNumber = `FAC-${new Date().getFullYear()}-${String(currentSeq).padStart(6, '0')}`;
+        const totalTtcGlobal = Math.round((totalHtGlobal + totalTaxGlobal) * 1000) / 1000;
+        const timestampIso = new Date().toISOString();
+
+        const previousSale = await tx.sale.findFirst({
+          where: { storeId: dto.storeId, isFiscal: true },
+          orderBy: { sequenceNumber: 'desc' }
+        });
+        const previousHash = previousSale?.hash || 'GENESIS_HASH';
+
+        const hashInput = `${dto.storeId}|${fiscalNumber}|${totalTtcGlobal}|${timestampIso}|${previousHash}`;
+        const signature = crypto.createHmac('sha256', fiscalSecret).update(hashInput).digest('hex');
+
+        await tx.store.update({ 
+          where: { id: dto.storeId }, 
+          data: { currentFiscalSequence: currentSeq } 
+        });
+        // -------------------------------
+
         const newSale = await tx.sale.create({
           data: {
             id: dto.id || undefined,
@@ -62,11 +93,29 @@ export class SalesService {
             takenById: dto.takenById || dto.baristaId,
             mode: dto.mode || 'NORMAL',
             sessionId: dto.sessionId,
+            terminalId: (dto as any).terminalId || undefined,
+            isFiscal: true,
+            fiscalNumber: fiscalNumber,
+            sequenceNumber: currentSeq,
+            fiscalDay: timestampIso.split('T')[0],
+            previousHash: previousHash,
+            hashInput: hashInput,
+            hash: signature,
+            signature: signature,
             items: {
               create: itemsWithTax
             }
           },
           include: { items: true }
+        });
+
+        // Create Fiscal Audit Log
+        await tx.fiscalLog.create({
+          data: {
+            saleId: newSale.id,
+            action: 'CREATE_TICKET',
+            hash: signature
+          }
         });
 
         // 4. Create Session Log if in RACHMA mode (closing session)
@@ -179,6 +228,53 @@ export class SalesService {
       },
       orderBy: { createdAt: 'desc' }
     });
+  }
+
+  async cancelSale(saleId: string, canceledById: string): Promise<any> {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const sale = await tx.sale.findUnique({ where: { id: saleId } });
+        if (!sale) throw new Error('Sale not found');
+        if (sale.isVoid) throw new Error('Sale is already voided');
+
+        // Logic for fiscal void chaining
+        let newHash = null;
+        if (sale.isFiscal) {
+          const store = await tx.store.findUnique({ where: { id: sale.storeId } });
+          const previousSale = await tx.sale.findFirst({
+            where: { storeId: sale.storeId, isFiscal: true },
+            orderBy: { sequenceNumber: 'desc' }
+          });
+          const previousHash = previousSale?.hash || 'GENESIS_HASH';
+          const cancelInput = `VOID|${sale.fiscalNumber}|${new Date().toISOString()}|${previousHash}`;
+          newHash = crypto.createHmac('sha256', store.fiscalSecret || '').update(cancelInput).digest('hex');
+
+          await tx.fiscalLog.create({
+            data: {
+              saleId: sale.id,
+              action: 'CANCEL_TICKET',
+              hash: newHash,
+              data: { canceledById }
+            }
+          });
+        }
+
+        const updated = await tx.sale.update({
+          where: { id: saleId },
+          data: {
+            isVoid: true,
+            // we could store the voidHash somewhere if needed, but FiscalLog is enough
+          }
+        });
+
+        // Optionally, refund stock here depending on rules
+
+        return updated;
+      });
+    } catch (error) {
+      this.logger.error(`Error canceling sale: ${error.message}`);
+      throw new BadRequestException(error.message);
+    }
   }
 
 }

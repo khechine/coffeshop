@@ -2728,6 +2728,11 @@ export async function createTerminalAction(nickname: string) {
 }
 
 export async function generateTerminalCodeAction(id: string) {
+  const terminal = await (prisma.posTerminal as any).findUnique({ where: { id } });
+  if (terminal?.status === 'ACTIVE') {
+    throw new Error('Ce terminal est déjà couplé et actif.');
+  }
+
   const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
   try {
     await (prisma.posTerminal as any).update({

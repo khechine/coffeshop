@@ -106,9 +106,11 @@ export default function TerminalsClient({ terminals, storeId }: { terminals: Ter
                   {t.status === 'ACTIVE' ? <CheckCircle2 size={26} color="#15803D" /> : <Smartphone size={26} color="#475569" />}
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="btn btn-ghost" style={{ padding: '8px', background: '#F1F5F9' }} onClick={() => generateCode(t)} title="Générer Code Activation">
-                    <RefreshCw size={14} color="#475569" />
-                  </button>
+                  {t.status !== 'ACTIVE' && (
+                    <button className="btn btn-ghost" style={{ padding: '8px', background: '#F1F5F9' }} onClick={() => generateCode(t)} title="Générer Code Activation">
+                      <RefreshCw size={14} color="#475569" />
+                    </button>
+                  )}
                   <button className="btn btn-ghost" style={{ padding: '8px', background: '#FEF2F2' }} onClick={() => setDeleteTarget(t)}>
                     <Trash2 size={14} color="#EF4444" />
                   </button>
