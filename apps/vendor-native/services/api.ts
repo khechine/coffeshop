@@ -1,9 +1,19 @@
+import { AuthService } from './auth';
+
 const BASE_URL = 'https://api.coffeeshop.elkassa.com';
 
 export const ApiService = {
   async get(endpoint: string) {
     try {
-      const response = await fetch(`${BASE_URL}${endpoint}`);
+      const session = await AuthService.getSession();
+      const headers: any = {};
+      if (session.token) {
+        headers['Authorization'] = `Bearer ${session.token}`;
+      }
+
+      const response = await fetch(`${BASE_URL}${endpoint}`, {
+        headers
+      });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
         throw new Error(data?.message || data?.error || `HTTP error! status: ${response.status}`);
@@ -17,11 +27,17 @@ export const ApiService = {
 
   async post(endpoint: string, bodyData: any) {
     try {
+      const session = await AuthService.getSession();
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      if (session.token) {
+        headers['Authorization'] = `Bearer ${session.token}`;
+      }
+
       const response = await fetch(`${BASE_URL}${endpoint}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(bodyData),
       });
       const data = await response.json().catch(() => null);
@@ -37,11 +53,17 @@ export const ApiService = {
 
   async put(endpoint: string, bodyData: any) {
     try {
+      const session = await AuthService.getSession();
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      if (session.token) {
+        headers['Authorization'] = `Bearer ${session.token}`;
+      }
+
       const response = await fetch(`${BASE_URL}${endpoint}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(bodyData),
       });
       const data = await response.json().catch(() => null);
@@ -57,8 +79,15 @@ export const ApiService = {
 
   async delete(endpoint: string) {
     try {
+      const session = await AuthService.getSession();
+      const headers: any = {};
+      if (session.token) {
+        headers['Authorization'] = `Bearer ${session.token}`;
+      }
+
       const response = await fetch(`${BASE_URL}${endpoint}`, {
         method: 'DELETE',
+        headers
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
