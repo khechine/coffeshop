@@ -654,31 +654,43 @@ export class ManagementController {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const firstDayOfWeek = new Date(today);
+    firstDayOfWeek.setDate(today.getDate() - 6); // last 7 days
+
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    // 1. Sales summaries
-    const [todaySales, monthSales] = await Promise.all([
+    // Parallel queries for performance
+    const [todaySales, weeklySales, monthSales, todayExpenses] = await Promise.all([
       prisma.sale.aggregate({
-        where: { storeId, createdAt: { gte: today } },
+        where: { storeId, isVoid: false, createdAt: { gte: today } },
         _sum: { total: true },
         _count: true,
       }),
       prisma.sale.aggregate({
-        where: { storeId, createdAt: { gte: firstDayOfMonth } },
+        where: { storeId, isVoid: false, createdAt: { gte: firstDayOfWeek } },
+        _sum: { total: true },
+      }),
+      prisma.sale.aggregate({
+        where: { storeId, isVoid: false, createdAt: { gte: firstDayOfMonth } },
         _sum: { total: true },
         _count: true,
       }),
-    ]);
-
-    // 2. Expense summaries
-    const [monthExpenses] = await Promise.all([
       prisma.expense.aggregate({
-        where: { storeId, date: { gte: firstDayOfMonth } },
+        where: { storeId, date: { gte: today } },
         _sum: { amount: true },
       }),
     ]);
 
-    // 3. Last 7 days chart data
+    // Low stock: items where quantity < minThreshold (field-to-field comparison via raw)
+    const lowStockResult = await prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(*) as count FROM "StockItem"
+      WHERE "storeId" = ${storeId}
+        AND "quantity" < "minThreshold"
+        AND "minThreshold" > 0
+    `;
+    const lowStock = Number(lowStockResult?.[0]?.count ?? 0);
+
+    // Last 7 days chart
     const chartData = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -686,27 +698,94 @@ export class ManagementController {
       d.setHours(0, 0, 0, 0);
       const nextD = new Date(d);
       nextD.setDate(nextD.getDate() + 1);
-
       const dayTotal = await prisma.sale.aggregate({
-        where: { storeId, createdAt: { gte: d, lt: nextD } },
+        where: { storeId, isVoid: false, createdAt: { gte: d, lt: nextD } },
         _sum: { total: true },
       });
-
       chartData.push({
         date: d.toISOString().split('T')[0],
         total: Number(dayTotal._sum.total || 0),
       });
     }
 
+    const totalSalesDay = Number(todaySales._sum.total || 0);
+    const totalExpensesDay = Number(todayExpenses._sum.amount || 0);
+
+    // Top Products (today) — group by product name via raw
+    const topProductsRaw = await prisma.$queryRaw<{ name: string; qty: bigint; revenue: number }[]>`
+      SELECT p.name, SUM(si.quantity) as qty, SUM(si.quantity * si.price) as revenue
+      FROM "SaleItem" si
+      JOIN "Sale" s ON si."saleId" = s.id
+      JOIN "Product" p ON si."productId" = p.id
+      WHERE s."storeId" = ${storeId}
+        AND s."isVoid" = false
+        AND s."createdAt" >= ${today}
+      GROUP BY p.name
+      ORDER BY qty DESC
+      LIMIT 10
+    `;
+    const topProducts = topProductsRaw.map(r => ({
+      name: r.name,
+      qty: Number(r.qty),
+      revenue: Number(r.revenue),
+    }));
+
+    // Top Staff (today) — group by takenBy user
+    const topStaffRaw = await prisma.$queryRaw<{ name: string; revenue: number; count: bigint }[]>`
+      SELECT u.name, SUM(s.total) as revenue, COUNT(s.id) as count
+      FROM "Sale" s
+      JOIN "User" u ON s."takenById" = u.id
+      WHERE s."storeId" = ${storeId}
+        AND s."isVoid" = false
+        AND s."createdAt" >= ${today}
+      GROUP BY u.name
+      ORDER BY revenue DESC
+      LIMIT 5
+    `;
+    const topStaff = topStaffRaw.map(r => ({
+      name: r.name,
+      revenue: Number(r.revenue),
+      count: Number(r.count),
+    }));
+
+    // Top Tables (today)
+    const topTablesRaw = await prisma.$queryRaw<{ tableName: string; revenue: number }[]>`
+      SELECT "tableName", SUM(total) as revenue
+      FROM "Sale"
+      WHERE "storeId" = ${storeId}
+        AND "isVoid" = false
+        AND "tableName" IS NOT NULL
+        AND "createdAt" >= ${today}
+      GROUP BY "tableName"
+      ORDER BY revenue DESC
+      LIMIT 5
+    `;
+    const topTables = topTablesRaw.map(r => ({
+      name: r.tableName,
+      revenue: Number(r.revenue),
+    }));
+
     return {
-      today: {
-        total: Number(todaySales._sum.total || 0),
-        count: todaySales._count,
-      },
+      // ── Flat KPIs for mobile ──────────────────────────────────
+      totalSales: totalSalesDay,
+      orderCount: todaySales._count || 0,
+      totalExpenses: totalExpensesDay,
+      weeklySales: Number(weeklySales._sum.total || 0),
+      monthlySales: Number(monthSales._sum.total || 0),
+      lowStockCount: typeof lowStock === 'number' ? lowStock : 0,
+      margin: totalSalesDay > 0 ? ((totalSalesDay - totalExpensesDay) / totalSalesDay) * 100 : 0,
+      netProfit: totalSalesDay - totalExpensesDay,
+      // ── Rich analytics ───────────────────────────────────────
+      topProducts,
+      topStaff,
+      topTables,
+      topVendor: topStaff[0] || null,
+      // ── Legacy nested keys (web consumer) ────────────────────
+      today: { total: totalSalesDay, count: todaySales._count },
       month: {
         total: Number(monthSales._sum.total || 0),
-        expenses: Number(monthExpenses._sum.amount || 0),
-        net: Number(monthSales._sum.total || 0) - Number(monthExpenses._sum.amount || 0),
+        expenses: totalExpensesDay,
+        net: Number(monthSales._sum.total || 0) - totalExpensesDay,
       },
       chart: chartData,
     };

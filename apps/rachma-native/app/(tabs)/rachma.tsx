@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, ScrollView, TouchableOpacity, View as RNView,
-  Text as RNText, Vibration, RefreshControl, Alert, Platform, Modal
+  Text as RNText, Vibration, RefreshControl, Alert, Platform, Modal, TextInput
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
@@ -24,6 +26,27 @@ type Product = {
 type LogEntry = string; // 'sale' | 'loss' | 'sale:PKG_ID'
 type Logs = Record<string, LogEntry[]>;
 
+const SOUND_PROFILES = {
+  modern: {
+    name: 'Moderne',
+    sale: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
+    loss: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
+    pkg: 'https://assets.mixkit.co/active_storage/sfx/2567/2567-preview.mp3',
+    undo: 'https://assets.mixkit.co/active_storage/sfx/2575/2575-preview.mp3',
+  },
+  classic: {
+    name: 'Caisse (Retro)',
+    sale: 'https://assets.mixkit.co/active_storage/sfx/1077/1077-preview.mp3',
+    loss: 'https://assets.mixkit.co/active_storage/sfx/1083/1083-preview.mp3',
+    pkg: 'https://assets.mixkit.co/active_storage/sfx/1079/1079-preview.mp3',
+    undo: 'https://assets.mixkit.co/active_storage/sfx/2575/2575-preview.mp3',
+  },
+  minimal: {
+    name: 'Discret (Vibrations)',
+    sale: null, loss: null, pkg: null, undo: null
+  }
+};
+
 const SLOT_COUNT = 20;
 
 // ────────────────────────────────────────────────
@@ -38,11 +61,32 @@ export default function RachmaScreen() {
   const [storeId, setStoreId] = useState('1');
   const router = useRouter();
   const [reportOpen, setReportOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [serverHistory, setServerHistory] = useState<any[]>([]);
+  const [stats, setStats] = useState({ today: 0, week: 0, month: 0 });
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundProfile, setSoundProfile] = useState<keyof typeof SOUND_PROFILES>('modern');
+  const [user, setUser] = useState<any>(null);
+  const [editName, setEditName] = useState('');
+  const [editPin, setEditPin] = useState('');
 
-  // Load storeId from session
   useEffect(() => {
-    AuthService.getSession().then(s => { if (s?.storeId) setStoreId(s.storeId); });
-  }, []);
+    AuthService.getSession().then(s => { 
+      if (s?.storeId) setStoreId(s.storeId); 
+      if (s?.user) {
+        setUser(s.user);
+        setEditName(s.user.name || '');
+        setEditPin(s.user.pinCode || '');
+      }
+    });
+    AsyncStorage.getItem('rachma_sound_enabled').then(v => {
+      if (v !== null) setSoundEnabled(v === 'true');
+    });
+    AsyncStorage.getItem('rachma_sound_profile').then(v => {
+      if (v !== null && v in SOUND_PROFILES) setSoundProfile(v as any);
+    });
+  }, [storeId]);
 
   // Load persisted logs
   useEffect(() => {
@@ -86,6 +130,60 @@ export default function RachmaScreen() {
     AsyncStorage.setItem(`rachma_logs_${storeId}`, JSON.stringify(newLogs));
   }, [storeId]);
 
+  // ── Feedback logic ──
+  const playFeedback = useCallback(async (type: 'sale' | 'loss' | 'pkg' | 'undo') => {
+    if (!soundEnabled) return;
+
+    // 1. Haptics (Immediate)
+    Haptics.impactAsync(
+      type === 'sale' ? Haptics.ImpactFeedbackStyle.Medium :
+      type === 'loss' ? Haptics.ImpactFeedbackStyle.Heavy :
+      Haptics.ImpactFeedbackStyle.Light
+    );
+    
+    // 2. Audio (Async)
+    try {
+      const url = SOUND_PROFILES[soundProfile][type];
+      if (url) {
+        const { sound } = await Audio.Sound.createAsync({ uri: url }, { shouldPlay: true });
+        // Auto-unload from memory after play
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
+        });
+      }
+    } catch (e) {
+      console.warn('Audio play failed:', e);
+    }
+  }, [soundEnabled, soundProfile]);
+
+  // ── Profile Logic ──
+  const handleUpdateProfile = async () => {
+    if (!user?.id) return;
+    try {
+      const resp = await ApiService.post('/auth/update-profile', {
+        id: user.id,
+        name: editName,
+        pinCode: editPin
+      });
+      if (resp) {
+        const updatedUser = { ...user, name: editName, pinCode: editPin };
+        await AuthService.setUser(updatedUser);
+        setUser(updatedUser);
+        Alert.alert('Succès', 'Profil mis à jour !');
+        setSettingsOpen(false);
+      }
+    } catch (e) {
+      Alert.alert('Erreur', 'Impossible de mettre à jour le profil');
+    }
+  };
+
+  const toggleSound = async () => {
+    const val = !soundEnabled;
+    setSoundEnabled(val);
+    await AsyncStorage.setItem('rachma_sound_enabled', String(val));
+    if (val) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
   // ── Tap: add a sale or packaging sale ──
   const handleAdd = (productId: string, pkgId?: string) => {
     const product = products.find(p => p.id === productId);
@@ -95,7 +193,7 @@ export default function RachmaScreen() {
     const updated = { ...logs, [productId]: [...(logs[productId] || []), logType] };
     setLogs(updated);
     saveLogs(updated);
-    Vibration.vibrate(10);
+    playFeedback(pkgId ? 'pkg' : (mode === 'sale' ? 'sale' : 'loss'));
   };
 
   // ── Long press: undo last entry ──
@@ -105,7 +203,7 @@ export default function RachmaScreen() {
     const updated = { ...logs, [productId]: existing.slice(0, -1) };
     setLogs(updated);
     saveLogs(updated);
-    Vibration.vibrate(20);
+    playFeedback('undo');
   };
 
   const handleLock = () => {
@@ -143,6 +241,41 @@ export default function RachmaScreen() {
         }
       ]
     );
+  };
+
+  const fetchHistory = async () => {
+    try {
+      const session = await AuthService.getSession();
+      const baristaId = session.user?.id;
+      if (!baristaId) return;
+
+      const data = await ApiService.get(`/sales/history/${storeId}?baristaId=${baristaId}`);
+      setServerHistory(data);
+
+      // Calcul des stats
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      let d = 0, w = 0, m = 0;
+      data.forEach((s: any) => {
+        const date = new Date(s.createdAt);
+        const amt = Number(s.total || 0);
+        if (s.isVoid) return;
+        if (date >= startOfDay) d += amt;
+        if (date >= startOfWeek) w += amt;
+        if (date >= startOfMonth) m += amt;
+      });
+      setStats({ today: d, week: w, month: m });
+    } catch (e) {
+      console.error("Failed to fetch history:", e);
+    }
+  };
+
+  const handleOpenHistory = () => {
+    fetchHistory();
+    setHistoryOpen(true);
   };
 
   const processBatch = async () => {
@@ -260,16 +393,22 @@ export default function RachmaScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', gap: 15 }}>
-          {/* Total counter triggering report */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', gap: 10 }}>
           <TouchableOpacity style={styles.counterBox} onPress={() => setReportOpen(true)}>
             <RNText style={styles.counterLabel}>Vendus</RNText>
             <RNText style={styles.counterValue}>{totalSold}</RNText>
           </TouchableOpacity>
 
-          {/* Lock Button */}
-          <TouchableOpacity onPress={handleLock} style={styles.lockBtn}>
-            <FontAwesome name="lock" size={24} color={Colors.danger} />
+          <TouchableOpacity onPress={handleOpenHistory} style={styles.headerIconButton}>
+            <FontAwesome name="history" size={20} color={Colors.primary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => setSettingsOpen(true)} style={styles.headerIconButton}>
+            <FontAwesome name="cog" size={20} color="#94a3b8" />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleLock} style={[styles.headerIconButton, { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
+            <FontAwesome name="lock" size={20} color={Colors.danger} />
           </TouchableOpacity>
         </View>
       </View>
@@ -438,6 +577,172 @@ export default function RachmaScreen() {
         </RNView>
       </Modal>
 
+      {/* ──────────────────────────────────────────────── */}
+      {/* History Modal */}
+      {/* ──────────────────────────────────────────────── */}
+      <Modal visible={historyOpen} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={styles.modalBackdrop} onPress={() => setHistoryOpen(false)} />
+          <View style={[styles.modalSheet, { height: '85%' }]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <FontAwesome name="history" size={20} color={Colors.primary} />
+                <Text style={styles.modalTitle}>Statistiques de Vente</Text>
+              </View>
+              <TouchableOpacity onPress={() => setHistoryOpen(false)}>
+                <FontAwesome name="times-circle" size={24} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1 }}>
+              <View style={styles.statsGrid}>
+                <View style={styles.statCard}>
+                  <Text style={styles.statLabel}>AUJOURD'HUI</Text>
+                  <Text style={styles.statValue}>{stats.today.toFixed(3)} DT</Text>
+                </View>
+                <View style={[styles.statCard, { backgroundColor: 'rgba(99,102,241,0.08)' }]}>
+                  <Text style={styles.statLabel}>CETTE SEMAINE</Text>
+                  <Text style={styles.statValue}>{stats.week.toFixed(3)} DT</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={styles.statLabel}>CE MOIS</Text>
+                  <Text style={styles.statValue}>{stats.month.toFixed(3)} DT</Text>
+                </View>
+              </View>
+
+              <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#94a3b8', marginBottom: 15, letterSpacing: 1 }}>TICKETS RÉCENTEMENT SYNCHRONISÉS</Text>
+                {serverHistory.slice(0, 30).map((s) => (
+                  <View key={s.id} style={styles.historyRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.historyRef, s.isVoid && { textDecorationLine: 'line-through', color: '#94a3b8' }]}>
+                        #{s.fiscalNumber || s.id.slice(-6).toUpperCase()}
+                      </Text>
+                      <Text style={styles.historyDate}>
+                        {new Date(s.createdAt).toLocaleDateString('fr-FR')} {new Date(s.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={[styles.historyAmount, s.isVoid && { color: '#ef4444' }]}>
+                        {s.isVoid ? 'ANNULÉ' : `${Number(s.total).toFixed(3)} DT`}
+                      </Text>
+                      <View style={styles.syncBadge}>
+                        <FontAwesome name="check-circle" size={10} color="#10B981" />
+                        <Text style={styles.syncBadgeText}>Serveur</Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+                {serverHistory.length === 0 && (
+                  <View style={{ padding: 40, alignItems: 'center' }}>
+                    <FontAwesome name="cloud" size={40} color="rgba(255,255,255,0.05)" />
+                    <Text style={{ color: '#64748b', marginTop: 10 }}>Aucune donnée serveur.</Text>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ──────────────────────────────────────────────── */}
+      {/* Settings Modal */}
+      {/* ──────────────────────────────────────────────── */}
+      <Modal visible={settingsOpen} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={styles.modalBackdrop} onPress={() => setSettingsOpen(false)} />
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <FontAwesome name="cog" size={20} color={Colors.primary} />
+                <Text style={styles.modalTitle}>Paramètres</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSettingsOpen(false)}>
+                <FontAwesome name="times-circle" size={24} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ padding: 20 }}>
+              {/* Sound Toggle */}
+              <TouchableOpacity style={styles.settingRow} onPress={toggleSound}>
+                <View style={{ backgroundColor: 'transparent' }}>
+                  <Text style={styles.settingLabel}>Retour Audio & Tactile</Text>
+                  <Text style={styles.settingSub}>Bruitages lors de la saisie</Text>
+                </View>
+                <FontAwesome 
+                  name={soundEnabled ? "toggle-on" : "toggle-off"} 
+                  size={32} 
+                  color={soundEnabled ? Colors.primary : "#475569"} 
+                />
+              </TouchableOpacity>
+
+              {soundEnabled && (
+                <View style={{ marginTop: 15, flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                  {Object.entries(SOUND_PROFILES).map(([key, profile]) => (
+                    <TouchableOpacity 
+                      key={key}
+                      onPress={async () => {
+                        setSoundProfile(key as any);
+                        await AsyncStorage.setItem('rachma_sound_profile', key);
+                        // Play preview
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }}
+                      style={[
+                        styles.soundOption, 
+                        soundProfile === key && styles.soundOptionActive
+                      ]}
+                    >
+                      <Text style={[
+                        styles.soundOptionText,
+                        soundProfile === key && styles.soundOptionTextActive
+                      ]}>
+                        {profile.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: 20 }} />
+
+              {/* User Info */}
+              <Text style={styles.sectionTitle}>MON PROFIL</Text>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Nom d'affichage</Text>
+                <TextInput
+                  style={styles.settingsInput}
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder="Ex: Barista Central"
+                  placeholderTextColor="#475569"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Code PIN (4 chiffres)</Text>
+                <TextInput
+                  style={styles.settingsInput}
+                  value={editPin}
+                  onChangeText={setEditPin}
+                  keyboardType="numeric"
+                  maxLength={4}
+                  secureTextEntry
+                  placeholder="****"
+                  placeholderTextColor="#475569"
+                />
+              </View>
+
+              <TouchableOpacity style={styles.saveProfileBtn} onPress={handleUpdateProfile}>
+                <Text style={styles.saveProfileText}>ENREGISTRER</Text>
+              </TouchableOpacity>
+
+              <View style={{ height: 50 }} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -467,13 +772,17 @@ const styles = StyleSheet.create({
   },
   counterLabel: { color: '#94a3b8', fontSize: 10, fontWeight: '700', letterSpacing: 1 },
   counterValue: { color: '#ffffff', fontSize: 22, fontWeight: '900', lineHeight: 26 },
-  lockBtn: {
-    padding: 5,
+  lockBtn: { padding: 5 },
+  headerIconButton: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
   },
 
   // Categories
   categoriesBar: {
-    flexGrow: 0, paddingHorizontal: 10, paddingVertical: 8,
+    flexGrow: 0, paddingHorizontal: 10, paddingVertical: 12,
     borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
     backgroundColor: 'transparent',
   },
@@ -546,10 +855,11 @@ const styles = StyleSheet.create({
 
   // Modal Styles
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
+  modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)' },
   modalSheet: {
-    backgroundColor: '#0e1526', borderTopLeftRadius: 30, borderTopRightRadius: 30,
-    maxHeight: '85%', paddingBottom: 30,
+    backgroundColor: '#0a0f1e', borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    maxHeight: '90%', paddingBottom: 20,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -583,4 +893,61 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   clearBatchText: { color: Colors.primary, fontWeight: '800', fontSize: 16, letterSpacing: 1 },
+
+  // Stats & History Styles
+  statsGrid: { padding: 15, backgroundColor: 'transparent' },
+  statCard: { 
+    padding: 24, borderRadius: 24, 
+    backgroundColor: 'rgba(99,102,241,0.04)', 
+    borderWidth: 1, borderColor: 'rgba(99,102,241,0.1)',
+    marginBottom: 12,
+  },
+  statLabel: { color: '#64748b', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 8 },
+  statValue: { color: '#ffffff', fontSize: 24, fontWeight: '900' },
+  historyRow: { 
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)'
+  },
+  historyRef: { color: Colors.primary, fontWeight: '800', fontSize: 16, letterSpacing: 0.5 },
+  historyDate: { color: '#64748b', fontSize: 12, marginTop: 4 },
+  historyAmount: { color: '#ffffff', fontWeight: '900', fontSize: 16 },
+  syncBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5, backgroundColor: 'rgba(16,185,129,0.08)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  syncBadgeText: { color: '#10B981', fontSize: 10, fontWeight: '800' },
+
+  // Settings Styles
+  settingRow: { 
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 10, backgroundColor: 'transparent'
+  },
+  settingLabel: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
+  settingSub: { color: '#64748b', fontSize: 12, marginTop: 2 },
+  sectionTitle: { color: '#94a3b8', fontSize: 11, fontWeight: '800', letterSpacing: 1.5, marginBottom: 20 },
+  inputGroup: { marginBottom: 20, backgroundColor: 'transparent' },
+  inputLabel: { color: '#94a3b8', fontSize: 11, fontWeight: '700', marginBottom: 8, marginLeft: 4 },
+  settingsInput: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 14, padding: 16, color: '#ffffff',
+    fontSize: 16, fontWeight: '600',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+  },
+  saveProfileBtn: {
+    backgroundColor: Colors.primary,
+    height: 56, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: 10,
+  },
+  saveProfileText: { color: '#ffffff', fontWeight: '800', fontSize: 15, letterSpacing: 1 },
+
+  // Sounds
+  soundOption: {
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+  },
+  soundOptionActive: {
+    backgroundColor: 'rgba(16,185,129,0.1)',
+    borderColor: Colors.primary,
+  },
+  soundOptionText: { color: '#94a3b8', fontSize: 11, fontWeight: '700' },
+  soundOptionTextActive: { color: Colors.primary },
 });

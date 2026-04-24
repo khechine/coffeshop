@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
+import { Platform } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthService } from '@/services/auth';
@@ -30,11 +31,13 @@ export default function TabLayout() {
     fetchUser();
   }, []);
 
-  const isOwner = (role === 'STORE_OWNER' || role === 'SUPERADMIN') && authMode === 'PASSWORD';
   const isOwnerRole = role === 'STORE_OWNER' || role === 'SUPERADMIN';
-  const hasRachmaAccess = isOwnerRole || permissions.includes('RACHMA') || role === 'RACHMA' || role === 'CASHIER';
-  const hasPosAccess = isOwnerRole || permissions.includes('POS') || permissions.includes('TABLES') || role === 'POS' || role === 'CASHIER';
-  const hasTablesAccess = isOwnerRole || permissions.includes('TABLES') || role === 'TABLES' || role === 'CASHIER';
+  const isManager = authMode === 'PASSWORD';
+  const isTerminal = authMode === 'PIN' || !authMode;
+
+  const hasRachmaAccess = isTerminal && (isOwnerRole || permissions.includes('RACHMA') || role === 'RACHMA' || role === 'CASHIER');
+  const hasPosAccess = isTerminal && (isOwnerRole || permissions.includes('POS') || permissions.includes('TABLES') || role === 'POS' || role === 'CASHIER');
+  const hasTablesAccess = isTerminal && (isOwnerRole || permissions.includes('TABLES') || role === 'TABLES' || role === 'CASHIER');
 
   return (
     <Tabs
@@ -44,8 +47,8 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: '#0a0f1e',
           borderTopColor: 'rgba(255,255,255,0.08)',
-          height: 60,
-          paddingBottom: 10,
+          height: 65,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 10,
         },
         headerStyle: {
           backgroundColor: '#0a0f1e',
@@ -59,9 +62,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="rachma"
         options={{
-          title: '⚡ RACHMA',
+          title: 'RACHMA',
           tabBarIcon: ({ color }) => <TabBarIcon name="bolt" color={color} />,
-          tabBarLabel: 'Rachma',
+          tabBarLabel: 'POS',
           headerShown: false,
           href: hasRachmaAccess ? '/(tabs)/rachma' : null,
         }}
@@ -87,25 +90,42 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Finance',
-          tabBarIcon: ({ color }) => <TabBarIcon name="money" color={color} />,
-          href: isOwner ? '/(tabs)' : null,
+          title: 'Dashboard',
+          tabBarLabel: 'Finance',
+          tabBarIcon: ({ color }) => <TabBarIcon name="line-chart" color={color} />,
+          href: isManager ? '/(tabs)' : null,
         }}
       />
       <Tabs.Screen
         name="stocks"
         options={{
-          title: 'Stocks',
-          tabBarIcon: ({ color }) => <TabBarIcon name="archive" color={color} />,
-          href: isOwner ? '/(tabs)/stocks' : null,
+          title: 'Gestion Pro',
+          tabBarLabel: 'Gestion',
+          tabBarIcon: ({ color }) => <TabBarIcon name="briefcase" color={color} />,
+          href: isManager ? '/(tabs)/stocks' : null,
         }}
       />
       <Tabs.Screen
         name="marketplace"
         options={{
-          title: 'Marché',
+          title: 'B2B',
+          tabBarLabel: 'Marché',
           tabBarIcon: ({ color }) => <TabBarIcon name="shopping-cart" color={color} />,
-          href: isOwner ? '/(tabs)/marketplace' : null,
+          href: isManager ? '/(tabs)/marketplace' : null,
+        }}
+      />
+      <Tabs.Screen
+        name="suppliers"
+        options={{
+          title: 'Fournisseurs',
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'Ventes',
+          href: null,
         }}
       />
     </Tabs>

@@ -146,4 +146,30 @@ export class AuthController {
       }
     };
   }
+
+  @Post('update-profile')
+  async updateProfile(@Body() body: { id: string; name?: string; email?: string; pinCode?: string }) {
+    console.log(`👤 Mise à jour profil pour [${body.id}]`);
+    
+    if (!body.id) throw new UnauthorizedException('ID Utilisateur requis');
+
+    const updateData: any = {};
+    if (body.name) updateData.name = body.name;
+    if (body.email) updateData.email = body.email.toLowerCase().trim();
+    if (body.pinCode) updateData.pinCode = body.pinCode.trim();
+
+    const user = await prisma.user.update({
+      where: { id: body.id },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        pinCode: true,
+      }
+    });
+
+    return user;
+  }
 }

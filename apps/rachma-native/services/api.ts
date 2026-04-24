@@ -33,6 +33,42 @@ export const ApiService = {
       console.error(`ApiService.post(${endpoint}) failed:`, error);
       throw error;
     }
+  },
+
+  async put(endpoint: string, bodyData: any) {
+    try {
+      const response = await fetch(`${BASE_URL}${endpoint}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bodyData),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || `HTTP error! status: ${response.status}`);
+      }
+      return data;
+    } catch (error) {
+      console.error(`ApiService.put(${endpoint}) failed:`, error);
+      throw error;
+    }
+  },
+
+  async delete(endpoint: string) {
+    try {
+      const response = await fetch(`${BASE_URL}${endpoint}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || `HTTP error! status: ${response.status}`);
+      }
+      return data;
+    } catch (error) {
+      console.error(`ApiService.delete(${endpoint}) failed:`, error);
+      throw error;
+    }
   }
 };
 

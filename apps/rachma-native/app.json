@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "rachma-native",
-    "slug": "rachma-native",
+    "name": "Rachma Pro",
+    "slug": "rachma-pro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -22,7 +22,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.elkassa.rachmapro"
     },
     "web": {
       "bundler": "metro",
@@ -34,6 +35,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f234c69b-e95a-4ff8-a5fd-41d9510d5021"
+      }
     }
   }
 }
