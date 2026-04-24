@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, Alert, Platform } from 'react-native';
+import { StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, Alert, Platform, Image } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
@@ -27,6 +27,8 @@ export default function ProductsScreen() {
   const [formStock, setFormStock] = useState('IN_STOCK'); // IN_STOCK, LOW_STOCK, OUT_OF_STOCK
   const [formFeatured, setFormFeatured] = useState(false);
   const [formFlash, setFormFlash] = useState(false);
+  const [formImages, setFormImages] = useState<string[]>([]);
+  const [newImageUrl, setNewImageUrl] = useState('');
 
   const fetchData = async (vid: string) => {
     try {
@@ -56,6 +58,29 @@ export default function ProductsScreen() {
     }
   };
 
+  const handleOpenItemModal = (item?: any) => {
+    if (item) {
+      setEditingItem(item);
+      setFormName(item.name || '');
+      setFormPrice(String(item.price || '0.000'));
+      setFormMinQty(String(item.minOrderQty || '1'));
+      setFormStock(item.stockStatus || 'IN_STOCK');
+      setFormFeatured(item.isFeatured || false);
+      setFormFlash(item.isFlashSale || false);
+      setFormImages(item.images || []);
+    } else {
+      setEditingItem(null);
+      setFormName('');
+      setFormPrice('0.000');
+      setFormMinQty('1');
+      setFormStock('IN_STOCK');
+      setFormFeatured(false);
+      setFormFlash(false);
+      setFormImages([]);
+    }
+    setIsItemModalVisible(true);
+  };
+
   const handleSaveItem = async () => {
     if (!formName) return Alert.alert("Erreur", "Le nom est requis.");
     try {
@@ -66,6 +91,7 @@ export default function ProductsScreen() {
         stockStatus: formStock,
         isFeatured: formFeatured,
         isFlashSale: formFlash,
+        images: formImages,
         vendorId,
       };
 
@@ -80,6 +106,17 @@ export default function ProductsScreen() {
     } catch (error) {
       Alert.alert("Erreur", "Sauvegarde impossible.");
     }
+  };
+
+  const addImage = () => {
+    if (newImageUrl) {
+      setFormImages([...formImages, newImageUrl]);
+      setNewImageUrl('');
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setFormImages(formImages.filter((_, i) => i !== index));
   };
 
   const filteredProducts = products.filter(p => {
@@ -127,22 +164,14 @@ export default function ProductsScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollBody} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}>
         {filteredProducts.map((p, idx) => (
-          <TouchableOpacity key={idx} style={[styles.itemRow, styles.glassCard]} onPress={() => {
-            setEditingItem(p);
-            setFormName(p.name);
-            setFormPrice(String(p.price));
-            setFormMinQty(String(p.minOrderQty));
-            setFormStock(p.stockStatus);
-            setFormFeatured(p.isFeatured);
-            setFormFlash(p.isFlashSale);
-            setIsItemModalVisible(true);
-          }}>
+          <TouchableOpacity key={idx} style={[styles.itemRow, styles.glassCard]} onPress={() => handleOpenItemModal(p)}>
             <View style={{ flex: 1, backgroundColor: 'transparent' }}>
               <Text style={styles.itemName}>{p.name}</Text>
               <Text style={styles.itemRef}>{Number(p.price).toFixed(3)} DT — Min: {p.minOrderQty}</Text>
               <View style={{ flexDirection: 'row', gap: 5, marginTop: 5, backgroundColor: 'transparent' }}>
                 {p.isFeatured && <View style={styles.tagFeatured}><Text style={styles.tagText}>Featured</Text></View>}
                 {p.isFlashSale && <View style={styles.tagFlash}><Text style={styles.tagText}>Flash</Text></View>}
+                {(p.images?.length > 0) && <View style={styles.tagImage}><Text style={styles.tagText}>{p.images.length} photos</Text></View>}
               </View>
             </View>
             <View style={[styles.stockBadge, { borderColor: p.stockStatus === 'IN_STOCK' ? '#10b981' : '#f59e0b' }]}>
@@ -153,7 +182,6 @@ export default function ProductsScreen() {
         {filteredProducts.length === 0 && <Text style={styles.emptyText}>Aucun produit trouvé.</Text>}
       </ScrollView>
 
-      {/* Product Editor Modal */}
       <Modal visible={isItemModalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
             <View style={styles.modalSheet}>
@@ -185,6 +213,37 @@ export default function ProductsScreen() {
                         ))}
                     </View>
 
+                    {/* Multi-Images UI */}
+                    <Text style={styles.inputLabel}>Photos (Galerie)</Text>
+                    <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', backgroundColor: 'transparent', marginBottom: 10 }}>
+                        <TextInput 
+                            style={[styles.modalInput, { flex: 1, marginBottom: 0 }]} 
+                            value={newImageUrl} 
+                            onChangeText={setNewImageUrl} 
+                            placeholder="URL vers image..." 
+                            placeholderTextColor="#475569" 
+                        />
+                        <TouchableOpacity 
+                            style={{ backgroundColor: '#f59e0b', width: 45, height: 45, borderRadius: 10, justifyContent: 'center', alignItems: 'center' }}
+                            onPress={addImage}
+                        >
+                            <FontAwesome name="plus" size={16} color="#fff" />
+                        </TouchableOpacity>
+                    </View>
+                    <ScrollView horizontal style={{ flexDirection: 'row', marginBottom: 20, backgroundColor: 'transparent' }} showsHorizontalScrollIndicator={false}>
+                        {formImages.map((img, idx) => (
+                            <View key={idx} style={{ position: 'relative', marginRight: 15, backgroundColor: 'transparent' }}>
+                                <Image source={{ uri: img }} style={{ width: 60, height: 60, borderRadius: 8 }} />
+                                <TouchableOpacity 
+                                    style={{ position: 'absolute', top: -8, right: -8, backgroundColor: 'transparent' }}
+                                    onPress={() => removeImage(idx)}
+                                >
+                                    <FontAwesome name="times-circle" size={18} color="#ef4444" />
+                                </TouchableOpacity>
+                            </View>
+                        ))}
+                    </ScrollView>
+
                     <View style={styles.switchRow}>
                         <Text style={styles.switchLabel}>Mettre en avant (Featured)</Text>
                         <TouchableOpacity onPress={() => setFormFeatured(!formFeatured)}>
@@ -205,7 +264,7 @@ export default function ProductsScreen() {
                 </ScrollView>
             </View>
         </View>
-      </Modal>
+</Modal>
     </View>
   );
 }
@@ -318,11 +377,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.2)',
   },
-  tagText: {
-    color: '#fff',
-    fontSize: 9,
-    fontWeight: '800',
-    textTransform: 'uppercase',
+  tagImage: { 
+    backgroundColor: 'rgba(245, 158, 11, 0.1)', 
+    paddingHorizontal: 8, 
+    paddingVertical: 4, 
+    borderRadius: 6, 
+    borderWidth: 1, 
+    borderColor: 'rgba(245, 158, 11, 0.3)' 
+  },
+  tagText: { 
+    color: '#fff', 
+    fontSize: 10, 
+    fontWeight: '700', 
+    textTransform: 'uppercase' 
   },
   stockBadge: {
     paddingHorizontal: 10,

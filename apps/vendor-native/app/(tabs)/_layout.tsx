@@ -53,6 +53,14 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="bundles"
+        options={{
+          title: 'Mes Packs',
+          tabBarLabel: 'Packs',
+          tabBarIcon: ({ color }) => <TabBarIcon name="gift" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="orders"
         options={{
           title: 'Commandes Reçues',

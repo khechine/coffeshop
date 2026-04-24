@@ -530,6 +530,7 @@ export class ManagementController {
         minOrderQty: body.minOrderQty || 1,
         unit: body.unit || 'pièce',
         image: body.image || null,
+        images: (body as any).images || [],
         isFeatured: body.isFeatured || false,
         isFlashSale: body.isFlashSale || false,
         discountPrice: body.discountPrice || null,
@@ -555,6 +556,7 @@ export class ManagementController {
         ...(body.subcategoryId !== undefined && { subcategoryId: body.subcategoryId || null }),
         ...(body.minOrderQty !== undefined && { minOrderQty: body.minOrderQty }),
         ...(body.image !== undefined && { image: body.image }),
+        ...((body as any).images !== undefined && { images: (body as any).images }),
         ...(body.unit !== undefined && { unit: body.unit }),
         ...(body.isFeatured !== undefined && { isFeatured: body.isFeatured }),
         ...(body.isFlashSale !== undefined && { isFlashSale: body.isFlashSale }),
@@ -678,10 +680,17 @@ export class ManagementController {
   @UseGuards(MarketplaceAuthGuard)
   @Post('vendor/bundles/:vendorId')
   async createVendorBundle(@Param('vendorId') vendorId: string, @Body() data: any): Promise<any> {
+    const { items, ...rest } = data;
     return (prisma as any).mktBundle.create({
       data: {
-        ...data,
-        vendorId
+        ...rest,
+        vendorId,
+        items: items ? {
+          create: items.map((item: any) => ({
+            vendorProductId: item.vendorProductId,
+            quantity: item.quantity || 1
+          }))
+        } : undefined
       }
     });
   }
@@ -689,9 +698,24 @@ export class ManagementController {
   @UseGuards(MarketplaceAuthGuard)
   @Put('vendor/bundles/:bundleId')
   async updateVendorBundle(@Param('bundleId') bundleId: string, @Body() data: any): Promise<any> {
+    const { items, ...rest } = data;
+    
+    // Simple update for items: delete old ones and create new ones
+    if (items) {
+      await (prisma as any).mktBundleItem.deleteMany({
+        where: { bundleId }
+      });
+      rest.items = {
+        create: items.map((item: any) => ({
+          vendorProductId: item.vendorProductId,
+          quantity: item.quantity || 1
+        }))
+      };
+    }
+
     return (prisma as any).mktBundle.update({
       where: { id: bundleId },
-      data
+      data: rest
     });
   }
 

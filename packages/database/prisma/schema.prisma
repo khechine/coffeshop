@@ -322,6 +322,7 @@ model VendorProduct {
   flashEnd        DateTime?
   
   image           String?
+  images          String[] @default([])
   description     String?
   
   // Tags (libres)
@@ -349,6 +350,7 @@ model MktBundle {
   price           Decimal
   discountPercent Int?     // Optionnel: pour afficher l'économie
   image           String?
+  images          String[] @default([])
   
   vendorId        String
   vendor          VendorProfile @relation(fields: [vendorId], references: [id])
