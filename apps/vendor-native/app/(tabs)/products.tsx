@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, Alert, Platform, Image } from 'react-native';
+import { StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, Platform, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useLocalSearchParams } from 'expo-router';
+import { useAlert } from '@/components/AlertContext';
 
 export default function ProductsScreen() {
   const { tab } = useLocalSearchParams();
+  const { showAlert } = useAlert();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'CATALOG' | 'PROMOTIONS'>((tab as any) || 'CATALOG');
@@ -19,6 +22,7 @@ export default function ProductsScreen() {
   // CRUD States
   const [isItemModalVisible, setIsItemModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [uploading, setUploading] = useState(false);
   
   // Form States
   const [formName, setFormName] = useState('');
@@ -82,7 +86,7 @@ export default function ProductsScreen() {
   };
 
   const handleSaveItem = async () => {
-    if (!formName) return Alert.alert("Erreur", "Le nom est requis.");
+    if (!formName) return showAlert({ title: "Erreur", message: "Le nom est requis.", type: 'error' });
     try {
       const payload = {
         name: formName,
@@ -104,7 +108,7 @@ export default function ProductsScreen() {
       setIsItemModalVisible(false);
       onRefresh();
     } catch (error) {
-      Alert.alert("Erreur", "Sauvegarde impossible.");
+      showAlert({ title: "Erreur", message: "Sauvegarde impossible.", type: 'error' });
     }
   };
 
@@ -112,6 +116,70 @@ export default function ProductsScreen() {
     if (newImageUrl) {
       setFormImages([...formImages, newImageUrl]);
       setNewImageUrl('');
+    }
+  };
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      showAlert({ title: "Accès refusé", message: "Nous avons besoin de l'accès à vos photos.", type: 'warning' });
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      uploadFile(result.assets[0].uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      showAlert({ title: "Erreur", message: "Accès caméra refusé.", type: 'error' });
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      uploadFile(result.assets[0].uri);
+    }
+  };
+
+  const uploadFile = async (uri: string) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      const filename = uri.split('/').pop() || 'photo.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const ext = match ? match[1].toLowerCase() : 'jpg';
+      const type = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+
+      formData.append('file', {
+        uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
+        name: filename,
+        type: type
+      } as any);
+
+      const res = await ApiService.upload('/management/upload', formData);
+      if (res && res.url) {
+        setFormImages([...formImages, res.url]);
+      } else {
+        throw new Error('No URL returned');
+      }
+    } catch (error) {
+      console.error("Upload error details:", error);
+      showAlert({ title: "Erreur", message: "Échec de l'upload. Vérifiez votre connexion.", type: 'error' });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -189,18 +257,18 @@ export default function ProductsScreen() {
                     <Text style={styles.modalTitle}>{editingItem ? 'Modifier' : 'Nouveau'} Produit</Text>
                     <TouchableOpacity onPress={() => setIsItemModalVisible(false)}><FontAwesome name="times" size={20} color="#fff" /></TouchableOpacity>
                 </View>
-                <ScrollView style={{ padding: 20 }}>
+                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}>
                     <Text style={styles.inputLabel}>Nom du produit</Text>
-                    <TextInput style={styles.modalInput} value={formName} onChangeText={setFormName} placeholder="Nom..." placeholderTextColor="#475569" />
+                    <TextInput style={styles.modalInput} value={formName} onChangeText={setFormName} placeholder="Nom..." placeholderTextColor="#94a3b8" />
                     
                     <View style={{ flexDirection: 'row', gap: 15, backgroundColor: 'transparent' }}>
                         <View style={{ flex: 1, backgroundColor: 'transparent' }}>
                             <Text style={styles.inputLabel}>Prix de vente (DT)</Text>
-                            <TextInput style={styles.modalInput} value={formPrice} onChangeText={setFormPrice} keyboardType="numeric" placeholder="0.000" placeholderTextColor="#475569" />
+                            <TextInput style={styles.modalInput} value={formPrice} onChangeText={setFormPrice} keyboardType="numeric" placeholder="0.000" placeholderTextColor="#94a3b8" />
                         </View>
                         <View style={{ flex: 1, backgroundColor: 'transparent' }}>
                             <Text style={styles.inputLabel}>Commande Min.</Text>
-                            <TextInput style={styles.modalInput} value={formMinQty} onChangeText={setFormMinQty} keyboardType="numeric" placeholder="1" placeholderTextColor="#475569" />
+                            <TextInput style={styles.modalInput} value={formMinQty} onChangeText={setFormMinQty} keyboardType="numeric" placeholder="1" placeholderTextColor="#94a3b8" />
                         </View>
                     </View>
 
@@ -221,15 +289,33 @@ export default function ProductsScreen() {
                             value={newImageUrl} 
                             onChangeText={setNewImageUrl} 
                             placeholder="URL vers image..." 
-                            placeholderTextColor="#475569" 
+                            placeholderTextColor="#94a3b8" 
                         />
                         <TouchableOpacity 
-                            style={{ backgroundColor: '#f59e0b', width: 45, height: 45, borderRadius: 10, justifyContent: 'center', alignItems: 'center' }}
+                            style={styles.actionIconBtn}
                             onPress={addImage}
                         >
                             <FontAwesome name="plus" size={16} color="#fff" />
                         </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.actionIconBtn, { backgroundColor: '#10b981' }]}
+                            onPress={pickImage}
+                        >
+                            <FontAwesome name="photo" size={16} color="#fff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.actionIconBtn, { backgroundColor: '#3b82f6' }]}
+                            onPress={takePhoto}
+                        >
+                            <FontAwesome name="camera" size={16} color="#fff" />
+                        </TouchableOpacity>
                     </View>
+                    {uploading && (
+                        <View style={{ marginBottom: 15, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'transparent' }}>
+                            <ActivityIndicator size="small" color="#f59e0b" />
+                            <Text style={{ color: '#f59e0b', fontSize: 13 }}>Chargement de l'image...</Text>
+                        </View>
+                    )}
                     <ScrollView horizontal style={{ flexDirection: 'row', marginBottom: 20, backgroundColor: 'transparent' }} showsHorizontalScrollIndicator={false}>
                         {formImages.map((img, idx) => (
                             <View key={idx} style={{ position: 'relative', marginRight: 15, backgroundColor: 'transparent' }}>
@@ -417,15 +503,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a0f1e',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    height: '85%',
+    height: '92%',
+    paddingBottom: 20,
+    marginHorizontal: Platform.OS === 'web' ? '5%' : (Platform.OS === 'ios' && (Platform as any).isPad ? 20 : 0),
     borderTopWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
   modalHeader: {
+    backgroundColor: '#111827',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
@@ -435,7 +526,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   inputLabel: {
-    color: '#94a3b8',
+    color: '#cbd5e1',
     fontSize: 12,
     fontWeight: '700',
     marginBottom: 8,
@@ -446,9 +537,17 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     height: 55,
     paddingHorizontal: 15,
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
-    marginBottom: 20,
+    marginBottom: 15,
+  },
+  actionIconBtn: { 
+    backgroundColor: '#f59e0b', 
+    width: 45, 
+    height: 45, 
+    borderRadius: 12, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
   },
   stockToggleRow: {
     flexDirection: 'row',
@@ -496,7 +595,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 30,
-    marginBottom: 50,
+    marginBottom: 40, // Reduced margin
   },
   saveBtnText: {
     color: '#fff',

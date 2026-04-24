@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, Alert, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
@@ -9,6 +10,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useLocalSearchParams } from 'expo-router';
 
 export default function StocksScreen() {
+  const insets = useSafeAreaInsets();
   const { tab } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -225,7 +227,7 @@ export default function StocksScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: Math.max(insets.top, 20) }]}>
       <View style={styles.tabContainer}>
         <TouchableOpacity style={[styles.tab, activeTab === 'PRODUCTS' && styles.activeTab]} onPress={() => { setActiveTab('PRODUCTS'); setSelectedCategory(null); setSearch(''); }}>
           <Text style={[styles.tabText, activeTab === 'PRODUCTS' && styles.activeTabText]}>Catalogue</Text>
@@ -600,10 +602,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0a0f1e',
     padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 30,
   },
   scrollBody: {
-    paddingBottom: 100,
+    paddingBottom: 130,
   },
   sectionTitle: {
     color: '#ffffff',
@@ -740,12 +741,16 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTopWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
+    paddingBottom: 40,
   },
   modalHeader: {
+    backgroundColor: '#111827',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },

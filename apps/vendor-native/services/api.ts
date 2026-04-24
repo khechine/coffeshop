@@ -98,6 +98,30 @@ export const ApiService = {
       console.error(`ApiService.delete(${endpoint}) failed:`, error);
       throw error;
     }
+  },
+
+  async upload(endpoint: string, formData: FormData) {
+    try {
+      const session = await AuthService.getSession();
+      const headers: any = {};
+      if (session.token) {
+        headers['Authorization'] = `Bearer ${session.token}`;
+      }
+
+      const response = await fetch(`${BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || `HTTP error! status: ${response.status}`);
+      }
+      return data;
+    } catch (error) {
+      console.error(`ApiService.upload(${endpoint}) failed:`, error);
+      throw error;
+    }
   }
 };
 

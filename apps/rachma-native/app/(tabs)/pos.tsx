@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, ScrollView, TouchableOpacity, FlatList,
-  Text as RNText, View as RNView, Modal, Vibration, Alert, Platform,
+  Text as RNText, View as RNView, Modal, Vibration, Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
@@ -10,6 +11,7 @@ import { AuthService } from '@/services/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useAlert } from '@/components/AlertContext';
 
 // ────────────────────────────────────────────────
 // Types
@@ -25,6 +27,7 @@ const TAX_RATE = 0.19;
 // POS Screen
 // ────────────────────────────────────────────────
 export default function PosScreen() {
+  const insets = useSafeAreaInsets();
   const { tableId } = useLocalSearchParams<{ tableId?: string }>();
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<Cart>({});
@@ -32,6 +35,7 @@ export default function PosScreen() {
   const [cartOpen, setCartOpen] = useState(false);
   const [storeId, setStoreId] = useState('1');
   const router = useRouter();
+  const { showAlert } = useAlert();
 
   useEffect(() => {
     AuthService.getSession().then(s => { if (s?.storeId) setStoreId(s.storeId); });
@@ -127,10 +131,11 @@ export default function PosScreen() {
       return;
     }
 
-    Alert.alert(
-      'Fermer la session',
-      'Voulez-vous verrouiller la caisse ?',
-      [
+    showAlert({
+      title: 'Fermer la session',
+      message: 'Voulez-vous verrouiller la caisse ?',
+      type: 'warning',
+      buttons: [
         { text: 'Annuler', style: 'cancel' },
         { 
           text: 'Fermer', 
@@ -147,7 +152,7 @@ export default function PosScreen() {
           }
         }
       ]
-    );
+    });
   };
 
   // ── Totals ──
@@ -184,13 +189,18 @@ export default function PosScreen() {
 
   const checkout = async () => {
     if (cartItems.length === 0) {
-      Alert.alert('Panier vide', 'Ajoutez des produits avant de valider.');
+      showAlert({
+        title: 'Panier vide',
+        message: 'Ajoutez des produits avant de valider.',
+        type: 'info'
+      });
       return;
     }
-    Alert.alert(
-      '💰 Confirmer la vente',
-      `Total : ${subtotalTTC.toFixed(3)} DT TTC\n${cartQty} articles`,
-      [
+    showAlert({
+      title: '💰 Confirmer la vente',
+      message: `Total : ${subtotalTTC.toFixed(3)} DT TTC\n${cartQty} articles`,
+      type: 'info',
+      buttons: [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Valider ✓',
@@ -215,14 +225,22 @@ export default function PosScreen() {
               await saveTicketToHistory(apiSale, null);
               clearCart();
               setCartOpen(false);
-              Alert.alert('✅ Vente Encaissée', `Ticket généré: ${apiSale.fiscalNumber}`);
+              showAlert({
+                title: '✅ Vente Encaissée',
+                message: `Ticket généré: ${apiSale.fiscalNumber}`,
+                type: 'success'
+              });
             } catch (e) {
-              Alert.alert('❌ Erreur de Synchronisation', 'Impossible de joindre le serveur fiscal (Mode 100% Connecté requis).');
+              showAlert({
+                title: '❌ Erreur de Synchronisation',
+                message: 'Impossible de joindre le serveur fiscal (Mode 100% Connecté requis).',
+                type: 'error'
+              });
             }
           },
         },
       ]
-    );
+    });
   };
 
   const checkoutTable = async () => {
@@ -250,10 +268,11 @@ export default function PosScreen() {
        }
        return;
     }
-    Alert.alert(
-      `💸 Payer la ${tableId}`,
-      `Total : ${subtotalTTC.toFixed(3)} DT TTC`,
-      [
+    showAlert({
+      title: `💸 Payer la ${tableId}`,
+      message: `Total : ${subtotalTTC.toFixed(3)} DT TTC`,
+      type: 'info',
+      buttons: [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Payer ✓',
@@ -272,15 +291,23 @@ export default function PosScreen() {
               await AsyncStorage.setItem(`rachma_table_carts_${storeId}`, JSON.stringify(parsed));
               setCart({});
               setCartOpen(false);
-              Alert.alert('✅ Table Encaissée', `Ticket: ${apiSale.fiscalNumber}`);
+              showAlert({
+                title: '✅ Table Encaissée',
+                message: `Ticket: ${apiSale.fiscalNumber}`,
+                type: 'success'
+              });
               router.push('/(tabs)/tables');
             } catch (e) {
-              Alert.alert('❌ Erreur de Synchronisation', 'Impossible de joindre le serveur fiscal.');
+              showAlert({
+                title: '❌ Erreur de Synchronisation',
+                message: 'Impossible de joindre le serveur fiscal.',
+                type: 'error'
+              });
             }
           },
         },
       ]
-    );
+    });
   };
 
   // ── Categories ──
@@ -290,7 +317,7 @@ export default function PosScreen() {
   return (
     <View style={styles.container}>
       {/* ── Header ── */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12), paddingBottom: 15 }]}>
         {tableId ? (
            <TouchableOpacity onPress={() => router.push('/(tabs)/tables')} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent' }}>
              <FontAwesome name="arrow-left" size={20} color={Colors.primary} style={{ marginRight: 10 }} />
@@ -479,7 +506,7 @@ const styles = StyleSheet.create({
   catBtnTextActive: { color: '#ffffff' },
 
   // Product grid
-  productGrid: { padding: 10, paddingBottom: 120 },
+  productGrid: { padding: 10, paddingBottom: 160 },
   productCard: {
     flex: 1, margin: 5, borderRadius: 20, padding: 16,
     backgroundColor: 'rgba(16, 20, 35, 0.7)',
@@ -502,7 +529,7 @@ const styles = StyleSheet.create({
 
   // FAB
   cartFab: {
-    position: 'absolute', bottom: 20, left: 20, right: 20,
+    position: 'absolute', bottom: 100, left: 20, right: 20,
     backgroundColor: Colors.primary, borderRadius: 20, height: 62,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 6 },
@@ -519,12 +546,15 @@ const styles = StyleSheet.create({
   cartOverlay: { flex: 1, justifyContent: 'flex-end' },
   cartBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
   cartSheet: {
-    backgroundColor: '#0e1526', borderTopLeftRadius: 30, borderTopRightRadius: 30,
-    maxHeight: '85%', paddingBottom: 30,
+    backgroundColor: '#0a0f1e', borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    maxHeight: '85%', paddingBottom: 40,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
   },
   cartHeader: {
+    backgroundColor: '#111827',
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)',
+    padding: 20, borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)',
   },
   cartTitle: { color: '#ffffff', fontSize: 20, fontWeight: '900' },
   cartItems: { maxHeight: 300 },

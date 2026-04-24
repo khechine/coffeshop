@@ -47,6 +47,8 @@ services:
       PRISMA_CLI_BINARY_TARGETS: "debian-openssl-3.0.x"
     depends_on:
       - coffeeshop_db
+    volumes:
+      - coffeeshop_uploads:/app/apps/api/public/uploads
     networks:
       - default
       - marketplace_default
@@ -71,6 +73,7 @@ services:
 
 volumes:
   coffeeshop_pgdata:
+  coffeeshop_uploads:
 
 networks:
   default:

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Platform, Modal } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Modal } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
+import { useAlert } from '@/components/AlertContext';
 
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
@@ -15,6 +16,7 @@ export default function DashboardScreen() {
   const [user, setUser] = useState<any>(null);
   const [lastOrderCount, setLastOrderCount] = useState<number>(0);
   const router = useRouter();
+  const { showAlert } = useAlert();
 
   // Load the real vendorId from secure storage
   useEffect(() => {
@@ -34,10 +36,11 @@ export default function DashboardScreen() {
       return;
     }
 
-    Alert.alert(
-      'Déconnexion',
-      'Voulez-vous vraiment vous déconnecter ?',
-      [
+    showAlert({
+      title: 'Déconnexion',
+      message: 'Voulez-vous vraiment vous déconnecter ?',
+      type: 'warning',
+      buttons: [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Déconnecter',
@@ -48,7 +51,7 @@ export default function DashboardScreen() {
           },
         },
       ]
-    );
+    });
   };
 
   const fetchData = async (vid: string) => {
@@ -57,7 +60,11 @@ export default function DashboardScreen() {
       
       // Check for new orders
       if (lastOrderCount > 0 && summary.orderCount > lastOrderCount) {
-        Alert.alert("🛒 Nouvelle Commande !", "Vous avez reçu une nouvelle commande sur la Marketplace.");
+        showAlert({
+          title: "🛒 Nouvelle Commande !",
+          message: "Vous avez reçu une nouvelle commande sur la Marketplace.",
+          type: 'success'
+        });
       }
       
       setLastOrderCount(summary.orderCount);
@@ -176,7 +183,7 @@ export default function DashboardScreen() {
  
           <TouchableOpacity 
             style={[styles.mgmtCard, styles.glassCard]}
-            onPress={() => router.push('/products?tab=PACKS')}
+            onPress={() => router.push('/bundles')}
           >
             <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
               <FontAwesome name="gift" size={20} color="#10b981" />

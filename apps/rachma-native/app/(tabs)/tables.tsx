@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform, Modal, Alert, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/Colors';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +12,7 @@ type TableCart = { total: number };
 type TableCarts = Record<string, TableCart>;
 
 export default function TablesScreen() {
+  const insets = useSafeAreaInsets();
   const [assignedTables, setAssignedTables] = useState<string[]>([]);
   const [isRestricted, setIsRestricted] = useState(false);
   const [tableCarts, setTableCarts] = useState<TableCarts>({});
@@ -159,7 +161,7 @@ export default function TablesScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
         <View style={{ backgroundColor: 'transparent' }}>
           <Text style={styles.headerTitle}>Plan de Salle</Text>
           <Text style={styles.headerSubtitle}>Veuillez sélectionner une table</Text>
@@ -349,6 +351,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     padding: 10,
+    paddingBottom: 120,
     gap: 10,
     justifyContent: 'center',
   },
@@ -390,12 +393,15 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
   modalSheet: {
-    backgroundColor: '#0e1526', borderTopLeftRadius: 30, borderTopRightRadius: 30,
-    maxHeight: '85%', paddingBottom: 30,
+    backgroundColor: '#0a0f1e', borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    maxHeight: '85%', paddingBottom: 40,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
   },
   modalHeader: {
+    backgroundColor: '#111827',
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)',
+    padding: 20, borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)',
   },
   modalTitle: { color: '#ffffff', fontSize: 20, fontWeight: '900' },
   historyList: { maxHeight: 500 },

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, ScrollView, TouchableOpacity, View as RNView,
-  Text as RNText, Vibration, RefreshControl, Alert, Platform, Modal, TextInput
+  Text as RNText, Vibration, RefreshControl, Platform, Modal, TextInput
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
@@ -13,6 +14,7 @@ import { AuthService } from '@/services/auth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 import { useRouter } from 'expo-router';
+import { useAlert } from '@/components/AlertContext';
 
 // ────────────────────────────────────────────────
 // Types
@@ -53,6 +55,7 @@ const SLOT_COUNT = 20;
 // POS Screen
 // ────────────────────────────────────────────────
 export default function RachmaScreen() {
+  const insets = useSafeAreaInsets();
   const [products, setProducts] = useState<Product[]>([]);
   const [logs, setLogs] = useState<Logs>({});
   const [mode, setMode] = useState<'sale' | 'loss'>('sale');
@@ -60,6 +63,7 @@ export default function RachmaScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [storeId, setStoreId] = useState('1');
   const router = useRouter();
+  const { showAlert } = useAlert();
   const [reportOpen, setReportOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [serverHistory, setServerHistory] = useState<any[]>([]);
@@ -169,11 +173,11 @@ export default function RachmaScreen() {
         const updatedUser = { ...user, name: editName, pinCode: editPin };
         await AuthService.setUser(updatedUser);
         setUser(updatedUser);
-        Alert.alert('Succès', 'Profil mis à jour !');
+        showAlert({ title: 'Succès', message: 'Profil mis à jour !', type: 'success' });
         setSettingsOpen(false);
       }
     } catch (e) {
-      Alert.alert('Erreur', 'Impossible de mettre à jour le profil');
+      showAlert({ title: 'Erreur', message: 'Impossible de mettre à jour le profil', type: 'error' });
     }
   };
 
@@ -220,10 +224,11 @@ export default function RachmaScreen() {
       return;
     }
 
-    Alert.alert(
-      'Fermer la session',
-      'Voulez-vous verrouiller la caisse ?',
-      [
+    showAlert({
+      title: 'Fermer la session',
+      message: 'Voulez-vous verrouiller la caisse ?',
+      type: 'warning',
+      buttons: [
         { text: 'Annuler', style: 'cancel' },
         { 
           text: 'Fermer', 
@@ -240,7 +245,7 @@ export default function RachmaScreen() {
           }
         }
       ]
-    );
+    });
   };
 
   const fetchHistory = async () => {
@@ -307,7 +312,11 @@ export default function RachmaScreen() {
         const apiSale = await ApiService.post('/sales', payload);
         if (!apiSale || !apiSale.id) throw new Error('API Sync Failed');
         if (Platform.OS !== 'web') {
-          Alert.alert('✅ Lot Clôturé', `Synchronisé avec le serveur fiscal.\nSéquence: ${apiSale.fiscalNumber}`);
+          showAlert({ 
+            title: '✅ Lot Clôturé', 
+            message: `Synchronisé avec le serveur fiscal.\nSéquence: ${apiSale.fiscalNumber}`,
+            type: 'success'
+          });
         } else {
           window.alert(`✅ Lot Clôturé. Séquence: ${apiSale.fiscalNumber}`);
         }
@@ -316,7 +325,11 @@ export default function RachmaScreen() {
       setLogs({}); saveLogs({}); setReportOpen(false);
     } catch(e) {
       if (Platform.OS !== 'web') {
-        Alert.alert('❌ Erreur', 'Impossible de synchroniser le lot. Vérifiez la connexion.');
+        showAlert({ 
+          title: '❌ Erreur', 
+          message: 'Impossible de synchroniser le lot. Vérifiez la connexion.',
+          type: 'error'
+        });
       } else {
         window.alert('Erreur: Impossible de synchroniser le lot.');
       }
@@ -331,10 +344,15 @@ export default function RachmaScreen() {
        }
        return;
     }
-    Alert.alert('Clôturer le lot', 'Voulez-vous synchroniser et vider la grille ?', [
-       {text: 'Annuler', style: 'cancel'},
-       {text: 'Synchroniser', style: 'destructive', onPress: processBatch}
-    ]);
+    showAlert({
+      title: 'Clôturer le lot', 
+      message: 'Voulez-vous synchroniser et vider la grille ?', 
+      type: 'warning',
+      buttons: [
+        {text: 'Annuler', style: 'cancel'},
+        {text: 'Synchroniser', style: 'destructive', onPress: processBatch}
+      ]
+    });
   };
 
   // ── Compute total sold ──
@@ -376,7 +394,7 @@ export default function RachmaScreen() {
   return (
     <View style={styles.container}>
       {/* ── Header ── */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12), paddingBottom: 15 }]}>
         {/* Mode toggle */}
         <View style={styles.modeToggle}>
           <TouchableOpacity
@@ -429,7 +447,7 @@ export default function RachmaScreen() {
       {/* ── Product list ── */}
       <ScrollView
         style={styles.productList}
-        contentContainerStyle={{ paddingBottom: 30 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); syncProducts(); }} tintColor={Colors.primary} />}
       >
         {filtered.length === 0 && (
@@ -454,14 +472,15 @@ export default function RachmaScreen() {
               onPress={() => handleAdd(product.id)}
               onLongPress={() => {
                 Vibration.vibrate(30);
-                Alert.alert(
-                  `Annuler pour ${product.name}?`,
-                  'Supprimer la dernière entrée.',
-                  [
+                showAlert({
+                  title: `Annuler pour ${product.name}?`,
+                  message: 'Supprimer la dernière entrée.',
+                  type: 'warning',
+                  buttons: [
                     { text: 'Annuler', style: 'cancel' },
                     { text: 'Supprimer', style: 'destructive', onPress: () => handleUndo(product.id) },
                   ]
-                );
+                });
               }}
               activeOpacity={0.9}
             >
@@ -858,12 +877,14 @@ const styles = StyleSheet.create({
   modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)' },
   modalSheet: {
     backgroundColor: '#0a0f1e', borderTopLeftRadius: 32, borderTopRightRadius: 32,
-    maxHeight: '90%', paddingBottom: 20,
+    maxHeight: '90%', paddingBottom: 40,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
   },
   modalHeader: {
+    backgroundColor: '#111827',
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)',
+    padding: 20, borderTopLeftRadius: 32, borderTopRightRadius: 32,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)',
   },
   modalTitle: { color: '#ffffff', fontSize: 20, fontWeight: '900' },
   reportItems: { maxHeight: 400 },

@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, Alert, Vibration, Platform } from 'react-native';
+import { StyleSheet, TouchableOpacity, Vibration, Platform } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
+import { useAlert } from '@/components/AlertContext';
 import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring } from 'react-native-reanimated';
 
 export default function UnlockScreen() {
   const [pin, setPin] = useState('');
   const router = useRouter();
+  const { showAlert } = useAlert();
   const shakeOffset = useSharedValue(0);
 
   const shakeStyle = useAnimatedStyle(() => {
@@ -47,8 +49,12 @@ export default function UnlockScreen() {
   const verifyPin = async () => {
     const session = await AuthService.getSession();
     if (!session.storeId) {
-      Alert.alert('Erreur', 'Terminal non assigné à une boutique.');
-      router.replace('/login');
+      showAlert({ 
+        title: 'Erreur', 
+        message: 'Terminal non assigné à une boutique.',
+        type: 'error',
+        buttons: [{ text: 'OK', onPress: () => router.replace('/login') }]
+      });
       return;
     }
 
@@ -88,10 +94,11 @@ export default function UnlockScreen() {
       return;
     }
 
-    Alert.alert(
-      'Déconnecter ce terminal',
-      "Ce terminal ne sera plus rattaché à la boutique. Il faudra le scanner à nouveau pour l'activer.",
-      [
+    showAlert({
+      title: 'Déconnecter ce terminal',
+      message: "Ce terminal ne sera plus rattaché à la boutique. Il faudra le scanner à nouveau pour l'activer.",
+      type: 'warning',
+      buttons: [
         { text: 'Annuler', style: 'cancel' },
         { 
           text: 'Déconnecter', 
@@ -102,7 +109,7 @@ export default function UnlockScreen() {
           }
         }
       ]
-    );
+    });
   };
 
   return (

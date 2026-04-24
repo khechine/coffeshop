@@ -7,8 +7,8 @@ export const Colors = {
   info: '#3b82f6',
   // Theme sub-objects (also used as default export for Themed component)
   light: {
-    text: '#11181C',
-    background: '#f1f5f9',
+    text: '#ECEDEE',
+    background: '#0a0f1e',
     tint: '#10b981',
     tabIconDefault: '#687076',
     tabIconSelected: '#10b981',

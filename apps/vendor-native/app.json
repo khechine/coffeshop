@@ -6,20 +6,21 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "vendor-native",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0a0f1e"
     },
+    "backgroundColor": "#0a0f1e",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0a0f1e"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -41,8 +42,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "vendor-project-id-placeholder"
+        "projectId": "55ab6ed6-3b81-4464-b1d5-b6e3e164f000"
       }
-    }
+    },
+    "owner": "khechine"
   }
 }

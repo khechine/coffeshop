@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
+import { useAlert } from '@/components/AlertContext';
 
 export default function LoginScreen() {
   const [loginMode, setLoginMode] = useState<'email' | 'pairing'>('email');
@@ -15,11 +16,12 @@ export default function LoginScreen() {
   const [activationCode, setActivationCode] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { showAlert } = useAlert();
 
   const handleLogin = async () => {
     if (loginMode === 'email') {
       if (!email.trim() || !password.trim()) {
-        Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
+        showAlert({ title: 'Erreur', message: 'Veuillez remplir tous les champs.', type: 'error' });
         return;
       }
       setLoading(true);
@@ -30,16 +32,16 @@ export default function LoginScreen() {
           await AuthService.setUser({ ...result.user, authMode: 'PASSWORD' }); // Save User directly for Manager
           router.replace('/(tabs)');
         } else {
-          Alert.alert('Connexion échouée', result.message || 'Identifiants invalides.');
+          showAlert({ title: 'Connexion échouée', message: result.message || 'Identifiants invalides.', type: 'error' });
         }
       } catch (error: any) {
-        Alert.alert('Erreur', error.message || 'Impossible de se connecter au serveur.');
+        showAlert({ title: 'Erreur', message: error.message || 'Impossible de se connecter au serveur.', type: 'error' });
       } finally {
         setLoading(false);
       }
     } else {
       if (!storeIdInput.trim() || !activationCode.trim()) {
-        Alert.alert('Erreur', 'Veuillez remplir tous les champs de couplage.');
+        showAlert({ title: 'Erreur', message: 'Veuillez remplir tous les champs de couplage.', type: 'error' });
         return;
       }
       setLoading(true);
@@ -52,10 +54,10 @@ export default function LoginScreen() {
           await AuthService.clearUser(); // explicitly clear any previous user state so it prompts for PIN
           router.replace('/unlock');
         } else {
-          Alert.alert('Appairage échoué', result.error || "Code d'activation invalide.");
+          showAlert({ title: 'Appairage échoué', message: result.error || "Code d'activation invalide.", type: 'error' });
         }
       } catch (error: any) {
-        Alert.alert('Erreur', error.message || "Vérifiez le code et l'ID de la boutique.");
+        showAlert({ title: 'Erreur', message: error.message || "Vérifiez le code et l'ID de la boutique.", type: 'error' });
       } finally {
         setLoading(false);
       }

@@ -673,7 +673,7 @@ export class ManagementController {
   async getVendorBundles(@Param('vendorId') vendorId: string): Promise<any> {
     return (prisma as any).mktBundle.findMany({
       where: { vendorId },
-      include: { items: { include: { product: true } } }
+      include: { items: { include: { vendorProduct: true } } }
     });
   }
 

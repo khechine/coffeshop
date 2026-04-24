@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthService } from '@/services/auth';
+import { AlertProvider } from '@/components/AlertContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -77,13 +78,15 @@ const CustomTheme = {
 function RootLayoutNav({ initialRoute }: { initialRoute: string }) {
   return (
     <ThemeProvider value={CustomTheme}>
-      <Stack initialRouteName={initialRoute as any}>
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="unlock" options={{ headerShown: false, animation: 'fade' }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal', headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
+      <AlertProvider>
+        <Stack initialRouteName={initialRoute as any}>
+          <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="unlock" options={{ headerShown: false, animation: 'fade' }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal', headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        </Stack>
+      </AlertProvider>
     </ThemeProvider>
   );
 }
