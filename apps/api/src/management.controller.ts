@@ -118,10 +118,11 @@ export class ManagementController {
   }
 
   @Post('categories')
-  async createCategory(@Body() body: { name: string; storeId?: string; parentId?: string; active?: boolean }): Promise<any> {
+  async createCategory(@Body() body: { name: string; icon?: string; storeId?: string; parentId?: string; active?: boolean }): Promise<any> {
     return prisma.category.create({ 
       data: { 
         name: body.name, 
+        icon: body.icon,
         storeId: body.storeId,
         parentId: body.parentId || null,
         active: body.active ?? true
@@ -130,11 +131,12 @@ export class ManagementController {
   }
 
   @Put('categories/:id')
-  async updateCategory(@Param('id') id: string, @Body() body: { name?: string; parentId?: string; active?: boolean }): Promise<any> {
+  async updateCategory(@Param('id') id: string, @Body() body: { name?: string; icon?: string; parentId?: string; active?: boolean }): Promise<any> {
     return prisma.category.update({
       where: { id },
       data: { 
         name: body.name,
+        icon: body.icon,
         parentId: body.parentId || undefined,
         active: body.active
       },
@@ -536,7 +538,7 @@ export class ManagementController {
         discountPrice: body.discountPrice || null,
         flashStart: body.flashStart ? new Date(body.flashStart) : null,
         flashEnd: body.flashEnd ? new Date(body.flashEnd) : null,
-      },
+      } as any,
     });
   }
 

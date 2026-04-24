@@ -106,19 +106,19 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* KPI Section */}
+        {/* KPI Grid - Wrapped for full visibility */}
         <View style={styles.kpiGrid}>
-          {/* CA Journalier – visible par tous */}
+          {/* CA Journalier */}
           <View style={[styles.kpiCard, styles.glassCard]}>
             <View style={[styles.iconBox, { backgroundColor: 'rgba(16,185,129,0.12)' }]}>
               <FontAwesome name="line-chart" size={18} color={Colors.primary} />
             </View>
             <Text style={styles.kpiLabel}>Chiffre d'Aff.</Text>
-            <Text style={styles.kpiValue}>{fmtMoney(stats.totalSales)} DT</Text>
+            <Text style={styles.kpiValue} numberOfLines={1}>{fmtMoney(stats.totalSales)} DT</Text>
             <Text style={styles.kpiTrend}>Journalier</Text>
           </View>
-
-          {/* Commandes – visible par tous */}
+ 
+          {/* Commandes */}
           <View style={[styles.kpiCard, styles.glassCard]}>
             <View style={[styles.iconBox, { backgroundColor: 'rgba(59,130,246,0.12)' }]}>
               <FontAwesome name="shopping-cart" size={18} color={Colors.secondary} />
@@ -127,7 +127,7 @@ export default function DashboardScreen() {
             <Text style={styles.kpiValue}>{fmtInt(stats.orderCount)}</Text>
             <Text style={[styles.kpiTrend, { color: Colors.secondary }]}>Total Ventes</Text>
           </View>
-
+ 
           {/* CA Semaine – Owner only */}
           {isOwner && (
             <View style={[styles.kpiCard, styles.glassCard]}>
@@ -135,11 +135,11 @@ export default function DashboardScreen() {
                 <FontAwesome name="calendar" size={18} color="#a855f7" />
               </View>
               <Text style={styles.kpiLabel}>Cette Semaine</Text>
-              <Text style={[styles.kpiValue, { color: '#a855f7' }]}>{fmtMoney(stats.weeklySales)} DT</Text>
+              <Text style={[styles.kpiValue, { color: '#a855f7' }]} numberOfLines={1}>{fmtMoney(stats.weeklySales)} DT</Text>
               <Text style={[styles.kpiTrend, { color: '#a855f7' }]}>7 derniers jours</Text>
             </View>
           )}
-
+ 
           {/* Dépenses – Owner only */}
           {isOwner && (
             <View style={[styles.kpiCard, styles.glassCard]}>
@@ -147,7 +147,7 @@ export default function DashboardScreen() {
                 <FontAwesome name="minus-circle" size={18} color={Colors.danger} />
               </View>
               <Text style={styles.kpiLabel}>Dépenses</Text>
-              <Text style={[styles.kpiValue, { color: Colors.danger }]}>{fmtMoney(stats.totalExpenses)} DT</Text>
+              <Text style={[styles.kpiValue, { color: Colors.danger }]} numberOfLines={1}>{fmtMoney(stats.totalExpenses)} DT</Text>
               <Text style={[styles.kpiTrend, { color: Colors.danger }]}>Journalier</Text>
             </View>
           )}
@@ -414,6 +414,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
     paddingTop: 10,
+    paddingBottom: 120,
   },
   header: {
     flexDirection: 'row',
@@ -443,12 +444,13 @@ const styles = StyleSheet.create({
   },
   kpiGrid: {
     flexDirection: 'row',
-    gap: 15,
+    flexWrap: 'wrap',
+    gap: 12,
     marginBottom: 20,
     backgroundColor: 'transparent',
   },
   kpiCard: {
-    flex: 1,
+    width: '48%',
     padding: 16,
     borderRadius: 24,
   },

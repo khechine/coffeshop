@@ -163,11 +163,17 @@ export default function ProductsScreen() {
       const ext = match ? match[1].toLowerCase() : 'jpg';
       const type = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
 
-      formData.append('file', {
-        uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
-        name: filename,
-        type: type
-      } as any);
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        formData.append('file', blob, filename);
+      } else {
+        formData.append('file', {
+          uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
+          name: filename,
+          type: type
+        } as any);
+      }
 
       const res = await ApiService.upload('/management/upload', formData);
       if (res && res.url) {
@@ -333,14 +339,14 @@ export default function ProductsScreen() {
                     <View style={styles.switchRow}>
                         <Text style={styles.switchLabel}>Mettre en avant (Featured)</Text>
                         <TouchableOpacity onPress={() => setFormFeatured(!formFeatured)}>
-                            <FontAwesome name={formFeatured ? "toggle-on" : "toggle-off"} size={28} color={formFeatured ? "#f59e0b" : "#475569"} />
+                            <FontAwesome name={formFeatured ? "toggle-on" : "toggle-off"} size={36} color={formFeatured ? "#f59e0b" : "#475569"} />
                         </TouchableOpacity>
                     </View>
 
                     <View style={styles.switchRow}>
                         <Text style={styles.switchLabel}>Vente Flash</Text>
                         <TouchableOpacity onPress={() => setFormFlash(!formFlash)}>
-                            <FontAwesome name={formFlash ? "toggle-on" : "toggle-off"} size={28} color={formFlash ? "#ef4444" : "#475569"} />
+                            <FontAwesome name={formFlash ? "toggle-on" : "toggle-off"} size={36} color={formFlash ? "#ef4444" : "#475569"} />
                         </TouchableOpacity>
                     </View>
 

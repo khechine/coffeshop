@@ -332,7 +332,7 @@ export default function PosScreen() {
       </View>
 
       {/* ── Categories ── */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesBar}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesBar} contentContainerStyle={{ paddingVertical: 10 }}>
         {categories.map(cat => (
           <TouchableOpacity
             key={cat}
@@ -349,7 +349,8 @@ export default function PosScreen() {
       {/* ── Product Grid ── */}
       <FlatList
         data={filtered}
-        numColumns={2}
+        numColumns={(Platform as any).isPad ? 4 : 2}
+        key={((Platform as any).isPad ? 'tab' : 'mob')} // Fix for dynamic numColumns
         keyExtractor={item => item.id}
         contentContainerStyle={styles.productGrid}
         renderItem={({ item }) => {
@@ -494,15 +495,24 @@ const styles = StyleSheet.create({
 
   // Categories
   categoriesBar: {
-    flexGrow: 0, paddingHorizontal: 10, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)', backgroundColor: 'transparent',
+    flexGrow: 0, 
+    paddingHorizontal: 15, 
+    paddingVertical: 10,
+    borderBottomWidth: 1, 
+    borderBottomColor: 'rgba(255,255,255,0.06)', 
+    backgroundColor: 'transparent',
   },
   catBtn: {
-    paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, marginRight: 8,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 20, 
+    paddingVertical: 10, 
+    borderRadius: 22, 
+    marginRight: 12,
+    borderWidth: 1, 
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.02)',
   },
   catBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  catBtnText: { color: '#94a3b8', fontWeight: '700', fontSize: 12 },
+  catBtnText: { color: '#94a3b8', fontWeight: '800', fontSize: 13 },
   catBtnTextActive: { color: '#ffffff' },
 
   // Product grid

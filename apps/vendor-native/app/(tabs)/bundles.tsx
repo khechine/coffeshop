@@ -173,11 +173,17 @@ export default function BundlesScreen() {
       const ext = match ? match[1].toLowerCase() : 'jpg';
       const type = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
 
-      formData.append('file', {
-        uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
-        name: filename,
-        type: type
-      } as any);
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        formData.append('file', blob, filename);
+      } else {
+        formData.append('file', {
+          uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
+          name: filename,
+          type: type
+        } as any);
+      }
 
       const res = await ApiService.upload('/management/upload', formData);
       if (res && res.url) {

@@ -801,16 +801,24 @@ const styles = StyleSheet.create({
 
   // Categories
   categoriesBar: {
-    flexGrow: 0, paddingHorizontal: 10, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+    flexGrow: 0, 
+    paddingHorizontal: 15, 
+    paddingVertical: 15,
+    borderBottomWidth: 1, 
+    borderBottomColor: 'rgba(255,255,255,0.06)',
     backgroundColor: 'transparent',
   },
   catBtn: {
-    paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, marginRight: 8,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 18, 
+    paddingVertical: 8, 
+    borderRadius: 22, 
+    marginRight: 10,
+    borderWidth: 1, 
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
   },
   catBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  catBtnText: { color: '#94a3b8', fontWeight: '700', fontSize: 12 },
+  catBtnText: { color: '#cbd5e1', fontWeight: '800', fontSize: 13 },
   catBtnTextActive: { color: '#ffffff' },
 
   // Product list
@@ -853,24 +861,33 @@ const styles = StyleSheet.create({
   },
   pkgIcon: { fontSize: 20 },
 
-  // Slots grid (10 columns)
+  // Slots grid (10 columns on mobile, more on tablet)
   slotsGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 4,
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 6,
+    marginTop: 5,
     backgroundColor: 'transparent',
   },
   slotEmpty: {
-    width: '8.5%', aspectRatio: 1, borderRadius: 4,
+    width: (Platform as any).isPad ? 50 : '8.6%', 
+    aspectRatio: 1, 
+    borderRadius: 8,
     backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1, 
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   slot: {
-    width: '8.5%', aspectRatio: 1, borderRadius: 4,
-    alignItems: 'center', justifyContent: 'center',
+    width: (Platform as any).isPad ? 50 : '8.6%', 
+    aspectRatio: 1, 
+    borderRadius: 8,
+    alignItems: 'center', 
+    justifyContent: 'center',
   },
-  slotSale: { backgroundColor: 'rgba(16,185,129,0.05)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.2)' },
-  slotLoss: { backgroundColor: 'rgba(239,68,68,0.05)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)' },
-  slotCheck: { color: '#ffffff', fontSize: 11, fontWeight: '900' },
-  slotIcon: { fontSize: 18 },
+  slotSale: { backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.4)' },
+  slotLoss: { backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.4)' },
+  slotCheck: { color: '#ffffff', fontSize: 14, fontWeight: '900' },
+  slotIcon: { fontSize: 22 },
 
   // Modal Styles
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },

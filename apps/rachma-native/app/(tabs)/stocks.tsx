@@ -16,6 +16,7 @@ export default function StocksScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const UNITS = ['UN', 'KG', 'G', 'L', 'ML', 'CL', 'PIÈCE', 'SAC', 'BOTTE'];
   const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'MATERIALS'>((tab as any) || 'PRODUCTS');
+  const ICON_LIST = ['☕', '🥐', '🍰', '🍔', '🍕', '🥗', '🥤', '🍦', '🍵', '🍺', '🍹', '🥪', '🥣', '🍳', '🥩', '🍗', '🍡', '🍱', '🍜', '🥘', '🥫', '🥛', '🍞', '🥯', '🥑', '🥥', '🥝', '🍓', '🧂', '🍫', '🍩', '🍪', '🔋', '📦', '🧹', '🧴'];
 
   useEffect(() => {
     if (tab === 'MATERIALS' || tab === 'PRODUCTS') {
@@ -135,7 +136,7 @@ export default function StocksScreen() {
       const payload: any = {
         name: formName,
         storeId,
-        categoryId: selectedCategory?.id,
+        categoryId: selectedCategory?.id === 'UNCATEGORIZED' ? undefined : selectedCategory?.id,
       };
 
       if (isProduct) {
@@ -240,15 +241,15 @@ export default function StocksScreen() {
       {activeTab === 'PRODUCTS' ? (
         selectedCategory ? (
           <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-            <View style={[styles.drillDownHeader, { marginBottom: 20 }]}>
-              <TouchableOpacity style={styles.backBtnCircle} onPress={() => setSelectedCategory(null)}>
-                <FontAwesome name="arrow-left" size={16} color="#fff" />
-              </TouchableOpacity>
-              <View style={{ backgroundColor: 'transparent', marginLeft: 15 }}>
-                 <Text style={styles.drillDownTitle}>{selectedCategory.name}</Text>
-                 <Text style={styles.drillDownSub}>Gestion du Catalogue</Text>
-              </View>
-            </View>
+             <View style={styles.drillDownHeader}>
+               <TouchableOpacity onPress={() => setSelectedCategory(null)} style={styles.backBtnCircle}>
+                 <FontAwesome name="chevron-left" size={14} color="#fff" />
+               </TouchableOpacity>
+               <View style={{ marginLeft: 15, flex: 1, backgroundColor: 'transparent' }}>
+                  <Text style={styles.drillDownTitle}>{selectedCategory?.icon} {selectedCategory?.name.toUpperCase()}</Text>
+                  <Text style={styles.drillDownSub}>Gestion du Catalogue</Text>
+               </View>
+             </View>
 
             <ScrollView contentContainerStyle={styles.scrollBody}>
               <Text style={styles.mgmtSectionTitle}>PRODUITS DANS CETTE CATÉGORIE</Text>
@@ -266,6 +267,7 @@ export default function StocksScreen() {
                         setFormCost(String(item.cost || 0));
                         setFormTVA(String((item.taxRate || 0) * 100));
                         setFormUnit(item.unit?.name || item.unit || 'UN');
+                        setFormIcon(item.icon || '☕');
                         setFormRecipe((item.recipeItems || []).map((r: any) => ({
                             stockItemId: r.stockItemId,
                             name: r.stockItem?.name || 'Ingrédient',
@@ -275,12 +277,15 @@ export default function StocksScreen() {
                         setIsItemModalVisible(true);
                     }}
                 >
-                  <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                   <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', marginRight: 15 }}>
+                        <Text style={{ fontSize: 20 }}>{item.icon || '☕'}</Text>
+                   </View>
+                   <View style={{ flex: 1, backgroundColor: 'transparent' }}>
                     <Text style={styles.itemName}>{item.name}</Text>
                     <Text style={styles.itemRef}>
                         {`${Number(item.price || 0).toFixed(3)} DT (+${(item.taxRate || 0.19) * 100}%)`}
                     </Text>
-                  </View>
+                   </View>
                   <View style={styles.qtyBadge}>
                     <Text style={styles.qtyText}>{item.quantity || 0}</Text>
                     <Text style={styles.qtyUnit}>{item.unit?.name || item.unit || 'UN'}</Text>
@@ -325,6 +330,7 @@ export default function StocksScreen() {
                         setFormCost(String(item.cost || 0));
                         setFormTVA(String((item.taxRate || 0) * 100));
                         setFormUnit(item.unit?.name || item.unit || 'UN');
+                        setFormIcon(item.icon || '☕');
                         setFormRecipe((item.recipeItems || []).map((r: any) => ({
                             stockItemId: r.stockItemId,
                             name: r.stockItem?.name || 'Ingrédient',
@@ -334,10 +340,13 @@ export default function StocksScreen() {
                         setIsItemModalVisible(true);
                     }}
                   >
-                    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                      <Text style={styles.itemName}>{item.name}</Text>
-                      <Text style={styles.itemRef}>{`${Number(item.price || 0).toFixed(3)} DT`}</Text>
-                    </View>
+                     <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                        <Text style={{ fontSize: 18 }}>{item.icon || '☕'}</Text>
+                     </View>
+                     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                       <Text style={styles.itemName}>{item.name}</Text>
+                       <Text style={styles.itemRef}>{`${Number(item.price || 0).toFixed(3)} DT`}</Text>
+                     </View>
                     <View style={styles.qtyBadge}>
                       <Text style={styles.qtyText}>{item.quantity || 0}</Text>
                       <Text style={styles.qtyUnit}>{item.unit?.name || item.unit || 'UN'}</Text>
@@ -359,10 +368,27 @@ export default function StocksScreen() {
                         <Text style={styles.catSubtitle}>{cat.itemCount} PRODUITS</Text>
                       </View>
                       <View style={styles.catActions}>
-                         <TouchableOpacity style={styles.actionBtn} onPress={(e) => { e.stopPropagation(); setEditingCategory(cat); setFormName(cat.name); setFormIcon(cat.icon || '📦'); setIsCategoryModalVisible(true); }}>
+                          <TouchableOpacity 
+                            style={styles.actionBtn} 
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            onPress={(e) => { 
+                              e.stopPropagation(); 
+                              setEditingCategory(cat); 
+                              setFormName(cat.name); 
+                              setFormIcon(cat.icon || '📦'); 
+                              setIsCategoryModalVisible(true); 
+                            }}
+                          >
                             <FontAwesome name="pencil" size={16} color="#94a3b8" />
                           </TouchableOpacity>
-                          <TouchableOpacity style={styles.actionBtn} onPress={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id); }}>
+                          <TouchableOpacity 
+                            style={styles.actionBtn} 
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            onPress={(e) => { 
+                              e.stopPropagation(); 
+                              handleDeleteCategory(cat.id); 
+                            }}
+                          >
                             <FontAwesome name="trash-o" size={16} color="#94a3b8" />
                           </TouchableOpacity>
                       </View>
@@ -408,6 +434,7 @@ export default function StocksScreen() {
                 setFormQty(String(item.quantity || 0));
                 setFormCost(String(item.cost || 0));
                 setFormUnit(item.unit?.name || item.unit || 'UN');
+                setFormIcon(item.icon || '📦');
                 setIsItemModalVisible(true);
               }}
             >
@@ -432,6 +459,39 @@ export default function StocksScreen() {
         </ScrollView>
       )}
 
+      {/* Category Editor Modal */}
+      <Modal visible={isCategoryModalVisible} animationType="fade" transparent={true}>
+        <View style={styles.modalOverlay}>
+            <View style={[styles.modalSheet, { height: 'auto' }]}>
+                <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>{editingCategory ? 'Editer' : 'Nouvelle'} Catégorie</Text>
+                    <TouchableOpacity onPress={() => setIsCategoryModalVisible(false)}><FontAwesome name="times" size={20} color="#fff" /></TouchableOpacity>
+                </View>
+                <View style={{ padding: 25 }}>
+                    <Text style={styles.inputLabel}>Nom de la catégorie</Text>
+                    <TextInput style={styles.modalInput} value={formName} onChangeText={setFormName} placeholder="Nom..." placeholderTextColor="#475569" />
+                    
+                    <Text style={styles.inputLabel}>Icône / Emoji</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.iconSelector}>
+                        {ICON_LIST.map(ic => (
+                            <TouchableOpacity 
+                                key={ic} 
+                                style={[styles.iconChoice, formIcon === ic && styles.iconChoiceActive]}
+                                onPress={() => setFormIcon(ic)}
+                            >
+                                <Text style={{ fontSize: 24 }}>{ic}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    <TouchableOpacity style={styles.saveBtn} onPress={handleSaveCategory}>
+                        <Text style={styles.saveBtnText}>Enregistrer</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </View>
+      </Modal>
+
 
       {/* Item Editor Modal */}
       <Modal visible={isItemModalVisible} animationType="fade" transparent={true}>
@@ -444,6 +504,23 @@ export default function StocksScreen() {
                 <ScrollView style={{ padding: 20 }}>
                     <Text style={styles.inputLabel}>Nom de l'article</Text>
                     <TextInput style={styles.modalInput} value={formName} onChangeText={setFormName} placeholder="Nom..." placeholderTextColor="#475569" />
+                    
+                    {activeTab === 'PRODUCTS' && (
+                        <>
+                            <Text style={styles.inputLabel}>Icône / Emoji</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.iconSelector}>
+                                {ICON_LIST.map(ic => (
+                                    <TouchableOpacity 
+                                        key={ic} 
+                                        style={[styles.iconChoice, formIcon === ic && styles.iconChoiceActive]}
+                                        onPress={() => setFormIcon(ic)}
+                                    >
+                                        <Text style={{ fontSize: 24 }}>{ic}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </>
+                    )}
                     
                     <View style={{ flexDirection: 'row', gap: 15, backgroundColor: 'transparent' }}>
                         <View style={{ flex: 1, backgroundColor: 'transparent' }}>
@@ -912,5 +989,26 @@ const styles = StyleSheet.create({
   activePickerItemText: {
       color: '#ffffff',
       fontWeight: '800',
+  },
+  iconSelector: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    backgroundColor: 'transparent',
+    paddingVertical: 5,
+  },
+  iconChoice: {
+    width: 50,
+    height: 50,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  iconChoiceActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderColor: '#10b981',
   },
 });

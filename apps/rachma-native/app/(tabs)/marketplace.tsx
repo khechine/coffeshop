@@ -7,8 +7,10 @@ import {
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
+import { AuthService } from '@/services/auth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
+import { Alert } from 'react-native';
 
 const { width } = Dimensions.get('window');
 const BANNER_IMAGE = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=1000';
@@ -60,6 +62,7 @@ export default function MarketplaceScreen() {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [storeId, setStoreId] = useState<string | null>(null);
 
   // Derived
   const cartCount = cartItems.reduce((s, i) => s + i.qty, 0);
@@ -84,7 +87,10 @@ export default function MarketplaceScreen() {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { 
+    fetchData(); 
+    AuthService.getSession().then(s => setStoreId(s.storeId));
+  }, []);
 
   const onRefresh = () => { setRefreshing(true); fetchData(); };
 
@@ -130,6 +136,56 @@ export default function MarketplaceScreen() {
       }
       return next;
     });
+  };
+
+  const handleCheckout = async () => {
+    if (cartItems.length === 0) return;
+    
+    setLoading(true);
+    try {
+      const session = await AuthService.getSession();
+      const sId = session.storeId;
+      
+      if (!sId) {
+        Alert.alert("Erreur", "Session expireé ou Store ID introuvable.");
+        setLoading(false);
+        return;
+      }
+
+      // Group items by vendorId for separate orders
+      const ordersMap: Record<string, CartItem[]> = {};
+      cartItems.forEach(item => {
+        const vendorId = item.product.vendor?.id || 'EXTERNAL';
+        if (!ordersMap[vendorId]) ordersMap[vendorId] = [];
+        ordersMap[vendorId].push(item);
+      });
+
+      for (const [vendorId, items] of Object.entries(ordersMap)) {
+        const total = items.reduce((s, i) => s + parseFloat(i.product.price || 0) * i.qty, 0);
+        const payload = {
+          storeId: sId,
+          vendorId: vendorId === 'EXTERNAL' ? null : vendorId,
+          total,
+          needsDelivery: true,
+          items: items.map(i => ({
+            name: i.product.name,
+            quantity: i.qty,
+            price: parseFloat(i.product.price || 0)
+          }))
+        };
+        await ApiService.post('/management/orders', payload);
+      }
+
+      setCartItems([]);
+      setCartOpen(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("✅ Succès", "Votre commande a été transmise avec succès !");
+    } catch (e) {
+      console.warn('Checkout error:', e);
+      Alert.alert("❌ Erreur", "Impossible de valider la commande. Vérifiez votre connexion.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filteredProducts = products.filter(p => {
@@ -438,7 +494,7 @@ export default function MarketplaceScreen() {
                   </View>
                   <TouchableOpacity
                     style={styles.orderBtn}
-                    onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); setCartOpen(false); }}
+                    onPress={handleCheckout}
                   >
                     <Text style={styles.orderBtnText}>Commander</Text>
                   </TouchableOpacity>
