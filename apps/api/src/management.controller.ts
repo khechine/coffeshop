@@ -573,6 +573,61 @@ export class ManagementController {
   }
 
   @UseGuards(MarketplaceAuthGuard)
+  @Get('vendor/summary/:vendorId')
+  async getVendorSummary(@Param('vendorId') vendorId: string): Promise<any> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [orders, products, wallet] = await Promise.all([
+      prisma.supplierOrder.findMany({
+        where: { vendorId },
+        select: { total: true, status: true, store: { select: { name: true } }, createdAt: true },
+      }),
+      prisma.vendorProduct.count({ where: { vendorId } }),
+      (prisma as any).vendorWallet.findUnique({ where: { vendorId } }),
+    ]);
+
+    const totalRevenue = orders.reduce((sum: number, o: any) => sum + Number(o.total || 0), 0);
+    const pendingOrders = orders.filter((o: any) => o.status === 'PENDING').length;
+    
+    // Group by store for top clients
+    const clientMap: Record<string, number> = {};
+    orders.forEach((o: any) => {
+      const name = o.store?.name || 'Inconnu';
+      clientMap[name] = (clientMap[name] || 0) + Number(o.total || 0);
+    });
+
+    const topClients = Object.entries(clientMap)
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+
+    return {
+      totalRevenue,
+      pendingOrders,
+      activeProducts: products,
+      walletBalance: Number(wallet?.balance || 0),
+      orderCount: orders.length,
+      topClients,
+    };
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Get('vendor/wallet/:vendorId')
+  async getVendorWallet(@Param('vendorId') vendorId: string): Promise<any> {
+    const wallet = await (prisma as any).vendorWallet.findUnique({
+      where: { vendorId },
+      include: {
+        transactions: {
+          orderBy: { createdAt: 'desc' },
+          take: 50
+        }
+      }
+    });
+    return wallet;
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
   @Get('vendor/orders/:vendorId')
   async getVendorOrders(@Param('vendorId') vendorId: string): Promise<any> {
     const orders = await prisma.supplierOrder.findMany({

@@ -1,0 +1,585 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  StyleSheet, ScrollView, TouchableOpacity, FlatList,
+  Text as RNText, View as RNView, Modal, Vibration, Alert, Platform,
+} from 'react-native';
+import { Text, View } from '@/components/Themed';
+import { Colors } from '@/constants/Colors';
+import { ApiService } from '@/services/api';
+import { AuthService } from '@/services/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+
+// ────────────────────────────────────────────────
+// Types
+// ────────────────────────────────────────────────
+type Product = {
+  id: string; name: string; price: number;
+  category: string; icon: string;
+};
+type Cart = Record<string, number>; // productId -> qty
+const TAX_RATE = 0.19;
+
+// ────────────────────────────────────────────────
+// POS Screen
+// ────────────────────────────────────────────────
+export default function PosScreen() {
+  const { tableId } = useLocalSearchParams<{ tableId?: string }>();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [cart, setCart] = useState<Cart>({});
+  const [activeCategory, setActiveCategory] = useState('ALL');
+  const [cartOpen, setCartOpen] = useState(false);
+  const [storeId, setStoreId] = useState('1');
+  const router = useRouter();
+
+  useEffect(() => {
+    AuthService.getSession().then(s => { if (s?.storeId) setStoreId(s.storeId); });
+  }, []);
+
+  // Load products
+  useEffect(() => {
+    async function load() {
+      try {
+        const raw = await ApiService.get(`/products?storeId=${storeId}`);
+        const mapped: Product[] = (raw || []).map((p: any) => {
+          let icon = '📦';
+          const cat = p.categoryName || '';
+          if (cat.toLowerCase().includes('café')) icon = '☕';
+          else if (cat.toLowerCase().includes('boisson')) icon = '🥤';
+          else if (cat.toLowerCase().includes('thé')) icon = '🍃';
+          else if (cat.toLowerCase().includes('pâtisserie')) icon = '🥐';
+          else if (cat.toLowerCase().includes('chicha')) icon = '💨';
+          return { id: p.id, name: p.name, price: Number(p.price), category: cat || 'Général', icon };
+        });
+        setProducts(mapped);
+        await AsyncStorage.setItem(`pos_products_${storeId}`, JSON.stringify(mapped));
+      } catch {
+        const cached = await AsyncStorage.getItem(`pos_products_${storeId}`);
+        if (cached) setProducts(JSON.parse(cached));
+      }
+    }
+    load();
+  }, [storeId]);
+
+  // Load saved cart (pos_cart OR table_cart)
+  useEffect(() => {
+    async function loadCart() {
+      if (tableId) {
+        const c = await AsyncStorage.getItem(`rachma_table_carts_${storeId}`);
+        if (c) {
+          const parsed = JSON.parse(c);
+          if (parsed[tableId] && parsed[tableId].cart) {
+            setCart(parsed[tableId].cart);
+          } else {
+            setCart({});
+          }
+        }
+      } else {
+        const c = await AsyncStorage.getItem(`pos_cart_${storeId}`);
+        if (c) setCart(JSON.parse(c));
+      }
+    }
+    loadCart();
+  }, [storeId, tableId]);
+
+  const saveCart = async (newCart: Cart) => {
+    if (tableId) {
+      let total = 0;
+      Object.entries(newCart).forEach(([id, qty]) => {
+        const p = products.find(prod => prod.id === id);
+        if (p) total += (p.price * qty);
+      });
+      const c = await AsyncStorage.getItem(`rachma_table_carts_${storeId}`);
+      let parsed = c ? JSON.parse(c) : {};
+      parsed[tableId] = { cart: newCart, total };
+      await AsyncStorage.setItem(`rachma_table_carts_${storeId}`, JSON.stringify(parsed));
+    } else {
+      await AsyncStorage.setItem(`pos_cart_${storeId}`, JSON.stringify(newCart));
+    }
+  };
+
+  const addToCart = (id: string) => {
+    const updated = { ...cart, [id]: (cart[id] || 0) + 1 };
+    setCart(updated); saveCart(updated); Vibration.vibrate(8);
+  };
+
+  const removeFromCart = (id: string) => {
+    const updated = { ...cart };
+    if (updated[id] > 1) updated[id]--;
+    else delete updated[id];
+    setCart(updated); saveCart(updated);
+  };
+
+  const clearCart = () => { setCart({}); saveCart({}); };
+
+  const handleLock = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Voulez-vous verrouiller la caisse ?')) {
+        AuthService.getSession().then(session => {
+          if (session.user && (session.user.role === 'STORE_OWNER' || session.user.role === 'SUPERADMIN')) {
+            AuthService.clearSession().then(() => router.replace('/login'));
+          } else {
+            AuthService.clearUser().then(() => router.replace('/unlock'));
+          }
+        });
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Fermer la session',
+      'Voulez-vous verrouiller la caisse ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Fermer', 
+          style: 'destructive', 
+          onPress: async () => {
+             const session = await AuthService.getSession();
+             if (session.user && (session.user.role === 'STORE_OWNER' || session.user.role === 'SUPERADMIN')) {
+               await AuthService.clearSession();
+               router.replace('/login');
+             } else {
+               await AuthService.clearUser();
+               router.replace('/unlock');
+             }
+          }
+        }
+      ]
+    );
+  };
+
+  // ── Totals ──
+  const cartItems = Object.entries(cart).map(([id, qty]) => ({
+    product: products.find(p => p.id === id)!, qty,
+  })).filter(i => !!i.product);
+
+  const subtotalTTC = cartItems.reduce((acc, i) => acc + i.product.price * i.qty, 0);
+  const totalTax = subtotalTTC * (TAX_RATE / (1 + TAX_RATE));
+  const totalHT = subtotalTTC - totalTax;
+  const cartQty = Object.values(cart).reduce((a, b) => a + b, 0);
+
+  const saveTicketToHistory = async (apiSale: any, tblId: string | null) => {
+    const newTicket = {
+      id: apiSale.fiscalNumber || apiSale.id, // Official fiscal number
+      dbId: apiSale.id,
+      signature: apiSale.signature,
+      tableId: tblId,
+      totalTTC: subtotalTTC,
+      items: cartItems.map(item => ({
+        id: item.product.id,
+        name: item.product.name,
+        price: item.product.price,
+        qty: item.qty
+      })),
+      timestamp: apiSale.createdAt || Date.now()
+    };
+    const c = await AsyncStorage.getItem(`tickets_history_${storeId}`);
+    let history = c ? JSON.parse(c) : [];
+    history.unshift(newTicket);
+    if (history.length > 100) history.pop(); // Keep only last 100 tickets
+    await AsyncStorage.setItem(`tickets_history_${storeId}`, JSON.stringify(history));
+  };
+
+  const checkout = async () => {
+    if (cartItems.length === 0) {
+      Alert.alert('Panier vide', 'Ajoutez des produits avant de valider.');
+      return;
+    }
+    Alert.alert(
+      '💰 Confirmer la vente',
+      `Total : ${subtotalTTC.toFixed(3)} DT TTC\n${cartQty} articles`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Valider ✓',
+          onPress: async () => {
+            try {
+              const session = await AuthService.getSession();
+              const payload = {
+                storeId: storeId,
+                total: subtotalTTC,
+                baristaId: session?.user?.id,
+                takenById: session?.user?.id,
+                terminalId: session?.terminalId,
+                mode: 'NORMAL',
+                items: cartItems.map(item => ({
+                  productId: item.product.id,
+                  quantity: item.qty,
+                  price: item.product.price
+                }))
+              };
+              const apiSale = await ApiService.post('/sales', payload);
+              if (!apiSale || !apiSale.id) throw new Error('API Reject');
+              await saveTicketToHistory(apiSale, null);
+              clearCart();
+              setCartOpen(false);
+              Alert.alert('✅ Vente Encaissée', `Ticket généré: ${apiSale.fiscalNumber}`);
+            } catch (e) {
+              Alert.alert('❌ Erreur de Synchronisation', 'Impossible de joindre le serveur fiscal (Mode 100% Connecté requis).');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const checkoutTable = async () => {
+    if (cartItems.length === 0) return;
+    if (Platform.OS === 'web') {
+       if (window.confirm(`💰 Confirmer la vente de la ${tableId}\nTotal : ${subtotalTTC.toFixed(3)} DT TTC`)) {
+          try {
+            const session = await AuthService.getSession();
+            const payload = {
+              storeId: storeId, total: subtotalTTC, baristaId: session?.user?.id, mode: 'NORMAL',
+              items: cartItems.map(item => ({ productId: item.product.id, quantity: item.qty, price: item.product.price }))
+            };
+            const apiSale = await ApiService.post('/sales', payload);
+            await saveTicketToHistory(apiSale, tableId || null);
+            const c = await AsyncStorage.getItem(`rachma_table_carts_${storeId}`);
+            let parsed = c ? JSON.parse(c) : {};
+            delete parsed[tableId!];
+            await AsyncStorage.setItem(`rachma_table_carts_${storeId}`, JSON.stringify(parsed));
+            setCart({});
+            setCartOpen(false);
+            router.push('/(tabs)/tables');
+          } catch(e) {
+            window.alert('Erreur: Impossible de joindre le serveur fiscal.');
+          }
+       }
+       return;
+    }
+    Alert.alert(
+      `💸 Payer la ${tableId}`,
+      `Total : ${subtotalTTC.toFixed(3)} DT TTC`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Payer ✓',
+          onPress: async () => {
+            try {
+              const session = await AuthService.getSession();
+              const payload = {
+                storeId: storeId, total: subtotalTTC, baristaId: session?.user?.id, mode: 'NORMAL',
+                items: cartItems.map(item => ({ productId: item.product.id, quantity: item.qty, price: item.product.price }))
+              };
+              const apiSale = await ApiService.post('/sales', payload);
+              await saveTicketToHistory(apiSale, tableId || null);
+              const c = await AsyncStorage.getItem(`rachma_table_carts_${storeId}`);
+              let parsed = c ? JSON.parse(c) : {};
+              delete parsed[tableId!];
+              await AsyncStorage.setItem(`rachma_table_carts_${storeId}`, JSON.stringify(parsed));
+              setCart({});
+              setCartOpen(false);
+              Alert.alert('✅ Table Encaissée', `Ticket: ${apiSale.fiscalNumber}`);
+              router.push('/(tabs)/tables');
+            } catch (e) {
+              Alert.alert('❌ Erreur de Synchronisation', 'Impossible de joindre le serveur fiscal.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // ── Categories ──
+  const categories = ['ALL', ...Array.from(new Set(products.map(p => p.category)))];
+  const filtered = activeCategory === 'ALL' ? products : products.filter(p => p.category === activeCategory);
+
+  return (
+    <View style={styles.container}>
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        {tableId ? (
+           <TouchableOpacity onPress={() => router.push('/(tabs)/tables')} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent' }}>
+             <FontAwesome name="arrow-left" size={20} color={Colors.primary} style={{ marginRight: 10 }} />
+             <Text style={styles.headerTitle}>{tableId}</Text>
+           </TouchableOpacity>
+        ) : (
+           <Text style={styles.headerTitle}>Point de Vente</Text>
+        )}
+        <TouchableOpacity onPress={handleLock} style={styles.lockBtn}>
+          <FontAwesome name="lock" size={24} color={Colors.danger} />
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Categories ── */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesBar}>
+        {categories.map(cat => (
+          <TouchableOpacity
+            key={cat}
+            style={[styles.catBtn, activeCategory === cat && styles.catBtnActive]}
+            onPress={() => setActiveCategory(cat)}
+          >
+            <RNText style={[styles.catBtnText, activeCategory === cat && styles.catBtnTextActive]}>
+              {cat}
+            </RNText>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* ── Product Grid ── */}
+      <FlatList
+        data={filtered}
+        numColumns={2}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.productGrid}
+        renderItem={({ item }) => {
+          const qty = cart[item.id] || 0;
+          return (
+            <TouchableOpacity
+              style={[styles.productCard, qty > 0 && styles.productCardActive]}
+              onPress={() => addToCart(item.id)}
+              activeOpacity={0.85}
+            >
+              <RNText style={styles.productEmoji}>{item.icon}</RNText>
+              <RNText style={styles.productName} numberOfLines={2}>{item.name}</RNText>
+              <RNText style={styles.productPrice}>{item.price.toFixed(3)} DT</RNText>
+              {qty > 0 && (
+                <RNView style={styles.qtyBadge}>
+                  <RNText style={styles.qtyBadgeText}>{qty}</RNText>
+                </RNView>
+              )}
+            </TouchableOpacity>
+          );
+        }}
+      />
+
+      {/* ── Cart FAB ── */}
+      <TouchableOpacity
+        style={[styles.cartFab, cartQty === 0 && { opacity: 0.5 }]}
+        onPress={() => setCartOpen(true)}
+        activeOpacity={0.85}
+      >
+        <FontAwesome name="shopping-basket" size={24} color="#ffffff" />
+        {cartQty > 0 && (
+          <RNView style={styles.fabBadge}>
+            <RNText style={styles.fabBadgeText}>{cartQty}</RNText>
+          </RNView>
+        )}
+        {subtotalTTC > 0 && (
+          <RNText style={styles.fabTotal}>{subtotalTTC.toFixed(3)} DT</RNText>
+        )}
+      </TouchableOpacity>
+
+      {/* ── Cart Bottom Sheet ── */}
+      <Modal visible={cartOpen} animationType="slide" transparent>
+        <RNView style={styles.cartOverlay}>
+          <TouchableOpacity style={styles.cartBackdrop} onPress={() => setCartOpen(false)} />
+          <RNView style={styles.cartSheet}>
+            {/* Sheet header */}
+            <RNView style={styles.cartHeader}>
+              <RNText style={styles.cartTitle}>{tableId ? `🛒 Addition ${tableId}` : '🛒 Panier'}</RNText>
+              <TouchableOpacity onPress={() => setCartOpen(false)}>
+                <FontAwesome name="close" size={22} color="#94a3b8" />
+              </TouchableOpacity>
+            </RNView>
+
+            {/* Cart items */}
+            <ScrollView style={styles.cartItems}>
+              {cartItems.length === 0 && (
+                <RNText style={styles.emptyCartText}>Le panier est vide</RNText>
+              )}
+              {cartItems.map(({ product, qty }) => (
+                <RNView key={product.id} style={styles.cartRow}>
+                  <RNView style={styles.cartRowInfo}>
+                    <RNText style={styles.cartItemName}>{product.icon} {product.name}</RNText>
+                    <RNText style={styles.cartItemSub}>{qty} × {product.price.toFixed(3)} DT</RNText>
+                  </RNView>
+                  <RNText style={styles.cartItemTotal}>{(product.price * qty).toFixed(3)}</RNText>
+                  <RNView style={styles.qtyControls}>
+                    <TouchableOpacity style={styles.qtyBtn} onPress={() => removeFromCart(product.id)}>
+                      <RNText style={styles.qtyBtnText}>−</RNText>
+                    </TouchableOpacity>
+                    <RNText style={styles.qtyNum}>{qty}</RNText>
+                    <TouchableOpacity style={styles.qtyBtn} onPress={() => addToCart(product.id)}>
+                      <RNText style={styles.qtyBtnText}>+</RNText>
+                    </TouchableOpacity>
+                  </RNView>
+                </RNView>
+              ))}
+            </ScrollView>
+
+            {/* Totals */}
+            {cartItems.length > 0 && (
+              <RNView style={styles.totalsBox}>
+                <RNView style={styles.totalRow}>
+                  <RNText style={styles.totalLabel}>HT</RNText>
+                  <RNText style={styles.totalValue}>{totalHT.toFixed(3)} DT</RNText>
+                </RNView>
+                <RNView style={styles.totalRow}>
+                  <RNText style={styles.totalLabel}>TVA (19%)</RNText>
+                  <RNText style={styles.totalValue}>{totalTax.toFixed(3)} DT</RNText>
+                </RNView>
+                <RNView style={[styles.totalRow, styles.totalRowBig]}>
+                  <RNText style={styles.totalBigLabel}>TOTAL TTC</RNText>
+                  <RNText style={styles.totalBigValue}>{subtotalTTC.toFixed(3)} DT</RNText>
+                </RNView>
+              </RNView>
+            )}
+
+            {/* Actions */}
+            <RNView style={styles.cartActions}>
+              <TouchableOpacity style={styles.clearBtn} onPress={clearCart}>
+                <FontAwesome name="trash" size={18} color={Colors.danger} />
+              </TouchableOpacity>
+              {tableId ? (
+                <>
+                  <TouchableOpacity style={styles.saveTableBtn} onPress={() => { Vibration.vibrate(20); setCartOpen(false); }}>
+                    <FontAwesome name="save" size={18} color="#ffffff" />
+                    <RNText style={styles.checkoutText}>Sauvegarder</RNText>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.checkoutTableBtn} onPress={checkoutTable}>
+                    <FontAwesome name="check" size={18} color="#ffffff" />
+                    <RNText style={styles.checkoutText}>Encaisser</RNText>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity style={styles.checkoutBtn} onPress={checkout}>
+                  <FontAwesome name="check" size={18} color="#ffffff" />
+                  <RNText style={styles.checkoutText}>Encaisser</RNText>
+                </TouchableOpacity>
+              )}
+            </RNView>
+          </RNView>
+        </RNView>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0a0f1e' },
+
+  header: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 15, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'transparent',
+  },
+  headerTitle: {
+    color: '#ffffff', fontSize: 18, fontWeight: '800',
+  },
+  lockBtn: {
+    padding: 5,
+  },
+
+  // Categories
+  categoriesBar: {
+    flexGrow: 0, paddingHorizontal: 10, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)', backgroundColor: 'transparent',
+  },
+  catBtn: {
+    paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, marginRight: 8,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+  },
+  catBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  catBtnText: { color: '#94a3b8', fontWeight: '700', fontSize: 12 },
+  catBtnTextActive: { color: '#ffffff' },
+
+  // Product grid
+  productGrid: { padding: 10, paddingBottom: 120 },
+  productCard: {
+    flex: 1, margin: 5, borderRadius: 20, padding: 16,
+    backgroundColor: 'rgba(16, 20, 35, 0.7)',
+    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'flex-start', minHeight: 120,
+  },
+  productCardActive: {
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+  },
+  productEmoji: { fontSize: 28, marginBottom: 8 },
+  productName: { color: '#ffffff', fontWeight: '700', fontSize: 13, marginBottom: 4 },
+  productPrice: { color: Colors.primary, fontWeight: '800', fontSize: 13 },
+  qtyBadge: {
+    position: 'absolute', top: 8, right: 8,
+    backgroundColor: Colors.primary, borderRadius: 12,
+    width: 24, height: 24, alignItems: 'center', justifyContent: 'center',
+  },
+  qtyBadgeText: { color: '#ffffff', fontWeight: '900', fontSize: 12 },
+
+  // FAB
+  cartFab: {
+    position: 'absolute', bottom: 20, left: 20, right: 20,
+    backgroundColor: Colors.primary, borderRadius: 20, height: 62,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4, shadowRadius: 15, elevation: 10,
+  },
+  fabBadge: {
+    backgroundColor: '#ffffff', borderRadius: 10,
+    width: 22, height: 22, alignItems: 'center', justifyContent: 'center',
+  },
+  fabBadgeText: { color: Colors.primary, fontWeight: '900', fontSize: 12 },
+  fabTotal: { color: '#ffffff', fontWeight: '800', fontSize: 15 },
+
+  // Cart sheet
+  cartOverlay: { flex: 1, justifyContent: 'flex-end' },
+  cartBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
+  cartSheet: {
+    backgroundColor: '#0e1526', borderTopLeftRadius: 30, borderTopRightRadius: 30,
+    maxHeight: '85%', paddingBottom: 30,
+  },
+  cartHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)',
+  },
+  cartTitle: { color: '#ffffff', fontSize: 20, fontWeight: '900' },
+  cartItems: { maxHeight: 300 },
+  emptyCartText: { color: '#94a3b8', textAlign: 'center', padding: 30 },
+  cartRow: {
+    flexDirection: 'row', alignItems: 'center', padding: 16,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  cartRowInfo: { flex: 1 },
+  cartItemName: { color: '#ffffff', fontWeight: '700', fontSize: 14 },
+  cartItemSub: { color: '#94a3b8', fontSize: 11, marginTop: 2 },
+  cartItemTotal: { color: Colors.primary, fontWeight: '800', fontSize: 15, marginRight: 12 },
+  qtyControls: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  qtyBtn: {
+    width: 28, height: 28, borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center',
+  },
+  qtyBtnText: { color: '#ffffff', fontWeight: '900', fontSize: 16 },
+  qtyNum: { color: '#ffffff', fontWeight: '800', fontSize: 15, minWidth: 20, textAlign: 'center' },
+
+  // Totals
+  totalsBox: {
+    padding: 20, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)',
+  },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  totalRowBig: { marginTop: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' },
+  totalLabel: { color: '#94a3b8', fontSize: 13, fontWeight: '600' },
+  totalValue: { color: '#ffffff', fontSize: 13, fontWeight: '700' },
+  totalBigLabel: { color: '#ffffff', fontSize: 18, fontWeight: '900' },
+  totalBigValue: { color: Colors.primary, fontSize: 22, fontWeight: '900' },
+
+  // Actions
+  cartActions: {
+    flexDirection: 'row', padding: 20, gap: 12,
+  },
+  clearBtn: {
+    width: 56, height: 56, borderRadius: 16,
+    backgroundColor: 'rgba(239,68,68,0.15)', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+  },
+  checkoutBtn: {
+    flex: 2, height: 56, borderRadius: 16,
+    backgroundColor: Colors.primary, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: 10,
+  },
+  checkoutTableBtn: {
+    flex: 1.5, height: 56, borderRadius: 16,
+    backgroundColor: Colors.primary, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: 5,
+  },
+  saveTableBtn: {
+    flex: 1.5, height: 56, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.1)', flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: 5,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)'
+  },
+  checkoutText: { color: '#ffffff', fontWeight: '800', fontSize: 16 },
+});
