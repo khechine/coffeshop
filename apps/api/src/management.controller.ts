@@ -628,6 +628,82 @@ export class ManagementController {
   }
 
   @UseGuards(MarketplaceAuthGuard)
+  @Get('vendor/profile/:vendorId')
+  async getVendorProfile(@Param('vendorId') vendorId: string): Promise<any> {
+    const profile = await (prisma as any).vendorProfile.findUnique({
+      where: { id: vendorId },
+      include: {
+        mktSectors: true,
+        user: { select: { email: true, name: true } }
+      }
+    });
+    return profile;
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Put('vendor/profile/:vendorId')
+  async updateVendorProfile(@Param('vendorId') vendorId: string, @Body() data: any): Promise<any> {
+    const { mktSectors, ...rest } = data;
+    const updateData: any = { ...rest };
+    
+    if (mktSectors) {
+      updateData.mktSectors = {
+         set: mktSectors.map((id: string) => ({ id }))
+      };
+    }
+
+    return (prisma as any).vendorProfile.update({
+      where: { id: vendorId },
+      data: updateData
+    });
+  }
+
+  @Get('marketplace/sectors')
+  async getMarketplaceSectors(): Promise<any> {
+    return (prisma as any).mktCategory.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: { name: 'asc' }
+    });
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Get('vendor/bundles/:vendorId')
+  async getVendorBundles(@Param('vendorId') vendorId: string): Promise<any> {
+    return (prisma as any).mktBundle.findMany({
+      where: { vendorId },
+      include: { items: { include: { product: true } } }
+    });
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Post('vendor/bundles/:vendorId')
+  async createVendorBundle(@Param('vendorId') vendorId: string, @Body() data: any): Promise<any> {
+    return (prisma as any).mktBundle.create({
+      data: {
+        ...data,
+        vendorId
+      }
+    });
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Put('vendor/bundles/:bundleId')
+  async updateVendorBundle(@Param('bundleId') bundleId: string, @Body() data: any): Promise<any> {
+    return (prisma as any).mktBundle.update({
+      where: { id: bundleId },
+      data
+    });
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Delete('vendor/bundles/:bundleId')
+  async deleteVendorBundle(@Param('bundleId') bundleId: string): Promise<any> {
+    return (prisma as any).mktBundle.delete({
+      where: { id: bundleId }
+    });
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
   @Get('vendor/orders/:vendorId')
   async getVendorOrders(@Param('vendorId') vendorId: string): Promise<any> {
     const orders = await prisma.supplierOrder.findMany({

@@ -28,16 +28,20 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  const [authState, setAuthState] = useState<{ isPaired: boolean; isUnlocked: boolean } | null>(null);
+  const [initialRoute, setInitialRoute] = useState<string | null>(null);
 
   // Check auth state
   useEffect(() => {
     async function checkAuth() {
       const session = await AuthService.getSession();
-      setAuthState({
-        isPaired: session.isPaired,
-        isUnlocked: session.isUnlocked
-      });
+      
+      if (session.token && session.vendorId) {
+        setInitialRoute('(tabs)');
+      } else if (session.token && session.storeId) {
+        setInitialRoute(session.isUnlocked ? '(tabs)' : 'unlock');
+      } else {
+        setInitialRoute('login');
+      }
     }
     checkAuth();
   }, []);
@@ -48,22 +52,16 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded && authState !== null) {
+    if (loaded && initialRoute !== null) {
       SplashScreen.hideAsync();
     }
-  }, [loaded, authState]);
+  }, [loaded, initialRoute]);
 
-  if (!loaded || authState === null) {
+  if (!loaded || initialRoute === null) {
     return null;
   }
 
-  // Determine starting route
-  let startingRoute = 'login';
-  if (authState.isPaired) {
-    startingRoute = authState.isUnlocked ? '(tabs)' : 'unlock';
-  }
-
-  return <RootLayoutNav initialRoute={startingRoute} />;
+  return <RootLayoutNav initialRoute={initialRoute} />;
 }
 
 const CustomTheme = {

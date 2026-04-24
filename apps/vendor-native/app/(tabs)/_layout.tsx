@@ -68,6 +68,14 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <TabBarIcon name="credit-card" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Mon Profil',
+          tabBarLabel: 'Profil',
+          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+        }}
+      />
       {/* Hidden legacy screens from cloning */}
       <Tabs.Screen name="rachma" options={{ href: null }} />
       <Tabs.Screen name="pos" options={{ href: null }} />
@@ -76,6 +84,7 @@ export default function TabLayout() {
       <Tabs.Screen name="stocks" options={{ href: null }} />
       <Tabs.Screen name="suppliers" options={{ href: null }} />
       <Tabs.Screen name="history" options={{ href: null }} />
+      <Tabs.Screen name="scanner" options={{ href: null }} />
     </Tabs>
   );
 }

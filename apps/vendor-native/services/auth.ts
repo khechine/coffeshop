@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 
 const TOKEN_KEY = 'rachma_token';
 const STORE_ID_KEY = 'rachma_store_id';
+const VENDOR_ID_KEY = 'rachma_vendor_id';
 const USER_KEY = 'rachma_user';
 const TERMINAL_ID_KEY = 'rachma_terminal_id';
 
@@ -32,10 +33,11 @@ const storage = {
 
 export const AuthService = {
   // --- Device Level Auth ---
-  async saveSession(token: string, storeId: string, terminalId?: string) {
+  async saveSession(token: string, storeId?: string, terminalId?: string, vendorId?: string) {
     try {
       await storage.setItem(TOKEN_KEY, token);
-      await storage.setItem(STORE_ID_KEY, storeId);
+      if (storeId) await storage.setItem(STORE_ID_KEY, storeId);
+      if (vendorId) await storage.setItem(VENDOR_ID_KEY, vendorId);
       if (terminalId) {
         await storage.setItem(TERMINAL_ID_KEY, terminalId);
       }
@@ -48,6 +50,7 @@ export const AuthService = {
     try {
       await storage.removeItem(TOKEN_KEY);
       await storage.removeItem(STORE_ID_KEY);
+      await storage.removeItem(VENDOR_ID_KEY);
       await storage.removeItem(USER_KEY);
       await storage.removeItem(TERMINAL_ID_KEY);
     } catch (error) {
@@ -77,21 +80,24 @@ export const AuthService = {
     try {
       const token = await storage.getItem(TOKEN_KEY);
       const storeId = await storage.getItem(STORE_ID_KEY);
+      const vendorId = await storage.getItem(VENDOR_ID_KEY);
       const terminalId = await storage.getItem(TERMINAL_ID_KEY);
       const userStr = await storage.getItem(USER_KEY);
       const user = userStr ? JSON.parse(userStr) : null;
       
       return { 
-        isPaired: !!(token && storeId), 
+        isPaired: !!(token && (storeId || vendorId)), 
         isUnlocked: !!user,
+        isVendor: !!vendorId,
         token, 
         storeId,
+        vendorId,
         terminalId,
         user 
       };
     } catch (error) {
       console.error('Failed to get session:', error);
-      return { isPaired: false, isUnlocked: false, token: null, storeId: null, terminalId: null, user: null };
+      return { isPaired: false, isUnlocked: false, isVendor: false, token: null, storeId: null, vendorId: null, terminalId: null, user: null };
     }
   },
 

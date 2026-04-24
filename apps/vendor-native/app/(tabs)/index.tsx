@@ -13,6 +13,7 @@ export default function DashboardScreen() {
   const [data, setData] = useState<any>(null);
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [lastOrderCount, setLastOrderCount] = useState<number>(0);
   const router = useRouter();
 
   // Load the real vendorId from secure storage
@@ -50,10 +51,16 @@ export default function DashboardScreen() {
     );
   };
 
-  const fetchData = async () => {
-    if (!vendorId) return;
+  const fetchData = async (vid: string) => {
     try {
-      const summary = await ApiService.get(`/management/vendor/summary/${vendorId}`);
+      const summary = await ApiService.get(`/management/vendor/summary/${vid}`);
+      
+      // Check for new orders
+      if (lastOrderCount > 0 && summary.orderCount > lastOrderCount) {
+        Alert.alert("🛒 Nouvelle Commande !", "Vous avez reçu une nouvelle commande sur la Marketplace.");
+      }
+      
+      setLastOrderCount(summary.orderCount);
       setData(summary);
     } catch (error) {
       console.warn("Failed to fetch vendor dashboard data:", error);
@@ -64,12 +71,19 @@ export default function DashboardScreen() {
   };
 
   useEffect(() => {
-    if (vendorId) fetchData();
+    if (vendorId) {
+      fetchData(vendorId);
+      // Auto-refresh every 30s for notifications
+      const interval = setInterval(() => fetchData(vendorId), 30000);
+      return () => clearInterval(interval);
+    }
   }, [vendorId]);
 
   const onRefresh = () => {
-    setRefreshing(true);
-    fetchData();
+    if (vendorId) {
+      setRefreshing(true);
+      fetchData(vendorId);
+    }
   };
 
   if (loading && !refreshing) {
