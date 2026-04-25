@@ -786,6 +786,7 @@ enum OrderStatus {
   DELIVERED
   CANCELLED
   PAID
+  STOCKED
 }
 
 model Supplier {

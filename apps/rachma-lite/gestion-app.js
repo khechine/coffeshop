@@ -666,8 +666,7 @@ async function fetchMarketplaceOrders() {
     if (!orders) return;
 
     let html = `<div style="padding-bottom:20px;">`;
-    orders.forEach(o => {
-        const statusClass = o.status === 'DELIVERED' ? 'badge-ok' : 'badge-low';
+        const statusClass = o.status === 'DELIVERED' ? 'badge-low' : o.status === 'STOCKED' ? 'badge-ok' : 'badge-low';
         html += `
             <div class="list-item" style="flex-direction:column; align-items:flex-start; gap:8px;">
                 <div style="display:flex; justify-content:space-between; width:100%;">
@@ -676,11 +675,29 @@ async function fetchMarketplaceOrders() {
                 </div>
                 <div class="item-meta">${o.supplier?.name || o.vendor?.companyName || 'Fournisseur'} • ${Number(o.total).toFixed(3)} DT</div>
                 <div class="item-meta" style="font-size:10px;">${new Date(o.createdAt).toLocaleDateString()}</div>
+                ${o.status === 'DELIVERED' ? `
+                <button class="primary-btn" style="padding: 6px 12px; margin-top: 5px; width: 100%; font-size: 12px; display: flex; justify-content: center; align-items: center; gap: 6px;" onclick="validerReceptionMarketplace('${o.id}')">
+                    ✅ Valider & Restocker
+                </button>
+                ` : ''}
             </div>
         `;
     });
     html += `</div>`;
     openSheet("Historique Commandes", html);
+}
+
+async function validerReceptionMarketplace(orderId) {
+    if(!confirm("Avez-vous bien reçu toute la marchandise ? Le stock sera mis à jour.")) return;
+    try {
+        const res = await fetch(`${CONFIG.API_URL}/management/orders/${orderId}/receive`, { method: 'POST' });
+        if(!res.ok) throw new Error("Erreur de validation");
+        alert("Réception validée et stock augmenté !");
+        closeSheet();
+        fetchMarketplaceOrders();
+    } catch(e) {
+        alert("Impossible de valider la réception pour le moment.");
+    }
 }
 
 // ═══════════════════════════════════════════════════════════

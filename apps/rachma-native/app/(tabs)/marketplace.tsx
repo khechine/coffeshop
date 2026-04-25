@@ -67,6 +67,9 @@ export default function MarketplaceScreen() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [storeId, setStoreId] = useState<string | null>(null);
 
+  const [ordersOpen, setOrdersOpen] = useState(false);
+  const [myOrders, setMyOrders] = useState<any[]>([]);
+
   // Derived
   const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0);
   const cartTotal = cartItems.reduce((s, i) => s + i.price * i.quantity, 0);
@@ -178,6 +181,31 @@ export default function MarketplaceScreen() {
     }
   };
 
+  const fetchMyOrders = async () => {
+    if (!storeId) return;
+    try {
+      const res = await ApiService.get(`/management/orders/${storeId}`);
+      const sorted = (res || []).sort((a: any, b: any) => {
+        const priorities: any = { PENDING: 1, DELIVERING: 2, SHIPPED: 3, DELIVERED: 4, STOCKED: 5 };
+        const p1 = priorities[a.status] || 99;
+        const p2 = priorities[b.status] || 99;
+        if (p1 !== p2) return p1 - p2;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+      setMyOrders(sorted);
+      setOrdersOpen(true);
+    } catch(e) { console.warn(e); }
+  };
+
+  const validerReception = async (orderId: string) => {
+    try {
+      await ApiService.post(`/management/orders/${orderId}/receive`, {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setMyOrders(myOrders.map(o => o.id === orderId ? { ...o, status: 'STOCKED' } : o));
+      Alert.alert("Succès", "Commande réceptionnée et stock mis à jour.");
+    } catch (e) { Alert.alert("Erreur", "Impossible de valider la réception"); }
+  };
+
   // --- Filtering ---
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
@@ -221,17 +249,25 @@ export default function MarketplaceScreen() {
             <Text style={styles.headerTitle}>Marketplace</Text>
             <Text style={styles.headerSub}>Solutions B2B Premium</Text>
          </View>
-         <TouchableOpacity 
-            style={[styles.cartTrigger, { backgroundColor: T.inputBg, borderColor: T.inputBorder }]}
-            onPress={() => setCartOpen(true)}
-         >
-            <FontAwesome name="shopping-basket" size={20} color={T.accent} />
-            {cartCount > 0 && (
-                <View style={[styles.badge, { backgroundColor: T.accent }]}>
-                  <Text style={styles.badgeText}>{cartCount}</Text>
-                </View>
-            )}
-         </TouchableOpacity>
+         <View style={{ flexDirection: 'row', gap: 10 }}>
+             <TouchableOpacity 
+                style={[styles.cartTrigger, { backgroundColor: 'rgba(99,102,241,0.15)', borderColor: 'rgba(99,102,241,0.3)', width: 'auto', paddingHorizontal: 15 }]}
+                onPress={fetchMyOrders}
+             >
+                <Text style={{ color: '#6366f1', fontSize: 11, fontWeight: '800' }}>Mes Cmds</Text>
+             </TouchableOpacity>
+             <TouchableOpacity 
+                style={[styles.cartTrigger, { backgroundColor: T.inputBg, borderColor: T.inputBorder }]}
+                onPress={() => setCartOpen(true)}
+             >
+                <FontAwesome name="shopping-basket" size={20} color={T.accent} />
+                {cartCount > 0 && (
+                    <View style={[styles.badge, { backgroundColor: T.accent }]}>
+                      <Text style={styles.badgeText}>{cartCount}</Text>
+                    </View>
+                )}
+             </TouchableOpacity>
+         </View>
       </View>
 
       {/* ── SEARCH & TABS ── */}
@@ -555,6 +591,50 @@ export default function MarketplaceScreen() {
               </View>
           </View>
       </Modal>
+
+      {/* ── ORDERS MODAL ── */}
+      <Modal visible={ordersOpen} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+              <View style={[styles.modalSheet, { backgroundColor: T.bg, padding: 0 }]}>
+                  <View style={[styles.modalHeader, { borderBottomColor: T.cardBorder, paddingTop: 20 }]}>
+                      <Text style={[styles.modalTitle, { color: T.text }]}>Historique Commandes</Text>
+                      <TouchableOpacity style={styles.closeBtn} onPress={() => setOrdersOpen(false)}>
+                          <FontAwesome name="times" size={20} color={T.text} />
+                      </TouchableOpacity>
+                  </View>
+                  <ScrollView style={{ padding: 20 }}>
+                      {myOrders.length === 0 ? (
+                          <Text style={{ color: T.subtext, textAlign: 'center', marginTop: 20 }}>Aucune commande B2B passée.</Text>
+                      ) : (
+                          myOrders.map(o => (
+                              <View key={o.id} style={{ backgroundColor: T.card, padding: 15, borderRadius: 15, marginBottom: 15, borderWidth: 1, borderColor: T.cardBorder }}>
+                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                                      <Text style={{ color: '#fff', fontWeight: '800' }}>Cmd #{o.id.substring(0,6)}</Text>
+                                      <View style={{ backgroundColor: o.status === 'DELIVERED' ? 'rgba(245,158,11,0.1)' : o.status === 'STOCKED' ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                                          <Text style={{ color: o.status === 'DELIVERED' ? '#f59e0b' : o.status === 'STOCKED' ? '#10b981' : '#94a3b8', fontSize: 10, fontWeight: '800' }}>{o.status}</Text>
+                                      </View>
+                                  </View>
+                                  <Text style={{ color: T.subtext, fontSize: 12, marginBottom: 5 }}>{o.supplier?.name || o.vendor?.companyName || 'Fournisseur'}</Text>
+                                  <Text style={{ color: T.accent, fontWeight: '900', marginBottom: 15 }}>{Number(o.total || 0).toFixed(3)} DT</Text>
+                                  
+                                  {o.status === 'DELIVERED' && (
+                                      <TouchableOpacity 
+                                          style={{ backgroundColor: '#10b981', padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}
+                                          onPress={() => validerReception(o.id)}
+                                      >
+                                          <FontAwesome name="check-circle" size={16} color="#fff" />
+                                          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>Valider Réception & Restocker</Text>
+                                      </TouchableOpacity>
+                                  )}
+                              </View>
+                          ))
+                      )}
+                      <View style={{ height: 40 }} />
+                  </ScrollView>
+              </View>
+          </View>
+      </Modal>
+
     </View>
   );
 }

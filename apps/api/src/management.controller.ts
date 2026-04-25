@@ -389,18 +389,23 @@ export class ManagementController {
           const totalNum = Number(body.total || 0);
 
           if (vendor.commissionTiers) {
-            const tiers = Array.isArray(vendor.commissionTiers) 
-              ? vendor.commissionTiers 
-              : JSON.parse(vendor.commissionTiers as string);
-            
-            if (Array.isArray(tiers) && tiers.length > 0) {
-              const sortedTiers = tiers.sort((a: any, b: any) => b.minAmount - a.minAmount);
-              for (const tier of sortedTiers) {
-                if (totalNum >= tier.minAmount) {
-                  finalRate = tier.rate;
-                  break;
+            try {
+              const tiersRaw = typeof vendor.commissionTiers === 'string' 
+                ? JSON.parse(vendor.commissionTiers) 
+                : vendor.commissionTiers;
+              const tiers = Array.isArray(tiersRaw) ? tiersRaw : [];
+              
+              if (tiers.length > 0) {
+                const sortedTiers = tiers.sort((a: any, b: any) => b.minAmount - a.minAmount);
+                for (const tier of sortedTiers) {
+                  if (totalNum >= tier.minAmount) {
+                    finalRate = tier.rate;
+                    break;
+                  }
                 }
               }
+            } catch (jsonErr) {
+               console.warn(`[Marketplace] Failed to parse commissionTiers for vendor ${vendor.id}`);
             }
           }
 
@@ -449,23 +454,30 @@ export class ManagementController {
 
   @Put('orders/:id/status')
   async updateOrderStatus(@Param('id') id: string, @Body() body: {
-    status: 'PENDING' | 'CONFIRMED' | 'DELIVERED' | 'CANCELLED';
+    status: 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
   }): Promise<any> {
     const order = await prisma.supplierOrder.update({
       where: { id },
       data: { status: body.status },
       include: { items: { include: { stockItem: true } } },
     });
+    return order;
+  }
 
-    // If delivered, auto-update stock quantities
-    if (body.status === 'DELIVERED') {
-      for (const item of order.items) {
-        if (item.stockItemId) {
-          await prisma.stockItem.update({
-            where: { id: item.stockItemId },
-            data: { quantity: { increment: Number(item.quantity) } },
-          });
-        }
+  @Post('orders/:id/receive')
+  async receiveOrder(@Param('id') id: string): Promise<any> {
+    const order = await prisma.supplierOrder.update({
+      where: { id },
+      data: { status: 'STOCKED' as any },
+      include: { items: { include: { stockItem: true } } },
+    });
+
+    for (const item of order.items) {
+      if (item.stockItemId && item.stockItem) {
+        await prisma.stockItem.update({
+          where: { id: item.stockItemId },
+          data: { quantity: { increment: Number(item.quantity) } },
+        });
       }
     }
 

@@ -270,7 +270,7 @@ export default function DashboardScreen() {
                 </View>
                 {unreadCount > 0 && (
                     <TouchableOpacity style={styles.markAllReadBtn} onPress={handleMarkAllAsRead}>
-                        <FontAwesome name="check-double" size={14} color={Colors.primary} />
+                        <FontAwesome name="check-square-o" size={14} color={Colors.primary} />
                         <Text style={styles.markAllReadText}>Tout marquer comme lu</Text>
                     </TouchableOpacity>
                 )}
@@ -281,7 +281,23 @@ export default function DashboardScreen() {
                         notifications.map((n, idx) => {
                             const isRead = readNotifIds.includes(n.id);
                             return (
-                                <View key={idx} style={[styles.notifItem, isRead && { opacity: 0.6 }]}>
+                                <TouchableOpacity 
+                                    key={idx} 
+                                    style={[styles.notifItem, isRead && { opacity: 0.6 }]}
+                                    onPress={() => {
+                                        if (!isRead) {
+                                            const newIds = [...readNotifIds, n.id];
+                                            setReadNotifIds(newIds);
+                                            AsyncStorage.setItem('@notifications_read', JSON.stringify(newIds)).catch(() => {});
+                                        }
+                                        setShowNotifications(false);
+                                        if (n.type === 'ORDER' || n.title.toLowerCase().includes('commande') || n.title.toLowerCase().includes('réception') || n.type === 'SUCCESS') {
+                                            router.push('/(tabs)/orders');
+                                        } else if (n.title.toLowerCase().includes('solde') || n.title.toLowerCase().includes('wallet')) {
+                                            router.push('/(tabs)/wallet');
+                                        }
+                                    }}
+                                >
                                     <View style={[styles.notifIconBox, n.type === 'STOCK' ? {backgroundColor:'rgba(239, 68, 68, 0.15)'} : n.type === 'SUCCESS' ? {backgroundColor:'rgba(16, 185, 129, 0.15)'} : {backgroundColor:'rgba(59, 130, 246, 0.15)'}]}>
                                         <FontAwesome name={n.type === 'STOCK' ? 'warning' : n.type === 'SUCCESS' ? 'check' : 'shopping-cart'} size={16} color={n.type === 'STOCK' ? '#ef4444' : n.type === 'SUCCESS' ? '#10b981' : '#3b82f6'} />
                                     </View>
@@ -291,7 +307,7 @@ export default function DashboardScreen() {
                                         <Text style={styles.notifDate}>{new Date(n.date).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</Text>
                                     </View>
                                     {!isRead && <View style={styles.unreadDot} />}
-                                </View>
+                                </TouchableOpacity>
                             );
                         })
                     )}
