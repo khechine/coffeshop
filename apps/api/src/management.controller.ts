@@ -754,6 +754,25 @@ export class ManagementController {
     }));
   }
 
+  @UseGuards(MarketplaceAuthGuard)
+  @Put('vendor/orders/:id/status')
+  async updateVendorOrderStatus(@Param('id') id: string, @Body() body: {
+    status: string;
+  }): Promise<any> {
+    // Map application statuses to Prisma enum
+    let dbStatus = body.status;
+    if (body.status === 'DELIVERING') dbStatus = 'SHIPPED';
+    if (body.status === 'COMPLETED') dbStatus = 'DELIVERED';
+
+    const order = await prisma.supplierOrder.update({
+      where: { id },
+      data: { status: dbStatus as any },
+      include: { items: true }
+    });
+
+    return order;
+  }
+
   // ═══════════════════════════════════════════════════════════
   // EXPENSES CRUD
   // ═══════════════════════════════════════════════════════════
