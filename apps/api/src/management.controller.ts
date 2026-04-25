@@ -693,7 +693,7 @@ export class ManagementController {
     return (prisma as any).vendorProfile.findMany({
       include: { 
         mktSectors: true,
-        _count: { select: { products: true } }
+        _count: { select: { vendorProducts: true } }
       },
       orderBy: { companyName: 'asc' }
     });

@@ -11,7 +11,15 @@ import { AuthService } from '@/services/auth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+
+// Fallback for LinearGradient if module resolution fails temporarily
+let LinearGradient: any = View;
+try {
+  const GradientModule = require('expo-linear-gradient');
+  LinearGradient = GradientModule.LinearGradient;
+} catch (e) {
+  console.warn('LinearGradient module not found, using fallback View');
+}
 
 const { width } = Dimensions.get('window');
 const BANNER_IMAGE = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=1000';
