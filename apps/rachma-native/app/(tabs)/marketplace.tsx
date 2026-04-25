@@ -187,7 +187,8 @@ export default function MarketplaceScreen() {
     try {
       const res = await ApiService.get(`/management/orders/${storeId}`);
       const sorted = (res || []).sort((a: any, b: any) => {
-        const priorities: any = { PENDING: 1, DELIVERING: 2, SHIPPED: 3, DELIVERED: 4, STOCKED: 5 };
+        // Active orders first: DELIVERED (waiting for reception) > SHIPPED > CONFIRMED > PENDING > STOCKED > CANCELLED
+        const priorities: any = { DELIVERED: 1, SHIPPED: 2, CONFIRMED: 3, PENDING: 4, STOCKED: 5, CANCELLED: 6 };
         const p1 = priorities[a.status] || 99;
         const p2 = priorities[b.status] || 99;
         if (p1 !== p2) return p1 - p2;
@@ -582,7 +583,7 @@ export default function MarketplaceScreen() {
                   </ScrollView>
                   <View style={styles.cartFooter}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, backgroundColor: 'transparent' }}>
-                         <Text style={styles.totalLbl}>Total à payer</Text>
+                      <Text style={styles.totalLbl}>Total à payer</Text>
                          <Text style={styles.totalVal}>{cartTotal.toFixed(3)} DT</Text>
                       </View>
                       <TouchableOpacity style={styles.checkoutBtn} onPress={handleCheckout}>
@@ -596,33 +597,44 @@ export default function MarketplaceScreen() {
       {/* ── ORDERS MODAL ── */}
       <Modal visible={ordersOpen} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
-              <View style={[styles.modalSheet, { backgroundColor: T.bg, padding: 0, height: '90%' }]}>
+              <View style={[styles.modalSheet, { backgroundColor: T.bg, padding: 0, height: '92%' }]}>
                   <View style={[styles.modalHeader, { borderBottomColor: T.cardBorder, paddingTop: 20 }]}>
-                      <Text style={[styles.modalTitle, { color: T.text }]}>Historique Commandes</Text>
+                      <View style={{ backgroundColor: 'transparent' }}>
+                          <Text style={[styles.modalTitle, { color: T.text }]}>Mes Commandes B2B</Text>
+                          <Text style={{ color: T.subtext, fontSize: 11, fontWeight: '700', marginTop: 2 }}>{myOrders.length} commande(s) au total</Text>
+                      </View>
                       <TouchableOpacity style={styles.closeBtn} onPress={() => setOrdersOpen(false)}>
                           <FontAwesome name="times" size={20} color={T.text} />
                       </TouchableOpacity>
                   </View>
                   
                   {/* Filter Bar */}
-                  <View style={{ flexDirection: 'row', padding: 15, gap: 8, backgroundColor: 'transparent' }}>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={{ padding: 15, backgroundColor: 'transparent' }}>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                           {[
-                            { id: 'ALL', label: 'Toutes' },
-                            { id: 'PENDING', label: 'En attente' },
-                            { id: 'DELIVERED', label: 'À réceptionner' },
-                            { id: 'STOCKED', label: 'Dernières' }
+                            { id: 'ALL',       label: 'Toutes',          color: '#94a3b8' },
+                            { id: 'ACTIVE',    label: 'En cours',        color: '#f59e0b' },
+                            { id: 'DELIVERED', label: 'À réceptionner',  color: '#10b981' },
+                            { id: 'STOCKED',   label: 'Finalisées',      color: '#6366f1' },
                           ].map(f => (
                               <TouchableOpacity 
                                   key={f.id}
                                   onPress={() => setOrderFilter(f.id as any)}
                                   style={{
-                                      backgroundColor: orderFilter === f.id ? T.accent : 'rgba(255,255,255,0.05)',
-                                      paddingHorizontal: 15, paddingVertical: 8, borderRadius: 12, marginRight: 8,
-                                      borderWidth: 1, borderColor: orderFilter === f.id ? T.accent : 'rgba(255,255,255,0.1)'
+                                      backgroundColor: orderFilter === f.id ? `${f.color}22` : 'rgba(255,255,255,0.04)',
+                                      paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,
+                                      borderWidth: 1, borderColor: orderFilter === f.id ? f.color : 'rgba(255,255,255,0.08)',
+                                      flexDirection: 'row', alignItems: 'center', gap: 6
                                   }}
                               >
-                                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{f.label}</Text>
+                                  <Text style={{ color: orderFilter === f.id ? f.color : T.subtext, fontSize: 12, fontWeight: '800' }}>{f.label}</Text>
+                                  <View style={{ backgroundColor: f.color, minWidth: 17, height: 17, borderRadius: 8, alignItems: 'center', justifyContent: 'center' }}>
+                                      <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>
+                                          {f.id === 'ALL' ? myOrders.length :
+                                           f.id === 'ACTIVE' ? myOrders.filter(o => ['PENDING','CONFIRMED','SHIPPED'].includes(o.status)).length :
+                                           myOrders.filter(o => o.status === f.id).length}
+                                      </Text>
+                                  </View>
                               </TouchableOpacity>
                           ))}
                       </ScrollView>

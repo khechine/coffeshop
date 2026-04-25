@@ -665,46 +665,70 @@ async function fetchMarketplaceOrders() {
     
     if (!orders) return;
 
+    // Sort: DELIVERED first (needs action), then active, then completed
+    const priorities = { DELIVERED: 1, SHIPPED: 2, CONFIRMED: 3, PENDING: 4, STOCKED: 5, CANCELLED: 6 };
+    orders.sort((a, b) => {
+        const p1 = priorities[a.status] || 99;
+        const p2 = priorities[b.status] || 99;
+        if (p1 !== p2) return p1 - p2;
+        return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
+    const STATUS_LABELS = {
+        PENDING:   { label: '🕐 En attente',        cls: 'badge-low' },
+        CONFIRMED: { label: '✅ Acceptée',           cls: 'badge-ok' },
+        SHIPPED:   { label: '🚚 En livraison',       cls: 'badge-info' },
+        DELIVERED: { label: '📦 À RÉCEPTIONNER',    cls: 'badge-warn' },
+        STOCKED:   { label: '✔ Finalisée',           cls: 'badge-ok' },
+        CANCELLED: { label: '❌ Annulée',            cls: 'badge-low' },
+    };
+
     let activeFilter = state._orderFilter || 'ALL';
     let filtered = orders;
-    if (activeFilter === 'PENDING') {
-        filtered = orders.filter(o => ['PENDING', 'DELIVERING', 'SHIPPED'].includes(o.status));
+    if (activeFilter === 'ACTIVE') {
+        filtered = orders.filter(o => ['PENDING', 'CONFIRMED', 'SHIPPED'].includes(o.status));
     } else if (activeFilter === 'DELIVERED') {
         filtered = orders.filter(o => o.status === 'DELIVERED');
     } else if (activeFilter === 'STOCKED') {
         filtered = orders.filter(o => o.status === 'STOCKED');
     }
 
+    const countAll = orders.length;
+    const countActive = orders.filter(o => ['PENDING','CONFIRMED','SHIPPED'].includes(o.status)).length;
+    const countDelivered = orders.filter(o => o.status === 'DELIVERED').length;
+    const countStocked = orders.filter(o => o.status === 'STOCKED').length;
+
     let html = `
         <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:15px; margin-bottom:15px; border-bottom:1px solid var(--border-glass);">
-            <button class="badge ${activeFilter === 'ALL' ? 'badge-ok' : ''}" style="border:none; cursor:pointer;" onclick="setMarketplaceFilter('ALL')">Toutes</button>
-            <button class="badge ${activeFilter === 'PENDING' ? 'badge-low' : ''}" style="border:none; cursor:pointer;" onclick="setMarketplaceFilter('PENDING')">En attente</button>
-            <button class="badge ${activeFilter === 'DELIVERED' ? 'badge-warn' : ''}" style="border:none; cursor:pointer; background:${activeFilter === 'DELIVERED' ? '#f59e0b' : 'rgba(255,255,255,0.05)'};" onclick="setMarketplaceFilter('DELIVERED')">À réceptionner</button>
-            <button class="badge ${activeFilter === 'STOCKED' ? 'badge-ok' : ''}" style="border:none; cursor:pointer;" onclick="setMarketplaceFilter('STOCKED')">Validées</button>
+            <button style="border:none; cursor:pointer; padding:6px 12px; border-radius:10px; font-weight:800; font-size:11px; background:${activeFilter === 'ALL' ? 'var(--accent)' : 'rgba(255,255,255,0.05)'}; color:${activeFilter === 'ALL' ? '#000' : 'var(--text-muted)'};" onclick="setMarketplaceFilter('ALL')">📋 Toutes (${countAll})</button>
+            <button style="border:none; cursor:pointer; padding:6px 12px; border-radius:10px; font-weight:800; font-size:11px; background:${activeFilter === 'ACTIVE' ? '#f59e0b' : 'rgba(255,255,255,0.05)'}; color:${activeFilter === 'ACTIVE' ? '#000' : 'var(--text-muted)'};" onclick="setMarketplaceFilter('ACTIVE')">⚡ En cours (${countActive})</button>
+            <button style="border:none; cursor:pointer; padding:6px 12px; border-radius:10px; font-weight:800; font-size:11px; background:${activeFilter === 'DELIVERED' ? '#10b981' : 'rgba(255,255,255,0.05)'}; color:${activeFilter === 'DELIVERED' ? '#fff' : 'var(--text-muted)'};" onclick="setMarketplaceFilter('DELIVERED')">🎯 À recevoir (${countDelivered})</button>
+            <button style="border:none; cursor:pointer; padding:6px 12px; border-radius:10px; font-weight:800; font-size:11px; background:${activeFilter === 'STOCKED' ? '#6366f1' : 'rgba(255,255,255,0.05)'}; color:${activeFilter === 'STOCKED' ? '#fff' : 'var(--text-muted)'};" onclick="setMarketplaceFilter('STOCKED')">✅ Finalisées (${countStocked})</button>
         </div>
         <div style="padding-bottom:20px;">
     `;
 
     if (filtered.length === 0) {
-        html += `<p style="text-align:center; color:var(--text-muted); padding:40px 0;">Aucune commande trouvée.</p>`;
+        html += `<p style="text-align:center; color:var(--text-muted); padding:40px 0; font-style:italic;">Aucune commande dans cette catégorie.</p>`;
     }
 
     filtered.forEach(o => {
-        const statusClass = o.status === 'DELIVERED' ? 'badge-warn' : o.status === 'STOCKED' ? 'badge-ok' : 'badge-low';
-        const statusLabel = o.status === 'DELIVERED' ? '⭐ À RÉCEPTIONNER' : o.status;
+        const s = STATUS_LABELS[o.status] || { label: o.status, cls: 'badge-low' };
+        const isDelivered = o.status === 'DELIVERED';
         html += `
-            <div class="list-item" style="flex-direction:column; align-items:flex-start; gap:8px; margin-bottom:15px; background:rgba(255,255,255,0.02);">
-                <div style="display:flex; justify-content:space-between; width:100%;">
+            <div class="list-item" style="flex-direction:column; align-items:flex-start; gap:8px; margin-bottom:15px; background:${isDelivered ? 'rgba(16,185,129,0.05)' : 'rgba(255,255,255,0.02)'}; border: 1px solid ${isDelivered ? 'rgba(16,185,129,0.3)' : 'var(--border-glass)'}; border-radius:16px; padding:15px;">
+                ${isDelivered ? `<div style="width:100%; text-align:center; padding:6px; background:rgba(16,185,129,0.1); border-radius:8px; color:#10b981; font-size:11px; font-weight:900; margin-bottom:5px;">⚠️ ACTION REQUISE — Confirmez que vous avez reçu la marchandise</div>` : ''}
+                <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
                     <div class="item-name" style="font-weight:900;">Cmd #${o.id.substring(0,8).toUpperCase()}</div>
-                    <div class="item-badge ${statusClass}" style="font-size:9px;">${statusLabel}</div>
+                    <div class="item-badge ${s.cls}" style="font-size:9px; padding:3px 8px;">${s.label}</div>
                 </div>
                 <div class="item-meta" style="font-weight:700; color:var(--text);">${o.supplier?.name || o.vendor?.companyName || 'Fournisseur'}</div>
                 <div style="display:flex; justify-content:space-between; width:100%; align-items:center; margin-top:5px;">
-                     <div class="item-name" style="color:var(--accent); font-size:16px;">${Number(o.total).toFixed(3)} DT</div>
+                     <div class="item-name" style="color:var(--accent); font-size:18px; font-weight:900;">${Number(o.total || 0).toFixed(3)} DT</div>
                      <div class="item-meta" style="font-size:10px;">${new Date(o.createdAt).toLocaleDateString()}</div>
                 </div>
-                ${o.status === 'DELIVERED' ? `
-                <button class="primary-btn" style="padding: 10px; margin-top: 10px; width: 100%; font-size: 13px; font-weight:900; background:#10b981; border:none; display: flex; justify-content: center; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(16,185,129,0.2);" onclick="validerReceptionMarketplace('${o.id}')">
+                ${isDelivered ? `
+                <button class="primary-btn" style="padding: 12px; margin-top: 10px; width: 100%; font-size: 14px; font-weight:900; background:#10b981; border:none; border-radius:12px; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(16,185,129,0.3); cursor:pointer;" onclick="validerReceptionMarketplace('${o.id}')">
                     ✅ CONFIRMER LA RÉCEPTION
                 </button>
                 ` : ''}
@@ -712,7 +736,7 @@ async function fetchMarketplaceOrders() {
         `;
     });
     html += `</div>`;
-    openSheet("Historique Commandes", html);
+    openSheet("Mes Commandes B2B", html);
 }
 
 function setMarketplaceFilter(filter) {

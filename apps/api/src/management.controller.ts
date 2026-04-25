@@ -906,23 +906,14 @@ export class ManagementController {
     const orders = await prisma.supplierOrder.findMany({
       where: { vendorId },
       include: {
-        // ✅ Anti-leakage: city only — no phone, address, GPS before confirmed delivery
         store: { select: { id: true, name: true, city: true } },
-        items: true,
+        items: { include: { stockItem: true } },
+        settlement: true,
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    // Reveal phone only when order is CONFIRMED or SHIPPED (needed for delivery)
-    return orders.map((order: any) => ({
-      ...order,
-      store: {
-        ...order.store,
-        ...(order.status === 'CONFIRMED' || order.status === 'SHIPPED'
-          ? { deliveryContact: '📞 Disponible à la confirmation' } // Reveal via secure channel
-          : {}),
-      },
-    }));
+    return orders;
   }
 
   @UseGuards(MarketplaceAuthGuard)
@@ -930,15 +921,16 @@ export class ManagementController {
   async updateVendorOrderStatus(@Param('id') id: string, @Body() body: {
     status: string;
   }): Promise<any> {
-    // Map application statuses to Prisma enum
-    let dbStatus = body.status;
-    if (body.status === 'DELIVERING') dbStatus = 'SHIPPED';
-    if (body.status === 'COMPLETED') dbStatus = 'DELIVERED';
+    // Only vendor-actionable statuses — STOCKED is reserved for the café (via /receive)
+    const vendorAllowedStatuses = ['CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+    if (!vendorAllowedStatuses.includes(body.status)) {
+      throw new Error(`Status '${body.status}' is not vendor-actionable.`);
+    }
 
     const order = await prisma.supplierOrder.update({
       where: { id },
-      data: { status: dbStatus as any },
-      include: { items: true }
+      data: { status: body.status as any },
+      include: { items: { include: { stockItem: true } }, store: { select: { id: true, name: true } } }
     });
 
     return order;

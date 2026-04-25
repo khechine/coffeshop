@@ -305,6 +305,7 @@ export default function VendorDetailClient({ vendor }: { vendor: any }) {
                         <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Client (Café)</th>
                         <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Articles</th>
                         <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Montant Total</th>
+                        <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Commission</th>
                         <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Statut</th>
                         <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Détails</th>
                       </tr>
@@ -312,11 +313,12 @@ export default function VendorDetailClient({ vendor }: { vendor: any }) {
                     <tbody>
                       {vendor.orders.map((o: any) => {
                         const orderStatusColors: any = {
-                          'PENDING': { bg: 'bg-amber-50 dark:bg-amber-500/10', text: 'text-amber-600' },
-                          'CONFIRMED': { bg: 'bg-indigo-50 dark:bg-indigo-500/10', text: 'text-indigo-600' },
-                          'SHIPPED': { bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600' },
-                          'DELIVERED': { bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600' },
-                          'CANCELLED': { bg: 'bg-rose-50 dark:bg-rose-500/10', text: 'text-rose-600' }
+                          'PENDING':   { bg: 'bg-amber-50 dark:bg-amber-500/10',   text: 'text-amber-600',   label: 'En attente' },
+                          'CONFIRMED': { bg: 'bg-indigo-50 dark:bg-indigo-500/10',  text: 'text-indigo-600',  label: 'Acceptée' },
+                          'SHIPPED':   { bg: 'bg-blue-50 dark:bg-blue-500/10',      text: 'text-blue-600',    label: 'Expédiée' },
+                          'DELIVERED': { bg: 'bg-orange-50 dark:bg-orange-500/10',  text: 'text-orange-600',  label: 'À réceptionner' },
+                          'STOCKED':   { bg: 'bg-emerald-50 dark:bg-emerald-500/10',text: 'text-emerald-600', label: 'Finalisée' },
+                          'CANCELLED': { bg: 'bg-rose-50 dark:bg-rose-500/10',      text: 'text-rose-600',    label: 'Annulée' },
                         };
                         const os = orderStatusColors[o.status] || orderStatusColors['PENDING'];
 
@@ -346,8 +348,20 @@ export default function VendorDetailClient({ vendor }: { vendor: any }) {
                               <div className="text-sm font-black text-slate-900 dark:text-white">{Number(o.total).toFixed(3)} DT</div>
                             </td>
                             <td className="p-6">
+                              {o.settlement ? (
+                                <div>
+                                  <div className="text-sm font-black text-rose-500">-{Number(o.settlement.commissionAmount).toFixed(3)} DT</div>
+                                  <div className="text-[9px] font-bold text-slate-400">Déduit du wallet</div>
+                                </div>
+                              ) : o.status === 'STOCKED' || o.status === 'DELIVERED' ? (
+                                <div className="text-[10px] font-bold text-amber-500">En attente...</div>
+                              ) : (
+                                <div className="text-[10px] font-bold text-slate-400">—</div>
+                              )}
+                            </td>
+                            <td className="p-6">
                               <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${os.bg} ${os.text}`}>
-                                {o.status}
+                                {os.label}
                               </span>
                             </td>
                             <td className="p-6 text-right pr-8">

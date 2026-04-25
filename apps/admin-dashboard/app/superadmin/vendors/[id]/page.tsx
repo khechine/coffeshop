@@ -15,7 +15,8 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
       orders: {
         include: { 
           store: true,
-          items: true
+          items: true,
+          settlement: true,
         },
         orderBy: { createdAt: 'desc' }
       }
