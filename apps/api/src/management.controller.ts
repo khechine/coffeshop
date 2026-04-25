@@ -670,6 +670,27 @@ export class ManagementController {
     });
   }
 
+  @Get('marketplace/bundles')
+  async getAllMarketplaceBundles(): Promise<any> {
+    return (prisma as any).mktBundle.findMany({
+      include: { 
+        items: { include: { vendorProduct: { include: { productStandard: true } } } },
+        vendor: { select: { id: true, companyName: true, city: true } }
+      }
+    });
+  }
+
+  @Get('marketplace/vendors')
+  async getAllMarketplaceVendors(): Promise<any> {
+    return (prisma as any).vendorProfile.findMany({
+      include: { 
+        mktSectors: true,
+        _count: { select: { products: true } }
+      },
+      orderBy: { companyName: 'asc' }
+    });
+  }
+
   @UseGuards(MarketplaceAuthGuard)
   @Get('vendor/bundles/:vendorId')
   async getVendorBundles(@Param('vendorId') vendorId: string): Promise<any> {
