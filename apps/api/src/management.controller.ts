@@ -670,6 +670,14 @@ export class ManagementController {
     });
   }
 
+  @Get('marketplace/categories')
+  async getAllMarketplaceCategories(): Promise<any> {
+    return (prisma as any).mktCategory.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: { sortOrder: 'asc' }
+    });
+  }
+
   @Get('marketplace/bundles')
   async getAllMarketplaceBundles(): Promise<any> {
     return (prisma as any).mktBundle.findMany({
