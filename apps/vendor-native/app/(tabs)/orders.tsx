@@ -121,10 +121,10 @@ export default function OrdersScreen() {
                     {selectedOrder?.items?.map((item: any, i: number) => (
                         <View key={i} style={styles.itemRow}>
                             <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                                <Text style={styles.itemName}>{item.vendorProduct?.name}</Text>
-                                <Text style={styles.itemSub}>{item.quantity} x {Number(item.priceAtOrder).toFixed(3)} DT</Text>
+                                <Text style={styles.itemName}>{item.name || item.stockItem?.name || 'Produit inconnu'}</Text>
+                                <Text style={styles.itemSub}>{Number(item.quantity)} x {Number(item.price || 0).toFixed(3)} DT</Text>
                             </View>
-                            <Text style={styles.itemTotal}>{(item.quantity * item.priceAtOrder).toFixed(3)} DT</Text>
+                            <Text style={styles.itemTotal}>{(Number(item.quantity) * Number(item.price || 0)).toFixed(3)} DT</Text>
                         </View>
                     ))}
 
