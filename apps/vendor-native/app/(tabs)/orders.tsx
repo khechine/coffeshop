@@ -94,7 +94,7 @@ export default function OrdersScreen() {
                 <Text style={styles.storeName}>{order.store?.name || 'Magasin inconnu'}</Text>
                 <Text style={styles.orderDate}>{new Date(order.createdAt).toLocaleDateString('fr-FR')} — {new Date(order.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</Text>
               </View>
-              <Text style={styles.orderTotal}>{Number(order.totalPrice || 0).toFixed(3)} DT</Text>
+              <Text style={styles.orderTotal}>{Number(order.total || 0).toFixed(3)} DT</Text>
             </View>
             <View style={styles.itemSummary}>
               <Text style={styles.itemCount}>{order.items?.length || 0} article(s)</Text>
@@ -130,7 +130,7 @@ export default function OrdersScreen() {
 
                     <View style={styles.totalRow}>
                         <Text style={styles.totalLabel}>Total Commande</Text>
-                        <Text style={styles.totalValue}>{Number(selectedOrder?.totalPrice || 0).toFixed(3)} DT</Text>
+                        <Text style={styles.totalValue}>{Number(selectedOrder?.total || 0).toFixed(3)} DT</Text>
                     </View>
 
                     {selectedOrder?.status === 'PENDING' && (

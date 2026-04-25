@@ -665,19 +665,47 @@ async function fetchMarketplaceOrders() {
     
     if (!orders) return;
 
-    let html = `<div style="padding-bottom:20px;">`;
-        const statusClass = o.status === 'DELIVERED' ? 'badge-low' : o.status === 'STOCKED' ? 'badge-ok' : 'badge-low';
+    let activeFilter = state._orderFilter || 'ALL';
+    let filtered = orders;
+    if (activeFilter === 'PENDING') {
+        filtered = orders.filter(o => ['PENDING', 'DELIVERING', 'SHIPPED'].includes(o.status));
+    } else if (activeFilter === 'DELIVERED') {
+        filtered = orders.filter(o => o.status === 'DELIVERED');
+    } else if (activeFilter === 'STOCKED') {
+        filtered = orders.filter(o => o.status === 'STOCKED');
+    }
+
+    let html = `
+        <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:15px; margin-bottom:15px; border-bottom:1px solid var(--border-glass);">
+            <button class="badge ${activeFilter === 'ALL' ? 'badge-ok' : ''}" style="border:none; cursor:pointer;" onclick="setMarketplaceFilter('ALL')">Toutes</button>
+            <button class="badge ${activeFilter === 'PENDING' ? 'badge-low' : ''}" style="border:none; cursor:pointer;" onclick="setMarketplaceFilter('PENDING')">En attente</button>
+            <button class="badge ${activeFilter === 'DELIVERED' ? 'badge-warn' : ''}" style="border:none; cursor:pointer; background:${activeFilter === 'DELIVERED' ? '#f59e0b' : 'rgba(255,255,255,0.05)'};" onclick="setMarketplaceFilter('DELIVERED')">À réceptionner</button>
+            <button class="badge ${activeFilter === 'STOCKED' ? 'badge-ok' : ''}" style="border:none; cursor:pointer;" onclick="setMarketplaceFilter('STOCKED')">Validées</button>
+        </div>
+        <div style="padding-bottom:20px;">
+    `;
+
+    if (filtered.length === 0) {
+        html += `<p style="text-align:center; color:var(--text-muted); padding:40px 0;">Aucune commande trouvée.</p>`;
+    }
+
+    filtered.forEach(o => {
+        const statusClass = o.status === 'DELIVERED' ? 'badge-warn' : o.status === 'STOCKED' ? 'badge-ok' : 'badge-low';
+        const statusLabel = o.status === 'DELIVERED' ? '⭐ À RÉCEPTIONNER' : o.status;
         html += `
-            <div class="list-item" style="flex-direction:column; align-items:flex-start; gap:8px;">
+            <div class="list-item" style="flex-direction:column; align-items:flex-start; gap:8px; margin-bottom:15px; background:rgba(255,255,255,0.02);">
                 <div style="display:flex; justify-content:space-between; width:100%;">
-                    <div class="item-name">Cmd #${o.id.substring(0,6)}</div>
-                    <div class="item-badge ${statusClass}">${o.status}</div>
+                    <div class="item-name" style="font-weight:900;">Cmd #${o.id.substring(0,8).toUpperCase()}</div>
+                    <div class="item-badge ${statusClass}" style="font-size:9px;">${statusLabel}</div>
                 </div>
-                <div class="item-meta">${o.supplier?.name || o.vendor?.companyName || 'Fournisseur'} • ${Number(o.total).toFixed(3)} DT</div>
-                <div class="item-meta" style="font-size:10px;">${new Date(o.createdAt).toLocaleDateString()}</div>
+                <div class="item-meta" style="font-weight:700; color:var(--text);">${o.supplier?.name || o.vendor?.companyName || 'Fournisseur'}</div>
+                <div style="display:flex; justify-content:space-between; width:100%; align-items:center; margin-top:5px;">
+                     <div class="item-name" style="color:var(--accent); font-size:16px;">${Number(o.total).toFixed(3)} DT</div>
+                     <div class="item-meta" style="font-size:10px;">${new Date(o.createdAt).toLocaleDateString()}</div>
+                </div>
                 ${o.status === 'DELIVERED' ? `
-                <button class="primary-btn" style="padding: 6px 12px; margin-top: 5px; width: 100%; font-size: 12px; display: flex; justify-content: center; align-items: center; gap: 6px;" onclick="validerReceptionMarketplace('${o.id}')">
-                    ✅ Valider & Restocker
+                <button class="primary-btn" style="padding: 10px; margin-top: 10px; width: 100%; font-size: 13px; font-weight:900; background:#10b981; border:none; display: flex; justify-content: center; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(16,185,129,0.2);" onclick="validerReceptionMarketplace('${o.id}')">
+                    ✅ CONFIRMER LA RÉCEPTION
                 </button>
                 ` : ''}
             </div>
@@ -685,6 +713,11 @@ async function fetchMarketplaceOrders() {
     });
     html += `</div>`;
     openSheet("Historique Commandes", html);
+}
+
+function setMarketplaceFilter(filter) {
+    state._orderFilter = filter;
+    fetchMarketplaceOrders();
 }
 
 async function validerReceptionMarketplace(orderId) {

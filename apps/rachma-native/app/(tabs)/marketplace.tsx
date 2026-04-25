@@ -69,6 +69,7 @@ export default function MarketplaceScreen() {
 
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [myOrders, setMyOrders] = useState<any[]>([]);
+  const [orderFilter, setOrderFilter] = useState<'ALL' | 'PENDING' | 'DELIVERED' | 'STOCKED'>('ALL');
 
   // Derived
   const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0);
@@ -595,41 +596,84 @@ export default function MarketplaceScreen() {
       {/* ── ORDERS MODAL ── */}
       <Modal visible={ordersOpen} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
-              <View style={[styles.modalSheet, { backgroundColor: T.bg, padding: 0 }]}>
+              <View style={[styles.modalSheet, { backgroundColor: T.bg, padding: 0, height: '90%' }]}>
                   <View style={[styles.modalHeader, { borderBottomColor: T.cardBorder, paddingTop: 20 }]}>
                       <Text style={[styles.modalTitle, { color: T.text }]}>Historique Commandes</Text>
                       <TouchableOpacity style={styles.closeBtn} onPress={() => setOrdersOpen(false)}>
                           <FontAwesome name="times" size={20} color={T.text} />
                       </TouchableOpacity>
                   </View>
-                  <ScrollView style={{ padding: 20 }}>
-                      {myOrders.length === 0 ? (
-                          <Text style={{ color: T.subtext, textAlign: 'center', marginTop: 20 }}>Aucune commande B2B passée.</Text>
-                      ) : (
-                          myOrders.map(o => (
-                              <View key={o.id} style={{ backgroundColor: T.card, padding: 15, borderRadius: 15, marginBottom: 15, borderWidth: 1, borderColor: T.cardBorder }}>
-                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                                      <Text style={{ color: '#fff', fontWeight: '800' }}>Cmd #{o.id.substring(0,6)}</Text>
-                                      <View style={{ backgroundColor: o.status === 'DELIVERED' ? 'rgba(245,158,11,0.1)' : o.status === 'STOCKED' ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                                          <Text style={{ color: o.status === 'DELIVERED' ? '#f59e0b' : o.status === 'STOCKED' ? '#10b981' : '#94a3b8', fontSize: 10, fontWeight: '800' }}>{o.status}</Text>
+                  
+                  {/* Filter Bar */}
+                  <View style={{ flexDirection: 'row', padding: 15, gap: 8, backgroundColor: 'transparent' }}>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          {[
+                            { id: 'ALL', label: 'Toutes' },
+                            { id: 'PENDING', label: 'En attente' },
+                            { id: 'DELIVERED', label: 'À réceptionner' },
+                            { id: 'STOCKED', label: 'Dernières' }
+                          ].map(f => (
+                              <TouchableOpacity 
+                                  key={f.id}
+                                  onPress={() => setOrderFilter(f.id as any)}
+                                  style={{
+                                      backgroundColor: orderFilter === f.id ? T.accent : 'rgba(255,255,255,0.05)',
+                                      paddingHorizontal: 15, paddingVertical: 8, borderRadius: 12, marginRight: 8,
+                                      borderWidth: 1, borderColor: orderFilter === f.id ? T.accent : 'rgba(255,255,255,0.1)'
+                                  }}
+                              >
+                                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{f.label}</Text>
+                              </TouchableOpacity>
+                          ))}
+                      </ScrollView>
+                  </View>
+
+                  <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+                      {(() => {
+                          const filtered = myOrders.filter(o => {
+                              if (orderFilter === 'ALL') return true;
+                              if (orderFilter === 'PENDING') return ['PENDING', 'DELIVERING', 'SHIPPED'].includes(o.status);
+                              return o.status === orderFilter;
+                          });
+
+                          if (filtered.length === 0) {
+                              return <Text style={{ color: T.subtext, textAlign: 'center', marginTop: 40, fontStyle: 'italic' }}>Aucune commande trouvée.</Text>;
+                          }
+
+                          return filtered.map(o => (
+                              <View key={o.id} style={{ backgroundColor: T.card, padding: 15, borderRadius: 20, marginBottom: 15, borderWidth: 1, borderColor: T.cardBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 2 }}>
+                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                                      <View style={{ backgroundColor: 'transparent' }}>
+                                          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>Commande #{o.id.substring(0,8).toUpperCase()}</Text>
+                                          <Text style={{ color: T.subtext, fontSize: 10, fontWeight: '700' }}>{new Date(o.createdAt).toLocaleDateString('fr-FR')}</Text>
+                                      </View>
+                                      <View style={{ backgroundColor: o.status === 'DELIVERED' ? 'rgba(245,158,11,0.1)' : o.status === 'STOCKED' ? 'rgba(16,185,129,0.1)' : 'rgba(99,102,241,0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, alignSelf: 'flex-start' }}>
+                                          <Text style={{ color: o.status === 'DELIVERED' ? '#f59e0b' : o.status === 'STOCKED' ? '#10b981' : '#6366f1', fontSize: 9, fontWeight: '900', textTransform: 'uppercase' }}>{o.status}</Text>
                                       </View>
                                   </View>
-                                  <Text style={{ color: T.subtext, fontSize: 12, marginBottom: 5 }}>{o.supplier?.name || o.vendor?.companyName || 'Fournisseur'}</Text>
-                                  <Text style={{ color: T.accent, fontWeight: '900', marginBottom: 15 }}>{Number(o.total || 0).toFixed(3)} DT</Text>
                                   
-                                  {o.status === 'DELIVERED' && (
-                                      <TouchableOpacity 
-                                          style={{ backgroundColor: '#10b981', padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}
-                                          onPress={() => validerReception(o.id)}
-                                      >
-                                          <FontAwesome name="check-circle" size={16} color="#fff" />
-                                          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>Valider Réception & Restocker</Text>
-                                      </TouchableOpacity>
-                                  )}
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15, backgroundColor: 'transparent' }}>
+                                      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center' }}>
+                                          <FontAwesome name="building" size={14} color={T.subtext} />
+                                      </View>
+                                      <Text style={{ color: T.text, fontSize: 13, fontWeight: '700' }}>{o.supplier?.name || o.vendor?.companyName || 'Fournisseur'}</Text>
+                                  </View>
+
+                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'transparent', paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.03)' }}>
+                                      <Text style={{ color: T.accent, fontWeight: '950', fontSize: 18 }}>{Number(o.total || 0).toFixed(3)} DT</Text>
+                                      {o.status === 'DELIVERED' && (
+                                          <TouchableOpacity 
+                                              style={{ backgroundColor: '#10b981', paddingHorizontal: 15, paddingVertical: 10, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, shadowColor: '#10b981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 }}
+                                              onPress={() => validerReception(o.id)}
+                                          >
+                                              <FontAwesome name="check-circle" size={14} color="#fff" />
+                                              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>VALIDER</Text>
+                                          </TouchableOpacity>
+                                      )}
+                                  </View>
                               </View>
-                          ))
-                      )}
-                      <View style={{ height: 40 }} />
+                          ));
+                      })()}
                   </ScrollView>
               </View>
           </View>
