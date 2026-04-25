@@ -29,18 +29,18 @@ type LogEntry = string; // 'sale' | 'loss' | 'sale:PKG_ID'
 type Logs = Record<string, LogEntry[]>;
 
 const SOUND_PROFILES = {
+  premium: {
+    name: 'Premium (Pro)',
+    sale: 'https://assets.mixkit.co/active_storage/sfx/1077/1077-preview.mp3', // Cha-ching cash register
+    loss: 'https://assets.mixkit.co/active_storage/sfx/2572/2572-preview.mp3', // Soft subtle tap
+    pkg: 'https://assets.mixkit.co/active_storage/sfx/1114/1114-preview.mp3',  // Minimal UI pop
+    undo: 'https://assets.mixkit.co/active_storage/sfx/2575/2575-preview.mp3', // Soft reverse
+  },
   modern: {
-    name: 'Moderne',
+    name: 'Standard',
     sale: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
     loss: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
     pkg: 'https://assets.mixkit.co/active_storage/sfx/2567/2567-preview.mp3',
-    undo: 'https://assets.mixkit.co/active_storage/sfx/2575/2575-preview.mp3',
-  },
-  classic: {
-    name: 'Caisse (Retro)',
-    sale: 'https://assets.mixkit.co/active_storage/sfx/1077/1077-preview.mp3',
-    loss: 'https://assets.mixkit.co/active_storage/sfx/1083/1083-preview.mp3',
-    pkg: 'https://assets.mixkit.co/active_storage/sfx/1079/1079-preview.mp3',
     undo: 'https://assets.mixkit.co/active_storage/sfx/2575/2575-preview.mp3',
   },
   minimal: {
@@ -70,7 +70,7 @@ export default function RachmaScreen() {
   const [stats, setStats] = useState({ today: 0, week: 0, month: 0 });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [soundProfile, setSoundProfile] = useState<keyof typeof SOUND_PROFILES>('modern');
+  const [soundProfile, setSoundProfile] = useState<keyof typeof SOUND_PROFILES>('premium');
   const [user, setUser] = useState<any>(null);
   const [editName, setEditName] = useState('');
   const [editPin, setEditPin] = useState('');

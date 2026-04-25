@@ -31,6 +31,8 @@ export default function RootLayout() {
 
   const [authState, setAuthState] = useState<{ isPaired: boolean; isUnlocked: boolean } | null>(null);
 
+  const router = useRouter();
+
   // Check auth state
   useEffect(() => {
     async function checkAuth() {
@@ -54,17 +56,22 @@ export default function RootLayout() {
     }
   }, [loaded, authState]);
 
+  // Redirect logic
+  useEffect(() => {
+    if (!loaded || authState === null) return;
+
+    if (!authState.isPaired) {
+      router.replace('/login');
+    } else if (!authState.isUnlocked) {
+      router.replace('/unlock');
+    }
+  }, [loaded, authState, router]);
+
   if (!loaded || authState === null) {
     return null;
   }
 
-  // Determine starting route
-  let startingRoute = 'login';
-  if (authState.isPaired) {
-    startingRoute = authState.isUnlocked ? '(tabs)' : 'unlock';
-  }
-
-  return <RootLayoutNav initialRoute={startingRoute} />;
+  return <RootLayoutNav />;
 }
 
 const CustomTheme = {
@@ -75,11 +82,11 @@ const CustomTheme = {
   },
 };
 
-function RootLayoutNav({ initialRoute }: { initialRoute: string }) {
+function RootLayoutNav() {
   return (
     <ThemeProvider value={CustomTheme}>
       <AlertProvider>
-        <Stack initialRouteName={initialRoute as any}>
+        <Stack>
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="unlock" options={{ headerShown: false, animation: 'fade' }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

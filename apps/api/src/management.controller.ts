@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, BadRequestException, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import * as bcrypt from 'bcrypt';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
@@ -994,5 +995,107 @@ export class ManagementController {
       },
       chart: chartData,
     };
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // TERMINALS
+  // ═══════════════════════════════════════════════════════════
+
+  @Get('terminals/:storeId')
+  async getTerminals(@Param('storeId') storeId: string): Promise<any> {
+    return prisma.posTerminal.findMany({
+      where: { storeId },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  @Post('terminals')
+  async createTerminal(@Body() body: { storeId: string; nickname: string }): Promise<any> {
+    const activationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    return prisma.posTerminal.create({
+      data: {
+        storeId: body.storeId,
+        nickname: body.nickname,
+        activationCode,
+        status: 'INACTIVE'
+      }
+    });
+  }
+
+  @Delete('terminals/:id')
+  async deleteTerminal(@Param('id') id: string): Promise<any> {
+    try {
+      return await prisma.posTerminal.delete({ where: { id } });
+    } catch (e) {
+      return await prisma.posTerminal.update({
+        where: { id },
+        data: { status: 'REVOKED', activationCode: null }
+      });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // EMPLOYEES
+  // ═══════════════════════════════════════════════════════════
+
+  @Get('employees/:storeId')
+  async getEmployees(@Param('storeId') storeId: string): Promise<any> {
+    return prisma.user.findMany({
+      where: { storeId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        pinCode: true,
+        permissions: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  @Post('employees')
+  async createEmployee(@Body() body: { storeId: string; name: string; role: string; pinCode: string }): Promise<any> {
+    const defaultEmail = `staff_${Math.random().toString(36).substring(7)}@coffeeshop.internal`;
+    const defaultPassword = await bcrypt.hash(body.pinCode, 10);
+    
+    return prisma.user.create({
+      data: {
+        storeId: body.storeId,
+        name: body.name,
+        email: defaultEmail,
+        password: defaultPassword,
+        role: body.role as any,
+        pinCode: body.pinCode,
+      },
+      select: { id: true, name: true, role: true, pinCode: true }
+    });
+  }
+
+  @Put('employees/:id')
+  async updateEmployee(@Param('id') id: string, @Body() body: { name?: string; role?: string; pinCode?: string }): Promise<any> {
+    const dataToUpdate: any = {};
+    if (body.name) dataToUpdate.name = body.name;
+    if (body.role) dataToUpdate.role = body.role as any;
+    if (body.pinCode) dataToUpdate.pinCode = body.pinCode;
+
+    return prisma.user.update({
+      where: { id },
+      data: dataToUpdate,
+      select: { id: true, name: true, role: true, pinCode: true }
+    });
+  }
+
+  @Delete('employees/:id')
+  async deleteEmployee(@Param('id') id: string): Promise<any> {
+    try {
+      return await prisma.user.delete({ where: { id } });
+    } catch(e) {
+      return await prisma.user.update({
+        where: { id },
+        data: { pinCode: null, storeId: null }
+      });
+    }
   }
 }

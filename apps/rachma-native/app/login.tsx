@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
 import { useAlert } from '@/components/AlertContext';
+import { useEffect } from 'react';
 
 export default function LoginScreen() {
   const [loginMode, setLoginMode] = useState<'email' | 'pairing'>('email');
@@ -16,7 +17,16 @@ export default function LoginScreen() {
   const [activationCode, setActivationCode] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { showAlert } = useAlert();
+
+  // Listen for scanned Store ID
+  useEffect(() => {
+    if (params.scannedStoreId) {
+      setLoginMode('pairing');
+      setStoreIdInput(params.scannedStoreId as string);
+    }
+  }, [params.scannedStoreId]);
 
   const handleLogin = async () => {
     if (loginMode === 'email') {
@@ -128,20 +138,28 @@ export default function LoginScreen() {
             </>
           ) : (
             <>
-              <View style={[styles.inputContainer, styles.glassEffect]}>
-                <FontAwesome name="building-o" size={18} color="#94a3b8" style={styles.inputIcon} />
-                <TextInput
-                  placeholder="ID de la boutique"
-                  placeholderTextColor="#94a3b8"
-                  style={styles.input}
-                  value={storeIdInput}
-                  onChangeText={setStoreIdInput}
-                  autoCapitalize="none"
-                />
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+                <View style={[styles.inputContainer, styles.glassEffect, { flex: 1, marginBottom: 0 }]}>
+                    <FontAwesome name="building-o" size={18} color="#94a3b8" style={styles.inputIcon} />
+                    <TextInput
+                        placeholder="ID de la boutique"
+                        placeholderTextColor="#94a3b8"
+                        style={styles.input}
+                        value={storeIdInput}
+                        onChangeText={setStoreIdInput}
+                        autoCapitalize="none"
+                    />
+                </View>
+                <TouchableOpacity 
+                    style={styles.qrBtn}
+                    onPress={() => router.push('/scanner?mode=AUTH_STORE')}
+                >
+                    <FontAwesome name="qrcode" size={24} color="#fff" />
+                </TouchableOpacity>
               </View>
 
               <View style={[styles.inputContainer, styles.glassEffect]}>
-                <FontAwesome name="qrcode" size={20} color="#94a3b8" style={styles.inputIcon} />
+                <FontAwesome name="key" size={20} color="#94a3b8" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Code d'activation (ex: 123456)"
                   placeholderTextColor="#94a3b8"
@@ -321,5 +339,18 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 14,
     fontWeight: '700',
+  },
+  qrBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    backgroundColor: '#10b981', // Matching theme accent
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
   },
 });

@@ -495,24 +495,26 @@ const styles = StyleSheet.create({
 
   // Categories
   categoriesBar: {
+    height: 70,
     flexGrow: 0, 
-    paddingHorizontal: 15, 
-    paddingVertical: 10,
+    flexShrink: 0,
     borderBottomWidth: 1, 
     borderBottomColor: 'rgba(255,255,255,0.06)', 
     backgroundColor: 'transparent',
   },
   catBtn: {
+    height: 42,
     paddingHorizontal: 20, 
-    paddingVertical: 10, 
-    borderRadius: 22, 
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 21, 
     marginRight: 12,
     borderWidth: 1, 
     borderColor: 'rgba(255,255,255,0.1)',
     backgroundColor: 'rgba(255,255,255,0.02)',
   },
   catBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  catBtnText: { color: '#94a3b8', fontWeight: '800', fontSize: 13 },
+  catBtnText: { color: '#94a3b8', fontWeight: '800', fontSize: 14 },
   catBtnTextActive: { color: '#ffffff' },
 
   // Product grid

@@ -255,6 +255,32 @@ export default function DashboardScreen() {
             <Text style={styles.mgmtCardTitle}>SCANNER</Text>
             <Text style={styles.mgmtCardSub}>Inventaire Rapide</Text>
           </TouchableOpacity>
+
+          {isOwner && (
+            <>
+              <TouchableOpacity 
+                style={[styles.mgmtCard, styles.glassCard]}
+                onPress={() => router.push('/terminals')}
+              >
+                <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(56, 189, 248, 0.1)' }]}>
+                  <FontAwesome name="desktop" size={20} color="#38bdf8" />
+                </View>
+                <Text style={styles.mgmtCardTitle}>CAISSES</Text>
+                <Text style={styles.mgmtCardSub}>Parrainage (Codes)</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.mgmtCard, styles.glassCard]}
+                onPress={() => router.push('/team')}
+              >
+                <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(236, 72, 153, 0.1)' }]}>
+                  <FontAwesome name="users" size={20} color="#ec4899" />
+                </View>
+                <Text style={styles.mgmtCardTitle}>ÉQUIPE</Text>
+                <Text style={styles.mgmtCardSub}>Employés & Droits</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
         {/* ── OWNER-ONLY ANALYTICS ───────────────────────────── */}

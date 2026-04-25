@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Colors } from '@/constants/Colors';
 
@@ -14,6 +14,7 @@ export default function ScannerScreen() {
   const [scanned, setScanned] = useState(false);
   const [torch, setTorch] = useState(false);
   const router = useRouter();
+  const { mode } = useLocalSearchParams();
 
   if (!permission) {
     // Camera permissions are still loading.
@@ -39,7 +40,16 @@ export default function ScannerScreen() {
     if (scanned) return;
     setScanned(true);
     
-    // Logic: Identify if it's a product or store
+    // Auth Mode: Return Store ID to login
+    if (mode === 'AUTH_STORE') {
+      router.replace({
+        pathname: '/login',
+        params: { scannedStoreId: data }
+      });
+      return;
+    }
+
+    // Default: Identify if it's a product or store
     alert(`Scanné: ${data}`);
     
     // Reset scanned state after a short delay
@@ -62,7 +72,7 @@ export default function ScannerScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
               <FontAwesome name="close" size={24} color="#ffffff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Scanner un article</Text>
+            <Text style={styles.headerTitle}>{mode === 'AUTH_STORE' ? 'Scanner Boutique' : 'Scanner un article'}</Text>
             <TouchableOpacity onPress={() => setTorch(!torch)} style={styles.iconBtn}>
               <FontAwesome name="flash" size={24} color={torch ? Colors.primary : "#ffffff"} />
             </TouchableOpacity>

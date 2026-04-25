@@ -205,7 +205,7 @@ export default function MarketplaceScreen() {
 
   // --- Helper Icons ---
   const getProductIcon = (name: string) => {
-    const n = name.toLowerCase();
+    const n = (name || '').toLowerCase();
     if (n.includes('café')) return '☕';
     if (n.includes('lait')) return '🥛';
     if (n.includes('cup') || n.includes('gobelet')) return '🥤';
@@ -311,14 +311,14 @@ export default function MarketplaceScreen() {
                     {p.image ? (
                         <Image source={{ uri: p.image }} style={styles.cardImg} />
                     ) : (
-                        <Text style={{ fontSize: 40 }}>{getProductIcon(p.name)}</Text>
+                        <Text style={{ fontSize: 40 }}>{getProductIcon(p.name || p.productStandard?.name)}</Text>
                     )}
                     {p.isFlashSale && <View style={styles.flashBadge}><Text style={styles.flashBadgeText}>FLASH</Text></View>}
                     {p.isFeatured && <View style={styles.featBadge}><Text style={styles.featBadgeText}>ELITE</Text></View>}
                   </View>
                   <View style={styles.cardInfo}>
                      <Text style={styles.cardVendor} numberOfLines={1}>{p.vendor?.companyName?.toUpperCase()}</Text>
-                     <Text style={styles.cardTitle} numberOfLines={1}>{p.name}</Text>
+                     <Text style={styles.cardTitle} numberOfLines={1}>{p.name || p.productStandard?.name || 'Produit'}</Text>
                      <View style={styles.cardFooter}>
                         <View style={{ flex: 1, backgroundColor: 'transparent' }}>
                           <Text style={styles.cardPrice}>{parseFloat(p.price).toFixed(3)}</Text>
@@ -357,7 +357,7 @@ export default function MarketplaceScreen() {
                       </View>
                    </View>
                    <View style={styles.vendorStats}>
-                      <Text style={styles.statsValue}>{v._count?.products || 0}</Text>
+                      <Text style={styles.statsValue}>{v._count?.vendorProducts || 0}</Text>
                       <Text style={styles.statsLabel}>Produits</Text>
                    </View>
                 </TouchableOpacity>
@@ -417,7 +417,7 @@ export default function MarketplaceScreen() {
                       <Text style={styles.modalSectionTitle}>PRODUITS INCLUS</Text>
                       {selectedBundle?.items?.map((item: any, i: number) => (
                         <View key={i} style={styles.bundleItemRow}>
-                           <Text style={styles.bundleItemName}>{item.vendorProduct?.name}</Text>
+                           <Text style={styles.bundleItemName}>{item.vendorProduct?.name || item.vendorProduct?.productStandard?.name || 'Produit sans nom'}</Text>
                            <Text style={styles.bundleItemQty}>x {item.quantity}</Text>
                         </View>
                       ))}
@@ -427,6 +427,92 @@ export default function MarketplaceScreen() {
                          onPress={() => { handleAddToCart(selectedBundle, true); setSelectedBundle(null); }}
                       >
                          <Text style={styles.modalBtnText}>Acheter le Pack ({parseFloat(selectedBundle?.price || 0).toFixed(3)} DT)</Text>
+                      </TouchableOpacity>
+                  </ScrollView>
+              </View>
+          </View>
+      </Modal>
+
+      {/* Product Modal */}
+      <Modal visible={!!selectedProduct} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+              <View style={[styles.modalSheet, { height: '80%' }]}>
+                  <View style={styles.modalHeader}>
+                      <Text style={styles.modalSheetTitle}>Détails du Produit</Text>
+                      <TouchableOpacity onPress={() => setSelectedProduct(null)}><FontAwesome name="times-circle" size={24} color={T.muted} /></TouchableOpacity>
+                  </View>
+                  <ScrollView contentContainerStyle={{ padding: 25 }}>
+                      <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                          {selectedProduct?.image ? (
+                             <Image source={{ uri: selectedProduct.image }} style={styles.modalBundleImg} />
+                          ) : (
+                             <View style={[styles.modalBundleImg, { backgroundColor: 'rgba(255,255,255,0.02)', alignItems: 'center', justifyContent: 'center' }]}>
+                               <Text style={{ fontSize: 60 }}>{getProductIcon(selectedProduct?.name || selectedProduct?.productStandard?.name)}</Text>
+                             </View>
+                          )}
+                      </View>
+                      <Text style={styles.modalBundleName}>{selectedProduct?.name || selectedProduct?.productStandard?.name}</Text>
+                      <Text style={styles.cardVendor}>{selectedProduct?.vendor?.companyName}</Text>
+                      <Text style={styles.modalBundleDesc}>{selectedProduct?.description || selectedProduct?.productStandard?.description || 'Aucune description fournie pour ce produit et ses caractéristiques de qualité.'}</Text>
+                      
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, backgroundColor: 'transparent' }}>
+                         <Text style={{ color: T.subtext, fontSize: 16 }}>Prix Unitaire</Text>
+                         <Text style={{ color: T.gold, fontSize: 18, fontWeight: '900' }}>{parseFloat(selectedProduct?.price || 0).toFixed(3)} DT / {selectedProduct?.unit || selectedProduct?.productStandard?.unit || 'unité'}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, backgroundColor: 'transparent' }}>
+                         <Text style={{ color: T.subtext, fontSize: 16 }}>MOQ (Quantité minimum)</Text>
+                         <Text style={{ color: T.text, fontSize: 16, fontWeight: '700' }}>{selectedProduct?.minOrderQty || 1}</Text>
+                      </View>
+
+                      <TouchableOpacity 
+                         style={styles.modalPrimaryBtn}
+                         onPress={() => { handleAddToCart(selectedProduct); setSelectedProduct(null); }}
+                      >
+                         <Text style={styles.modalBtnText}>Ajouter au panier</Text>
+                      </TouchableOpacity>
+                  </ScrollView>
+              </View>
+          </View>
+      </Modal>
+
+      {/* Vendor Modal */}
+      <Modal visible={!!selectedVendor} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+              <View style={[styles.modalSheet, { height: '80%' }]}>
+                  <View style={styles.modalHeader}>
+                      <Text style={styles.modalSheetTitle}>Profil du Fournisseur</Text>
+                      <TouchableOpacity onPress={() => setSelectedVendor(null)}><FontAwesome name="times-circle" size={24} color={T.muted} /></TouchableOpacity>
+                  </View>
+                  <ScrollView contentContainerStyle={{ padding: 25 }}>
+                      <View style={{ alignItems: 'center', marginBottom: 30, backgroundColor: 'transparent' }}>
+                          <View style={[styles.vendorAvatar, { width: 100, height: 100, borderRadius: 30, marginBottom: 15 }]}>
+                             <Text style={{ fontSize: 40 }}>🏪</Text>
+                          </View>
+                          <Text style={styles.modalBundleName}>{selectedVendor?.companyName}</Text>
+                          <Text style={{ color: T.indigo, fontSize: 16, fontWeight: '700', marginTop: 5 }}>{selectedVendor?.city || 'Tunisie'}</Text>
+                      </View>
+                      
+                      <View style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 15, padding: 20, marginBottom: 20 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent', marginBottom: 10 }}>
+                             <Text style={{ color: T.subtext }}>Catalogue visible</Text>
+                             <Text style={{ color: T.accent, fontWeight: '800' }}>{selectedVendor?._count?.vendorProducts || 0} produits</Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent' }}>
+                             <Text style={{ color: T.subtext }}>Certification</Text>
+                             <Text style={{ color: T.accent, fontWeight: '800' }}>Partenaire Rachma</Text>
+                          </View>
+                      </View>
+
+                      <TouchableOpacity 
+                         style={styles.modalPrimaryBtn}
+                         onPress={() => { 
+                           const v = selectedVendor;
+                           setSelectedVendor(null);
+                           setSearch(v?.companyName || '');
+                           setViewMode('PRODUCTS');
+                         }}
+                      >
+                         <Text style={styles.modalBtnText}>Voir son catalogue complet</Text>
                       </TouchableOpacity>
                   </ScrollView>
               </View>
