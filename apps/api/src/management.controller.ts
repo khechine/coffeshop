@@ -377,16 +377,51 @@ export class ManagementController {
     if (body.vendorId) {
       this.interactionService.logOrder(body.storeId, body.vendorId, body.total).catch(() => {});
 
-      // 💳 Marketplace Commission Deduction
+    }
+
+    return order;
+  }
+
+  @Put('orders/:id/status')
+  async updateOrderStatus(@Param('id') id: string, @Body() body: {
+    status: 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+  }): Promise<any> {
+    const order = await prisma.supplierOrder.update({
+      where: { id },
+      data: { status: body.status },
+      include: { items: { include: { stockItem: true } } },
+    });
+    return order;
+  }
+
+  @Post('orders/:id/receive')
+  async receiveOrder(@Param('id') id: string): Promise<any> {
+    const order = await prisma.supplierOrder.update({
+      where: { id },
+      data: { status: 'STOCKED' as any },
+      include: { items: { include: { stockItem: true } } },
+    });
+
+    for (const item of order.items) {
+      if (item.stockItemId && item.stockItem) {
+        await prisma.stockItem.update({
+          where: { id: item.stockItemId },
+          data: { quantity: { increment: Number(item.quantity) } },
+        });
+      }
+    }
+
+    // 💳 Marketplace Commission Deduction on Reception
+    if (order.vendorId) {
       try {
         const vendor = await prisma.vendorProfile.findUnique({
-          where: { id: body.vendorId },
+          where: { id: order.vendorId },
           include: { wallet: true }
         });
 
         if (vendor) {
           let finalRate = Number(vendor.commissionRate || 0.01);
-          const totalNum = Number(body.total || 0);
+          const totalNum = Number(order.total || 0);
 
           if (vendor.commissionTiers) {
             try {
@@ -445,39 +480,7 @@ export class ManagementController {
           }
         }
       } catch (err) {
-        console.error("Commission processing error:", err);
-      }
-    }
-
-    return order;
-  }
-
-  @Put('orders/:id/status')
-  async updateOrderStatus(@Param('id') id: string, @Body() body: {
-    status: 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
-  }): Promise<any> {
-    const order = await prisma.supplierOrder.update({
-      where: { id },
-      data: { status: body.status },
-      include: { items: { include: { stockItem: true } } },
-    });
-    return order;
-  }
-
-  @Post('orders/:id/receive')
-  async receiveOrder(@Param('id') id: string): Promise<any> {
-    const order = await prisma.supplierOrder.update({
-      where: { id },
-      data: { status: 'STOCKED' as any },
-      include: { items: { include: { stockItem: true } } },
-    });
-
-    for (const item of order.items) {
-      if (item.stockItemId && item.stockItem) {
-        await prisma.stockItem.update({
-          where: { id: item.stockItemId },
-          data: { quantity: { increment: Number(item.quantity) } },
-        });
+        console.error("Commission processing error on reception:", err);
       }
     }
 
