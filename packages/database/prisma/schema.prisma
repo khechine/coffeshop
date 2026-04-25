@@ -758,7 +758,8 @@ model VendorProfile {
   stockItems     StockItem[]
   
   wallet         VendorWallet?
-  commissionRate Decimal @default(0) // Negotiation margin (per order total)
+  commissionRate Decimal @default(0.01) // Negotiation margin (per order total)
+  commissionTiers Json?  // Format: [{ minAmount: number, rate: number }]
   depositRequests WalletDepositRequest[]
 
   // Anti-leakage tracking

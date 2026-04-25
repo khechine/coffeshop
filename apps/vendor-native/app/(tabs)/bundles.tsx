@@ -297,7 +297,7 @@ export default function BundlesScreen() {
                 const prod = vendorProducts.find(p => p.id === item.vendorProductId);
                 return (
                   <View key={idx} style={styles.selectedItemRow}>
-                    <Text style={styles.selectedItemName} numberOfLines={1}>{prod?.name || 'Inconnu'}</Text>
+                    <Text style={styles.selectedItemName} numberOfLines={1}>{prod?.productStandard?.name || prod?.name || 'Inconnu'}</Text>
                     <View style={styles.qtyControls}>
                       <TouchableOpacity onPress={() => updateItemQty(item.vendorProductId, item.quantity - 1)}>
                         <FontAwesome name="minus-circle" size={24} color="#64748b" />
@@ -318,7 +318,7 @@ export default function BundlesScreen() {
               <View style={styles.productPicker}>
                 {vendorProducts.filter(p => !selectedItems.find(it => it.vendorProductId === p.id)).map(prod => (
                   <TouchableOpacity key={prod.id} style={styles.pickerItem} onPress={() => addProductToBundle(prod.id)}>
-                    <Text style={styles.pickerItemText}>{prod.name}</Text>
+                    <Text style={styles.pickerItemText}>{prod.productStandard?.name || prod.name}</Text>
                     <FontAwesome name="plus" size={12} color="#f59e0b" />
                   </TouchableOpacity>
                 ))}

@@ -376,6 +376,72 @@ export class ManagementController {
     // ✅ Anti-leakage: log marketplace order interaction for BehaviorScoring
     if (body.vendorId) {
       this.interactionService.logOrder(body.storeId, body.vendorId, body.total).catch(() => {});
+
+      // 💳 Marketplace Commission Deduction
+      try {
+        const vendor = await prisma.vendorProfile.findUnique({
+          where: { id: body.vendorId },
+          include: { wallet: true }
+        });
+
+        if (vendor) {
+          let finalRate = Number(vendor.commissionRate || 0.01);
+          const totalNum = Number(body.total || 0);
+
+          if (vendor.commissionTiers) {
+            const tiers = Array.isArray(vendor.commissionTiers) 
+              ? vendor.commissionTiers 
+              : JSON.parse(vendor.commissionTiers as string);
+            
+            if (Array.isArray(tiers) && tiers.length > 0) {
+              const sortedTiers = tiers.sort((a: any, b: any) => b.minAmount - a.minAmount);
+              for (const tier of sortedTiers) {
+                if (totalNum >= tier.minAmount) {
+                  finalRate = tier.rate;
+                  break;
+                }
+              }
+            }
+          }
+
+          const commissionAmount = totalNum * finalRate;
+
+          if (commissionAmount > 0) {
+            const walletId = vendor.wallet ? vendor.wallet.id : (await prisma.vendorWallet.create({
+              data: { vendorId: vendor.id, balance: 0 }
+            })).id;
+
+            // 1. Create Settlement
+            const settlement = await (prisma as any).marketplaceSettlement.create({
+              data: {
+                orderId: order.id,
+                commissionAmount,
+                isProcessed: true,
+                processedAt: new Date()
+              }
+            });
+
+            // 2. Decrement Balance
+            await prisma.vendorWallet.update({
+              where: { id: walletId },
+              data: { balance: { decrement: commissionAmount } }
+            });
+
+            // 3. Log Wallet Transaction connected to Settlement
+            await (prisma as any).walletTransaction.create({
+              data: {
+                walletId,
+                amount: -commissionAmount, // Deduction
+                type: 'COMMISSION',
+                description: `Commission Marketplace (${(finalRate * 100).toFixed(2)}%) sur commande #${order.id.slice(-6)}`,
+                settlementId: settlement.id
+              }
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Commission processing error:", err);
+      }
     }
 
     return order;
@@ -615,6 +681,66 @@ export class ManagementController {
       orderCount: orders.length,
       topClients,
     };
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Get('vendor/notifications/:vendorId')
+  async getVendorNotifications(@Param('vendorId') vendorId: string): Promise<any> {
+    const notifications = [];
+
+    // 1. PENDING Orders
+    const pendingOrders = await prisma.supplierOrder.findMany({
+      where: { vendorId, status: 'PENDING' },
+      include: { store: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+    for (const po of pendingOrders) {
+      notifications.push({
+        id: `order-pending-${po.id}`,
+        type: 'ORDER',
+        title: `Nouvelle Commande PENDING`,
+        message: `Commande de ${po.store?.name || 'Magasin Inconnu'} pour ${po.total} DT`,
+        date: po.createdAt,
+      });
+    }
+
+    // 2. DELIVERED Orders (last 72h)
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setHours(threeDaysAgo.getHours() - 72);
+    const deliveredOrders = await prisma.supplierOrder.findMany({
+      where: { vendorId, status: 'DELIVERED', updatedAt: { gte: threeDaysAgo } },
+      include: { store: { select: { name: true } } },
+      orderBy: { updatedAt: 'desc' }
+    });
+    for (const do_ of deliveredOrders) {
+      notifications.push({
+        id: `order-delivered-${do_.id}`,
+        type: 'SUCCESS',
+        title: `Commande Réceptionnée`,
+        message: `La commande pour ${do_.store?.name || 'Magasin Inconnu'} a bien été réceptionnée.`,
+        date: do_.updatedAt,
+      });
+    }
+
+    // 3. LOW STOCK & OUT OF STOCK
+    const lowStockProducts = await prisma.vendorProduct.findMany({
+      where: { vendorId, stockStatus: { in: ['LOW_STOCK', 'OUT_OF_STOCK'] } },
+      include: { productStandard: { select: { name: true } } }
+    });
+    for (const prod of lowStockProducts) {
+      const name = prod.productStandard?.name || prod.name || 'Produit inconnu';
+      notifications.push({
+        id: `stock-${prod.stockStatus}-${prod.id}`,
+        type: 'STOCK',
+        title: prod.stockStatus === 'OUT_OF_STOCK' ? `⚠️ Rupture de Stock` : `Stock Faible`,
+        message: `Le produit "${name}" nécessite votre attention.`,
+        date: prod.updatedAt || new Date(),
+      });
+    }
+
+    notifications.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    return notifications;
   }
 
   @UseGuards(MarketplaceAuthGuard)

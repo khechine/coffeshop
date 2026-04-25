@@ -29,7 +29,8 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
-  const [initialRoute, setInitialRoute] = useState<string | null>(null);
+  const [authState, setAuthState] = useState<{ isLogged: boolean; isUnlocked?: boolean } | null>(null);
+  const router = useRouter();
 
   // Check auth state
   useEffect(() => {
@@ -37,11 +38,11 @@ export default function RootLayout() {
       const session = await AuthService.getSession();
       
       if (session.token && session.vendorId) {
-        setInitialRoute('(tabs)');
+        setAuthState({ isLogged: true, isUnlocked: true });
       } else if (session.token && session.storeId) {
-        setInitialRoute(session.isUnlocked ? '(tabs)' : 'unlock');
+        setAuthState({ isLogged: true, isUnlocked: session.isUnlocked });
       } else {
-        setInitialRoute('login');
+        setAuthState({ isLogged: false });
       }
     }
     checkAuth();
@@ -53,16 +54,29 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded && initialRoute !== null) {
+    if (loaded && authState !== null) {
       SplashScreen.hideAsync();
     }
-  }, [loaded, initialRoute]);
+  }, [loaded, authState]);
 
-  if (!loaded || initialRoute === null) {
+  // Redirect logic
+  useEffect(() => {
+    if (!loaded || authState === null) return;
+
+    if (!authState.isLogged) {
+      router.replace('/login');
+    } else if (authState.isUnlocked === false) {
+      router.replace('/unlock');
+    } else {
+      router.replace('/(tabs)');
+    }
+  }, [loaded, authState, router]);
+
+  if (!loaded || authState === null) {
     return null;
   }
 
-  return <RootLayoutNav initialRoute={initialRoute} />;
+  return <RootLayoutNav />;
 }
 
 const CustomTheme = {
@@ -73,11 +87,11 @@ const CustomTheme = {
   },
 };
 
-function RootLayoutNav({ initialRoute }: { initialRoute: string }) {
+function RootLayoutNav() {
   return (
     <ThemeProvider value={CustomTheme}>
       <AlertProvider>
-        <Stack initialRouteName={initialRoute as any}>
+        <Stack>
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="unlock" options={{ headerShown: false, animation: 'fade' }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

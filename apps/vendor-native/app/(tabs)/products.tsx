@@ -65,7 +65,7 @@ export default function ProductsScreen() {
   const handleOpenItemModal = (item?: any) => {
     if (item) {
       setEditingItem(item);
-      setFormName(item.name || '');
+      setFormName(item.productStandard?.name || item.name || '');
       setFormPrice(String(item.price || '0.000'));
       setFormMinQty(String(item.minOrderQty || '1'));
       setFormStock(item.stockStatus || 'IN_STOCK');
@@ -194,7 +194,8 @@ export default function ProductsScreen() {
   };
 
   const filteredProducts = products.filter(p => {
-    const matchesSearch = (p.name || '').toLowerCase().includes(search.toLowerCase());
+    const productName = p.productStandard?.name || p.name || '';
+    const matchesSearch = productName.toLowerCase().includes(search.toLowerCase());
     if (activeTab === 'PROMOTIONS') return matchesSearch && (p.isFeatured || p.isFlashSale);
     return matchesSearch;
   });
@@ -240,7 +241,7 @@ export default function ProductsScreen() {
         {filteredProducts.map((p, idx) => (
           <TouchableOpacity key={idx} style={[styles.itemRow, styles.glassCard]} onPress={() => handleOpenItemModal(p)}>
             <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-              <Text style={styles.itemName}>{p.name}</Text>
+              <Text style={styles.itemName}>{p.productStandard?.name || p.name}</Text>
               <Text style={styles.itemRef}>{Number(p.price).toFixed(3)} DT — Min: {p.minOrderQty}</Text>
               <View style={{ flexDirection: 'row', gap: 5, marginTop: 5, backgroundColor: 'transparent' }}>
                 {p.isFeatured && <View style={styles.tagFeatured}><Text style={styles.tagText}>Featured</Text></View>}

@@ -4,6 +4,7 @@ import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import { useAlert } from '@/components/AlertContext';
@@ -15,6 +16,9 @@ export default function DashboardScreen() {
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [lastOrderCount, setLastOrderCount] = useState<number>(0);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [readNotifIds, setReadNotifIds] = useState<string[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const router = useRouter();
   const { showAlert } = useAlert();
 
@@ -57,6 +61,14 @@ export default function DashboardScreen() {
   const fetchData = async (vid: string) => {
     try {
       const summary = await ApiService.get(`/management/vendor/summary/${vid}`);
+      
+      try {
+        const notifs = await ApiService.get(`/management/vendor/notifications/${vid}`);
+        const storedKeys = await AsyncStorage.getItem(`readNotifications_${vid}`);
+        const parsedKeys = storedKeys ? JSON.parse(storedKeys) : [];
+        setReadNotifIds(parsedKeys);
+        setNotifications(notifs || []);
+      } catch(e) { console.warn("Failed to fetch notifications:", e); }
       
       // Check for new orders
       if (lastOrderCount > 0 && summary.orderCount > lastOrderCount) {
@@ -107,6 +119,14 @@ export default function DashboardScreen() {
   const fmtMoney = (v: any) => (v != null && !isNaN(Number(v)) ? Number(v).toLocaleString('fr-TN', { minimumFractionDigits: 2 }) : '0.000');
   const fmtInt = (v: any) => (v != null ? Number(v) : 0);
 
+  const handleMarkAllAsRead = async () => {
+    if (!vendorId) return;
+    const allIds = notifications.map(n => n.id);
+    await AsyncStorage.setItem(`readNotifications_${vendorId}`, JSON.stringify(allIds));
+    setReadNotifIds(allIds);
+  };
+  const unreadCount = notifications.filter(n => !readNotifIds.includes(n.id)).length;
+
   return (
     <View style={styles.outerContainer}>
       <ScrollView 
@@ -121,12 +141,22 @@ export default function DashboardScreen() {
             <Text style={styles.welcomeTitle}>Espace Vendeur 👋</Text>
             <Text style={styles.subtitle}>{user?.vendorName || 'Votre Entreprise'}</Text>
           </View>
-          <TouchableOpacity style={styles.profileBtn} onPress={handleLogout}>
-            <FontAwesome name="sign-out" size={24} color={Colors.danger} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', gap: 15 }}>
+            <TouchableOpacity style={styles.notifBtn} onPress={() => setShowNotifications(true)}>
+              <FontAwesome name="bell" size={22} color="#fff" />
+              {unreadCount > 0 && (
+                <View style={styles.notifBadge}>
+                  <Text style={styles.notifBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.profileBtn} onPress={handleLogout}>
+              <FontAwesome name="sign-out" size={24} color={Colors.danger} />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* KPI Section */}
+        {/* KPI Section - Finance */}
         <View style={styles.kpiGrid}>
           <View style={[styles.kpiCard, styles.glassCard]}>
             <View style={[styles.iconBox, { backgroundColor: 'rgba(245,158,11,0.12)' }]}>
@@ -135,26 +165,6 @@ export default function DashboardScreen() {
             <Text style={styles.kpiLabel}>CA Total</Text>
             <Text style={styles.kpiValue}>{fmtMoney(stats.totalRevenue)} DT</Text>
             <Text style={[styles.kpiTrend, { color: '#f59e0b' }]}>Toutes ventes</Text>
-          </View>
-
-          <View style={[styles.kpiCard, styles.glassCard]}>
-            <View style={[styles.iconBox, { backgroundColor: 'rgba(59,130,246,0.12)' }]}>
-              <FontAwesome name="clock-o" size={18} color="#3b82f6" />
-            </View>
-            <Text style={styles.kpiLabel}>En attente</Text>
-            <Text style={[styles.kpiValue, { color: '#3b82f6' }]}>{fmtInt(stats.pendingOrders)}</Text>
-            <Text style={[styles.kpiTrend, { color: '#3b82f6' }]}>Commandes</Text>
-          </View>
-        </View>
-
-        <View style={styles.kpiGrid}>
-          <View style={[styles.kpiCard, styles.glassCard]}>
-            <View style={[styles.iconBox, { backgroundColor: 'rgba(16,185,129,0.12)' }]}>
-              <FontAwesome name="cubes" size={18} color="#10b981" />
-            </View>
-            <Text style={styles.kpiLabel}>Produits</Text>
-            <Text style={[styles.kpiValue, { color: '#10b981' }]}>{fmtInt(stats.activeProducts)}</Text>
-            <Text style={[styles.kpiTrend, { color: '#10b981' }]}>Actifs</Text>
           </View>
 
           <View style={[styles.kpiCard, styles.glassCard]}>
@@ -167,20 +177,42 @@ export default function DashboardScreen() {
           </View>
         </View>
 
+        {/* Actionable KPIs - Operations */}
+        <View style={styles.kpiGrid}>
+          <TouchableOpacity 
+            style={[styles.kpiCard, styles.actionCard]} 
+            onPress={() => router.push('/orders')}
+          >
+            <View style={[styles.iconBox, { backgroundColor: 'rgba(59,130,246,0.18)' }]}>
+              <FontAwesome name="truck" size={18} color="#3b82f6" />
+            </View>
+            <Text style={styles.kpiLabel}>Commandes</Text>
+            <Text style={[styles.kpiValue, { color: '#3b82f6' }]}>{fmtInt(stats.pendingOrders)}</Text>
+            <View style={{flexDirection:'row', alignItems:'center', backgroundColor: 'transparent'}}>
+                <Text style={[styles.kpiTrend, { color: '#3b82f6', marginRight: 4 }]}>En attente</Text>
+                <FontAwesome name="chevron-right" size={10} color="#3b82f6" />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.kpiCard, styles.actionCard]} 
+            onPress={() => router.push('/products')}
+          >
+            <View style={[styles.iconBox, { backgroundColor: 'rgba(16,185,129,0.18)' }]}>
+              <FontAwesome name="cubes" size={18} color="#10b981" />
+            </View>
+            <Text style={styles.kpiLabel}>Produits</Text>
+            <Text style={[styles.kpiValue, { color: '#10b981' }]}>{fmtInt(stats.activeProducts)}</Text>
+            <View style={{flexDirection:'row', alignItems:'center', backgroundColor: 'transparent'}}>
+                <Text style={[styles.kpiTrend, { color: '#10b981', marginRight: 4 }]}>Gérer le stock</Text>
+                <FontAwesome name="chevron-right" size={10} color="#10b981" />
+            </View>
+          </TouchableOpacity>
+        </View>
+
         {/* Management Menu */}
         <Text style={styles.sectionTitle}>Gestion Catalogue & Ventes</Text>
         <View style={styles.mgmtGrid}>
-          <TouchableOpacity 
-            style={[styles.mgmtCard, styles.glassCard]}
-            onPress={() => router.push('/products')}
-          >
-            <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
-              <FontAwesome name="archive" size={20} color="#f59e0b" />
-            </View>
-            <Text style={styles.mgmtCardTitle}>PRODUITS</Text>
-            <Text style={styles.mgmtCardSub}>Catalogue & Prix</Text>
-          </TouchableOpacity>
- 
           <TouchableOpacity 
             style={[styles.mgmtCard, styles.glassCard]}
             onPress={() => router.push('/bundles')}
@@ -190,17 +222,6 @@ export default function DashboardScreen() {
             </View>
             <Text style={styles.mgmtCardTitle}>PACKS B2B</Text>
             <Text style={styles.mgmtCardSub}>Offres groupées</Text>
-          </TouchableOpacity>
- 
-          <TouchableOpacity 
-            style={[styles.mgmtCard, styles.glassCard]}
-            onPress={() => router.push('/orders')}
-          >
-            <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-              <FontAwesome name="truck" size={20} color="#3b82f6" />
-            </View>
-            <Text style={styles.mgmtCardTitle}>COMMANDES</Text>
-            <Text style={styles.mgmtCardSub}>Suivi livraisons</Text>
           </TouchableOpacity>
  
           <TouchableOpacity 
@@ -236,6 +257,48 @@ export default function DashboardScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Notifications Modal */}
+      <Modal visible={showNotifications} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+                <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Notifications</Text>
+                    <TouchableOpacity onPress={() => setShowNotifications(false)}>
+                        <FontAwesome name="times" size={20} color="#fff" />
+                    </TouchableOpacity>
+                </View>
+                {unreadCount > 0 && (
+                    <TouchableOpacity style={styles.markAllReadBtn} onPress={handleMarkAllAsRead}>
+                        <FontAwesome name="check-double" size={14} color={Colors.primary} />
+                        <Text style={styles.markAllReadText}>Tout marquer comme lu</Text>
+                    </TouchableOpacity>
+                )}
+                <ScrollView contentContainerStyle={{ padding: 20 }}>
+                    {notifications.length === 0 ? (
+                        <Text style={{color: '#94a3b8', textAlign: 'center', marginTop: 30}}>Aucune notification.</Text>
+                    ) : (
+                        notifications.map((n, idx) => {
+                            const isRead = readNotifIds.includes(n.id);
+                            return (
+                                <View key={idx} style={[styles.notifItem, isRead && { opacity: 0.6 }]}>
+                                    <View style={[styles.notifIconBox, n.type === 'STOCK' ? {backgroundColor:'rgba(239, 68, 68, 0.15)'} : n.type === 'SUCCESS' ? {backgroundColor:'rgba(16, 185, 129, 0.15)'} : {backgroundColor:'rgba(59, 130, 246, 0.15)'}]}>
+                                        <FontAwesome name={n.type === 'STOCK' ? 'warning' : n.type === 'SUCCESS' ? 'check' : 'shopping-cart'} size={16} color={n.type === 'STOCK' ? '#ef4444' : n.type === 'SUCCESS' ? '#10b981' : '#3b82f6'} />
+                                    </View>
+                                    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                                        <Text style={[styles.notifTitle, !isRead && { fontWeight: '800', color: '#fff' }]}>{n.title}</Text>
+                                        <Text style={styles.notifMessage}>{n.message}</Text>
+                                        <Text style={styles.notifDate}>{new Date(n.date).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</Text>
+                                    </View>
+                                    {!isRead && <View style={styles.unreadDot} />}
+                                </View>
+                            );
+                        })
+                    )}
+                </ScrollView>
+            </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -303,6 +366,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(16, 20, 35, 0.7)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  actionCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
   },
   iconBox: {
     width: 36,
@@ -592,6 +665,80 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 12,
     fontWeight: '800',
+  },
+  notifBtn: {
+    position: 'relative',
+    padding: 5,
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: '#ef4444',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#0a0f1e',
+  },
+  notifBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  markAllReadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+    gap: 8,
+  },
+  markAllReadText: {
+    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  notifItem: {
+    flexDirection: 'row',
+    padding: 15,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  notifIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  notifTitle: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  notifMessage: {
+    color: '#94a3b8',
+    fontSize: 12,
+    marginBottom: 6,
+  },
+  notifDate: {
+    color: '#64748b',
+    fontSize: 10,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
+    marginLeft: 10,
   },
 });
 
