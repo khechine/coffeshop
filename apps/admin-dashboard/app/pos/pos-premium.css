@@ -95,12 +95,24 @@
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
-/* Main Area */
 .pos-main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.pos-main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .pos-main-wrapper {
+    flex-direction: column;
+  }
 }
 
 .pos-header {
@@ -136,16 +148,15 @@
 
 @media (max-width: 768px) {
   .pos-categories-column {
-    width: 100%;
-    height: auto;
-    flex-direction: row;
-    overflow-x: auto;
+    width: 100% !important;
+    max-height: 80px;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    flex-shrink: 0;
     border-right: none;
     border-bottom: 1px solid var(--pos-border);
-    padding: 12px;
-    position: sticky;
-    top: 0;
-    z-index: 50;
+    padding: 10px;
+    background: var(--pos-header-bg);
   }
 }
 

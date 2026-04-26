@@ -437,8 +437,10 @@ export default function PremiumPOSClient({
         </div>
       </aside>
 
-      {/* NEW: Vertical Category Hybrid Navigation */}
-      {view === 'POS' && (
+      {/* Main Content Wrapper (Responsive Stack) */}
+      <div className="pos-main-wrapper">
+        {/* NEW: Vertical Category Hybrid Navigation */}
+        {view === 'POS' && (
         <div className="pos-categories-column">
            {currentParentCategoryId ? (
              <>
@@ -839,14 +841,15 @@ export default function PremiumPOSClient({
                            )}
                         </div>
                      </div>
-                  </div>
-               </div>
-             )}
-          </div>
+                   </div>
+                </div>
+              )}
+           </div>
         )}
       </div>
+    </div>
 
-      {/* Cart Sidebar (Stay functional always during POS) */}
+    {/* Cart Sidebar (Stay functional always during POS) */}
       {view === 'POS' && (
       <aside className={`pos-cart-sidebar ${isCartOpenMobile ? 'mobile-open' : ''}`}>
         <div className="cart-header">

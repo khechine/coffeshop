@@ -174,22 +174,58 @@ export default function DashboardScreen() {
 
         {/* KPI Section - Finance */}
         <View style={styles.kpiGrid}>
-          <View style={[styles.kpiCard, styles.glassCard]}>
+          <View style={[styles.kpiCard, styles.glassCard, { borderLeftColor: '#f59e0b', borderLeftWidth: 4 }]}>
             <View style={[styles.iconBox, { backgroundColor: 'rgba(245,158,11,0.12)' }]}>
               <FontAwesome name="money" size={18} color="#f59e0b" />
             </View>
             <Text style={styles.kpiLabel}>CA Total</Text>
-            <Text style={styles.kpiValue}>{fmtMoney(stats.totalRevenue)} DT</Text>
-            <Text style={[styles.kpiTrend, { color: '#f59e0b' }]}>Toutes ventes</Text>
+            <Text style={styles.kpiValue}>{fmtMoney(stats.totalRevenue)} <Text style={{fontSize:12, opacity:0.6}}>DT</Text></Text>
+            <Text style={[styles.kpiTrend, { color: '#f59e0b' }]}>Chiffre cumulé</Text>
           </View>
 
-          <View style={[styles.kpiCard, styles.glassCard]}>
+          <View style={[styles.kpiCard, styles.glassCard, { borderLeftColor: '#8b5cf6', borderLeftWidth: 4 }]}>
             <View style={[styles.iconBox, { backgroundColor: 'rgba(139,92,246,0.12)' }]}>
               <FontAwesome name="credit-card" size={18} color="#8b5cf6" />
             </View>
             <Text style={styles.kpiLabel}>Wallet</Text>
-            <Text style={[styles.kpiValue, { color: '#8b5cf6' }]}>{fmtMoney(stats.walletBalance)} DT</Text>
-            <Text style={[styles.kpiTrend, { color: '#8b5cf6' }]}>Solde dispo.</Text>
+            <Text style={[styles.kpiValue, { color: '#8b5cf6' }]}>{fmtMoney(stats.walletBalance)} <Text style={{fontSize:12, opacity:0.6}}>DT</Text></Text>
+            <Text style={[styles.kpiTrend, { color: '#8b5cf6' }]}>Solde disponible</Text>
+          </View>
+        </View>
+
+        {/* ── SECTION: ANALYSE DÉTAILLÉE ───────────────────────── */}
+        <View style={{ marginTop: 10, marginBottom: 20 }}>
+          <Text style={styles.sectionTitle}>Analyse de Performance</Text>
+          
+          <View style={[styles.profitBanner, { backgroundColor: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.15)' }]}>
+            <View style={{ backgroundColor: 'transparent' }}>
+              <Text style={styles.profitLabel}>Volume des Ventes</Text>
+              <Text style={[styles.profitValue, { color: '#10b981' }]}>{fmtInt(stats.orderCount)}</Text>
+              <Text style={[styles.profitSub, { color: '#94a3b8' }]}>Commandes traitées sur le marché</Text>
+            </View>
+            <FontAwesome name="line-chart" size={32} color="#10b981" style={{ opacity: 0.5 }} />
+          </View>
+
+          <View style={{ gap: 15 }}>
+              {stats.topClients?.length > 0 && (
+                <View style={[styles.analyticsCard, styles.glassCard]}>
+                  <View style={styles.analyticsHeader}>
+                    <Text style={styles.analyticsTitle}>Meilleurs Clients (Magasins)</Text>
+                  </View>
+                  {stats.topClients.slice(0, 3).map((c: any, i: number) => (
+                    <View key={i} style={[styles.rankRow, i === 2 && { borderBottomWidth: 0 }]}>
+                      <Text style={styles.rankNum}>{i + 1}</Text>
+                      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                        <Text style={styles.rankName}>{c.name}</Text>
+                        <Text style={styles.rankSub}>Total achats: {fmtMoney(c.total)} DT</Text>
+                      </View>
+                      <View style={[styles.rankBadge, { backgroundColor: 'rgba(59,130,246,0.12)' }]}>
+                        <Text style={[styles.rankBadgeText, { color: '#3b82f6' }]}>Top Client</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
           </View>
         </View>
 
@@ -252,24 +288,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Top Clients */}
-        {stats.topClients?.length > 0 && (
-          <>
-            <Text style={[styles.sectionTitle, { marginTop: 25 }]}>Meilleurs Clients (Magasins)</Text>
-            <View style={[styles.analyticsCard, styles.glassCard]}>
-              {stats.topClients.map((c: any, i: number) => (
-                <View key={i} style={styles.rankRow}>
-                  <Text style={styles.rankNum}>#{i + 1}</Text>
-                  <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                    <Text style={styles.rankName}>{c.name}</Text>
-                    <Text style={styles.rankSub}>Total achats: {fmtMoney(c.total)} DT</Text>
-                  </View>
-                  <FontAwesome name="chevron-right" size={12} color="rgba(255,255,255,0.2)" />
-                </View>
-              ))}
-            </View>
-          </>
-        )}
+
 
         <View style={{ height: 40 }} />
       </ScrollView>
