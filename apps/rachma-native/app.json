@@ -15,7 +15,8 @@
     },
     "backgroundColor": "#0a0f1e",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.elkassa.rachmapro"
     },
     "android": {
       "adaptiveIcon": {
