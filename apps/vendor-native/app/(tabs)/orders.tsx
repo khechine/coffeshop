@@ -68,7 +68,7 @@ export default function OrdersScreen() {
     { key: 'PENDING',   label: 'Nouvelles',   icon: 'clock-o',        color: '#f59e0b' },
     { key: 'CONFIRMED', label: 'Acceptées',   icon: 'check-circle',   color: '#6366f1' },
     { key: 'SHIPPED',   label: 'Expédiées',   icon: 'truck',          color: '#3b82f6' },
-    { key: 'DELIVERED', label: 'Livrées',     icon: 'cube',           color: '#10b981' },
+    { key: 'DELIVERED', label: 'Livrées / Hist.', icon: 'history',        color: '#10b981' },
     { key: 'CANCELLED', label: 'Annulées',    icon: 'times-circle',   color: '#ef4444' },
   ];
 
@@ -84,7 +84,10 @@ export default function OrdersScreen() {
   const getItemName = (item: any) =>
     item.name || item.stockItem?.name || 'Produit inconnu';
 
-  const filteredOrders = orders.filter(o => o.status === activeTab);
+  const filteredOrders = orders.filter(o => {
+    if (activeTab === 'DELIVERED') return o.status === 'DELIVERED' || o.status === 'STOCKED';
+    return o.status === activeTab;
+  });
 
   if (loading && !refreshing) {
     return (
@@ -110,11 +113,18 @@ export default function OrdersScreen() {
           >
             <FontAwesome name={tab.icon as any} size={12} color={activeTab === tab.key ? tab.color : '#475569'} />
             <Text style={[styles.tabText, activeTab === tab.key && { color: tab.color }]}>{tab.label}</Text>
-            {orders.filter(o => o.status === tab.key).length > 0 && (
-              <View style={[styles.tabBadge, { backgroundColor: tab.color }]}>
-                <Text style={styles.tabBadgeText}>{orders.filter(o => o.status === tab.key).length}</Text>
-              </View>
-            )}
+            {(() => {
+              const count = tab.key === 'DELIVERED' 
+                ? orders.filter(o => o.status === 'DELIVERED' || o.status === 'STOCKED').length
+                : orders.filter(o => o.status === tab.key).length;
+              
+              if (count === 0) return null;
+              return (
+                <View style={[styles.tabBadge, { backgroundColor: tab.color }]}>
+                  <Text style={styles.tabBadgeText}>{count}</Text>
+                </View>
+              );
+            })()}
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -136,12 +146,19 @@ export default function OrdersScreen() {
               <View style={{ backgroundColor: 'transparent', flex: 1 }}>
                 <Text style={styles.storeName}>{order.store?.name || 'Café inconnu'}</Text>
                 <Text style={styles.orderDate}>
-                  {new Date(order.createdAt).toLocaleDateString('fr-FR')} — {new Date(order.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  #{(order.id || '').slice(-6).toUpperCase()} — {new Date(order.createdAt).toLocaleDateString('fr-FR')}
                 </Text>
               </View>
-              <Text style={[styles.orderTotal, { color: activeTabMeta.color }]}>
-                {Number(order.total || 0).toFixed(3)} DT
-              </Text>
+              <View style={{ alignItems: 'flex-end', backgroundColor: 'transparent' }}>
+                <Text style={[styles.orderTotal, { color: activeTabMeta.color }]}>
+                  {Number(order.total || 0).toFixed(3)} DT
+                </Text>
+                {order.settlement && (
+                  <Text style={{ color: '#ef4444', fontSize: 10, fontWeight: '800' }}>
+                    -{Number(order.settlement.commissionAmount).toFixed(3)} DT
+                  </Text>
+                )}
+              </View>
             </View>
             <View style={styles.cardBottom}>
               <Text style={styles.itemCount}>{order.items?.length || 0} article(s)</Text>
@@ -221,10 +238,29 @@ export default function OrdersScreen() {
                 </View>
               ))}
 
-              {/* Total */}
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total Commande</Text>
-                <Text style={styles.totalValue}>{Number(selectedOrder?.total || 0).toFixed(3)} DT</Text>
+              {/* Total and Commission breakdown */}
+              <View style={{ marginTop: 25, padding: 15, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, backgroundColor: 'transparent' }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: '700' }}>Total Brut</Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>{Number(selectedOrder?.total || 0).toFixed(3)} DT</Text>
+                </View>
+                
+                {selectedOrder?.settlement && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, backgroundColor: 'transparent' }}>
+                    <Text style={{ color: '#ef4444', fontSize: 13, fontWeight: '700' }}>Frais Marketplace</Text>
+                    <Text style={{ color: '#ef4444', fontSize: 13, fontWeight: '800' }}>-{Number(selectedOrder.settlement.commissionAmount).toFixed(3)} DT</Text>
+                  </View>
+                )}
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', backgroundColor: 'transparent' }}>
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>Total Net</Text>
+                  <Text style={{ color: '#fbbf24', fontSize: 18, fontWeight: '900' }}>
+                    {selectedOrder?.settlement 
+                      ? (Number(selectedOrder.total) - Number(selectedOrder.settlement.commissionAmount)).toFixed(3)
+                      : Number(selectedOrder?.total || 0).toFixed(3)
+                    } DT
+                  </Text>
+                </View>
               </View>
 
               {/* Action buttons based on status */}

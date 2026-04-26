@@ -304,7 +304,7 @@ export default function RachmaScreen() {
           total: calculatedTotal,
           baristaId: session?.user?.id,
           takenById: session?.user?.id,
-          terminalId: session?.terminalId,
+          terminalId: session?.terminalId || 'OWNER-MODE',
           mode: 'RACHMA',
           items,
           sessionId: 'BATCH-' + Date.now()

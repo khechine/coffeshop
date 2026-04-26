@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Modal } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Modal, BackHandler, Alert } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAlert } from '@/components/AlertContext';
 
 export default function DashboardScreen() {
@@ -29,6 +29,22 @@ export default function DashboardScreen() {
       if (session?.user) setUser(session.user);
     });
   }, []);
+
+  // Handle Android Back Button
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        Alert.alert('Quitter l\'application', 'Voulez-vous vraiment quitter Rachma Vendor ?', [
+          { text: 'Annuler', style: 'cancel', onPress: () => {} },
+          { text: 'Quitter', style: 'destructive', onPress: () => BackHandler.exitApp() },
+        ]);
+        return true; // prevent default
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [])
+  );
 
   const handleLogout = () => {
     if (Platform.OS === 'web') {
@@ -379,9 +395,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   glassCard: {
-    backgroundColor: 'rgba(16, 20, 35, 0.7)',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   actionCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -498,6 +514,11 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
   },
   mgmtIconCircle: {
     width: 48,

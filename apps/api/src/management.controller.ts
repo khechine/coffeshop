@@ -343,6 +343,7 @@ export class ManagementController {
         supplier: { select: { name: true } },
         vendor: { select: { companyName: true } },
         items: { include: { stockItem: { select: { name: true } } } },
+        settlement: true,
       },
       orderBy: { createdAt: 'desc' },
     });

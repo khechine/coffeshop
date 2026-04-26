@@ -35,30 +35,44 @@ export default function TabLayout() {
   const isManager = authMode === 'PASSWORD';
   const isTerminal = authMode === 'PIN' || !authMode;
 
-  const hasRachmaAccess = isTerminal && (isOwnerRole || permissions.includes('RACHMA') || role === 'RACHMA' || role === 'CASHIER');
-  const hasPosAccess = isTerminal && (isOwnerRole || permissions.includes('POS') || permissions.includes('TABLES') || role === 'POS' || role === 'CASHIER');
-  const hasTablesAccess = isTerminal && (isOwnerRole || permissions.includes('TABLES') || role === 'TABLES' || role === 'CASHIER');
+  const hasRachmaAccess = (isTerminal || isOwnerRole) && (isOwnerRole || permissions.includes('RACHMA') || role === 'RACHMA' || role === 'CASHIER');
+  const hasPosAccess = (isTerminal || isOwnerRole) && (isOwnerRole || permissions.includes('POS') || permissions.includes('TABLES') || role === 'POS' || role === 'CASHIER');
+  const hasTablesAccess = (isTerminal || isOwnerRole) && (isOwnerRole || permissions.includes('TABLES') || role === 'TABLES' || role === 'CASHIER');
+  const hasManagementAccess = isManager || isOwnerRole;
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#10b981',
         tabBarInactiveTintColor: '#94a3b8',
+        tabBarItemStyle: {
+          borderRadius: 15,
+          marginHorizontal: 5,
+          marginVertical: 4,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '900',
+          marginBottom: 4,
+        },
         tabBarStyle: {
           backgroundColor: '#111827',
           borderTopColor: 'rgba(255,255,255,0.08)',
           borderTopWidth: 1,
-          height: 85,
+          height: Platform.OS === 'ios' ? 88 : 70,
           paddingTop: 8,
-          paddingBottom: Platform.OS === 'ios' ? 30 : 15,
+          paddingBottom: Platform.OS === 'ios' ? 32 : 12,
+          marginHorizontal: Platform.OS === 'ios' ? 0 : 12,
+          marginBottom: Platform.OS === 'ios' ? 0 : 20,
+          borderRadius: Platform.OS === 'ios' ? 0 : 24,
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          elevation: 20,
+          elevation: 25,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -10 },
-          shadowOpacity: 0.3,
+          shadowOpacity: 0.4,
           shadowRadius: 20,
         },
         headerStyle: {
@@ -104,7 +118,7 @@ export default function TabLayout() {
           title: 'Dashboard',
           tabBarLabel: 'Finance',
           tabBarIcon: ({ color }) => <TabBarIcon name="line-chart" color={color} />,
-          href: isManager ? '/(tabs)' : null,
+          href: hasManagementAccess ? '/(tabs)' : null,
         }}
       />
       <Tabs.Screen
@@ -113,7 +127,7 @@ export default function TabLayout() {
           title: 'Gestion Pro',
           tabBarLabel: 'Gestion',
           tabBarIcon: ({ color }) => <TabBarIcon name="briefcase" color={color} />,
-          href: isManager ? '/(tabs)/stocks' : null,
+          href: hasManagementAccess ? '/(tabs)/stocks' : null,
         }}
       />
       <Tabs.Screen
@@ -122,7 +136,7 @@ export default function TabLayout() {
           title: 'B2B',
           tabBarLabel: 'Marché',
           tabBarIcon: ({ color }) => <TabBarIcon name="shopping-cart" color={color} />,
-          href: isManager ? '/(tabs)/marketplace' : null,
+          href: hasManagementAccess ? '/(tabs)/marketplace' : null,
         }}
       />
       <Tabs.Screen

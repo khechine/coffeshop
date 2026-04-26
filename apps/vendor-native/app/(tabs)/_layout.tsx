@@ -21,21 +21,34 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: '#f59e0b', // Amber for Vendor
         tabBarInactiveTintColor: '#94a3b8',
+        tabBarItemStyle: {
+          borderRadius: 15,
+          marginHorizontal: 5,
+          marginVertical: 4,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '900',
+          marginBottom: 4,
+        },
         tabBarStyle: {
           backgroundColor: '#111827',
           borderTopColor: 'rgba(255,255,255,0.08)',
           borderTopWidth: 1,
-          height: 85,
+          height: Platform.OS === 'ios' ? 88 : 70,
           paddingTop: 8,
-          paddingBottom: Platform.OS === 'ios' ? 30 : 15,
+          paddingBottom: Platform.OS === 'ios' ? 32 : 12,
+          marginHorizontal: Platform.OS === 'ios' ? 0 : 12,
+          marginBottom: Platform.OS === 'ios' ? 0 : 20,
+          borderRadius: Platform.OS === 'ios' ? 0 : 24,
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          elevation: 20,
+          elevation: 25,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -10 },
-          shadowOpacity: 0.3,
+          shadowOpacity: 0.4,
           shadowRadius: 20,
         },
         headerStyle: {

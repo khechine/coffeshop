@@ -90,6 +90,9 @@ function RootLayoutNav() {
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="unlock" options={{ headerShown: false, animation: 'fade' }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="terminals" options={{ title: 'Caisses', headerTintColor: '#fff' }} />
+          <Stack.Screen name="team" options={{ title: 'Équipe', headerTintColor: '#fff' }} />
+          <Stack.Screen name="metrics" options={{ title: 'Analyses', presentation: 'card', headerTintColor: '#fff' }} />
           <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal', headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>

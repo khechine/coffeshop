@@ -39,7 +39,7 @@ const DARK = {
   indigo: '#6366f1',
 };
 
-interface CartItem { id: string; name: string; price: number; quantity: number; vendor: any; isBundle?: boolean; image?: string; }
+interface CartItem { id: string; name: string; price: number; quantity: number; vendor: any; isBundle?: boolean; image?: string; minQty: number; }
 
 type ViewMode = 'PRODUCTS' | 'VENDORS' | 'PACKS';
 
@@ -69,7 +69,8 @@ export default function MarketplaceScreen() {
 
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [myOrders, setMyOrders] = useState<any[]>([]);
-  const [orderFilter, setOrderFilter] = useState<'ALL' | 'PENDING' | 'DELIVERED' | 'STOCKED'>('ALL');
+  const [orderFilter, setOrderFilter] = useState<'ALL' | 'ACTIVE' | 'DELIVERED' | 'STOCKED'>('ALL');
+  const [viewingOrder, setViewingOrder] = useState<any>(null);
 
   // Derived
   const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0);
@@ -120,7 +121,8 @@ export default function MarketplaceScreen() {
         quantity: minQty, 
         vendor: p.vendor,
         isBundle,
-        image: p.image
+        image: p.image,
+        minQty: minQty
       }];
     });
   };
@@ -129,14 +131,19 @@ export default function MarketplaceScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setCartItems(prev => prev.map(item => {
       if (item.id === id) {
-        const nextQty = Math.max(1, item.quantity + delta);
+        const nextQty = item.quantity + delta;
+        // Enforce MOQ: don't allow decrease below minQty
+        if (delta < 0 && nextQty < item.minQty) {
+          return item;
+        }
         return { ...item, quantity: nextQty };
       }
       return item;
-    }).filter(i => i.quantity > 0));
+    }));
   };
 
   const removeFromCart = (id: string) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     setCartItems(prev => prev.filter(i => i.id !== id));
   };
 
@@ -183,9 +190,18 @@ export default function MarketplaceScreen() {
   };
 
   const fetchMyOrders = async () => {
-    if (!storeId) return;
+    let sId = storeId;
+    if (!sId) {
+      const session = await AuthService.getSession();
+      sId = session?.storeId;
+      if (sId) setStoreId(sId);
+    }
+    if (!sId) {
+      Alert.alert("Erreur", "Impossible de récupérer l'identité du point de vente.");
+      return;
+    }
     try {
-      const res = await ApiService.get(`/management/orders/${storeId}`);
+      const res = await ApiService.get(`/management/orders/${sId}`);
       const sorted = (res || []).sort((a: any, b: any) => {
         // Active orders first: DELIVERED (waiting for reception) > SHIPPED > CONFIRMED > PENDING > STOCKED > CANCELLED
         const priorities: any = { DELIVERED: 1, SHIPPED: 2, CONFIRMED: 3, PENDING: 4, STOCKED: 5, CANCELLED: 6 };
@@ -330,12 +346,44 @@ export default function MarketplaceScreen() {
                ))}
             </ScrollView>
 
+            {/* ── SECTOR: FEATURED PACKS ── */}
+            {bundles.length > 0 && !search && activeCategory === 'all' && (
+               <View style={{ marginBottom: 30, backgroundColor: 'transparent' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingHorizontal: 5, backgroundColor: 'transparent' }}>
+                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'transparent' }}>
+                        <FontAwesome name="bolt" size={18} color={T.gold} />
+                        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>Packs Économiques</Text>
+                     </View>
+                     <TouchableOpacity onPress={() => setViewMode('PACKS')} style={{ backgroundColor: 'rgba(251,191,36,0.1)', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8 }}>
+                        <Text style={{ color: T.gold, fontSize: 11, fontWeight: '800' }}>TOUT VOIR</Text>
+                     </TouchableOpacity>
+                  </View>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 15, paddingHorizontal: 5 }}>
+                     {bundles.map(b => (
+                        <TouchableOpacity key={b.id} style={styles.featuredPackCard} onPress={() => setSelectedBundle(b)}>
+                           <Image source={{ uri: b.image || BANNER_IMAGE }} style={styles.featuredPackImg} />
+                           <LinearGradient colors={['transparent', 'rgba(10,15,30,0.95)']} style={styles.featuredPackGradient}>
+                              <Text style={styles.featuredPackTag}>{b.vendor?.companyName?.toUpperCase()}</Text>
+                              <Text style={styles.featuredPackTitle} numberOfLines={1}>{b.name}</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', backgroundColor: 'transparent' }}>
+                                 <Text style={styles.featuredPackPrice}>{parseFloat(b.price).toFixed(3)} <Text style={{ fontSize: 10 }}>DT</Text></Text>
+                                 <View style={styles.featuredPackDiscount}>
+                                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>-{b.discountPercent}%</Text>
+                                 </View>
+                              </View>
+                           </LinearGradient>
+                        </TouchableOpacity>
+                     ))}
+                  </ScrollView>
+               </View>
+            )}
+
             {/* Banner Section */}
             {!search && activeCategory === 'all' && (
               <TouchableOpacity style={styles.heroBanner}>
                 <Image source={{ uri: BANNER_IMAGE }} style={styles.heroImg} />
                 <LinearGradient colors={['transparent', 'rgba(10,15,30,0.9)']} style={styles.heroGradient}>
-                   <View style={styles.heroTag}><Text style={styles.heroTagText}>SÉLECTIONNE PRO</Text></View>
+                   <View style={styles.heroTag}><Text style={styles.heroTagText}>SÉLECTION PRO</Text></View>
                    <Text style={styles.heroTitle}>Grains de Café Premium</Text>
                    <Text style={styles.heroPrice}>À partir de 45.000 DT / KG</Text>
                 </LinearGradient>
@@ -573,7 +621,15 @@ export default function MarketplaceScreen() {
                              <Text style={styles.cartItemSub}>{item.vendor?.companyName}</Text>
                           </View>
                           <View style={styles.cartQtyControl}>
-                             <TouchableOpacity onPress={() => updateQuantity(item.id, -1)} style={styles.qBtn}><FontAwesome name="minus" color="#fff" size={10} /></TouchableOpacity>
+                             {item.quantity > item.minQty ? (
+                               <TouchableOpacity onPress={() => updateQuantity(item.id, -1)} style={styles.qBtn}>
+                                 <FontAwesome name="minus" color="#fff" size={10} />
+                               </TouchableOpacity>
+                             ) : (
+                               <TouchableOpacity onPress={() => removeFromCart(item.id)} style={[styles.qBtn, { backgroundColor: 'rgba(239,68,68,0.2)' }]}>
+                                 <FontAwesome name="trash" color="#ef4444" size={10} />
+                               </TouchableOpacity>
+                             )}
                              <Text style={styles.qText}>{item.quantity}</Text>
                              <TouchableOpacity onPress={() => updateQuantity(item.id, 1)} style={[styles.qBtn, { backgroundColor: T.accent }]}><FontAwesome name="plus" color="#fff" size={10} /></TouchableOpacity>
                           </View>
@@ -644,7 +700,7 @@ export default function MarketplaceScreen() {
                       {(() => {
                           const filtered = myOrders.filter(o => {
                               if (orderFilter === 'ALL') return true;
-                              if (orderFilter === 'PENDING') return ['PENDING', 'DELIVERING', 'SHIPPED'].includes(o.status);
+                              if (orderFilter === 'ACTIVE') return ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERING'].includes(o.status);
                               return o.status === orderFilter;
                           });
 
@@ -653,10 +709,15 @@ export default function MarketplaceScreen() {
                           }
 
                           return filtered.map(o => (
-                              <View key={o.id} style={{ backgroundColor: T.card, padding: 15, borderRadius: 20, marginBottom: 15, borderWidth: 1, borderColor: T.cardBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 2 }}>
+                              <TouchableOpacity 
+                                  key={o.id} 
+                                  onPress={() => setViewingOrder(o)}
+                                  activeOpacity={0.7}
+                                  style={{ backgroundColor: T.card, padding: 15, borderRadius: 20, marginBottom: 15, borderWidth: 1, borderColor: T.cardBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 2 }}
+                              >
                                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
                                       <View style={{ backgroundColor: 'transparent' }}>
-                                          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>Commande #{o.id.substring(0,8).toUpperCase()}</Text>
+                                          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>Commande #{o.id.substring(o.id.length - 6).toUpperCase()}</Text>
                                           <Text style={{ color: T.subtext, fontSize: 10, fontWeight: '700' }}>{new Date(o.createdAt).toLocaleDateString('fr-FR')}</Text>
                                       </View>
                                       <View style={{ backgroundColor: o.status === 'DELIVERED' ? 'rgba(245,158,11,0.1)' : o.status === 'STOCKED' ? 'rgba(16,185,129,0.1)' : 'rgba(99,102,241,0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, alignSelf: 'flex-start' }}>
@@ -664,7 +725,7 @@ export default function MarketplaceScreen() {
                                       </View>
                                   </View>
                                   
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15, backgroundColor: 'transparent' }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8, backgroundColor: 'transparent' }}>
                                       <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center' }}>
                                           <FontAwesome name="building" size={14} color={T.subtext} />
                                       </View>
@@ -672,7 +733,14 @@ export default function MarketplaceScreen() {
                                   </View>
 
                                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'transparent', paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.03)' }}>
-                                      <Text style={{ color: T.accent, fontWeight: '950', fontSize: 18 }}>{Number(o.total || 0).toFixed(3)} DT</Text>
+                                      <View style={{ backgroundColor: 'transparent' }}>
+                                          <Text style={{ color: T.accent, fontWeight: '900', fontSize: 18 }}>{Number(o.total || 0).toFixed(3)} DT</Text>
+                                          {o.settlement && (
+                                              <Text style={{ color: '#ef4444', fontSize: 10, fontWeight: '800', marginTop: 2 }}>
+                                                  Frais Marketplace: -{Number(o.settlement.commissionAmount).toFixed(3)} DT
+                                              </Text>
+                                          )}
+                                      </View>
                                       {o.status === 'DELIVERED' && (
                                           <TouchableOpacity 
                                               style={{ backgroundColor: '#10b981', paddingHorizontal: 15, paddingVertical: 10, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, shadowColor: '#10b981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 }}
@@ -682,10 +750,73 @@ export default function MarketplaceScreen() {
                                               <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>VALIDER</Text>
                                           </TouchableOpacity>
                                       )}
+                                      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' }}>
+                                          <FontAwesome name="chevron-right" size={10} color={T.subtext} />
+                                      </View>
                                   </View>
-                              </View>
+                              </TouchableOpacity>
                           ));
                       })()}
+                  </ScrollView>
+              </View>
+          </View>
+      </Modal>
+
+      {/* Order Detail Modal */}
+      <Modal visible={!!viewingOrder} transparent animationType="slide" onRequestClose={() => setViewingOrder(null)}>
+          <View style={styles.modalOverlay}>
+              <View style={[styles.modalSheet, { height: '85%' }]}>
+                  <View style={styles.modalHeader}>
+                      <View>
+                          <Text style={styles.modalSheetTitle}>Détails Commande</Text>
+                          <Text style={{ color: T.subtext, fontSize: 12, fontWeight: '700' }}>#{viewingOrder?.id.toUpperCase()}</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => setViewingOrder(null)}>
+                          <FontAwesome name="times-circle" size={24} color={T.subtext} />
+                      </TouchableOpacity>
+                  </View>
+
+                  <ScrollView contentContainerStyle={{ padding: 25 }}>
+                      <View style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: 20, borderRadius: 20, marginBottom: 25, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+                          <Text style={{ color: T.subtext, fontSize: 10, fontWeight: '800', textTransform: 'uppercase', marginBottom: 10 }}>FOURNISSEUR</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(99,102,241,0.1)', alignItems: 'center', justifyContent: 'center' }}>
+                                  <FontAwesome name="building" size={18} color="#6366f1" />
+                              </View>
+                              <View>
+                                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>{viewingOrder?.supplier?.name || viewingOrder?.vendor?.companyName}</Text>
+                                  <Text style={{ color: T.subtext, fontSize: 12, fontWeight: '700' }}>Marché B2B</Text>
+                              </View>
+                          </View>
+                      </View>
+
+                      <Text style={styles.modalSectionTitle}>ARTICLES COMMANDÉS</Text>
+                      {viewingOrder?.items?.map((item: any, idx: number) => (
+                          <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
+                              <View style={{ flex: 1 }}>
+                                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>{item.stockItem?.name || item.name || "Produit inconnu"}</Text>
+                                  <Text style={{ color: T.subtext, fontSize: 12, fontWeight: '700', marginTop: 2 }}>{item.quantity} x {Number(item.price).toFixed(3)} DT</Text>
+                              </View>
+                              <Text style={{ color: T.accent, fontSize: 15, fontWeight: '900' }}>{(item.quantity * item.price).toFixed(3)} DT</Text>
+                          </View>
+                      ))}
+
+                      <View style={{ marginTop: 30, padding: 20, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                              <Text style={{ color: T.subtext, fontWeight: '700' }}>Total Articles</Text>
+                              <Text style={{ color: '#fff', fontWeight: '800' }}>{Number(viewingOrder?.total || 0).toFixed(3)} DT</Text>
+                          </View>
+                          {viewingOrder?.settlement && (
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+                                  <Text style={{ color: '#ef4444', fontWeight: '700' }}>Frais Marketplace</Text>
+                                  <Text style={{ color: '#ef4444', fontWeight: '800' }}>-{Number(viewingOrder.settlement.commissionAmount).toFixed(3)} DT</Text>
+                              </View>
+                          )}
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 15, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' }}>
+                              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>Net à payer</Text>
+                              <Text style={{ color: T.accent, fontSize: 22, fontWeight: '900', textAlign: 'right' }}>{Number(viewingOrder?.total || 0).toFixed(3)} DT</Text>
+                          </View>
+                      </View>
                   </ScrollView>
               </View>
           </View>
@@ -733,7 +864,59 @@ const styles = StyleSheet.create({
   catChipActive: { backgroundColor: '#10b981' },
   catChipText: { color: '#64748b', fontSize: 12, fontWeight: '700' },
   catChipTextActive: { color: '#fff' },
-  heroBanner: { width: '100%', height: 180, borderRadius: 20, overflow: 'hidden', marginBottom: 25 },
+  // ── Featured Pack Styles ──
+  featuredPackCard: {
+    width: 220,
+    height: 160,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  featuredPackImg: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  featuredPackGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+    padding: 15,
+    justifyContent: 'flex-end',
+  },
+  featuredPackTag: {
+    color: '#fbbf24',
+    fontSize: 9,
+    fontWeight: '900',
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  featuredPackTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+  featuredPackPrice: {
+    color: '#10b981',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  featuredPackDiscount: {
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  
+  heroBanner: { 
+    width: '100%', height: 180, borderRadius: 25, 
+    overflow: 'hidden', marginBottom: 30, elevation: 10 
+  },
   heroImg: { width: '100%', height: '100%', position: 'absolute' },
   heroGradient: { flex: 1, padding: 20, justifyContent: 'flex-end' },
   heroTag: { backgroundColor: '#fbbf24', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 5, alignSelf: 'flex-start', marginBottom: 8 },
@@ -752,7 +935,7 @@ const styles = StyleSheet.create({
   cardVendor: { color: '#6366f1', fontSize: 9, fontWeight: '900' },
   cardTitle: { color: '#fff', fontSize: 13, fontWeight: '800', marginVertical: 4 },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', backgroundColor: 'transparent' },
-  cardPrice: { color: '#fbbf24', fontSize: 17, fontWeight: '950' },
+  cardPrice: { color: '#fbbf24', fontSize: 17, fontWeight: '900' },
   cardUnit: { color: '#64748b', fontSize: 9, fontWeight: '700' },
   addBtn: { width: 30, height: 30, borderRadius: 8, backgroundColor: '#10b981', alignItems: 'center', justifyContent: 'center' },
   moqRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10, backgroundColor: 'transparent' },
@@ -767,7 +950,7 @@ const styles = StyleSheet.create({
   packCard: { width: '100%', borderRadius: 25, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   packImg: { width: '100%', height: 160 },
   packPriceTag: { position: 'absolute', top: 15, right: 15, backgroundColor: '#000', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  packPriceText: { color: '#fbbf24', fontWeight: '950', fontSize: 16 },
+  packPriceText: { color: '#fbbf24', fontWeight: '900', fontSize: 16 },
   packBody: { padding: 20, backgroundColor: 'transparent' },
   packVendor: { color: '#6366f1', fontSize: 10, fontWeight: '900' },
   packTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginTop: 5 },
@@ -807,7 +990,7 @@ const styles = StyleSheet.create({
   cartRowTotal: { color: '#fbbf24', fontSize: 15, fontWeight: '900', minWidth: 80, textAlign: 'right' },
   cartFooter: { padding: 25, borderTopWidth: 1, borderTopColor: 'rgba(148,163,184,0.1)' },
   totalLbl: { color: '#64748b', fontSize: 14, fontWeight: '700' },
-  totalVal: { color: '#fff', fontSize: 24, fontWeight: '950' },
+  totalVal: { color: '#fff', fontSize: 24, fontWeight: '900' },
   checkoutBtn: { backgroundColor: '#10b981', height: 55, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
   checkoutText: { color: '#fff', fontSize: 16, fontWeight: '900' }
 });

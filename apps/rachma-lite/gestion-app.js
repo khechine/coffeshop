@@ -664,6 +664,7 @@ async function fetchMarketplaceOrders() {
     })(`${CONFIG.API_URL}/management/orders/${storeId}`);
     
     if (!orders) return;
+    state.marketplace._lastOrders = orders; // Store for lookup
 
     // Sort: DELIVERED first (needs action), then active, then completed
     const priorities = { DELIVERED: 1, SHIPPED: 2, CONFIRMED: 3, PENDING: 4, STOCKED: 5, CANCELLED: 6 };
@@ -700,10 +701,10 @@ async function fetchMarketplaceOrders() {
 
     let html = `
         <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:15px; margin-bottom:15px; border-bottom:1px solid var(--border-glass);">
-            <button style="border:none; cursor:pointer; padding:6px 12px; border-radius:10px; font-weight:800; font-size:11px; background:${activeFilter === 'ALL' ? 'var(--accent)' : 'rgba(255,255,255,0.05)'}; color:${activeFilter === 'ALL' ? '#000' : 'var(--text-muted)'};" onclick="setMarketplaceFilter('ALL')">📋 Toutes (${countAll})</button>
-            <button style="border:none; cursor:pointer; padding:6px 12px; border-radius:10px; font-weight:800; font-size:11px; background:${activeFilter === 'ACTIVE' ? '#f59e0b' : 'rgba(255,255,255,0.05)'}; color:${activeFilter === 'ACTIVE' ? '#000' : 'var(--text-muted)'};" onclick="setMarketplaceFilter('ACTIVE')">⚡ En cours (${countActive})</button>
-            <button style="border:none; cursor:pointer; padding:6px 12px; border-radius:10px; font-weight:800; font-size:11px; background:${activeFilter === 'DELIVERED' ? '#10b981' : 'rgba(255,255,255,0.05)'}; color:${activeFilter === 'DELIVERED' ? '#fff' : 'var(--text-muted)'};" onclick="setMarketplaceFilter('DELIVERED')">🎯 À recevoir (${countDelivered})</button>
-            <button style="border:none; cursor:pointer; padding:6px 12px; border-radius:10px; font-weight:800; font-size:11px; background:${activeFilter === 'STOCKED' ? '#6366f1' : 'rgba(255,255,255,0.05)'}; color:${activeFilter === 'STOCKED' ? '#fff' : 'var(--text-muted)'};" onclick="setMarketplaceFilter('STOCKED')">✅ Finalisées (${countStocked})</button>
+            <button style="border:none; border-radius:10px; font-weight:800; font-size:11px; padding:6px 12px; background:${activeFilter === 'ALL' ? 'var(--accent)' : 'rgba(255,255,255,0.05)'}; color:${activeFilter === 'ALL' ? '#000' : 'var(--text-muted)'}; cursor:pointer;" onclick="setMarketplaceFilter('ALL')">📋 Toutes (${countAll})</button>
+            <button style="border:none; border-radius:10px; font-weight:800; font-size:11px; padding:6px 12px; background:${activeFilter === 'ACTIVE' ? '#f59e0b' : 'rgba(255,255,255,0.05)'}; color:${activeFilter === 'ACTIVE' ? '#000' : 'var(--text-muted)'}; cursor:pointer;" onclick="setMarketplaceFilter('ACTIVE')">⚡ En cours (${countActive})</button>
+            <button style="border:none; border-radius:10px; font-weight:800; font-size:11px; padding:6px 12px; background:${activeFilter === 'DELIVERED' ? '#10b981' : 'rgba(255,255,255,0.05)'}; color:${activeFilter === 'DELIVERED' ? '#fff' : 'var(--text-muted)'}; cursor:pointer;" onclick="setMarketplaceFilter('DELIVERED')">🎯 À recevoir (${countDelivered})</button>
+            <button style="border:none; border-radius:10px; font-weight:800; font-size:11px; padding:6px 12px; background:${activeFilter === 'STOCKED' ? '#6366f1' : 'rgba(255,255,255,0.05)'}; color:${activeFilter === 'STOCKED' ? '#fff' : 'var(--text-muted)'}; cursor:pointer;" onclick="setMarketplaceFilter('STOCKED')">✅ Finalisées (${countStocked})</button>
         </div>
         <div style="padding-bottom:20px;">
     `;
@@ -716,19 +717,25 @@ async function fetchMarketplaceOrders() {
         const s = STATUS_LABELS[o.status] || { label: o.status, cls: 'badge-low' };
         const isDelivered = o.status === 'DELIVERED';
         html += `
-            <div class="list-item" style="flex-direction:column; align-items:flex-start; gap:8px; margin-bottom:15px; background:${isDelivered ? 'rgba(16,185,129,0.05)' : 'rgba(255,255,255,0.02)'}; border: 1px solid ${isDelivered ? 'rgba(16,185,129,0.3)' : 'var(--border-glass)'}; border-radius:16px; padding:15px;">
-                ${isDelivered ? `<div style="width:100%; text-align:center; padding:6px; background:rgba(16,185,129,0.1); border-radius:8px; color:#10b981; font-size:11px; font-weight:900; margin-bottom:5px;">⚠️ ACTION REQUISE — Confirmez que vous avez reçu la marchandise</div>` : ''}
+            <div class="list-item" style="flex-direction:column; align-items:flex-start; gap:8px; margin-bottom:15px; background:${isDelivered ? 'rgba(16,185,129,0.05)' : 'rgba(255,255,255,0.02)'}; border: 1px solid ${isDelivered ? 'rgba(16,185,129,0.3)' : 'var(--border-glass)'}; border-radius:16px; padding:15px; position:relative; cursor:pointer;" onclick="viewMarketplaceOrderDetail('${o.id}')">
+                ${isDelivered ? `<div style="width:100%; text-align:center; padding:6px; background:rgba(16,185,129,0.1); border-radius:8px; color:#10b981; font-size:11px; font-weight:900; margin-bottom:5px;">⚠️ ACTION REQUISE — Confirmez la réception</div>` : ''}
                 <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                    <div class="item-name" style="font-weight:900;">Cmd #${o.id.substring(0,8).toUpperCase()}</div>
+                    <div class="item-name" style="font-weight:900;">Cmd #${o.id.substring(o.id.length - 6).toUpperCase()}</div>
                     <div class="item-badge ${s.cls}" style="font-size:9px; padding:3px 8px;">${s.label}</div>
                 </div>
                 <div class="item-meta" style="font-weight:700; color:var(--text);">${o.supplier?.name || o.vendor?.companyName || 'Fournisseur'}</div>
                 <div style="display:flex; justify-content:space-between; width:100%; align-items:center; margin-top:5px;">
-                     <div class="item-name" style="color:var(--accent); font-size:18px; font-weight:900;">${Number(o.total || 0).toFixed(3)} DT</div>
-                     <div class="item-meta" style="font-size:10px;">${new Date(o.createdAt).toLocaleDateString()}</div>
+                     <div style="display:flex; flex-direction:column; gap:2px;">
+                        <div class="item-name" style="color:var(--accent); font-size:18px; font-weight:900;">${Number(o.total || 0).toFixed(3)} DT</div>
+                        ${o.settlement ? `<div style="color:#ef4444; font-size:9px; font-weight:800;">Frais Marketplace: -${Number(o.settlement.commissionAmount).toFixed(3)} DT</div>` : ''}
+                     </div>
+                     <div style="text-align:right;">
+                        <div class="item-meta" style="font-size:10px;">${new Date(o.createdAt).toLocaleDateString()}</div>
+                        <div style="font-size:10px; color:var(--text-muted); font-weight:800; margin-top:2px;">Détails ➔</div>
+                     </div>
                 </div>
                 ${isDelivered ? `
-                <button class="primary-btn" style="padding: 12px; margin-top: 10px; width: 100%; font-size: 14px; font-weight:900; background:#10b981; border:none; border-radius:12px; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(16,185,129,0.3); cursor:pointer;" onclick="validerReceptionMarketplace('${o.id}')">
+                <button class="primary-btn" style="padding: 12px; margin-top: 10px; width: 100%; font-size: 14px; font-weight:900; background:#10b981; border:none; border-radius:12px; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(16,185,129,0.3); cursor:pointer;" onclick="event.stopPropagation(); validerReceptionMarketplace('${o.id}')">
                     ✅ CONFIRMER LA RÉCEPTION
                 </button>
                 ` : ''}
@@ -737,6 +744,61 @@ async function fetchMarketplaceOrders() {
     });
     html += `</div>`;
     openSheet("Mes Commandes B2B", html);
+}
+
+function viewMarketplaceOrderDetail(orderId) {
+    const o = state.marketplace._lastOrders?.find(ord => ord.id === orderId);
+    if (!o) return;
+
+    let itemsHtml = (o.items || []).map(item => `
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.05); padding:12px 0;">
+            <div style="flex:1;">
+                <div style="color:#fff; font-weight:800; font-size:14px;">${item.stockItem?.name || item.name || 'Produit'}</div>
+                <div style="color:var(--text-muted); font-size:11px; font-weight:700; margin-top:2px;">${item.quantity} x ${Number(item.price).toFixed(3)} DT</div>
+            </div>
+            <div style="color:var(--accent); font-weight:900; font-size:14px;">${(item.quantity * item.price).toFixed(3)} DT</div>
+        </div>
+    `).join('');
+
+    let html = `
+        <div style="padding-bottom:100px;">
+            <div style="background:rgba(255,255,255,0.03); border-radius:15px; padding:15px; margin-bottom:20px; border:1px solid var(--border-glass);">
+                <div style="color:var(--text-muted); font-size:10px; font-weight:800; text-transform:uppercase; margin-bottom:8px;">Fournisseur</div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:rgba(99,102,241,0.1); display:flex; align-items:center; justify-content:center; color:#6366f1;">🏢</div>
+                    <div style="color:white; font-size:16px; font-weight:900;">${o.supplier?.name || o.vendor?.companyName || 'Fournisseur'}</div>
+                </div>
+            </div>
+
+            <div style="color:var(--text-muted); font-size:10px; font-weight:900; text-transform:uppercase; margin-bottom:10px; margin-left:5px;">Articles commandés</div>
+            <div style="background:rgba(255,255,255,0.02); border-radius:20px; padding:15px; border:1px solid var(--border-glass);">
+                ${itemsHtml || '<p style="text-align:center; color:var(--text-muted); padding:20px;">Aucun article.</p>'}
+            </div>
+
+            <div style="margin-top:25px; padding:20px; background:rgba(255,255,255,0.05); border-radius:20px; border:1px dashed var(--border-glass);">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span style="color:var(--text-muted); font-weight:700;">Total commande</span>
+                    <span style="color:#fff; font-weight:800;">${Number(o.total || 0).toFixed(3)} DT</span>
+                </div>
+                ${o.settlement ? `
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                    <span style="color:#ef4444; font-weight:700;">Frais Marketplace</span>
+                    <span style="color:#ef4444; font-weight:800;">-${Number(o.settlement.commissionAmount).toFixed(3)} DT</span>
+                </div>
+                ` : ''}
+                <div style="display:flex; justify-content:space-between; padding-top:15px; border-top:1px solid rgba(255,255,255,0.1); align-items:center;">
+                    <span style="color:#fff; font-size:16px; font-weight:900;">Net à payer</span>
+                    <span style="color:var(--accent); font-size:22px; font-weight:950;">${Number(o.total || 0).toFixed(3)} DT</span>
+                </div>
+            </div>
+
+            <button class="primary-btn" style="margin-top:30px; background:rgba(255,255,255,0.05); color:var(--text); border:1px solid var(--border-glass);" onclick="fetchMarketplaceOrders()">
+                ⬅ RETOUR À LA LISTE
+            </button>
+        </div>
+    `;
+
+    openSheet(`Cmd #${o.id.substring(o.id.length - 6).toUpperCase()}`, html);
 }
 
 function setMarketplaceFilter(filter) {

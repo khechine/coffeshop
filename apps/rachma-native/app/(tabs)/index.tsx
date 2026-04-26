@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Platform, Modal } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Platform, Modal, BackHandler } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
@@ -23,6 +23,22 @@ export default function DashboardScreen() {
       if (session?.user) setUser(session.user);
     });
   }, []);
+
+  // Handle Android Back Button
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        Alert.alert('Quitter l\'application', 'Voulez-vous vraiment quitter Rachma ?', [
+          { text: 'Annuler', style: 'cancel', onPress: () => {} },
+          { text: 'Quitter', style: 'destructive', onPress: () => BackHandler.exitApp() },
+        ]);
+        return true; // prevent default
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [])
+  );
 
   const handleLogout = () => {
     if (Platform.OS === 'web') {
@@ -98,15 +114,33 @@ export default function DashboardScreen() {
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.welcomeTitle}>Bonjour, {user?.name || user?.email?.split('@')[0] || 'Manager'} 👋</Text>
-            <Text style={styles.subtitle}>Voici vos performances du jour</Text>
+            <Text style={styles.welcomeTitle}>Bonjour, {user?.name || 'Manager'} 👋</Text>
+            <Text style={styles.subtitle}>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
           </View>
           <TouchableOpacity style={styles.profileBtn} onPress={handleLogout}>
             <FontAwesome name="sign-out" size={24} color={Colors.danger} />
           </TouchableOpacity>
         </View>
 
-        {/* KPI Grid - Wrapped for full visibility */}
+        {/* ── SECTION: ALERTES PRIORITAIRES ─────────────────────── */}
+        {stats.lowStockCount > 0 && (
+          <TouchableOpacity 
+            style={[styles.alertBanner, { backgroundColor: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)' }]}
+            onPress={() => router.push('/stocks?tab=MATERIALS')}
+          >
+            <View style={[styles.iconBox, { backgroundColor: Colors.danger, marginBottom: 0, width: 32, height: 32 }]}>
+              <FontAwesome name="warning" size={14} color="#fff" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12, backgroundColor: 'transparent' }}>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Alerte Stock Bas</Text>
+              <Text style={{ color: '#94a3b8', fontSize: 12 }}>{stats.lowStockCount} article(s) nécessitent votre attention.</Text>
+            </View>
+            <FontAwesome name="chevron-right" size={12} color="#475569" />
+          </TouchableOpacity>
+        )}
+
+        {/* ── SECTION: FINANCE & PERFORMANCE ────────────────────── */}
+        <Text style={styles.sectionTitle}>Performance Financière</Text>
         <View style={styles.kpiGrid}>
           {/* CA Journalier */}
           <View style={[styles.kpiCard, styles.glassCard]}>
@@ -115,7 +149,7 @@ export default function DashboardScreen() {
             </View>
             <Text style={styles.kpiLabel}>Chiffre d'Aff.</Text>
             <Text style={styles.kpiValue} numberOfLines={1}>{fmtMoney(stats.totalSales)} DT</Text>
-            <Text style={styles.kpiTrend}>Journalier</Text>
+            <Text style={styles.kpiTrend}> Aujourd'hui</Text>
           </View>
  
           {/* Commandes */}
@@ -153,42 +187,87 @@ export default function DashboardScreen() {
           )}
         </View>
 
-        {/* Performance & Alertes */}
-        <View style={[styles.featuredCard, styles.glassCard]}>
-          <View style={styles.featuredHeader}>
-            <Text style={styles.featuredTitle}>Performance & Alertes</Text>
-            <TouchableOpacity onPress={onRefresh}>
-              <FontAwesome name="refresh" size={14} color={Colors.primary} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.statRow}>
-            <View style={{ backgroundColor: 'transparent', alignItems: 'center' }}>
-              <Text style={styles.statLabel}>Dépenses</Text>
-              <Text style={styles.statValue}>{fmtMoney(stats.totalExpenses)} DT</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={{ backgroundColor: 'transparent', alignItems: 'center' }}>
-              <Text style={styles.statLabel}>Stock Bas</Text>
-              <Text style={[styles.statValue, { color: Colors.danger }]}>{fmtInt(stats.lowStockCount)}</Text>
-            </View>
-            {isOwner && (
-              <>
-                <View style={styles.statDivider} />
-                <View style={{ backgroundColor: 'transparent', alignItems: 'center' }}>
-                  <Text style={styles.statLabel}>Marge Nette</Text>
-                  <Text style={[styles.statValue, { color: '#a855f7' }]}>
-                    {stats.totalSales > 0
-                      ? ((1 - stats.totalExpenses / stats.totalSales) * 100).toFixed(0) + '%'
-                      : '—'}
-                  </Text>
+        {/* ── SECTION: ANALYTIQUES AVANCÉES (OWNER) ───────────── */}
+        {isOwner && (
+          <View style={{ marginTop: 10, marginBottom: 20 }}>
+            <Text style={styles.sectionTitle}>Analyse Détaillée</Text>
+            
+            {/* Profit Net Banner */}
+            <View style={[styles.profitBanner, {
+              backgroundColor: stats.netProfit >= 0 ? 'rgba(16,185,129,0.05)' : 'rgba(239,68,68,0.05)',
+              borderColor: stats.netProfit >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+              marginTop: 10,
+            }]}>
+              <View style={{ backgroundColor: 'transparent' }}>
+                <Text style={styles.profitLabel}>Profit Net Estimé</Text>
+                <Text style={[styles.profitValue, { color: stats.netProfit >= 0 ? Colors.primary : Colors.danger }]}>
+                  {fmtMoney(stats.netProfit ?? stats.totalSales - stats.totalExpenses)} DT
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: 'transparent' }}>
+                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: stats.netProfit >= 0 ? Colors.primary : Colors.danger, marginRight: 6 }} />
+                   <Text style={[styles.profitSub, { color: '#94a3b8' }]}>Marge: {stats.totalSales > 0 ? ((1 - stats.totalExpenses/stats.totalSales)*100).toFixed(0) : 0}%</Text>
                 </View>
-              </>
-            )}
+              </View>
+              <FontAwesome
+                name={stats.netProfit >= 0 ? 'line-chart' : 'warning'}
+                size={32}
+                color={stats.netProfit >= 0 ? Colors.primary : Colors.danger}
+                style={{ opacity: 0.5 }}
+              />
+            </View>
+
+            {/* Top Stats Scrollable list or Grid */}
+            <View style={{ gap: 12 }}>
+                {stats.topVendor && (
+                  <View style={[styles.analyticsCard, styles.glassCard, { padding: 15 }]}>
+                    <View style={styles.topVendorRow}>
+                      <View style={[styles.topVendorAvatar, { backgroundColor: 'rgba(251,191,36,0.1)' }]}>
+                        <FontAwesome name="trophy" size={20} color="#fbbf24" />
+                      </View>
+                      <View style={{ backgroundColor: 'transparent', flex: 1 }}>
+                        <Text style={[styles.kpiLabel, { marginBottom: 2 }]}>Meilleur Vendeur</Text>
+                        <Text style={styles.topVendorName}>{stats.topVendor.name}</Text>
+                        <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: '600' }}>{fmtMoney(stats.topVendor.revenue)} DT générés</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end', backgroundColor: 'transparent' }}>
+                        <Text style={{ color: '#fbbf24', fontSize: 16, fontWeight: '900' }}>{stats.topVendor.count}</Text>
+                        <Text style={{ color: '#64748b', fontSize: 9, fontWeight: '700' }}>TICKETS</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {stats.topProducts?.length > 0 && (
+                  <View style={[styles.analyticsCard, styles.glassCard]}>
+                    <View style={styles.analyticsHeader}>
+                      <Text style={styles.analyticsTitle}>Top 3 Produits</Text>
+                    </View>
+                    {stats.topProducts.slice(0, 3).map((p: any, i: number) => (
+                      <View key={i} style={[styles.rankRow, i === 2 && { borderBottomWidth: 0 }]}>
+                        <Text style={styles.rankNum}>{i + 1}</Text>
+                        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                          <Text style={styles.rankName}>{p.name}</Text>
+                          <Text style={styles.rankSub}>{fmtMoney(p.revenue)} DT CA</Text>
+                        </View>
+                        <View style={styles.rankBadge}>
+                          <Text style={styles.rankBadgeText}>{p.qty} ventes</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+            </View>
+          </View>
+        )}
+
+        {/* ── SECTION: CENTRE DE GESTION ───────────────────────── */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+          <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Centre de Gestion</Text>
+          <View style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '800' }}>{isOwner ? 'ACCÈS TOTAL' : 'ACCÈS LIMITÉ'}</Text>
           </View>
         </View>
 
-        {/* Full Management Menu */}
-        <Text style={styles.sectionTitle}>Centre de Gestion</Text>
         <View style={styles.mgmtGrid}>
           <TouchableOpacity 
             style={[styles.mgmtCard, styles.glassCard]}
@@ -197,8 +276,8 @@ export default function DashboardScreen() {
             <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
               <FontAwesome name="archive" size={20} color={Colors.secondary} />
             </View>
-            <Text style={styles.mgmtCardTitle}>CATALOGUE</Text>
-            <Text style={styles.mgmtCardSub}>Produits & Prix</Text>
+            <Text style={styles.mgmtCardTitle}>PRODUITS</Text>
+            <Text style={styles.mgmtCardSub}>Catalogue & Prix</Text>
           </TouchableOpacity>
  
           <TouchableOpacity 
@@ -209,7 +288,7 @@ export default function DashboardScreen() {
               <FontAwesome name="bar-chart" size={20} color={Colors.primary} />
             </View>
             <Text style={styles.mgmtCardTitle}>STOCKS</Text>
-            <Text style={styles.mgmtCardSub}>Matières & Alertes</Text>
+            <Text style={styles.mgmtCardSub}>Inventaire & Recettes</Text>
           </TouchableOpacity>
  
           <TouchableOpacity 
@@ -219,8 +298,8 @@ export default function DashboardScreen() {
             <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
               <FontAwesome name="shopping-basket" size={20} color={Colors.warning} />
             </View>
-            <Text style={styles.mgmtCardTitle}>MARKETPLACE</Text>
-            <Text style={styles.mgmtCardSub}>Commandes B2B</Text>
+            <Text style={styles.mgmtCardTitle}>B2B MARCHÉ</Text>
+            <Text style={styles.mgmtCardSub}>Commandes Fournisseurs</Text>
           </TouchableOpacity>
  
           <TouchableOpacity 
@@ -230,8 +309,8 @@ export default function DashboardScreen() {
             <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
               <FontAwesome name="handshake-o" size={18} color={Colors.danger} />
             </View>
-            <Text style={styles.mgmtCardTitle}>FOURNISSEURS</Text>
-            <Text style={styles.mgmtCardSub}>Mes Partenaires</Text>
+            <Text style={styles.mgmtCardTitle}>PARTENAIRES</Text>
+            <Text style={styles.mgmtCardSub}>Mes Fournisseurs</Text>
           </TouchableOpacity>
  
           <TouchableOpacity 
@@ -242,7 +321,7 @@ export default function DashboardScreen() {
               <FontAwesome name="history" size={20} color="#a855f7" />
             </View>
             <Text style={styles.mgmtCardTitle}>VENTES</Text>
-            <Text style={styles.mgmtCardSub}>Historique & Z</Text>
+            <Text style={styles.mgmtCardSub}>Historique & Clôtures</Text>
           </TouchableOpacity>
  
           <TouchableOpacity 
@@ -260,13 +339,24 @@ export default function DashboardScreen() {
             <>
               <TouchableOpacity 
                 style={[styles.mgmtCard, styles.glassCard]}
-                onPress={() => router.push('/terminals')}
+                onPress={() => router.push('/metrics')}
               >
                 <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(56, 189, 248, 0.1)' }]}>
-                  <FontAwesome name="desktop" size={20} color="#38bdf8" />
+                  <FontAwesome name="line-chart" size={20} color="#38bdf8" />
+                </View>
+                <Text style={styles.mgmtCardTitle}>MÉTRIQUES</Text>
+                <Text style={styles.mgmtCardSub}>Analyses & Rapports</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.mgmtCard, styles.glassCard]}
+                onPress={() => router.push('/terminals')}
+              >
+                <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                  <FontAwesome name="desktop" size={20} color={Colors.primary} />
                 </View>
                 <Text style={styles.mgmtCardTitle}>CAISSES</Text>
-                <Text style={styles.mgmtCardSub}>Parrainage (Codes)</Text>
+                <Text style={styles.mgmtCardSub}>Terminaux & Codes</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -277,115 +367,13 @@ export default function DashboardScreen() {
                   <FontAwesome name="users" size={20} color="#ec4899" />
                 </View>
                 <Text style={styles.mgmtCardTitle}>ÉQUIPE</Text>
-                <Text style={styles.mgmtCardSub}>Employés & Droits</Text>
+                <Text style={styles.mgmtCardSub}>Staff & Rôles</Text>
               </TouchableOpacity>
             </>
           )}
         </View>
 
-        {/* ── OWNER-ONLY ANALYTICS ───────────────────────────── */}
-        {isOwner && (
-          <>
-            {/* Profit Net Banner */}
-            <View style={[styles.profitBanner, {
-              backgroundColor: stats.netProfit >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-              borderColor: stats.netProfit >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)',
-            }]}>
-              <View style={{ backgroundColor: 'transparent' }}>
-                <Text style={styles.profitLabel}>Profit Net Estimé</Text>
-                <Text style={[styles.profitValue, { color: stats.netProfit >= 0 ? Colors.primary : Colors.danger }]}>
-                  {fmtMoney(stats.netProfit ?? stats.totalSales - stats.totalExpenses)} DT
-                </Text>
-                <Text style={[styles.profitSub, { color: '#94a3b8' }]}>
-                  Dépenses: {fmtMoney(stats.totalExpenses)} DT
-                </Text>
-              </View>
-              <FontAwesome
-                name={stats.netProfit >= 0 ? 'arrow-up' : 'arrow-down'}
-                size={32}
-                color={stats.netProfit >= 0 ? Colors.primary : Colors.danger}
-              />
-            </View>
 
-            {/* Top Vendeur */}
-            {stats.topVendor && (
-              <View style={[styles.analyticsCard, styles.glassCard]}>
-                <View style={styles.analyticsHeader}>
-                  <Text style={styles.analyticsTitle}>🏆 Top Vendeur du Jour</Text>
-                </View>
-                <View style={styles.topVendorRow}>
-                  <View style={styles.topVendorAvatar}>
-                    <Text style={{ fontSize: 22 }}>👤</Text>
-                  </View>
-                  <View style={{ backgroundColor: 'transparent', flex: 1 }}>
-                    <Text style={styles.topVendorName}>{stats.topVendor.name}</Text>
-                    <Text style={styles.topVendorRevenue}>{fmtMoney(stats.topVendor.revenue)} DT — {stats.topVendor.count} tickets</Text>
-                  </View>
-                  <View style={styles.crownBadge}>
-                    <Text style={{ fontSize: 18 }}>👑</Text>
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {/* Meilleurs Produits */}
-            {stats.topProducts?.length > 0 && (
-              <View style={[styles.analyticsCard, styles.glassCard]}>
-                <View style={styles.analyticsHeader}>
-                  <Text style={styles.analyticsTitle}>📦 Meilleurs Produits</Text>
-                </View>
-                {stats.topProducts.slice(0, 5).map((p: any, i: number) => (
-                  <View key={i} style={styles.rankRow}>
-                    <Text style={styles.rankNum}>#{i + 1}</Text>
-                    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                      <Text style={styles.rankName}>{p.name}</Text>
-                      <Text style={styles.rankSub}>CA généré: {fmtMoney(p.revenue)} DT</Text>
-                    </View>
-                    <View style={styles.rankBadge}>
-                      <Text style={styles.rankBadgeText}>{p.qty} u.</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {/* Performance Staff */}
-            {stats.topStaff?.length > 0 && (
-              <View style={[styles.analyticsCard, styles.glassCard]}>
-                <View style={styles.analyticsHeader}>
-                  <Text style={styles.analyticsTitle}>👥 Performance Staff</Text>
-                </View>
-                {stats.topStaff.map((s: any, i: number) => (
-                  <View key={i} style={styles.rankRow}>
-                    <Text style={styles.rankNum}>#{i + 1}</Text>
-                    <Text style={[styles.rankName, { flex: 1 }]}>{s.name}</Text>
-                    <Text style={[styles.rankBadgeText, { color: Colors.primary, fontWeight: '900', fontSize: 15 }]}>
-                      {fmtMoney(s.revenue)} DT
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {/* Performance Tables */}
-            {stats.topTables?.length > 0 && (
-              <View style={[styles.analyticsCard, styles.glassCard]}>
-                <View style={styles.analyticsHeader}>
-                  <Text style={styles.analyticsTitle}>🪑 Performance Tables</Text>
-                </View>
-                {stats.topTables.map((t: any, i: number) => (
-                  <View key={i} style={styles.rankRow}>
-                    <Text style={styles.rankNum}>#{i + 1}</Text>
-                    <Text style={[styles.rankName, { flex: 1 }]}>{t.name || '—'}</Text>
-                    <Text style={[styles.rankBadgeText, { color: Colors.primary, fontWeight: '900', fontSize: 15 }]}>
-                      {fmtMoney(t.revenue)} DT
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </>
-        )}
 
         <View style={{ height: 40 }} />
 
@@ -481,9 +469,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   glassCard: {
-    backgroundColor: 'rgba(16, 20, 35, 0.7)',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   iconBox: {
     width: 36,
@@ -577,6 +565,14 @@ const styles = StyleSheet.create({
   },
 
   // Management Grid Styles
+  alertBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 25,
+  },
   mgmtGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -590,6 +586,11 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
   },
   mgmtIconCircle: {
     width: 48,
