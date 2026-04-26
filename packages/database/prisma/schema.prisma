@@ -114,6 +114,7 @@ model Store {
   isFiscalEnabled Boolean  @default(false)
   currentFiscalSequence Int @default(0) // Compteur atomique pour la numérotation NACEF
   fiscalSecret    String?  // Secret de signature spécifique à la boutique
+  preferredSearchRadius Int? @default(50) // Rayon de recherche marketplace par défaut (km)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -765,6 +766,10 @@ model VendorProfile {
   // Anti-leakage tracking
   interactions   VendorInteraction[]     @relation("VendorInteractions")
   relationships  StoreVendorRelationship[] @relation("VendorRelationships")
+
+  // Billing & Marketplace Safeguards
+  gracePeriodEndsAt   DateTime?
+  lastBillingAlertAt  DateTime?
 }
 
 model CourierProfile {

@@ -13,6 +13,7 @@ export default function LoginScreen() {
   const [loginMode, setLoginMode] = useState<'email' | 'pairing'>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [storeIdInput, setStoreIdInput] = useState('');
   const [activationCode, setActivationCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -128,8 +129,14 @@ export default function LoginScreen() {
                   style={styles.input}
                   value={password}
                   onChangeText={setPassword}
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                 />
+                <TouchableOpacity 
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeIcon}
+                >
+                  <FontAwesome name={showPassword ? "eye" : "eye-slash"} size={18} color="#94a3b8" />
+                </TouchableOpacity>
               </View>
 
               <TouchableOpacity style={styles.forgotBtn}>
@@ -192,8 +199,8 @@ export default function LoginScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Pas encore de compte ?</Text>
-          <TouchableOpacity>
-            <Text style={styles.signupText}> Contacter le support</Text>
+          <TouchableOpacity onPress={() => router.push('/register')}>
+            <Text style={styles.signupText}> Créer un compte</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -295,6 +302,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '500',
+  },
+  eyeIcon: {
+    padding: 10,
+    backgroundColor: 'transparent',
   },
   forgotBtn: {
     alignSelf: 'flex-end',

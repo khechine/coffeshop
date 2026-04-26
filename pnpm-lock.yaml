@@ -157,6 +157,9 @@ importers:
       '@nestjs/platform-express':
         specifier: ^10.4.22
         version: 10.4.22(@nestjs/common@10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.22)
+      '@nestjs/schedule':
+        specifier: ^6.1.3
+        version: 6.1.3(@nestjs/common@10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.22(@nestjs/common@10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@10.4.22)(reflect-metadata@0.2.2)(rxjs@7.8.2))
       '@nestjs/swagger':
         specifier: ^7.3.0
         version: 7.4.2(@nestjs/common@10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.22(@nestjs/common@10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@10.4.22)(reflect-metadata@0.2.2)(rxjs@7.8.2))(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
@@ -428,6 +431,9 @@ importers:
       expo-linking:
         specifier: ~55.0.11
         version: 55.0.14(expo@55.0.13)(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0)
+      expo-location:
+        specifier: ^55.1.8
+        version: 55.1.8(expo@55.0.13(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(@expo/metro-runtime@55.0.9)(expo-router@55.0.13)(react-dom@19.2.0(react@19.2.0))(react-native-webview@13.8.6(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0))(react-native-worklets@0.7.2(@babel/core@7.29.0)(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0))(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0)(typescript@5.9.3))(typescript@5.9.3)
       expo-router:
         specifier: ~55.0.13
         version: 55.0.13(@expo/log-box@55.0.10)(@expo/metro-runtime@55.0.9)(@types/react-dom@18.3.7(@types/react@19.1.17))(@types/react@19.1.17)(expo-constants@55.0.13)(expo-font@55.0.6)(expo-linking@55.0.14)(expo@55.0.13)(react-dom@19.2.0(react@19.2.0))(react-native-reanimated@4.2.1(react-native-worklets@0.7.2(@babel/core@7.29.0)(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0))(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0))(react-native-safe-area-context@5.6.2(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0))(react-native-screens@4.16.0(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0))(react-native-web@0.21.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0)
@@ -2138,6 +2144,12 @@ packages:
       '@nestjs/common': ^10.0.0
       '@nestjs/core': ^10.0.0
 
+  '@nestjs/schedule@6.1.3':
+    resolution: {integrity: sha512-RflMFOpR16Dwd1jAUbeB4mfGTCh65fvEdL4mSjQPJChpkRGRjIXjb+6YQcK2faQrVT60c9DmLmoVR7/ONCtuYQ==}
+    peerDependencies:
+      '@nestjs/common': ^10.0.0 || ^11.0.0
+      '@nestjs/core': ^10.0.0 || ^11.0.0
+
   '@nestjs/schematics@10.2.3':
     resolution: {integrity: sha512-4e8gxaCk7DhBxVUly2PjYL4xC2ifDFexCqq1/u4TtivLGXotVk0wHdYuPYe1tHTHuR1lsOkRbfOCpkdTnigLVg==}
     peerDependencies:
@@ -3022,6 +3034,9 @@ packages:
 
   '@types/leaflet@1.9.21':
     resolution: {integrity: sha512-TbAd9DaPGSnzp6QvtYngntMZgcRk+igFELwR2N99XZn7RXUdKgsXMR+28bUO0rPsWp8MIu/f47luLIQuSLYv/w==}
+
+  '@types/luxon@3.7.1':
+    resolution: {integrity: sha512-H3iskjFIAn5SlJU7OuxUmTEpebK6TKB8rxZShDslBMZJ5u9S//KM1sbdAisiSrqwLQncVjnpi2OK2J51h+4lsg==}
 
   '@types/mime@1.3.5':
     resolution: {integrity: sha512-/pyBZWSLD2n0dcHE3hq8s8ZvcETHtEuF+3E7XVt0Ig2nvsVQXdghHVcEkIWjy9A0wKfTn97a/PSDYohKIlnP/w==}
@@ -4096,6 +4111,10 @@ packages:
       typescript:
         optional: true
 
+  cron@4.4.0:
+    resolution: {integrity: sha512-fkdfq+b+AHI4cKdhZlppHveI/mgz2qpiYxcm+t5E5TsxX7QrLS1VE0+7GENEk9z0EeGPcpSciGv6ez24duWhwQ==}
+    engines: {node: '>=18.x'}
+
   cross-fetch@3.2.0:
     resolution: {integrity: sha512-Q+xVJLoGOeIMXZmbUK4HYk+69cQH6LudR0Vu/pRm2YlU/hDV9CiS0gKUMaWY5f2NeUH9C1nV3bsTlCo0FsTV1Q==}
 
@@ -4819,6 +4838,11 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
+
+  expo-location@55.1.8:
+    resolution: {integrity: sha512-mEExFf84nmWLwi14GFfUsFLrCm10gbcqFn9EPXpuruQ28YMtJWgCD+jJtESYPQkYF44N21fVok3T28fLuCqydA==}
+    peerDependencies:
+      expo: '*'
 
   expo-manifests@55.0.15:
     resolution: {integrity: sha512-p40ftXpgLTFGddFy35MYZMyjm/E6IQdn3l6fBZZ6zeraEzYLt+VLHYsplOL9ccTYvUSWKN9aOWRpoEYpyGVBVw==}
@@ -6216,6 +6240,10 @@ packages:
     resolution: {integrity: sha512-u6EPU8juLUk9ytRcyapkWI18epAv3RU+6+TC23ivjR0e+glWKBobFeSgRwOIJihzktILQuy6E0E80P2jVTDR5g==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0
+
+  luxon@3.7.2:
+    resolution: {integrity: sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew==}
+    engines: {node: '>=12'}
 
   magic-string@0.30.8:
     resolution: {integrity: sha512-ISQTe55T2ao7XtlAStud6qwYPZjE4GK1S/BeVPus4jrq6JuOnQ00YKQC581RWhR122W7msZV263KzVeLoqidyQ==}
@@ -11091,6 +11119,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@nestjs/schedule@6.1.3(@nestjs/common@10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.22(@nestjs/common@10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@10.4.22)(reflect-metadata@0.2.2)(rxjs@7.8.2))':
+    dependencies:
+      '@nestjs/common': 10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core': 10.4.22(@nestjs/common@10.4.22(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@10.4.22)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      cron: 4.4.0
+
   '@nestjs/schematics@10.2.3(chokidar@3.6.0)(typescript@5.7.2)':
     dependencies:
       '@angular-devkit/core': 17.3.11(chokidar@3.6.0)
@@ -12675,6 +12709,8 @@ snapshots:
     dependencies:
       '@types/geojson': 7946.0.16
 
+  '@types/luxon@3.7.1': {}
+
   '@types/mime@1.3.5': {}
 
   '@types/ms@2.1.0': {}
@@ -13987,6 +14023,11 @@ snapshots:
     optionalDependencies:
       typescript: 5.7.2
 
+  cron@4.4.0:
+    dependencies:
+      '@types/luxon': 3.7.1
+      luxon: 3.7.2
+
   cross-fetch@3.2.0:
     dependencies:
       node-fetch: 2.7.0
@@ -14973,6 +15014,14 @@ snapshots:
       react-native: 0.83.2(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0)
     transitivePeerDependencies:
       - expo
+      - supports-color
+      - typescript
+
+  expo-location@55.1.8(expo@55.0.13(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(@expo/metro-runtime@55.0.9)(expo-router@55.0.13)(react-dom@19.2.0(react@19.2.0))(react-native-webview@13.8.6(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0))(react-native-worklets@0.7.2(@babel/core@7.29.0)(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0))(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0)(typescript@5.9.3))(typescript@5.9.3):
+    dependencies:
+      '@expo/image-utils': 0.8.13(typescript@5.9.3)
+      expo: 55.0.13(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(@expo/metro-runtime@55.0.9)(expo-router@55.0.13)(react-dom@19.2.0(react@19.2.0))(react-native-webview@13.8.6(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0))(react-native-worklets@0.7.2(@babel/core@7.29.0)(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0))(react-native@0.83.4(@babel/core@7.29.0)(@react-native-community/cli@13.6.9)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+    transitivePeerDependencies:
       - supports-color
       - typescript
 
@@ -16795,6 +16844,8 @@ snapshots:
   lucide-react@0.378.0(react@18.3.1):
     dependencies:
       react: 18.3.1
+
+  luxon@3.7.2: {}
 
   magic-string@0.30.8:
     dependencies:

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { SalesModule } from './sales/sales.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { ProductsModule } from './products/products.module';
@@ -13,6 +14,7 @@ import { ManagementController } from './management.controller';
       isGlobal: true,
       envFilePath: '../../.env',
     }),
+    ScheduleModule.forRoot(),
     SalesModule,
     InventoryModule,
     ProductsModule,

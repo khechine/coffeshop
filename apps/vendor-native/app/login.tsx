@@ -11,6 +11,7 @@ import { useAlert } from '@/components/AlertContext';
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { showAlert } = useAlert();
@@ -77,8 +78,14 @@ export default function LoginScreen() {
                 style={styles.input}
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                secureTextEntry={!showPassword}
             />
+            <TouchableOpacity 
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeIcon}
+            >
+                <FontAwesome name={showPassword ? "eye" : "eye-slash"} size={18} color="#94a3b8" />
+            </TouchableOpacity>
             </View>
 
             <TouchableOpacity style={styles.forgotBtn}>
@@ -98,7 +105,7 @@ export default function LoginScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Devenir partenaire ?</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/register')}>
             <Text style={styles.signupText}> Rejoindre le réseau</Text>
           </TouchableOpacity>
         </View>
@@ -201,6 +208,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '500',
+  },
+  eyeIcon: {
+    padding: 10,
+    backgroundColor: 'transparent',
   },
   forgotBtn: {
     alignSelf: 'flex-end',

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Rachma Pro",
-    "slug": "rachma-pro",
+    "slug": "rachmaclient",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -41,7 +41,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "f234c69b-e95a-4ff8-a5fd-41d9510d5021"
+        "projectId": "8da47816-5663-4ba2-9308-46c0a72cf7af"
       }
     },
     "runtimeVersion": {
@@ -49,6 +49,7 @@
     },
     "updates": {
       "url": "https://u.expo.dev/f234c69b-e95a-4ff8-a5fd-41d9510d5021"
-    }
+    },
+    "owner": "djanguil"
   }
 }

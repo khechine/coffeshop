@@ -11,6 +11,7 @@ import { AuthService } from '@/services/auth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
+import * as Location from 'expo-location';
 
 // Fallback for LinearGradient if module resolution fails temporarily
 let LinearGradient: any = View;
@@ -67,6 +68,11 @@ export default function MarketplaceScreen() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [storeId, setStoreId] = useState<string | null>(null);
 
+  // 📍 Location & Radius
+  const [radius, setRadius] = useState<number>(50); // Rayon par défaut: 50km
+  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [myOrders, setMyOrders] = useState<any[]>([]);
   const [orderFilter, setOrderFilter] = useState<'ALL' | 'ACTIVE' | 'DELIVERED' | 'STOCKED'>('ALL');
@@ -76,10 +82,31 @@ export default function MarketplaceScreen() {
   const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0);
   const cartTotal = cartItems.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  const fetchData = async () => {
+  const fetchLocation = async () => {
     try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+          console.warn('Location permission denied');
+          return null;
+      }
+      const loc = await Location.getCurrentPositionAsync({});
+      const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+      setLocation(coords);
+      return coords;
+    } catch (e) {
+      console.warn('Fetch location error:', e);
+      return null;
+    }
+  };
+
+  const fetchData = async (currentLoc?: {lat: number, lng: number}, currentRad?: number) => {
+    try {
+      const loc = currentLoc || location;
+      const rad = currentRad || radius;
+      const query = loc ? `?lat=${loc.lat}&lng=${loc.lng}&radius=${rad}` : '';
+      
       const [prodData, vendorData, bundleData, catData] = await Promise.all([
-        ApiService.get('/management/marketplace/products'),
+        ApiService.get(`/management/marketplace/products${query}`),
         ApiService.get('/management/marketplace/vendors'),
         ApiService.get('/management/marketplace/bundles'),
         ApiService.get('/management/marketplace/categories'),
@@ -97,8 +124,12 @@ export default function MarketplaceScreen() {
   };
 
   useEffect(() => { 
-    fetchData(); 
-    AuthService.getSession().then(s => setStoreId(s.storeId));
+    const init = async () => {
+      const loc = await fetchLocation();
+      fetchData(loc || undefined);
+      AuthService.getSession().then(s => setStoreId(s.storeId));
+    };
+    init();
   }, []);
 
   const onRefresh = () => { setRefreshing(true); fetchData(); };
@@ -290,15 +321,23 @@ export default function MarketplaceScreen() {
 
       {/* ── SEARCH & TABS ── */}
       <View style={{ paddingHorizontal: 20, paddingTop: 10 }}>
-          <View style={[styles.searchBar, { backgroundColor: T.inputBg, borderColor: T.inputBorder }]}>
-            <FontAwesome name="search" size={16} color={T.muted} style={{ marginRight: 12 }} />
-            <TextInput 
-                placeholder="Rechercher produits, vendeurs..."
-                placeholderTextColor={T.muted}
-                style={[styles.searchInput, { color: T.text }]}
-                value={search}
-                onChangeText={setSearch}
-            />
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', backgroundColor: 'transparent', marginBottom: 15 }}>
+            <View style={[styles.searchBar, { flex: 1, backgroundColor: T.inputBg, borderColor: T.inputBorder, marginBottom: 0 }]}>
+                <FontAwesome name="search" size={16} color={T.muted} style={{ marginRight: 12 }} />
+                <TextInput 
+                    placeholder="Rechercher produits, vendeurs..."
+                    placeholderTextColor={T.muted}
+                    style={[styles.searchInput, { color: T.text }]}
+                    value={search}
+                    onChangeText={setSearch}
+                />
+            </View>
+            <TouchableOpacity 
+                style={[styles.filterBtn, { backgroundColor: T.inputBg, borderColor: T.inputBorder, borderWidth: 1, borderRadius: 15, width: 50, height: 50, alignItems: 'center', justifyContent: 'center' }]}
+                onPress={() => setFiltersOpen(true)}
+            >
+                <FontAwesome name="sliders" size={20} color={location ? T.accent : T.muted} />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.tabBar}>
@@ -605,7 +644,46 @@ export default function MarketplaceScreen() {
           </View>
       </Modal>
 
-      {/* Cart Modal */}
+      {/* ── FILTER MODAL ── */}
+      <Modal visible={filtersOpen} animationType="fade" transparent>
+          <View style={styles.modalOverlay}>
+              <View style={[styles.modalSheet, { height: '50%' }]}>
+                  <View style={styles.modalHeader}>
+                      <Text style={styles.modalSheetTitle}>Filtres Marketplace</Text>
+                      <TouchableOpacity onPress={() => setFiltersOpen(false)}><FontAwesome name="times-circle" size={24} color={T.muted} /></TouchableOpacity>
+                  </View>
+                  <View style={{ padding: 25, backgroundColor: 'transparent' }}>
+                      <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 15 }}>Rayon de recherche</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, backgroundColor: 'transparent' }}>
+                          {[5, 10, 20, 50, 100, 500].map(r => (
+                              <TouchableOpacity 
+                                  key={r}
+                                  onPress={() => { setRadius(r); fetchData(undefined, r); }}
+                                  style={{
+                                      paddingHorizontal: 15, paddingVertical: 10, borderRadius: 12,
+                                      backgroundColor: radius === r ? T.accent : 'rgba(255,255,255,0.05)',
+                                      borderWidth: 1, borderColor: radius === r ? T.accent : T.cardBorder
+                                  }}
+                              >
+                                  <Text style={{ color: radius === r ? '#fff' : T.muted, fontWeight: '700' }}>{r} km</Text>
+                              </TouchableOpacity>
+                          ))}
+                      </View>
+                      
+                      <View style={{ marginTop: 30, backgroundColor: 'transparent' }}>
+                          <Text style={{ color: T.subtext, fontSize: 13 }}>
+                             📍 {location ? `Position active (${location.lat.toFixed(2)}, ${location.lng.toFixed(2)})` : 'Position non détectée'}
+                          </Text>
+                          <TouchableOpacity onPress={() => fetchLocation()} style={{ marginTop: 10 }}>
+                              <Text style={{ color: T.indigo, fontWeight: '700' }}>Actualiser ma position</Text>
+                          </TouchableOpacity>
+                      </View>
+                  </View>
+              </View>
+          </View>
+      </Modal>
+
+      {/* ── CART MODAL ── */}
       <Modal visible={cartOpen} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
               <View style={[styles.modalSheet, { height: '80%' }]}>
@@ -992,5 +1070,22 @@ const styles = StyleSheet.create({
   totalLbl: { color: '#64748b', fontSize: 14, fontWeight: '700' },
   totalVal: { color: '#fff', fontSize: 24, fontWeight: '900' },
   checkoutBtn: { backgroundColor: '#10b981', height: 55, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
-  checkoutText: { color: '#fff', fontSize: 16, fontWeight: '900' }
+  checkoutText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  modalTitle: { fontSize: 20, fontWeight: '900', color: '#fff' },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterBtn: {
+    borderWidth: 1,
+    borderRadius: 15,
+    width: 50,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

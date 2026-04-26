@@ -579,12 +579,64 @@ export class ManagementController {
 
   @Get('marketplace/products')
   async getMarketplaceProducts(
-    @Query('vendorId') vendorId: string,
+    @Query('vendorId') vendorId?: string,
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+    @Query('radius') radius?: string,
     @Query('skip') skip?: string,
     @Query('take') take?: string,
   ): Promise<any> {
+    const skipNum = skip ? Number(skip) : 0;
+    const takeNum = take ? Number(take) : 50;
+
+    // 📍 If location is provided, use Raw SQL for Proximity Sorting (Haversine)
+    if (lat && lng) {
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lng);
+      const rad = radius ? parseFloat(radius) : null;
+
+      try {
+        // Raw SQL for distance calculation
+        const products = await (prisma as any).$queryRawUnsafe(`
+          SELECT 
+            vp.*,
+            v.id as "vendorId",
+            v."companyName" as "vendorName",
+            v.city as "vendorCity",
+            (6371 * acos(
+              cos(radians($1)) * cos(radians(v.lat)) * 
+              cos(radians(v.lng) - radians($2)) + 
+              sin(radians($1)) * sin(radians(v.lat))
+            )) AS distance
+          FROM "VendorProduct" vp
+          JOIN "VendorProfile" v ON vp."vendorId" = v.id
+          WHERE 
+            v.status != 'SUSPENDED'
+            ${vendorId ? `AND vp."vendorId" = $4` : ''}
+            AND (
+              $3::float IS NULL OR 
+              (6371 * acos(
+                cos(radians($1)) * cos(radians(v.lat)) * 
+                cos(radians(v.lng) - radians($2)) + 
+                sin(radians($1)) * sin(radians(v.lat))
+              )) <= $3
+            )
+          ORDER BY distance ASC, vp."createdAt" DESC
+          LIMIT $5 OFFSET $6
+        `, latitude, longitude, rad, vendorId, takeNum, skipNum);
+
+        return products;
+      } catch (err) {
+        console.error("Proximity search error:", err);
+        // Fallback to standard query on error
+      }
+    }
+
     return prisma.vendorProduct.findMany({
-      where: vendorId ? { vendorId } : {},
+      where: {
+        ...(vendorId ? { vendorId } : {}),
+        vendor: { status: { not: 'SUSPENDED' } }
+      },
       include: { 
         vendor: { 
           select: {
@@ -594,11 +646,11 @@ export class ManagementController {
             description: true,
           }
         },
-        productStandard: true // Include standard info for extra metadata
+        productStandard: true
       },
       orderBy: { createdAt: 'desc' },
-      skip: skip ? Number(skip) : undefined,
-      take: take ? Number(take) : undefined,
+      skip: skipNum,
+      take: takeNum,
     });
   }
 
@@ -999,19 +1051,34 @@ export class ManagementController {
 
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const endOfYesterday = new Date(today);
+
     // Parallel queries for performance
-    const [todaySales, weeklySales, monthSales, todayExpenses] = await Promise.all([
+    const [todaySales, yesterdaySales, weeklySales, monthSales, allTimeSales, todayExpenses] = await Promise.all([
       prisma.sale.aggregate({
         where: { storeId, isVoid: false, createdAt: { gte: today } },
         _sum: { total: true },
         _count: true,
       }),
       prisma.sale.aggregate({
+        where: { storeId, isVoid: false, createdAt: { gte: yesterday, lt: endOfYesterday } },
+        _sum: { total: true },
+        _count: true,
+      }),
+      prisma.sale.aggregate({
         where: { storeId, isVoid: false, createdAt: { gte: firstDayOfWeek } },
         _sum: { total: true },
+        _count: true,
       }),
       prisma.sale.aggregate({
         where: { storeId, isVoid: false, createdAt: { gte: firstDayOfMonth } },
+        _sum: { total: true },
+        _count: true,
+      }),
+      prisma.sale.aggregate({
+        where: { storeId, isVoid: false },
         _sum: { total: true },
         _count: true,
       }),
@@ -1109,9 +1176,15 @@ export class ManagementController {
       // ── Flat KPIs for mobile ──────────────────────────────────
       totalSales: totalSalesDay,
       orderCount: todaySales._count || 0,
+      yesterdaySales: Number(yesterdaySales._sum.total || 0),
+      yesterdayOrderCount: yesterdaySales._count || 0,
       totalExpenses: totalExpensesDay,
       weeklySales: Number(weeklySales._sum.total || 0),
+      weeklyOrderCount: weeklySales._count || 0,
       monthlySales: Number(monthSales._sum.total || 0),
+      monthlyOrderCount: monthSales._count || 0,
+      allTimeSales: Number(allTimeSales._sum.total || 0),
+      allTimeOrderCount: allTimeSales._count || 0,
       lowStockCount: typeof lowStock === 'number' ? lowStock : 0,
       margin: totalSalesDay > 0 ? ((totalSalesDay - totalExpensesDay) / totalSalesDay) * 100 : 0,
       netProfit: totalSalesDay - totalExpensesDay,
@@ -1124,6 +1197,7 @@ export class ManagementController {
       today: { total: totalSalesDay, count: todaySales._count },
       month: {
         total: Number(monthSales._sum.total || 0),
+        count: monthSales._count || 0,
         expenses: totalExpensesDay,
         net: Number(monthSales._sum.total || 0) - totalExpensesDay,
       },

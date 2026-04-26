@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Rachma Vendor",
-    "slug": "vendor-native",
+    "slug": "rachma",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,7 +15,8 @@
     },
     "backgroundColor": "#0a0f1e",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.elkassa.vendor"
     },
     "android": {
       "adaptiveIcon": {
@@ -42,9 +43,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "55ab6ed6-3b81-4464-b1d5-b6e3e164f000"
+        "projectId": "ee3a3e72-2c05-4328-b6c1-dbb85090e89f"
       }
     },
-    "owner": "khechine"
+    "owner": "djanguil"
   }
 }

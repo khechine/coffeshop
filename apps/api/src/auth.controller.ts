@@ -147,6 +147,105 @@ export class AuthController {
     };
   }
 
+  @Post('register')
+  async register(@Body() body: any) {
+    const { email, password, name, role, companyName } = body;
+    console.log(`📝 Inscription demandée: [${email}] avec rôle [${role}]`);
+
+    if (!email || !password || !name || !role || !companyName) {
+      throw new UnauthorizedException('Tous les champs sont requis (email, password, name, role, companyName)');
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() }
+    });
+
+    if (existingUser) {
+      throw new UnauthorizedException('Cet email est déjà utilisé');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    let newUser: any;
+    let vendorId = null;
+
+    try {
+      if (role === 'STORE_OWNER') {
+        const store = await prisma.store.create({
+          data: {
+            name: companyName,
+            status: 'PENDING_DOCS'
+          }
+        });
+
+        newUser = await prisma.user.create({
+          data: {
+            email: email.toLowerCase().trim(),
+            password: hashedPassword,
+            name,
+            role: 'STORE_OWNER',
+            storeId: store.id
+          },
+          include: { 
+            store: {
+              include: {
+                subscription: { include: { plan: true } }
+              }
+            } 
+          }
+        });
+      } else if (role === 'VENDOR') {
+        newUser = await prisma.user.create({
+          data: {
+            email: email.toLowerCase().trim(),
+            password: hashedPassword,
+            name,
+            role: 'VENDOR'
+          }
+        });
+
+        const profile = await (prisma as any).vendorProfile.create({
+          data: {
+            userId: newUser.id,
+            companyName,
+            status: 'PENDING'
+          }
+        });
+        
+        vendorId = profile.id;
+
+        // Ensure wallet is created for vendor
+        await (prisma as any).vendorWallet.create({
+          data: {
+            vendorId: profile.id,
+            balance: 0
+          }
+        });
+      } else {
+        throw new UnauthorizedException('Rôle non supporté pour l\'inscription mobile');
+      }
+
+      return {
+        token: `user-jwt-${newUser.id}-${Date.now()}`,
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+          role: newUser.role,
+          storeId: newUser.storeId,
+          storeName: newUser.store?.name || (role === 'VENDOR' ? companyName : null),
+          isFiscalEnabled: newUser.store?.isFiscalEnabled ?? false,
+          planName: newUser.store?.subscription?.plan?.name || 'FREE',
+          vendorId,
+          vendorName: role === 'VENDOR' ? companyName : null
+        }
+      };
+    } catch (error) {
+      console.error("❌ Erreur lors de l'inscription:", error);
+      throw new UnauthorizedException('Erreur lors de la création du compte');
+    }
+  }
+
   @Post('update-profile')
   async updateProfile(@Body() body: { id: string; name?: string; email?: string; pinCode?: string }) {
     console.log(`👤 Mise à jour profil pour [${body.id}]`);
