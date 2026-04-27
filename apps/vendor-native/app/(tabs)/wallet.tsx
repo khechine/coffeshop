@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Platform, Modal } from 'react-native';
-import { Text, View } from '@/components/Themed';
+import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Platform, Modal, View, Text, TextInput } from 'react-native';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as ImagePicker from 'expo-image-picker';
-import { TextInput } from 'react-native';
 
 export default function WalletScreen() {
   const [loading, setLoading] = useState(true);
@@ -81,9 +79,7 @@ export default function WalletScreen() {
         type,
       } as any);
 
-      const uploadResp = await ApiService.post('/management/upload', formData, {
-        'Content-Type': 'multipart/form-data',
-      });
+      const uploadResp = await ApiService.upload('/management/upload', formData);
 
       // 2. Submit request
       await ApiService.post('/management/vendor/deposit-request', {

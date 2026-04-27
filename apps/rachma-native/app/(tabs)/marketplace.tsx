@@ -126,8 +126,8 @@ export default function MarketplaceScreen() {
       
       const [prodData, vendorData, bundleData, catData] = await Promise.all([
         ApiService.get(`/management/marketplace/products${query}`),
-        ApiService.get('/management/marketplace/vendors'),
-        ApiService.get('/management/marketplace/bundles'),
+        ApiService.get(`/management/marketplace/vendors${query}`),
+        ApiService.get(`/management/marketplace/bundles${query}`),
         ApiService.get('/management/marketplace/categories'),
       ]);
       setProducts(prodData || []);
@@ -362,17 +362,22 @@ export default function MarketplaceScreen() {
 
           <View style={styles.tabBar}>
               {[
-                { id: 'PRODUCTS', label: 'Produits', icon: 'th-large' },
-                { id: 'VENDORS', label: 'Vendeurs', icon: 'building' },
-                { id: 'PACKS', label: 'Packs', icon: 'bolt' }
+                { id: 'PRODUCTS', label: 'Produits', icon: 'th-large', count: filteredProducts.length },
+                { id: 'VENDORS', label: 'Vendeurs', icon: 'building', count: filteredVendors.length },
+                { id: 'PACKS', label: 'Packs', icon: 'bolt', count: filteredBundles.length }
               ].map(tab => (
                 <TouchableOpacity 
                     key={tab.id}
                     style={[styles.tab, viewMode === tab.id && styles.activeTab]}
                     onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setViewMode(tab.id as ViewMode); }}
                 >
-                    <FontAwesome name={tab.icon as any} size={14} color={viewMode === tab.id ? T.gold : T.muted} />
-                    <Text style={[styles.tabText, { color: viewMode === tab.id ? '#fff' : T.muted }]}>{tab.label}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'transparent' }}>
+                      <FontAwesome name={tab.icon as any} size={13} color={viewMode === tab.id ? T.gold : T.muted} />
+                      <Text style={[styles.tabText, { color: viewMode === tab.id ? '#fff' : T.muted }]}>{tab.label}</Text>
+                    </View>
+                    <View style={[styles.tabCountBadge, viewMode === tab.id && { backgroundColor: T.gold }]}>
+                        <Text style={[styles.tabCountText, viewMode === tab.id && { color: '#000' }]}>{tab.count}</Text>
+                    </View>
                 </TouchableOpacity>
               ))}
           </View>
@@ -956,13 +961,45 @@ const styles = StyleSheet.create({
     borderRadius: 15, paddingHorizontal: 15, borderWidth: 1, marginBottom: 20 
   },
   searchInput: { flex: 1, fontSize: 14, fontWeight: '600' },
-  tabBar: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  tab: { 
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', 
-    height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.03)', gap: 8 
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 18,
+    padding: 6,
+    marginBottom: 20,
+    gap: 8,
   },
-  activeTab: { backgroundColor: 'rgba(99,102,241,0.15)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)' },
-  tabText: { fontSize: 12, fontWeight: '800' },
+  tab: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+  },
+  activeTab: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  tabCountBadge: {
+    backgroundColor: 'rgba(148,163,184,0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  tabCountText: {
+    color: '#94a3b8',
+    fontSize: 10,
+    fontWeight: '900',
+  },
   catChip: { 
     flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', 
     paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10, marginRight: 10 

@@ -431,79 +431,6 @@ export class ManagementController {
       }
     }
 
-    // 💳 Marketplace Commission Deduction on Reception
-    if (order.vendorId) {
-      try {
-        const vendor = await prisma.vendorProfile.findUnique({
-          where: { id: order.vendorId },
-          include: { wallet: true }
-        });
-
-        if (vendor) {
-          let finalRate = Number(vendor.commissionRate || 0.01);
-          const totalNum = Number(order.total || 0);
-
-          if (vendor.commissionTiers) {
-            try {
-              const tiersRaw = typeof vendor.commissionTiers === 'string' 
-                ? JSON.parse(vendor.commissionTiers) 
-                : vendor.commissionTiers;
-              const tiers = Array.isArray(tiersRaw) ? tiersRaw : [];
-              
-              if (tiers.length > 0) {
-                const sortedTiers = tiers.sort((a: any, b: any) => b.minAmount - a.minAmount);
-                for (const tier of sortedTiers) {
-                  if (totalNum >= tier.minAmount) {
-                    finalRate = tier.rate;
-                    break;
-                  }
-                }
-              }
-            } catch (jsonErr) {
-               console.warn(`[Marketplace] Failed to parse commissionTiers for vendor ${vendor.id}`);
-            }
-          }
-
-          const commissionAmount = totalNum * finalRate;
-
-          if (commissionAmount > 0) {
-            const walletId = vendor.wallet ? vendor.wallet.id : (await prisma.vendorWallet.create({
-              data: { vendorId: vendor.id, balance: 0 }
-            })).id;
-
-            // 1. Create Settlement
-            const settlement = await (prisma as any).marketplaceSettlement.create({
-              data: {
-                orderId: order.id,
-                commissionAmount,
-                isProcessed: true,
-                processedAt: new Date()
-              }
-            });
-
-            // 2. Decrement Balance
-            await prisma.vendorWallet.update({
-              where: { id: walletId },
-              data: { balance: { decrement: commissionAmount } }
-            });
-
-            // 3. Log Wallet Transaction connected to Settlement
-            await (prisma as any).walletTransaction.create({
-              data: {
-                walletId,
-                amount: -commissionAmount, // Deduction
-                type: 'COMMISSION',
-                description: `Commission Marketplace (${(finalRate * 100).toFixed(2)}%) sur commande #${order.id.slice(-6)}`,
-                settlementId: settlement.id
-              }
-            });
-          }
-        }
-      } catch (err) {
-        console.error("Commission processing error on reception:", err);
-      }
-    }
-
     return order;
   }
 
@@ -786,7 +713,7 @@ export class ManagementController {
     // Group by store for top clients
     const clientMap: Record<string, number> = {};
     orders.forEach((o: any) => {
-      const name = o.store?.name || 'Inconnu';
+      const name = o.status === 'PENDING' ? 'Client Masqué' : (o.store?.name || 'Inconnu');
       clientMap[name] = (clientMap[name] || 0) + Number(o.total || 0);
     });
 
@@ -930,7 +857,11 @@ export class ManagementController {
   }
 
   @Get('marketplace/bundles')
-  async getAllMarketplaceBundles(): Promise<any> {
+  async getAllMarketplaceBundles(
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+    @Query('radius') radius?: string,
+  ): Promise<any> {
     const bundles = await (prisma as any).$queryRawUnsafe(`
       SELECT b.*
       FROM "MktBundle" b
@@ -956,18 +887,46 @@ export class ManagementController {
 
     // Fetch details with Prisma for better structure
     const bundleIds = (bundles as any[]).map(b => b.id);
-    return (prisma as any).mktBundle.findMany({
+    const bundleResults = await (prisma as any).mktBundle.findMany({
       where: { id: { in: bundleIds } },
       include: { 
         items: { include: { vendorProduct: { include: { productStandard: true } } } },
-        vendor: { select: { id: true, companyName: true, city: true } }
+        vendor: { select: { id: true, companyName: true, city: true, lat: true, lng: true } }
       },
       orderBy: { createdAt: 'desc' }
     });
+
+    if (lat && lng) {
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lng);
+      const radiusKm = radius ? parseFloat(radius) : 50;
+      
+      const haversine = (lat1: number, lng1: number, lat2: number | null, lng2: number | null): number => {
+        if (lat2 == null || lng2 == null) return 9999;
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLng / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      };
+
+      return bundleResults.filter(b => {
+        const dist = haversine(latitude, longitude, (b.vendor as any)?.lat, (b.vendor as any)?.lng);
+        return dist <= radiusKm || (b.vendor as any)?.lat == null;
+      });
+    }
+
+    return bundleResults;
   }
 
   @Get('marketplace/vendors')
-  async getAllMarketplaceVendors(): Promise<any> {
+  async getAllMarketplaceVendors(
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+    @Query('radius') radius?: string,
+  ): Promise<any> {
     const allVendors = await prisma.vendorProfile.findMany({
       where: {
         status: { not: 'SUSPENDED' },
@@ -1015,6 +974,28 @@ export class ManagementController {
       
       return true;
     });
+
+    if (lat && lng) {
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lng);
+      const radiusKm = radius ? parseFloat(radius) : 50;
+
+      const haversine = (lat1: number, lng1: number, lat2: number | null, lng2: number | null): number => {
+        if (lat2 == null || lng2 == null) return 9999;
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLng / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      };
+
+      return eligibleVendors.filter(v => {
+        const dist = haversine(latitude, longitude, v.lat, v.lng);
+        return dist <= radiusKm || v.lat == null;
+      });
+    }
 
     return eligibleVendors;
   }
@@ -1091,7 +1072,19 @@ export class ManagementController {
       orderBy: { createdAt: 'desc' },
     });
 
-    return orders;
+    return orders.map(order => {
+      if (order.status === 'PENDING') {
+        return {
+          ...order,
+          store: {
+             id: order.store?.id,
+             name: 'Client Masqué (Acceptez pour voir)',
+             city: '*****',
+          }
+        };
+      }
+      return order;
+    });
   }
 
   @UseGuards(MarketplaceAuthGuard)
@@ -1105,13 +1098,96 @@ export class ManagementController {
       throw new Error(`Status '${body.status}' is not vendor-actionable.`);
     }
 
-    const order = await prisma.supplierOrder.update({
+    const order = await prisma.supplierOrder.findUnique({ where: { id } });
+    if (!order) throw new Error("Order not found");
+
+    const previousStatus = order.status;
+
+    const updatedOrder = await prisma.supplierOrder.update({
       where: { id },
       data: { status: body.status as any },
-      include: { items: { include: { stockItem: true } }, store: { select: { id: true, name: true } } }
+      include: { items: { include: { stockItem: true } }, store: { select: { id: true, name: true, city: true } } }
     });
 
-    return order;
+    // 💳 Marketplace Commission Deduction on Acceptance (CONFIRMED)
+    if (body.status === 'CONFIRMED' && previousStatus === 'PENDING' && updatedOrder.vendorId) {
+      try {
+        const vendor = await prisma.vendorProfile.findUnique({
+          where: { id: updatedOrder.vendorId },
+          include: { wallet: true }
+        });
+
+        // Check if settlement already exists to prevent double deduction
+        const existingSettlement = await (prisma as any).marketplaceSettlement.findFirst({
+           where: { orderId: updatedOrder.id }
+        });
+
+        if (vendor && !existingSettlement) {
+          let finalRate = Number(vendor.commissionRate || 0.01);
+          const totalNum = Number(updatedOrder.total || 0);
+
+          if (vendor.commissionTiers) {
+            try {
+              const tiersRaw = typeof vendor.commissionTiers === 'string' 
+                ? JSON.parse(vendor.commissionTiers) 
+                : vendor.commissionTiers;
+              const tiers = Array.isArray(tiersRaw) ? tiersRaw : [];
+              
+              if (tiers.length > 0) {
+                const sortedTiers = tiers.sort((a: any, b: any) => b.minAmount - a.minAmount);
+                for (const tier of sortedTiers) {
+                  if (totalNum >= tier.minAmount) {
+                    finalRate = tier.rate;
+                    break;
+                  }
+                }
+              }
+            } catch (jsonErr) {
+               console.warn(`[Marketplace] Failed to parse commissionTiers for vendor ${vendor.id}`);
+            }
+          }
+
+          const commissionAmount = totalNum * finalRate;
+
+          if (commissionAmount > 0) {
+            const walletId = vendor.wallet ? vendor.wallet.id : (await prisma.vendorWallet.create({
+              data: { vendorId: vendor.id, balance: 0 }
+            })).id;
+
+            // 1. Create Settlement
+            const settlement = await (prisma as any).marketplaceSettlement.create({
+              data: {
+                orderId: updatedOrder.id,
+                commissionAmount,
+                isProcessed: true,
+                processedAt: new Date()
+              }
+            });
+
+            // 2. Decrement Balance
+            await prisma.vendorWallet.update({
+              where: { id: walletId },
+              data: { balance: { decrement: commissionAmount } }
+            });
+
+            // 3. Log Wallet Transaction connected to Settlement
+            await (prisma as any).walletTransaction.create({
+              data: {
+                walletId,
+                amount: -commissionAmount, // Deduction
+                type: 'COMMISSION',
+                description: `Commission Marketplace (${(finalRate * 100).toFixed(2)}%) sur commande #${updatedOrder.id.slice(-6)}`,
+                settlementId: settlement.id
+              }
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Commission processing error on acceptance:", err);
+      }
+    }
+
+    return updatedOrder;
   }
 
   // ═══════════════════════════════════════════════════════════

@@ -221,7 +221,7 @@ export default function TabLayout() {
         options={{
           title: 'RACHMA',
           tabBarIcon: ({ color }) => <TabBarIcon name="bolt" color={color} />,
-          tabBarLabel: 'POS',
+          tabBarLabel: 'Rachma',
           headerShown: false,
           href: hasRachmaAccess ? '/(tabs)/rachma' : null,
         }}
