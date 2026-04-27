@@ -612,7 +612,7 @@ export class ManagementController {
       },
       include: {
         vendor: {
-          select: { id: true, companyName: true, city: true, description: true, lat: true, lng: true, gracePeriodEndsAt: true, wallet: true }
+          include: { wallet: true }
         },
         productStandard: true
       },

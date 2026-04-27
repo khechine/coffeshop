@@ -12,7 +12,7 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<any>(null);
-  const [storeId, setStoreId] = useState('1');
+  const [storeId, setStoreId] = useState<string | null>(null);
   const [activeMgmt, setActiveMgmt] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [appMode, setAppMode] = useState<'RACHMA' | 'FULL'>('FULL');
@@ -45,8 +45,8 @@ export default function DashboardScreen() {
     }, [])
   );
 
-
   const fetchData = async () => {
+    if (!storeId) return;
     try {
       const summary = await ApiService.get(`/management/reports/summary/${storeId}`);
       setData(summary);
@@ -203,124 +203,6 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* ── SECTION: CHARTS (REFINED) ────────────────────────── */}
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Volume des tickets (7 jours)</Text>
-          <View style={styles.chartArea}>
-             <View style={styles.chartBars}>
-                {(stats.weeklyOrderHistory || [0, 0, 0, 1, 0, 3, 2]).map((val: number, i: number) => (
-                  <View key={i} style={styles.barCol}>
-                    <View style={[styles.bar, { height: Math.max(8, val * 25), backgroundColor: '#10b981', opacity: 0.8 }]} />
-                    <Text style={styles.barLabel}>{'Lun,Mar,Mer,Jeu,Ven,Sam,Dim'.split(',')[i]}</Text>
-                  </View>
-                ))}
-             </View>
-             <View style={styles.chartLegend}>
-                <View style={{ backgroundColor: '#10b981', width: 6, height: 6, borderRadius: 3, marginRight: 6 }} />
-                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '600' }}>Nombre de tickets</Text>
-             </View>
-          </View>
-        </View>
-
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Chiffre d'affaires (7 jours)</Text>
-          <View style={styles.chartArea}>
-             <View style={styles.chartBars}>
-                {(stats.weeklySalesHistory || [100, 250, 150, 420, 300, 580, 425]).map((val: any, i: number) => {
-                  const numVal = typeof val === 'object' ? val.total : val;
-                  const maxVal = Math.max(...(stats.weeklySalesHistory?.map((h:any) => typeof h === 'object' ? h.total : h) || [600]));
-                  return (
-                    <View key={i} style={styles.barCol}>
-                      <View style={[styles.bar, { height: Math.max(8, (numVal / maxVal) * 100), backgroundColor: '#6366f1', opacity: 0.8 }]} />
-                      <Text style={styles.barLabel}>{'L,M,M,J,V,S,D'.split(',')[i]}</Text>
-                    </View>
-                  );
-                })}
-             </View>
-          </View>
-        </View>
-
-        {/* ── SECTION: ANALYTIQUES AVANCÉES (OWNER) ───────────── */}
-        {isOwner && (
-          <View style={{ marginTop: 10, marginBottom: 20 }}>
-            <Text style={styles.sectionTitle}>Analyse Détaillée</Text>
-            
-            {/* Profit Net Banner */}
-            <View style={[styles.profitBanner, {
-              backgroundColor: stats.netProfit >= 0 ? 'rgba(16,185,129,0.05)' : 'rgba(239,68,68,0.05)',
-              borderColor: stats.netProfit >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-              marginTop: 10,
-            }]}>
-              <View style={{ backgroundColor: 'transparent' }}>
-                <Text style={styles.profitLabel}>Profit Net Estimé</Text>
-                <Text style={[styles.profitValue, { color: stats.netProfit >= 0 ? Colors.primary : Colors.danger }]}>
-                  {fmtMoney(stats.netProfit ?? stats.totalSales - stats.totalExpenses)} DT
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: 'transparent' }}>
-                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: stats.netProfit >= 0 ? Colors.primary : Colors.danger, marginRight: 6 }} />
-                   <Text style={[styles.profitSub, { color: '#94a3b8' }]}>Marge: {stats.totalSales > 0 ? ((1 - stats.totalExpenses/stats.totalSales)*100).toFixed(0) : 0}%</Text>
-                </View>
-              </View>
-              <FontAwesome
-                name={stats.netProfit >= 0 ? 'line-chart' : 'warning'}
-                size={32}
-                color={stats.netProfit >= 0 ? Colors.primary : Colors.danger}
-                style={{ opacity: 0.5 }}
-              />
-            </View>
-
-            {/* Top Stats Scrollable list or Grid */}
-            <View style={{ gap: 12 }}>
-                {stats.topStaff?.length > 0 && (
-                  <View style={[styles.analyticsCard, styles.glassCard]}>
-                    <View style={styles.analyticsHeader}>
-                      <Text style={styles.analyticsTitle}>Performance Staff</Text>
-                    </View>
-                    {(stats.topStaff || [
-                      { name: 'Haythem', revenue: 992.8 },
-                      { name: 'Ali', revenue: 290.5 },
-                    ]).slice(0, 3).map((s: any, i: number) => (
-                      <View key={i} style={[styles.rankRow, i === 2 && { borderBottomWidth: 0 }]}>
-                        <View style={[styles.rankNumBox, { backgroundColor: i === 0 ? 'rgba(16,185,129,0.1)' : 'transparent' }]}>
-                          <Text style={[styles.rankNum, i === 0 && { color: Colors.primary }]}>{i + 1}</Text>
-                        </View>
-                        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                          <Text style={styles.rankName}>{s.name}</Text>
-                          <Text style={styles.rankSub}>{fmtMoney(s.revenue)} DT</Text>
-                        </View>
-                        {i === 0 && <FontAwesome name="trophy" size={14} color="#fbbf24" />}
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {(stats.topProducts?.length > 0 || true) && (
-                  <View style={[styles.analyticsCard, styles.glassCard]}>
-                    <View style={styles.analyticsHeader}>
-                      <Text style={styles.analyticsTitle}>Meilleurs Produits</Text>
-                    </View>
-                    {(stats.topProducts?.length ? stats.topProducts : [
-                      { name: 'Americano', qty: 128, revenue: 448.0 },
-                      { name: 'Café crème', qty: 68, revenue: 204.0 },
-                      { name: 'Cappuccino', qty: 51, revenue: 222.5 },
-                    ]).slice(0, 3).map((p: any, i: number) => (
-                      <View key={i} style={[styles.rankRow, i === 2 && { borderBottomWidth: 0 }]}>
-                        <Text style={styles.rankNum}>{i + 1}</Text>
-                        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                          <Text style={styles.rankName}>{p.name}</Text>
-                          <Text style={styles.rankSub}>{fmtMoney(p.revenue)} DT CA</Text>
-                        </View>
-                        <View style={styles.rankBadge}>
-                          <Text style={styles.rankBadgeText}>{p.qty} ventes</Text>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
-            </View>
-          </View>
-        )}
-
         {/* ── SECTION: CENTRE DE GESTION ───────────────────────── */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
           <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Centre de Gestion</Text>
@@ -433,6 +315,125 @@ export default function DashboardScreen() {
             </>
           )}
         </View>
+        {/* ── SECTION: CHARTS (REFINED) ────────────────────────── */}
+        <View style={styles.chartContainer}>
+          <Text style={styles.chartTitle}>Volume des tickets (7 jours)</Text>
+          <View style={styles.chartArea}>
+             <View style={styles.chartBars}>
+                {(stats.weeklyOrderHistory || [0, 0, 0, 0, 0, 0, 0]).map((val: number, i: number) => (
+                  <View key={i} style={styles.barCol}>
+                    <View style={[styles.bar, { height: Math.max(8, val * 25), backgroundColor: '#10b981', opacity: 0.8 }]} />
+                    <Text style={styles.barLabel}>{'Lun,Mar,Mer,Jeu,Ven,Sam,Dim'.split(',')[i]}</Text>
+                  </View>
+                ))}
+             </View>
+             <View style={styles.chartLegend}>
+                <View style={{ backgroundColor: '#10b981', width: 6, height: 6, borderRadius: 3, marginRight: 6 }} />
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '600' }}>Nombre de tickets</Text>
+             </View>
+          </View>
+        </View>
+
+        <View style={styles.chartContainer}>
+          <Text style={styles.chartTitle}>Chiffre d'affaires (7 jours)</Text>
+          <View style={styles.chartArea}>
+             <View style={styles.chartBars}>
+                {(stats.weeklySalesHistory || [0, 0, 0, 0, 0, 0, 0]).map((val: any, i: number) => {
+                  const numVal = typeof val === 'object' ? val.total : val;
+                  const maxVal = Math.max(...(stats.weeklySalesHistory?.map((h:any) => typeof h === 'object' ? h.total : h) || [100]));
+                  return (
+                    <View key={i} style={styles.barCol}>
+                      <View style={[styles.bar, { height: Math.max(8, (numVal / maxVal) * 100), backgroundColor: '#6366f1', opacity: 0.8 }]} />
+                      <Text style={styles.barLabel}>{'L,M,M,J,V,S,D'.split(',')[i]}</Text>
+                    </View>
+                  );
+                })}
+             </View>
+          </View>
+        </View>
+
+        {/* ── SECTION: ANALYTIQUES AVANCÉES (OWNER) ───────────── */}
+        {isOwner && (
+          <View style={{ marginTop: 10, marginBottom: 20 }}>
+            <Text style={styles.sectionTitle}>Analyse Détaillée</Text>
+            
+            {/* Profit Net Banner */}
+            <View style={[styles.profitBanner, {
+              backgroundColor: stats.netProfit >= 0 ? 'rgba(16,185,129,0.05)' : 'rgba(239,68,68,0.05)',
+              borderColor: stats.netProfit >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+              marginTop: 10,
+            }]}>
+              <View style={{ backgroundColor: 'transparent' }}>
+                <Text style={styles.profitLabel}>Profit Net Estimé</Text>
+                <Text style={[styles.profitValue, { color: stats.netProfit >= 0 ? Colors.primary : Colors.danger }]}>
+                  {fmtMoney(stats.netProfit ?? stats.totalSales - stats.totalExpenses)} DT
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: 'transparent' }}>
+                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: stats.netProfit >= 0 ? Colors.primary : Colors.danger, marginRight: 6 }} />
+                   <Text style={[styles.profitSub, { color: '#94a3b8' }]}>Marge: {stats.totalSales > 0 ? ((1 - stats.totalExpenses/stats.totalSales)*100).toFixed(0) : 0}%</Text>
+                </View>
+              </View>
+              <FontAwesome
+                name={stats.netProfit >= 0 ? 'line-chart' : 'warning'}
+                size={32}
+                color={stats.netProfit >= 0 ? Colors.primary : Colors.danger}
+                style={{ opacity: 0.5 }}
+              />
+            </View>
+
+            {/* Top Stats Scrollable list or Grid */}
+            <View style={{ gap: 12 }}>
+                {stats.topStaff?.length > 0 && (
+                  <View style={[styles.analyticsCard, styles.glassCard]}>
+                    <View style={styles.analyticsHeader}>
+                      <Text style={styles.analyticsTitle}>Performance Staff</Text>
+                    </View>
+                    {stats.topStaff?.length > 0 ? (
+                      stats.topStaff.slice(0, 3).map((s: any, i: number) => (
+                        <View key={i} style={[styles.rankRow, i === 2 && { borderBottomWidth: 0 }]}>
+                          <View style={[styles.rankNumBox, { backgroundColor: i === 0 ? 'rgba(16,185,129,0.1)' : 'transparent' }]}>
+                            <Text style={[styles.rankNum, i === 0 && { color: Colors.primary }]}>{i + 1}</Text>
+                          </View>
+                          <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                            <Text style={styles.rankName}>{s.name}</Text>
+                            <Text style={styles.rankSub}>{fmtMoney(s.revenue)} DT</Text>
+                          </View>
+                          {i === 0 && <FontAwesome name="trophy" size={14} color="#fbbf24" />}
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: 20 }}>Pas encore de ventes staff</Text>
+                    )}
+                  </View>
+                )}
+
+                {(stats.topProducts?.length > 0 || true) && (
+                  <View style={[styles.analyticsCard, styles.glassCard]}>
+                    <View style={styles.analyticsHeader}>
+                      <Text style={styles.analyticsTitle}>Meilleurs Produits</Text>
+                    </View>
+                    {stats.topProducts?.length > 0 ? (
+                      stats.topProducts.slice(0, 3).map((p: any, i: number) => (
+                        <View key={i} style={[styles.rankRow, i === 2 && { borderBottomWidth: 0 }]}>
+                          <Text style={styles.rankNum}>{i + 1}</Text>
+                          <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                            <Text style={styles.rankName}>{p.name}</Text>
+                            <Text style={styles.rankSub}>{fmtMoney(p.revenue)} DT CA</Text>
+                          </View>
+                          <View style={styles.rankBadge}>
+                            <Text style={styles.rankBadgeText}>{p.qty} ventes</Text>
+                          </View>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: 20 }}>Aucune donnée aujourd'hui</Text>
+                    )}
+                  </View>
+                )}
+            </View>
+          </View>
+        )}
+
 
 
 
@@ -488,7 +489,7 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 20,
-    paddingTop: 10,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30, // raised to move menu higher
     paddingBottom: 120,
   },
   header: {

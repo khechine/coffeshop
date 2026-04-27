@@ -250,6 +250,7 @@ export default function TabLayout() {
           title: 'Dashboard',
           tabBarLabel: 'Finance',
           tabBarIcon: ({ color }) => <TabBarIcon name="line-chart" color={color} />,
+          headerShown: false,
           href: hasManagementAccess ? '/(tabs)' : null,
         }}
       />
