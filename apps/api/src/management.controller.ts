@@ -1123,7 +1123,10 @@ export class ManagementController {
         });
 
         if (vendor && !existingSettlement) {
-          let finalRate = Number(vendor.commissionRate || 0.01);
+          let finalRate = Number(vendor.commissionRate);
+          if (isNaN(finalRate) || finalRate === 0) {
+            finalRate = 0.01;
+          }
           const totalNum = Number(updatedOrder.total || 0);
 
           if (vendor.commissionTiers) {
