@@ -607,42 +607,28 @@ export class ManagementController {
         ...(vendorId ? { vendorId } : {}),
         vendor: {
           status: { not: 'SUSPENDED' },
-          OR: [
-            { wallet: { balance: { gte: 0 } } },
-            {
-              AND: [
-                { gracePeriodEndsAt: { gt: new Date() } },
-              ]
-            },
-            { gracePeriodEndsAt: null, wallet: { is: null } }, // No billing setup yet
-          ]
+          // Note: Full billing check is done in memory below to handle gracePeriod and order counts accurately
         }
       },
       include: {
         vendor: {
-          select: { id: true, companyName: true, city: true, description: true, lat: true, lng: true }
+          select: { id: true, companyName: true, city: true, description: true, lat: true, lng: true, gracePeriodEndsAt: true, wallet: true }
         },
         productStandard: true
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    // Filter by order count for grace period vendors (can't do in Prisma without raw SQL)
     const now = new Date();
     const vendorOrderCounts = new Map<string, number>();
 
-    // For any vendor in grace period, check their order count
-    const gracePeriodVendorIds = [...new Set(
-      allProducts
-        .filter(p => (p.vendor as any).wallet == null || true) // check all to be safe
-        .map(p => p.vendorId)
-    )];
-
-    if (gracePeriodVendorIds.length > 0) {
+    // 1. Pre-calculate order counts for vendors who might be in grace period
+    const potentialGraceVendors = [...new Set(allProducts.map(p => p.vendorId))];
+    if (potentialGraceVendors.length > 0) {
       const recentOrders = await prisma.supplierOrder.groupBy({
         by: ['vendorId'],
         where: {
-          vendorId: { in: gracePeriodVendorIds },
+          vendorId: { in: potentialGraceVendors },
           status: { not: 'CANCELLED' }
         },
         _count: { id: true }
@@ -650,25 +636,47 @@ export class ManagementController {
       recentOrders.forEach(o => vendorOrderCounts.set(o.vendorId, o._count.id));
     }
 
+    // 2. Filter products based on vendor billing status
+    const eligibleProducts = allProducts.filter(p => {
+      const v = p.vendor as any;
+      const balance = Number(v.wallet?.balance || 0);
+      const isNegative = balance < 0;
+      const hasWallet = !!v.wallet;
+      
+      // If balance is healthy, they are visible
+      if (balance >= 0) return true;
+      
+      // If negative, check grace period and order limits
+      const graceExpired = v.gracePeriodEndsAt ? new Date(v.gracePeriodEndsAt) < now : true;
+      const orderCount = vendorOrderCounts.get(v.id) || 0;
+      
+      // Hidden if negative AND (grace expired OR limit reached)
+      if (isNegative && (graceExpired || orderCount >= 2)) {
+        return false;
+      }
+      
+      return true;
+    });
+
     // For products with proximity, sort and filter by distance
     if (lat && lng) {
       const latitude = parseFloat(lat);
       const longitude = parseFloat(lng);
       const radiusKm = radius ? parseFloat(radius) : 50;
 
-      const withDistance = allProducts
+      const withDistance = eligibleProducts
         .map(p => ({
           ...p,
           distance: haversine(latitude, longitude, (p.vendor as any).lat, (p.vendor as any).lng)
         }))
-        .filter(p => p.distance <= radiusKm)
+        .filter(p => p.distance <= radiusKm || (p.vendor as any).lat == null) // Include those without coordinates
         .sort((a, b) => a.distance - b.distance)
         .slice(skipNum, skipNum + takeNum);
 
       return withDistance;
     }
 
-    return allProducts.slice(skipNum, skipNum + takeNum);
+    return eligibleProducts.slice(skipNum, skipNum + takeNum);
   }
 
   @UseGuards(MarketplaceAuthGuard)
@@ -944,11 +952,6 @@ export class ManagementController {
     const allVendors = await prisma.vendorProfile.findMany({
       where: {
         status: { not: 'SUSPENDED' },
-        OR: [
-          { wallet: { balance: { gte: 0 } } },
-          { gracePeriodEndsAt: { gt: new Date() } },
-          { gracePeriodEndsAt: null, wallet: { is: null } },
-        ]
       },
       include: { 
         wallet: true,
@@ -961,14 +964,14 @@ export class ManagementController {
     const now = new Date();
     const vendorOrderCounts = new Map<string, number>();
 
-    const gracePeriodVendorIds = allVendors.map(v => v.id);
+    const potentialGraceVendors = allVendors.map(v => v.id);
 
-    if (gracePeriodVendorIds.length > 0) {
+    if (potentialGraceVendors.length > 0) {
       const recentOrders = await prisma.supplierOrder.groupBy({
         by: ['vendorId'],
         where: {
-          vendorId: { in: gracePeriodVendorIds },
-          createdAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) }
+          vendorId: { in: potentialGraceVendors },
+          status: { not: 'CANCELLED' }
         },
         _count: { id: true }
       });
@@ -976,13 +979,22 @@ export class ManagementController {
     }
 
     const eligibleVendors = allVendors.filter(v => {
-      const wallet = (v as any).wallet;
-      if (!wallet || wallet.balance >= 0) return true;
-      if (v.gracePeriodEndsAt && new Date(v.gracePeriodEndsAt) > now) {
-        const orderCount = vendorOrderCounts.get(v.id) || 0;
-        return orderCount < 2;
+      const balance = Number(v.wallet?.balance || 0);
+      const isNegative = balance < 0;
+      
+      // If balance is healthy, they are visible
+      if (balance >= 0) return true;
+      
+      // If negative, check grace period and order limits
+      const graceExpired = v.gracePeriodEndsAt ? new Date(v.gracePeriodEndsAt) < now : true;
+      const orderCount = vendorOrderCounts.get(v.id) || 0;
+      
+      // Hidden if negative AND (grace expired OR limit reached)
+      if (isNegative && (graceExpired || orderCount >= 2)) {
+        return false;
       }
-      return false;
+      
+      return true;
     });
 
     return eligibleVendors;
