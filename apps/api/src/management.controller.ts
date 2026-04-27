@@ -1365,4 +1365,23 @@ export class ManagementController {
       });
     }
   }
+
+  @Post('vendor/deposit-request')
+  async createDepositRequest(@Body() body: {
+    vendorId: string;
+    amount: number;
+    proofImage?: string;
+  }): Promise<any> {
+    if (!body.vendorId || !body.amount) {
+      throw new BadRequestException('ID vendeur et montant requis');
+    }
+    return (prisma as any).walletDepositRequest.create({
+      data: {
+        vendorId: body.vendorId,
+        amount: body.amount,
+        proofImage: body.proofImage,
+        status: 'PENDING'
+      }
+    });
+  }
 }
