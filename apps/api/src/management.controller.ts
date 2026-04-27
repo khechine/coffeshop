@@ -589,94 +589,86 @@ export class ManagementController {
     const skipNum = skip ? Number(skip) : 0;
     const takeNum = take ? Number(take) : 50;
 
-    // 📍 If location is provided, use Raw SQL for Proximity Sorting (Haversine)
+    // Helper: Haversine distance in km
+    const haversine = (lat1: number, lng1: number, lat2: number | null, lng2: number | null): number => {
+      if (lat2 == null || lng2 == null) return 9999;
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    // Fetch all eligible products with Prisma
+    const allProducts = await prisma.vendorProduct.findMany({
+      where: {
+        ...(vendorId ? { vendorId } : {}),
+        vendor: {
+          status: { not: 'SUSPENDED' },
+          OR: [
+            { wallet: { balance: { gte: 0 } } },
+            {
+              AND: [
+                { gracePeriodEndsAt: { gt: new Date() } },
+              ]
+            },
+            { gracePeriodEndsAt: null, wallet: { is: null } }, // No billing setup yet
+          ]
+        }
+      },
+      include: {
+        vendor: {
+          select: { id: true, companyName: true, city: true, description: true, lat: true, lng: true }
+        },
+        productStandard: true
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Filter by order count for grace period vendors (can't do in Prisma without raw SQL)
+    const now = new Date();
+    const vendorOrderCounts = new Map<string, number>();
+
+    // For any vendor in grace period, check their order count
+    const gracePeriodVendorIds = [...new Set(
+      allProducts
+        .filter(p => (p.vendor as any).wallet == null || true) // check all to be safe
+        .map(p => p.vendorId)
+    )];
+
+    if (gracePeriodVendorIds.length > 0) {
+      const recentOrders = await prisma.supplierOrder.groupBy({
+        by: ['vendorId'],
+        where: {
+          vendorId: { in: gracePeriodVendorIds },
+          status: { not: 'CANCELLED' }
+        },
+        _count: { id: true }
+      });
+      recentOrders.forEach(o => vendorOrderCounts.set(o.vendorId, o._count.id));
+    }
+
+    // For products with proximity, sort and filter by distance
     if (lat && lng) {
       const latitude = parseFloat(lat);
       const longitude = parseFloat(lng);
-      const rad = radius ? parseFloat(radius) : null;
+      const radiusKm = radius ? parseFloat(radius) : 50;
 
-      try {
-        // Raw SQL for distance calculation
-        const products = await (prisma as any).$queryRawUnsafe(`
-          SELECT 
-            vp.*,
-            v.id as "vendorId",
-            v."companyName" as "vendorName",
-            v.city as "vendorCity",
-            (6371 * acos(
-              cos(radians($1)) * cos(radians(v.lat)) * 
-              cos(radians(v.lng) - radians($2)) + 
-              sin(radians($1)) * sin(radians(v.lat))
-            )) AS distance
-          FROM "VendorProduct" vp
-          JOIN "VendorProfile" v ON vp."vendorId" = v.id
-          LEFT JOIN "VendorWallet" vw ON vw."vendorId" = v.id
-          WHERE 
-            v.status != 'SUSPENDED'
-            AND (
-              vw.balance >= 0 
-              OR (
-                v."gracePeriodEndsAt" > NOW()
-                AND (
-                  SELECT COUNT(*) FROM "SupplierOrder" so 
-                  WHERE so."vendorId" = v.id 
-                  AND so.status != 'CANCELLED'
-                  AND so."createdAt" > COALESCE(v."lastBillingAlertAt", v."createdAt")
-                ) < 2
-              )
-            )
-            ${vendorId ? `AND vp."vendorId" = $4` : ''}
-            AND (
-              $3::float IS NULL OR 
-              (6371 * acos(
-                cos(radians($1)) * cos(radians(v.lat)) * 
-                cos(radians(v.lng) - radians($2)) + 
-                sin(radians($1)) * sin(radians(v.lat))
-              )) <= $3
-            )
-          ORDER BY distance ASC, vp."createdAt" DESC
-          LIMIT $5 OFFSET $6
-        `, latitude, longitude, rad, vendorId, takeNum, skipNum);
+      const withDistance = allProducts
+        .map(p => ({
+          ...p,
+          distance: haversine(latitude, longitude, (p.vendor as any).lat, (p.vendor as any).lng)
+        }))
+        .filter(p => p.distance <= radiusKm)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(skipNum, skipNum + takeNum);
 
-        return products;
-      } catch (err) {
-        console.error("Proximity search error:", err);
-        // Fallback to standard query on error
-      }
+      return withDistance;
     }
 
-    try {
-      const products = await (prisma as any).$queryRawUnsafe(`
-        SELECT 
-          vp.*,
-          v.id as "vendorId",
-          v."companyName" as "vendorName",
-          v.city as "vendorCity"
-        FROM "VendorProduct" vp
-        JOIN "VendorProfile" v ON vp."vendorId" = v.id
-        LEFT JOIN "VendorWallet" vw ON vw."vendorId" = v.id
-        WHERE 
-          v.status != 'SUSPENDED'
-          AND (
-            vw.balance >= 0 
-            OR v."gracePeriodEndsAt" > NOW()
-            OR (
-              SELECT COUNT(*) FROM "SupplierOrder" so 
-              WHERE so."vendorId" = v.id 
-              AND so.status != 'CANCELLED'
-              AND so."createdAt" > COALESCE(v."lastBillingAlertAt", v."createdAt")
-            ) < 2
-          )
-          ${vendorId ? `AND vp."vendorId" = $1` : ''}
-        ORDER BY vp."createdAt" DESC
-        LIMIT $2 OFFSET $3
-      `, ...(vendorId ? [vendorId, takeNum, skipNum] : [takeNum, skipNum]));
-
-      return products;
-    } catch (err) {
-      console.error("Marketplace standard search error:", err);
-      throw err;
-    }
+    return allProducts.slice(skipNum, skipNum + takeNum);
   }
 
   @UseGuards(MarketplaceAuthGuard)
@@ -912,33 +904,38 @@ export class ManagementController {
 
   @Get('marketplace/bundles')
   async getAllMarketplaceBundles(): Promise<any> {
+    const bundles = await (prisma as any).$queryRawUnsafe(`
+      SELECT b.*
+      FROM "MktBundle" b
+      JOIN "VendorProfile" v ON b."vendorId" = v.id
+      LEFT JOIN "VendorWallet" vw ON vw."vendorId" = v.id
+      WHERE 
+        b."isActive" = true
+        AND v.status != 'SUSPENDED'
+        AND (
+          vw.balance >= 0 
+          OR (
+            v."gracePeriodEndsAt" > NOW()
+            AND (
+              SELECT COUNT(*) FROM "SupplierOrder" so 
+              WHERE so."vendorId" = v.id 
+              AND so.status != 'CANCELLED'
+              AND so."createdAt" > COALESCE(v."lastBillingAlertAt", v."createdAt")
+            ) < 2
+          )
+        )
+      ORDER BY b."createdAt" DESC
+    `);
+
+    // Fetch details with Prisma for better structure
+    const bundleIds = (bundles as any[]).map(b => b.id);
     return (prisma as any).mktBundle.findMany({
-      where: {
-        isActive: true,
-        vendor: {
-          status: { not: 'SUSPENDED' },
-          OR: [
-            { wallet: { balance: { gte: 0 } } },
-            { 
-              AND: [
-                { gracePeriodEndsAt: { gt: new Date() } },
-                { lastBillingAlertAt: { lt: new Date() } } // This part is tricky with prisma count
-              ]
-            }
-          ]
-        }
-      },
+      where: { id: { in: bundleIds } },
       include: { 
         items: { include: { vendorProduct: { include: { productStandard: true } } } },
-        vendor: { 
-          include: {
-            wallet: true,
-            _count: {
-              select: { orders: { where: { status: { not: 'CANCELLED' } } } }
-            }
-          }
-        }
-      }
+        vendor: { select: { id: true, companyName: true, city: true } }
+      },
+      orderBy: { createdAt: 'desc' }
     });
   }
 
