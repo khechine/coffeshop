@@ -941,13 +941,51 @@ export class ManagementController {
 
   @Get('marketplace/vendors')
   async getAllMarketplaceVendors(): Promise<any> {
-    return (prisma as any).vendorProfile.findMany({
+    const allVendors = await prisma.vendorProfile.findMany({
+      where: {
+        status: { not: 'SUSPENDED' },
+        OR: [
+          { wallet: { balance: { gte: 0 } } },
+          { gracePeriodEndsAt: { gt: new Date() } },
+          { gracePeriodEndsAt: null, wallet: { is: null } },
+        ]
+      },
       include: { 
+        wallet: true,
         mktSectors: true,
         _count: { select: { vendorProducts: true } }
       },
       orderBy: { companyName: 'asc' }
     });
+
+    const now = new Date();
+    const vendorOrderCounts = new Map<string, number>();
+
+    const gracePeriodVendorIds = allVendors.map(v => v.id);
+
+    if (gracePeriodVendorIds.length > 0) {
+      const recentOrders = await prisma.mktOrder.groupBy({
+        by: ['vendorId'],
+        where: {
+          vendorId: { in: gracePeriodVendorIds },
+          createdAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) }
+        },
+        _count: { id: true }
+      });
+      recentOrders.forEach(ro => vendorOrderCounts.set(ro.vendorId, ro._count.id));
+    }
+
+    const eligibleVendors = allVendors.filter(v => {
+      const wallet = (v as any).wallet;
+      if (!wallet || wallet.balance >= 0) return true;
+      if (v.gracePeriodEndsAt && new Date(v.gracePeriodEndsAt) > now) {
+        const orderCount = vendorOrderCounts.get(v.id) || 0;
+        return orderCount < 2;
+      }
+      return false;
+    });
+
+    return eligibleVendors;
   }
 
   @UseGuards(MarketplaceAuthGuard)

@@ -91,29 +91,6 @@ export default function TabLayout() {
     const isMarketplace = segs.includes('marketplace');
     const isDashboard = segs.length <= 1 || (!segs.includes('pos') && !segs.includes('tables') && !segs.includes('rachma') && !segs.includes('stocks') && !segs.includes('marketplace'));
 
-    if (isMarketplace) {
-      return (
-        <View style={{ backgroundColor: 'transparent' }}>
-          <View style={styles.modalHeader}>
-            <FontAwesome name="map-marker" size={24} color={Colors.primary} />
-            <Text style={styles.modalTitle}>Rayon de Recherche</Text>
-          </View>
-          <Text style={styles.modalSub}>Définissez la distance maximale pour trouver des vendeurs.</Text>
-          
-          <View style={styles.radiusContainer}>
-            {[5, 10, 20, 50, 100, 200, 500].map((r) => (
-              <TouchableOpacity 
-                key={r} 
-                style={[styles.radiusBtn, radius === r && styles.radiusBtnActive]}
-                onPress={() => updateRadius(r)}
-              >
-                <Text style={[styles.radiusText, radius === r && { color: '#fff' }]}>{r}km</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      );
-    }
 
     if (isDashboard) {
       return (
