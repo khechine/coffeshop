@@ -70,7 +70,7 @@ export default function MarketplaceScreen() {
   const [storeId, setStoreId] = useState<string | null>(null);
 
   // 📍 Location & Radius
-  const [radius, setRadius] = useState<number>(50); // Rayon par défaut: 50km
+  const [radius, setRadius] = useState<number>(5); // Rayon par défaut: 5km
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -90,8 +90,19 @@ export default function MarketplaceScreen() {
   const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0);
   const cartTotal = cartItems.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  const fetchLocation = async () => {
+  const fetchLocation = async (sId?: string) => {
     try {
+      // Priorité 1: Position du Coffee Shop (depuis le serveur)
+      if (sId) {
+        const store = await ApiService.get(`/management/stores/${sId}`);
+        if (store?.lat && store?.lng) {
+          const storeCoords = { lat: parseFloat(store.lat), lng: parseFloat(store.lng) };
+          setLocation(storeCoords);
+          return storeCoords;
+        }
+      }
+
+      // Priorité 2: Position GPS du terminal (fallback)
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
           console.warn('Location permission denied');
@@ -133,9 +144,10 @@ export default function MarketplaceScreen() {
 
   useEffect(() => { 
     const init = async () => {
-      const loc = await fetchLocation();
+      const session = await AuthService.getSession();
+      setStoreId(session.storeId);
+      const loc = await fetchLocation(session.storeId || undefined);
       fetchData(loc || undefined);
-      AuthService.getSession().then(s => setStoreId(s.storeId));
     };
     init();
   }, []);

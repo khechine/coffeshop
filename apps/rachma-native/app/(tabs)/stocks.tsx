@@ -741,7 +741,10 @@ export default function StocksScreen() {
                     <Text style={styles.modalTitle}>Quantité par portion</Text>
                     <TouchableOpacity onPress={() => { setIngredientQtyModalVisible(false); setAddingIngredient(true); }}><FontAwesome name="times" size={20} color="#fff" /></TouchableOpacity>
                 </View>
-                <View style={{ padding: 25 }}>
+                <ScrollView 
+                  contentContainerStyle={{ padding: 25 }}
+                  keyboardShouldPersistTaps="handled"
+                >
                     <Text style={{ color: '#fff', fontSize: 16, marginBottom: 15 }}>
                         Combien de <Text style={{ color: Colors.primary, fontWeight: 'bold' }}>{selectedIngredientForQty?.name}</Text> ({selectedIngredientForQty?.unit?.name || selectedIngredientForQty?.unit || 'UN'}) est utilisé pour une portion de {formName} ?
                     </Text>
@@ -771,7 +774,7 @@ export default function StocksScreen() {
                     >
                         <Text style={styles.saveBtnText}>Ajouter l'ingrédient</Text>
                     </TouchableOpacity>
-                </View>
+                </ScrollView>
             </View>
         </View>
       </Modal>

@@ -119,9 +119,9 @@ export const AuthService = {
   async getSearchRadius(): Promise<number> {
     try {
       const r = await storage.getItem(RADIUS_KEY);
-      return r ? parseInt(r) : 50; // default 50km
+      return r ? parseInt(r) : 5; // default 5km
     } catch (e) {
-      return 50;
+      return 5;
     }
   },
 

@@ -110,6 +110,20 @@ export class ManagementController {
 
 
   // Categories helper
+  @Get('stores/:id')
+  async getStore(@Param('id') id: string) {
+    return prisma.store.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        lat: true,
+        lng: true,
+        preferredSearchRadius: true,
+      }
+    });
+  }
+
   @Get('categories/:storeId')
   async getCategories(@Param('storeId') storeId: string): Promise<any> {
     return prisma.category.findMany({ 
