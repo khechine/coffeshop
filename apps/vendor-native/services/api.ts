@@ -21,13 +21,13 @@ export const ApiService = {
       const response = await fetch(`${BASE_URL}${endpoint}`, {
         headers
       });
-      const data = await response.json().catch(() => null);
       if (!response.ok) {
+        const data = await response.json().catch(() => null);
         throw new Error(data?.message || data?.error || `HTTP error! status: ${response.status}`);
       }
-      return data;
+      return await response.json();
     } catch (error) {
-      console.error(`ApiService.get(${endpoint}) failed:`, error);
+      console.error(`ApiService.get(${BASE_URL}${endpoint}) failed:`, error);
       throw error;
     }
   },

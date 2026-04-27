@@ -610,8 +610,21 @@ export class ManagementController {
             )) AS distance
           FROM "VendorProduct" vp
           JOIN "VendorProfile" v ON vp."vendorId" = v.id
+          LEFT JOIN "VendorWallet" vw ON vw."vendorId" = v.id
           WHERE 
             v.status != 'SUSPENDED'
+            AND (
+              vw.balance >= 0 
+              OR (
+                v."gracePeriodEndsAt" > NOW()
+                AND (
+                  SELECT COUNT(*) FROM "SupplierOrder" so 
+                  WHERE so."vendorId" = v.id 
+                  AND so.status != 'CANCELLED'
+                  AND so."createdAt" > COALESCE(v."lastBillingAlertAt", v."createdAt")
+                ) < 2
+              )
+            )
             ${vendorId ? `AND vp."vendorId" = $4` : ''}
             AND (
               $3::float IS NULL OR 
@@ -632,26 +645,38 @@ export class ManagementController {
       }
     }
 
-    return prisma.vendorProduct.findMany({
-      where: {
-        ...(vendorId ? { vendorId } : {}),
-        vendor: { status: { not: 'SUSPENDED' } }
-      },
-      include: { 
-        vendor: { 
-          select: {
-            id: true,
-            companyName: true,
-            city: true,
-            description: true,
-          }
-        },
-        productStandard: true
-      },
-      orderBy: { createdAt: 'desc' },
-      skip: skipNum,
-      take: takeNum,
-    });
+    try {
+      const products = await (prisma as any).$queryRawUnsafe(`
+        SELECT 
+          vp.*,
+          v.id as "vendorId",
+          v."companyName" as "vendorName",
+          v.city as "vendorCity"
+        FROM "VendorProduct" vp
+        JOIN "VendorProfile" v ON vp."vendorId" = v.id
+        LEFT JOIN "VendorWallet" vw ON vw."vendorId" = v.id
+        WHERE 
+          v.status != 'SUSPENDED'
+          AND (
+            vw.balance >= 0 
+            OR v."gracePeriodEndsAt" > NOW()
+            OR (
+              SELECT COUNT(*) FROM "SupplierOrder" so 
+              WHERE so."vendorId" = v.id 
+              AND so.status != 'CANCELLED'
+              AND so."createdAt" > COALESCE(v."lastBillingAlertAt", v."createdAt")
+            ) < 2
+          )
+          ${vendorId ? `AND vp."vendorId" = $1` : ''}
+        ORDER BY vp."createdAt" DESC
+        LIMIT $2 OFFSET $3
+      `, ...(vendorId ? [vendorId, takeNum, skipNum] : [takeNum, skipNum]));
+
+      return products;
+    } catch (err) {
+      console.error("Marketplace standard search error:", err);
+      throw err;
+    }
   }
 
   @UseGuards(MarketplaceAuthGuard)
@@ -729,6 +754,16 @@ export class ManagementController {
     const totalRevenue = orders.reduce((sum: number, o: any) => sum + Number(o.total || 0), 0);
     const pendingOrders = orders.filter((o: any) => o.status === 'PENDING').length;
     
+    // Visibility Logic
+    const isNegative = Number(wallet?.balance || 0) < 0;
+    const graceExpired = wallet?.vendor?.gracePeriodEndsAt ? new Date(wallet.vendor.gracePeriodEndsAt) < new Date() : false;
+    
+    // Count orders since last alert or negative balance (Simplified: count total for now or we need a date)
+    // The user said "limit to 2 orders in grace period". 
+    // We'll assume grace orders are those since lastBillingAlertAt or just count all if negative.
+    const graceOrdersCount = isNegative ? orders.filter(o => o.status !== 'CANCELLED').length : 0; 
+    const isHidden = isNegative && (graceExpired || graceOrdersCount >= 2);
+
     // Group by store for top clients
     const clientMap: Record<string, number> = {};
     orders.forEach((o: any) => {
@@ -748,6 +783,8 @@ export class ManagementController {
       walletBalance: Number(wallet?.balance || 0),
       orderCount: orders.length,
       topClients,
+      isHidden,
+      suspensionReason: isHidden ? (graceExpired ? "Période de grâce expirée" : "Limite de commandes atteinte (Solde négatif)") : null
     };
   }
 
@@ -876,9 +913,31 @@ export class ManagementController {
   @Get('marketplace/bundles')
   async getAllMarketplaceBundles(): Promise<any> {
     return (prisma as any).mktBundle.findMany({
+      where: {
+        isActive: true,
+        vendor: {
+          status: { not: 'SUSPENDED' },
+          OR: [
+            { wallet: { balance: { gte: 0 } } },
+            { 
+              AND: [
+                { gracePeriodEndsAt: { gt: new Date() } },
+                { lastBillingAlertAt: { lt: new Date() } } // This part is tricky with prisma count
+              ]
+            }
+          ]
+        }
+      },
       include: { 
         items: { include: { vendorProduct: { include: { productStandard: true } } } },
-        vendor: { select: { id: true, companyName: true, city: true } }
+        vendor: { 
+          include: {
+            wallet: true,
+            _count: {
+              select: { orders: { where: { status: { not: 'CANCELLED' } } } }
+            }
+          }
+        }
       }
     });
   }

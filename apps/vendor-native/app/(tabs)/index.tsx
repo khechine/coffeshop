@@ -99,8 +99,13 @@ export default function DashboardScreen() {
       
       setLastOrderCount(summary.orderCount);
       setData(summary);
+      
+      if (summary.isHidden) {
+        // Optional: notification toast
+      }
     } catch (error) {
-      console.warn("Failed to fetch vendor dashboard data:", error);
+      console.error("Dashboard fetch error:", error);
+      // If vid is correct but fetch fails, it's often a network/CORS issue
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -153,6 +158,22 @@ export default function DashboardScreen() {
         }
         contentContainerStyle={styles.container}
       >
+        {/* Suspension Alert */}
+        {data?.isHidden && (
+          <View style={styles.alertBanner}>
+            <View style={styles.alertIconContainer}>
+              <FontAwesome name="exclamation-triangle" size={24} color="#fff" />
+            </View>
+            <View style={styles.alertTextContainer}>
+              <Text style={styles.alertTitle}>Produits Invisibles</Text>
+              <Text style={styles.alertSub}>{data.suspensionReason || "Votre compte nécessite une régularisation."}</Text>
+            </View>
+            <TouchableOpacity style={styles.alertActionBtn} onPress={() => router.push('/wallet')}>
+              <Text style={styles.alertActionText}>Payer</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -372,6 +393,54 @@ const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
     backgroundColor: '#0a0f1e',
+  },
+  alertBanner: {
+    margin: 20,
+    backgroundColor: '#ef4444',
+    borderRadius: 20,
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  alertIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  alertTextContainer: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  alertTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  alertSub: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  alertActionBtn: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  alertActionText: {
+    color: '#ef4444',
+    fontSize: 13,
+    fontWeight: '800',
   },
   container: {
     padding: 20,
