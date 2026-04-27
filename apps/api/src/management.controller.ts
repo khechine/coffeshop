@@ -964,7 +964,7 @@ export class ManagementController {
     const gracePeriodVendorIds = allVendors.map(v => v.id);
 
     if (gracePeriodVendorIds.length > 0) {
-      const recentOrders = await prisma.mktOrder.groupBy({
+      const recentOrders = await prisma.supplierOrder.groupBy({
         by: ['vendorId'],
         where: {
           vendorId: { in: gracePeriodVendorIds },
