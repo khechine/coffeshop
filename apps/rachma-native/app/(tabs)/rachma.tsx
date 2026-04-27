@@ -490,13 +490,16 @@ export default function RachmaScreen() {
             >
               {/* Product header */}
               <View style={styles.productMeta}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', gap: 10, flex: 1 }}>
                    {product.image ? (
                      <Image source={{ uri: ApiService.getFileUrl(product.image) || undefined }} style={styles.productThumb} />
                    ) : (
                      <RNText style={{ fontSize: 22 }}>{product.icon}</RNText>
                    )}
-                   <RNText style={styles.productName}>{product.name}</RNText>
+                   <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                    <RNText style={styles.productName} numberOfLines={1}>{product.name}</RNText>
+                    <RNText style={styles.productPrice}>{Number(product.price).toFixed(3)} DT</RNText>
+                   </View>
                 </View>
                 <View style={styles.counters}>
                   <View style={styles.badgeSale}><RNText style={styles.badgeText}>{soldCount}</RNText></View>
@@ -842,13 +845,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 12, marginBottom: 10, borderRadius: 20,
     backgroundColor: 'rgba(16, 20, 35, 0.7)',
     borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 14, overflow: 'hidden',
+    padding: 14,
   },
   productMeta: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', marginBottom: 10, backgroundColor: 'transparent',
   },
-  productName: { color: '#ffffff', fontWeight: '800', fontSize: 15, flex: 1 },
+  productName: { color: '#ffffff', fontWeight: '800', fontSize: 15 },
+  productPrice: { color: '#10b981', fontWeight: '700', fontSize: 12, marginTop: 2 },
   productThumb: { width: 36, height: 36, borderRadius: 10 },
   counters: { flexDirection: 'row', gap: 6, backgroundColor: 'transparent' },
   badgeSale: {
