@@ -240,13 +240,21 @@ export default function ProductsScreen() {
       <ScrollView contentContainerStyle={styles.scrollBody} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />}>
         {filteredProducts.map((p, idx) => (
           <TouchableOpacity key={idx} style={[styles.itemRow, styles.glassCard]} onPress={() => handleOpenItemModal(p)}>
-            <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-              <Text style={styles.itemName}>{p.productStandard?.name || p.name}</Text>
-              <Text style={styles.itemRef}>{Number(p.price).toFixed(3)} DT — Min: {p.minOrderQty}</Text>
-              <View style={{ flexDirection: 'row', gap: 5, marginTop: 5, backgroundColor: 'transparent' }}>
-                {p.isFeatured && <View style={styles.tagFeatured}><Text style={styles.tagText}>Featured</Text></View>}
-                {p.isFlashSale && <View style={styles.tagFlash}><Text style={styles.tagText}>Flash</Text></View>}
-                {(p.images?.length > 0) && <View style={styles.tagImage}><Text style={styles.tagText}>{p.images.length} photos</Text></View>}
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', flex: 1, gap: 12 }}>
+              {p.images?.length > 0 ? (
+                <Image source={{ uri: ApiService.getFileUrl(p.images[0]) || undefined }} style={styles.itemImage} />
+              ) : (
+                <View style={[styles.itemImage, { backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' }]}>
+                  <FontAwesome name="cube" size={20} color="#475569" />
+                </View>
+              )}
+              <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                <Text style={styles.itemName}>{p.productStandard?.name || p.name}</Text>
+                <Text style={styles.itemRef}>{Number(p.price).toFixed(3)} DT — Min: {p.minOrderQty}</Text>
+                <View style={{ flexDirection: 'row', gap: 5, marginTop: 5, backgroundColor: 'transparent' }}>
+                  {p.isFeatured && <View style={styles.tagFeatured}><Text style={styles.tagText}>Featured</Text></View>}
+                  {p.isFlashSale && <View style={styles.tagFlash}><Text style={styles.tagText}>Flash</Text></View>}
+                </View>
               </View>
             </View>
             <View style={[styles.stockBadge, { borderColor: p.stockStatus === 'IN_STOCK' ? '#10b981' : '#f59e0b' }]}>
@@ -326,7 +334,7 @@ export default function ProductsScreen() {
                     <ScrollView horizontal style={{ flexDirection: 'row', marginBottom: 20, backgroundColor: 'transparent' }} showsHorizontalScrollIndicator={false}>
                         {formImages.map((img, idx) => (
                             <View key={idx} style={{ position: 'relative', marginRight: 15, backgroundColor: 'transparent' }}>
-                                <Image source={{ uri: img }} style={{ width: 60, height: 60, borderRadius: 8 }} />
+                                <Image source={{ uri: ApiService.getFileUrl(img) || undefined }} style={{ width: 60, height: 60, borderRadius: 8 }} />
                                 <TouchableOpacity 
                                     style={{ position: 'absolute', top: -8, right: -8, backgroundColor: 'transparent' }}
                                     onPress={() => removeImage(idx)}
@@ -443,6 +451,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(16, 20, 35, 0.7)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  itemImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
   },
   itemName: {
     color: '#ffffff',

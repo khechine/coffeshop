@@ -104,11 +104,11 @@ export default function OrdersScreen() {
       <Text style={styles.sectionTitle}>Mes Commandes</Text>
 
       {/* Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }} contentContainerStyle={{ gap: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20, flexGrow: 0 }} contentContainerStyle={{ gap: 8 }}>
         {TABS.map(tab => (
           <TouchableOpacity
             key={tab.key}
-            style={[styles.tab, activeTab === tab.key && { backgroundColor: `${tab.color}22`, borderColor: tab.color, borderWidth: 1 }]}
+            style={[styles.tab, activeTab === tab.key && { backgroundColor: `${tab.color}22`, borderColor: tab.color }]}
             onPress={() => setActiveTab(tab.key)}
           >
             <FontAwesome name={tab.icon as any} size={12} color={activeTab === tab.key ? tab.color : '#475569'} />
@@ -137,7 +137,9 @@ export default function OrdersScreen() {
         {filteredOrders.length === 0 && (
           <View style={styles.emptyState}>
             <FontAwesome name={activeTabMeta.icon as any} size={40} color="#1e293b" style={{ marginBottom: 15 }} />
-            <Text style={styles.emptyText}>Aucune commande {activeTabMeta.label.toLowerCase()}</Text>
+            <Text style={styles.emptyText}>
+               {activeTab === 'PENDING' ? 'Aucune nouvelle commande' : `Aucune commande ${activeTabMeta.label.toLowerCase()}`}
+            </Text>
           </View>
         )}
         {filteredOrders.map((order, idx) => (
@@ -322,8 +324,9 @@ const styles = StyleSheet.create({
   scrollBody: { paddingBottom: 100 },
   tab: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)', position: 'relative'
+    paddingHorizontal: 14, height: 44, borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.04)', position: 'relative',
+    borderWidth: 1, borderColor: 'transparent'
   },
   tabText: { color: '#475569', fontSize: 12, fontWeight: '800' },
   tabBadge: {

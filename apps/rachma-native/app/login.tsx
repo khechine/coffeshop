@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Modal } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -20,6 +20,8 @@ export default function LoginScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { showAlert } = useAlert();
+  const [showModeSelection, setShowModeSelection] = useState(false);
+  const [pendingSession, setPendingSession] = useState<{token: string, storeId: string, user: any} | null>(null);
 
   // Listen for scanned Store ID
   useEffect(() => {
@@ -39,9 +41,15 @@ export default function LoginScreen() {
       try {
         const result = await ApiService.post('/auth/login', { email, password });
         if (result.token && result.user?.storeId) {
-          await AuthService.saveSession(result.token, result.user.storeId);
-          await AuthService.setUser({ ...result.user, authMode: 'PASSWORD' }); // Save User directly for Manager
-          router.replace('/(tabs)');
+          const isOwner = result.user.role === 'STORE_OWNER' || result.user.role === 'SUPERADMIN';
+          if (isOwner) {
+             setPendingSession({ token: result.token, storeId: result.user.storeId, user: result.user });
+             setShowModeSelection(true);
+          } else {
+             await AuthService.saveSession(result.token, result.user.storeId);
+             await AuthService.setUser({ ...result.user, authMode: 'PASSWORD' });
+             router.replace('/(tabs)');
+          }
         } else {
           showAlert({ title: 'Connexion échouée', message: result.message || 'Identifiants invalides.', type: 'error' });
         }
@@ -73,6 +81,15 @@ export default function LoginScreen() {
         setLoading(false);
       }
     }
+  };
+
+  const selectModeAndRedirect = async (mode: 'RACHMA' | 'FULL') => {
+    if (!pendingSession) return;
+    await AuthService.setAppMode(mode);
+    await AuthService.saveSession(pendingSession.token, pendingSession.storeId);
+    await AuthService.setUser({ ...pendingSession.user, authMode: 'PASSWORD' });
+    setShowModeSelection(false);
+    router.replace('/(tabs)');
   };
 
   return (
@@ -204,6 +221,47 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Mode Selection Modal */}
+      <Modal visible={showModeSelection} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <FontAwesome name="th-large" size={24} color={Colors.primary} />
+              <Text style={styles.modalTitle}>Personnalisez votre interface</Text>
+            </View>
+            <Text style={styles.modalSub}>Choisissez le mode de fonctionnement principal pour cet appareil.</Text>
+
+            <TouchableOpacity 
+              style={styles.modeOption} 
+              onPress={() => selectModeAndRedirect('RACHMA')}
+            >
+              <View style={[styles.modeIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                <FontAwesome name="briefcase" size={20} color="#10b981" />
+              </View>
+              <View style={styles.modeInfo}>
+                <Text style={styles.modeName}>Mode Rachma Uniquement</Text>
+                <Text style={styles.modeDescription}>Gestion, Stocks et Marché B2B. Interface épurée.</Text>
+              </View>
+              <FontAwesome name="chevron-right" size={14} color="#475569" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.modeOption} 
+              onPress={() => selectModeAndRedirect('FULL')}
+            >
+              <View style={[styles.modeIconBox, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+                <FontAwesome name="desktop" size={20} color="#6366f1" />
+              </View>
+              <View style={styles.modeInfo}>
+                <Text style={styles.modeName}>Mode Complet (Table + Caisse)</Text>
+                <Text style={styles.modeDescription}>Toutes les fonctionnalités, y compris la prise de commande.</Text>
+              </View>
+              <FontAwesome name="chevron-right" size={14} color="#475569" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -363,5 +421,70 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#111827',
+    width: '100%',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+    backgroundColor: 'transparent',
+  },
+  modalTitle: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  modalSub: {
+    color: '#94a3b8',
+    fontSize: 14,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  modeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    padding: 16,
+    borderRadius: 18,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  modeIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  modeInfo: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  modeName: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modeDescription: {
+    color: '#64748b',
+    fontSize: 12,
+    marginTop: 2,
   },
 });

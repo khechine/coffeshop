@@ -33,6 +33,8 @@ export default function DashboardScreen() {
   // Handle Android Back Button
   useFocusEffect(
     React.useCallback(() => {
+      if (Platform.OS === 'web') return;
+
       const onBackPress = () => {
         Alert.alert('Quitter l\'application', 'Voulez-vous vraiment quitter Rachma Vendor ?', [
           { text: 'Annuler', style: 'cancel', onPress: () => {} },

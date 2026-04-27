@@ -82,6 +82,15 @@ export default function TeamManagementScreen() {
     }
   };
 
+  const toggleStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      await ApiService.put(`/management/employees/${id}`, { isActive: !currentStatus });
+      loadTeam();
+    } catch (e) {
+      Alert.alert("Erreur", "Impossible de changer le statut.");
+    }
+  };
+
   const handleDelete = (id: string, name: string) => {
     Alert.alert(
       'Révoquer l\'accès',
@@ -101,25 +110,38 @@ export default function TeamManagementScreen() {
   };
 
   const renderItem = ({ item }: { item: any }) => {
+    const isActive = item.isActive !== false; // Default true if undefined
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, !isActive && { opacity: 0.6 }]}>
         <View style={styles.cardInfo}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{item.name.substring(0, 2).toUpperCase()}</Text>
+          <View style={[styles.avatar, { backgroundColor: item.role === 'STORE_OWNER' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(16, 185, 129, 0.2)' }]}>
+            <Text style={[styles.avatarText, { color: item.role === 'STORE_OWNER' ? '#a855f7' : '#10b981' }]}>
+              {item.name.substring(0, 2).toUpperCase()}
+            </Text>
           </View>
           <View>
-            <Text style={styles.cardTitle}>{item.name}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'transparent' }}>
+              <Text style={styles.cardTitle}>{item.name}</Text>
+              {!isActive && (
+                <View style={styles.inactiveBadge}>
+                  <Text style={styles.inactiveBadgeText}>INACTIF</Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.cardSub}>
-              {item.role === 'CASHIER' ? '🟢 Caissier(e)' : '🟣 Manager'}
+              {item.role === 'STORE_OWNER' ? 'Manager' : 'Caissier(e)'} • PIN: ****
             </Text>
           </View>
         </View>
         <View style={styles.actions}>
+          <TouchableOpacity 
+            style={[styles.statusBtn, { backgroundColor: isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }]} 
+            onPress={() => toggleStatus(item.id, isActive)}
+          >
+            <FontAwesome name={isActive ? "toggle-on" : "toggle-off"} size={20} color={isActive ? '#10b981' : '#ef4444'} />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.editBtn} onPress={() => openForm(item)}>
             <FontAwesome name="pencil" size={18} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id, item.name)}>
-            <FontAwesome name="user-times" size={18} color={Colors.danger} />
           </TouchableOpacity>
         </View>
       </View>
@@ -244,6 +266,20 @@ const styles = StyleSheet.create({
   },
   deleteBtn: {
     padding: 12, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 12,
+  },
+  statusBtn: {
+    padding: 12, borderRadius: 12,
+  },
+  inactiveBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  inactiveBadgeText: {
+    color: '#ef4444',
+    fontSize: 9,
+    fontWeight: '800',
   },
   emptyText: { color: '#94a3b8', textAlign: 'center', marginTop: 40, fontSize: 15 },
 

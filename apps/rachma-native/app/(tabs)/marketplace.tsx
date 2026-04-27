@@ -12,6 +12,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
 import * as Location from 'expo-location';
+import { useFocusEffect } from 'expo-router';
 
 // Fallback for LinearGradient if module resolution fails temporarily
 let LinearGradient: any = View;
@@ -77,6 +78,13 @@ export default function MarketplaceScreen() {
   const [myOrders, setMyOrders] = useState<any[]>([]);
   const [orderFilter, setOrderFilter] = useState<'ALL' | 'ACTIVE' | 'DELIVERED' | 'STOCKED'>('ALL');
   const [viewingOrder, setViewingOrder] = useState<any>(null);
+
+  // Sync with global radius
+  useFocusEffect(
+    React.useCallback(() => {
+      AuthService.getSearchRadius().then(setRadius);
+    }, [])
+  );
 
   // Derived
   const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0);
@@ -737,9 +745,17 @@ export default function MarketplaceScreen() {
                           <Text style={[styles.modalTitle, { color: T.text }]}>Mes Commandes B2B</Text>
                           <Text style={{ color: T.subtext, fontSize: 11, fontWeight: '700', marginTop: 2 }}>{myOrders.length} commande(s) au total</Text>
                       </View>
-                      <TouchableOpacity style={styles.closeBtn} onPress={() => setOrdersOpen(false)}>
-                          <FontAwesome name="times" size={20} color={T.text} />
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: 'transparent' }}>
+                          <TouchableOpacity 
+                              style={[styles.closeBtn, { backgroundColor: 'rgba(255,255,255,0.04)' }]} 
+                              onPress={fetchMyOrders}
+                          >
+                              <FontAwesome name="refresh" size={16} color={T.accent} />
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.closeBtn} onPress={() => setOrdersOpen(false)}>
+                              <FontAwesome name="times" size={20} color={T.text} />
+                          </TouchableOpacity>
+                      </View>
                   </View>
                   
                   {/* Filter Bar */}

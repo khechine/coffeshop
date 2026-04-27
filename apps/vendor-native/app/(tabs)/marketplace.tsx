@@ -54,6 +54,7 @@ export default function MarketplaceScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
+  const [bundles, setBundles] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -67,12 +68,17 @@ export default function MarketplaceScreen() {
 
   const fetchData = async () => {
     try {
-      const data = await ApiService.get('/management/marketplace/products');
-      const list = data || [];
-      setProducts(list);
+      const [prodData, bundlesData] = await Promise.all([
+        ApiService.get('/management/marketplace/products'),
+        ApiService.get('/management/marketplace/bundles').catch(() => []) // Fallback if endpoint doesn't exist yet
+      ]);
+      
+      setProducts(prodData || []);
+      setBundles(bundlesData || []);
+
       const seen = new Set<any>();
       const v: any[] = [];
-      list.forEach((p: any) => {
+      (prodData || []).forEach((p: any) => {
         if (p.vendor?.id && !seen.has(p.vendor.id)) { seen.add(p.vendor.id); v.push(p.vendor); }
       });
       setVendors(v);
@@ -140,7 +146,7 @@ export default function MarketplaceScreen() {
     return matchesSearch && matchesCat;
   });
 
-  const businessPacks = products.filter(p => {
+  const businessPacks = bundles.length > 0 ? bundles : products.filter(p => {
     const n = (p.name || '').toLowerCase();
     return n.includes('pack') || n.includes('kit');
   });
@@ -245,8 +251,12 @@ export default function MarketplaceScreen() {
                   style={[styles.packCard, { backgroundColor: scheme === 'dark' ? 'rgba(16,185,129,0.1)' : 'rgba(16,185,129,0.07)', borderColor: 'rgba(16,185,129,0.2)' }]}
                   onPress={() => setSelectedProduct(pack)}
                 >
-                  <View style={[styles.packIconContainer, { backgroundColor: T.inputBg }]}>
-                    <Text style={{ fontSize: 32 }}>🎁</Text>
+                  <View style={[styles.packIconContainer, { backgroundColor: T.inputBg, overflow: 'hidden' }]}>
+                    {pack.images?.length > 0 ? (
+                      <Image source={{ uri: ApiService.getFileUrl(pack.images[0]) || undefined }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                    ) : (
+                      <Text style={{ fontSize: 32 }}>🎁</Text>
+                    )}
                   </View>
                   <View style={{ flex: 1, backgroundColor: 'transparent' }}>
                     <Text style={[styles.packName, { color: T.text }]} numberOfLines={1}>{pack.name}</Text>
@@ -308,8 +318,12 @@ export default function MarketplaceScreen() {
               style={[styles.productCard, { backgroundColor: T.card, borderColor: T.cardBorder }]}
               onPress={() => setSelectedProduct(product)}
             >
-              <View style={[styles.productImagePlaceholder, { backgroundColor: T.sectionBg }]}>
-                <Text style={styles.productIcon}>{getProductIcon(product.name)}</Text>
+              <View style={[styles.productImagePlaceholder, { backgroundColor: T.sectionBg, overflow: 'hidden' }]}>
+                {product.images?.length > 0 ? (
+                  <Image source={{ uri: ApiService.getFileUrl(product.images[0]) || undefined }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                ) : (
+                  <Text style={styles.productIcon}>{getProductIcon(product.name)}</Text>
+                )}
               </View>
               <View style={{ padding: 12, backgroundColor: 'transparent' }}>
                 <Text style={[styles.productName, { color: T.text }]} numberOfLines={1}>{product.name}</Text>
@@ -347,8 +361,12 @@ export default function MarketplaceScreen() {
                   </TouchableOpacity>
                 </View>
                 <ScrollView contentContainerStyle={{ padding: 20 }}>
-                  <View style={[styles.modalImagePlaceholder, { backgroundColor: T.sectionBg }]}>
-                    <Text style={{ fontSize: 70 }}>{getProductIcon(selectedProduct.name)}</Text>
+                  <View style={[styles.modalImagePlaceholder, { backgroundColor: T.sectionBg, overflow: 'hidden' }]}>
+                    {selectedProduct.images?.length > 0 ? (
+                      <Image source={{ uri: ApiService.getFileUrl(selectedProduct.images[0]) || undefined }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                    ) : (
+                      <Text style={{ fontSize: 70 }}>{getProductIcon(selectedProduct.name)}</Text>
+                    )}
                   </View>
                   <Text style={[styles.modalDescTitle, { color: T.text }]}>Description</Text>
                   <Text style={[styles.modalDesc, { color: T.subtext }]}>
@@ -405,8 +423,12 @@ export default function MarketplaceScreen() {
                 <ScrollView contentContainerStyle={{ padding: 20 }}>
                   {cartItems.map((item, i) => (
                     <View key={i} style={[styles.cartItem, { backgroundColor: T.sectionBg, borderColor: T.cardBorder }]}>
-                      <View style={[styles.cartItemIcon, { backgroundColor: T.inputBg }]}>
-                        <Text style={{ fontSize: 28 }}>{getProductIcon(item.product.name)}</Text>
+                      <View style={[styles.cartItemIcon, { backgroundColor: T.inputBg, overflow: 'hidden' }]}>
+                        {item.product.images?.length > 0 ? (
+                          <Image source={{ uri: ApiService.getFileUrl(item.product.images[0]) || undefined }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                        ) : (
+                          <Text style={{ fontSize: 28 }}>{getProductIcon(item.product.name)}</Text>
+                        )}
                       </View>
                       <View style={{ flex: 1, marginHorizontal: 12, backgroundColor: 'transparent' }}>
                         <Text style={[styles.cartItemName, { color: T.text }]} numberOfLines={1}>{item.product.name}</Text>

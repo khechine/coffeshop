@@ -1,6 +1,13 @@
 const BASE_URL = 'https://api.coffeeshop.elkassa.com';
+const STORAGE_URL = BASE_URL;
 
 export const ApiService = {
+  getFileUrl(path: string | null | undefined) {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `${STORAGE_URL}${cleanPath}`;
+  },
   async get(endpoint: string) {
     try {
       const response = await fetch(`${BASE_URL}${endpoint}`);

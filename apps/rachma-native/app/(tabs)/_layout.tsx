@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Tabs } from 'expo-router';
-import { Platform } from 'react-native';
+import { Tabs, useRouter, useSegments } from 'expo-router';
+import { Platform, View, TouchableOpacity, Alert, Modal, Text, StyleSheet } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthService } from '@/services/auth';
@@ -18,6 +18,12 @@ export default function TabLayout() {
   const [role, setRole] = useState<string>('UNKNOWN');
   const [permissions, setPermissions] = useState<string[]>([]);
   const [authMode, setAuthMode] = useState<string>('');
+  const [appMode, setAppMode] = useState<'RACHMA' | 'FULL'>('FULL');
+  const [showSettings, setShowSettings] = useState(false);
+  const [radius, setRadius] = useState(50);
+  const router = useRouter();
+  const segments = useSegments();
+  const currentTab = segments[segments.length - 1] || 'index';
 
   useEffect(() => {
     async function fetchUser() {
@@ -27,20 +33,157 @@ export default function TabLayout() {
         setPermissions(session.user.permissions || []);
         setAuthMode(session.user.authMode || '');
       }
+      const mode = await AuthService.getAppMode();
+      setAppMode(mode);
+      const r = await AuthService.getSearchRadius();
+      setRadius(r);
     }
     fetchUser();
-  }, []);
+  }, [showSettings]);
 
   const isOwnerRole = role === 'STORE_OWNER' || role === 'SUPERADMIN';
   const isManager = authMode === 'PASSWORD';
   const isTerminal = authMode === 'PIN' || !authMode;
 
+  const isFullMode = appMode === 'FULL';
+
   const hasRachmaAccess = (isTerminal || isOwnerRole) && (isOwnerRole || permissions.includes('RACHMA') || role === 'RACHMA' || role === 'CASHIER');
-  const hasPosAccess = (isTerminal || isOwnerRole) && (isOwnerRole || permissions.includes('POS') || permissions.includes('TABLES') || role === 'POS' || role === 'CASHIER');
-  const hasTablesAccess = (isTerminal || isOwnerRole) && (isOwnerRole || permissions.includes('TABLES') || role === 'TABLES' || role === 'CASHIER');
+  const hasPosAccess = isFullMode && (isTerminal || isOwnerRole) && (isOwnerRole || permissions.includes('POS') || permissions.includes('TABLES') || role === 'POS' || role === 'CASHIER');
+  const hasTablesAccess = isFullMode && (isTerminal || isOwnerRole) && (isOwnerRole || permissions.includes('TABLES') || role === 'TABLES' || role === 'CASHIER');
   const hasManagementAccess = isManager || isOwnerRole;
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Déconnexion',
+      'Voulez-vous vraiment vous déconnecter ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Déconnecter',
+          style: 'destructive',
+          onPress: async () => {
+            await AuthService.clearSession();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
+  };
+
+  const toggleAppMode = async (mode: 'RACHMA' | 'FULL') => {
+    await AuthService.setAppMode(mode);
+    setAppMode(mode);
+    setShowSettings(false);
+    Alert.alert(
+      'Mode modifié',
+      'L\'interface a été mise à jour. Redémarrez si certains onglets ne se rafraîchissent pas.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  const updateRadius = async (r: number) => {
+    await AuthService.setSearchRadius(r);
+    setRadius(r);
+  };
+
+  const renderSettingsContent = () => {
+    const segs = segments as any[];
+    const isMarketplace = segs.includes('marketplace');
+    const isDashboard = segs.length <= 1 || (!segs.includes('pos') && !segs.includes('tables') && !segs.includes('rachma') && !segs.includes('stocks') && !segs.includes('marketplace'));
+
+    if (isMarketplace) {
+      return (
+        <View style={{ backgroundColor: 'transparent' }}>
+          <View style={styles.modalHeader}>
+            <FontAwesome name="map-marker" size={24} color={Colors.primary} />
+            <Text style={styles.modalTitle}>Rayon de Recherche</Text>
+          </View>
+          <Text style={styles.modalSub}>Définissez la distance maximale pour trouver des vendeurs.</Text>
+          
+          <View style={styles.radiusContainer}>
+            {[5, 10, 20, 50, 100, 200, 500].map((r) => (
+              <TouchableOpacity 
+                key={r} 
+                style={[styles.radiusBtn, radius === r && styles.radiusBtnActive]}
+                onPress={() => updateRadius(r)}
+              >
+                <Text style={[styles.radiusText, radius === r && { color: '#fff' }]}>{r}km</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      );
+    }
+
+    if (isDashboard) {
+      return (
+        <View style={{ backgroundColor: 'transparent' }}>
+          <View style={styles.modalHeader}>
+            <FontAwesome name="user-circle" size={24} color={Colors.primary} />
+            <Text style={styles.modalTitle}>Administration</Text>
+          </View>
+          <Text style={styles.modalSub}>Gestion de la boutique et du personnel.</Text>
+          
+          <View style={{ gap: 10 }}>
+            <TouchableOpacity style={styles.adminLink} onPress={() => { setShowSettings(false); router.push('/team'); }}>
+              <FontAwesome name="users" size={18} color="#94a3b8" />
+              <Text style={styles.adminLinkText}>Gestion Personnel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.adminLink} onPress={() => { setShowSettings(false); router.push('/table-config'); }}>
+              <FontAwesome name="th" size={18} color="#94a3b8" />
+              <Text style={styles.adminLinkText}>Configuration Tables</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.adminLink} onPress={() => { setShowSettings(false); }}>
+              <FontAwesome name="lock" size={18} color="#94a3b8" />
+              <Text style={styles.adminLinkText}>Modifier PIN / Codes</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    // Default: App Mode
+    return (
+      <View style={{ backgroundColor: 'transparent' }}>
+        <View style={styles.modalHeader}>
+          <FontAwesome name="cog" size={24} color={Colors.primary} />
+          <Text style={styles.modalTitle}>Mode Application</Text>
+        </View>
+        <Text style={styles.modalSub}>Choisissez le focus de l'interface.</Text>
+
+        <TouchableOpacity 
+          style={[styles.modeOption, appMode === 'RACHMA' && styles.modeOptionActive]} 
+          onPress={() => toggleAppMode('RACHMA')}
+        >
+          <View style={[styles.modeIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+            <FontAwesome name="briefcase" size={20} color="#10b981" />
+          </View>
+          <View style={styles.modeInfo}>
+            <Text style={styles.modeName}>Mode Rachma Only</Text>
+            <Text style={styles.modeDescription}>Gestion & Marché B2B uniquement.</Text>
+          </View>
+          {appMode === 'RACHMA' && <FontAwesome name="check-circle" size={20} color="#10b981" />}
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.modeOption, appMode === 'FULL' && styles.modeOptionActive]} 
+          onPress={() => toggleAppMode('FULL')}
+        >
+          <View style={[styles.modeIconBox, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+            <FontAwesome name="desktop" size={20} color="#6366f1" />
+          </View>
+          <View style={styles.modeInfo}>
+            <Text style={styles.modeName}>Mode Complet</Text>
+            <Text style={styles.modeDescription}>Toutes les fonctions (Table + Caisse).</Text>
+          </View>
+          {appMode === 'FULL' && <FontAwesome name="check-circle" size={20} color="#6366f1" />}
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
+    <>
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#10b981',
@@ -82,6 +225,18 @@ export default function TabLayout() {
           color: '#ffffff',
           fontWeight: '800',
         },
+        headerRight: () => (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 15, gap: 12, backgroundColor: 'transparent' }}>
+            {isOwnerRole && (
+              <TouchableOpacity onPress={() => setShowSettings(true)} style={styles.headerIcon}>
+                <FontAwesome name="cog" size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={handleLogout} style={styles.headerIcon}>
+              <FontAwesome name="sign-out" size={20} color={Colors.danger} />
+            </TouchableOpacity>
+          </View>
+        ),
         headerShown: true,
       }}>
       <Tabs.Screen
@@ -154,5 +309,147 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+
+    <Modal visible={showSettings} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {renderSettingsContent()}
+
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setShowSettings(false)}>
+                <Text style={styles.closeBtnText}>Fermer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+    </Modal>
+    </>
   );
 }
+
+const styles = StyleSheet.create({
+  headerIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#111827',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: 24,
+    paddingBottom: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
+  modalTitle: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  modalSub: {
+    color: '#94a3b8',
+    fontSize: 14,
+    marginBottom: 24,
+  },
+  modeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    padding: 16,
+    borderRadius: 18,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  modeOptionActive: {
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+  },
+  modeIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  modeInfo: {
+    flex: 1,
+  },
+  modeName: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modeDescription: {
+    color: '#64748b',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  closeBtn: {
+    marginTop: 10,
+    height: 54,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  closeBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  radiusContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
+  },
+  radiusBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  radiusBtnActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  radiusText: {
+    color: '#94a3b8',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  adminLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+    padding: 18,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  adminLinkText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+});

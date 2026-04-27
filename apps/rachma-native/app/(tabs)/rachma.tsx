@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, ScrollView, TouchableOpacity, View as RNView,
-  Text as RNText, Vibration, RefreshControl, Platform, Modal, TextInput
+  Text as RNText, Vibration, RefreshControl, Platform, Modal, TextInput, Image
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,6 +24,7 @@ type Product = {
   id: string; name: string; price: number;
   category: string; icon: string; takeaway: boolean;
   packagings: Packaging[];
+  image?: string;
 };
 type LogEntry = string; // 'sale' | 'loss' | 'sale:PKG_ID'
 type Logs = Record<string, LogEntry[]>;
@@ -113,8 +114,11 @@ export default function RachmaScreen() {
         else if (cat.toLowerCase().includes('chicha')) icon = '💨';
         return {
           id: p.id, name: p.name, price: p.price,
-          category: cat || 'Général', icon, takeaway: p.takeaway ?? true,
+          category: cat || 'Général', 
+          icon: p.icon || icon, 
+          takeaway: p.takeaway ?? true,
           packagings: p.packagings || [],
+          image: p.image
         };
       });
       setProducts(mapped);
@@ -486,7 +490,14 @@ export default function RachmaScreen() {
             >
               {/* Product header */}
               <View style={styles.productMeta}>
-                <RNText style={styles.productName}>{product.icon} {product.name}</RNText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', gap: 10 }}>
+                   {product.image ? (
+                     <Image source={{ uri: ApiService.getFileUrl(product.image) || undefined }} style={styles.productThumb} />
+                   ) : (
+                     <RNText style={{ fontSize: 22 }}>{product.icon}</RNText>
+                   )}
+                   <RNText style={styles.productName}>{product.name}</RNText>
+                </View>
                 <View style={styles.counters}>
                   <View style={styles.badgeSale}><RNText style={styles.badgeText}>{soldCount}</RNText></View>
                   <View style={styles.badgeLoss}><RNText style={styles.badgeText}>{lostCount}</RNText></View>
@@ -838,6 +849,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginBottom: 10, backgroundColor: 'transparent',
   },
   productName: { color: '#ffffff', fontWeight: '800', fontSize: 15, flex: 1 },
+  productThumb: { width: 36, height: 36, borderRadius: 10 },
   counters: { flexDirection: 'row', gap: 6, backgroundColor: 'transparent' },
   badgeSale: {
     backgroundColor: 'rgba(16,185,129,0.2)', borderRadius: 10,

@@ -221,10 +221,19 @@ export default function BundlesScreen() {
 
         {bundles.map((bundle) => (
           <TouchableOpacity key={bundle.id} style={styles.bundleCard} onPress={() => handleOpenModal(bundle)}>
-            <View style={styles.bundleInfo}>
-              <Text style={styles.bundleName}>{bundle.name}</Text>
-              <Text style={styles.bundleDetails}>{bundle.items?.length || 0} produits inclus</Text>
-              <Text style={styles.bundlePrice}>{bundle.price} DT</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', flex: 1, gap: 15 }}>
+              {bundle.images?.length > 0 ? (
+                <Image source={{ uri: ApiService.getFileUrl(bundle.images[0]) || undefined }} style={styles.bundleImage} />
+              ) : (
+                <View style={[styles.bundleImage, { backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' }]}>
+                  <FontAwesome name="gift" size={24} color="#475569" />
+                </View>
+              )}
+              <View style={styles.bundleInfo}>
+                <Text style={styles.bundleName}>{bundle.name}</Text>
+                <Text style={styles.bundleDetails}>{bundle.items?.length || 0} produits inclus</Text>
+                <Text style={styles.bundlePrice}>{bundle.price} DT</Text>
+              </View>
             </View>
             <View style={styles.bundleActions}>
               <FontAwesome name="edit" size={20} color="#f59e0b" />
@@ -284,7 +293,7 @@ export default function BundlesScreen() {
               <ScrollView horizontal style={styles.imagePreviewRow} showsHorizontalScrollIndicator={false}>
                 {images.map((img, idx) => (
                   <View key={idx} style={styles.imagePreviewWrapper}>
-                    <Image source={{ uri: img }} style={styles.imagePreview} />
+                    <Image source={{ uri: ApiService.getFileUrl(img) || undefined }} style={styles.imagePreview} />
                     <TouchableOpacity style={styles.removeImageBtn} onPress={() => removeImage(idx)}>
                       <FontAwesome name="times-circle" size={20} color="#ef4444" />
                     </TouchableOpacity>
@@ -348,7 +357,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '900', color: '#fff' },
   addBtn: { backgroundColor: '#f59e0b', paddingHorizontal: 15, paddingVertical: 10, borderRadius: 12, flexDirection: 'row', alignItems: 'center' },
   addBtnText: { color: '#fff', fontWeight: '800' },
-  bundleCard: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 20, marginBottom: 15, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  bundleCard: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 15, marginBottom: 15, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  bundleImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 15,
+  },
   bundleInfo: { flex: 1, backgroundColor: 'transparent' },
   bundleName: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 5 },
   bundleDetails: { fontSize: 14, color: '#64748b', marginBottom: 5 },

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, ScrollView, TouchableOpacity, FlatList,
-  Text as RNText, View as RNView, Modal, Vibration, Platform,
+  Text as RNText, View as RNView, Modal, Vibration, Platform, Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
@@ -19,6 +19,7 @@ import { useAlert } from '@/components/AlertContext';
 type Product = {
   id: string; name: string; price: number;
   category: string; icon: string;
+  image?: string;
 };
 type Cart = Record<string, number>; // productId -> qty
 const TAX_RATE = 0.19;
@@ -54,7 +55,14 @@ export default function PosScreen() {
           else if (cat.toLowerCase().includes('thé')) icon = '🍃';
           else if (cat.toLowerCase().includes('pâtisserie')) icon = '🥐';
           else if (cat.toLowerCase().includes('chicha')) icon = '💨';
-          return { id: p.id, name: p.name, price: Number(p.price), category: cat || 'Général', icon };
+          return { 
+            id: p.id, 
+            name: p.name, 
+            price: Number(p.price), 
+            category: cat || 'Général', 
+            icon: p.icon || icon,
+            image: p.image 
+          };
         });
         setProducts(mapped);
         await AsyncStorage.setItem(`pos_products_${storeId}`, JSON.stringify(mapped));
@@ -361,7 +369,11 @@ export default function PosScreen() {
               onPress={() => addToCart(item.id)}
               activeOpacity={0.85}
             >
-              <RNText style={styles.productEmoji}>{item.icon}</RNText>
+              {item.image ? (
+                <Image source={{ uri: ApiService.getFileUrl(item.image) || undefined }} style={styles.productImage} />
+              ) : (
+                <RNText style={styles.productEmoji}>{item.icon}</RNText>
+              )}
               <RNText style={styles.productName} numberOfLines={2}>{item.name}</RNText>
               <RNText style={styles.productPrice}>{item.price.toFixed(3)} DT</RNText>
               {qty > 0 && (
@@ -528,6 +540,9 @@ const styles = StyleSheet.create({
   productCardActive: {
     borderColor: Colors.primary,
     backgroundColor: 'rgba(16, 185, 129, 0.08)',
+  },
+  productImage: {
+    width: '100%', height: 70, borderRadius: 12, marginBottom: 8, resizeMode: 'cover',
   },
   productEmoji: { fontSize: 28, marginBottom: 8 },
   productName: { color: '#ffffff', fontWeight: '700', fontSize: 13, marginBottom: 4 },

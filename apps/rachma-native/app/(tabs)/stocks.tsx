@@ -6,6 +6,8 @@ import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'react-native';
 
 import { useLocalSearchParams } from 'expo-router';
 
@@ -46,6 +48,10 @@ export default function StocksScreen() {
   const [formCost, setFormCost] = useState('0.000');
   const [formRecipe, setFormRecipe] = useState<any[]>([]); // { stockItemId, name, quantity, unit }
   const [addingIngredient, setAddingIngredient] = useState(false);
+  const [ingredientQtyModalVisible, setIngredientQtyModalVisible] = useState(false);
+  const [selectedIngredientForQty, setSelectedIngredientForQty] = useState<any>(null);
+  const [tempIngredientQty, setTempIngredientQty] = useState('0.1');
+  const [formImage, setFormImage] = useState<string | null>(null);
   const [showUnitSelect, setShowUnitSelect] = useState(false); // Bottom sheet visibility
 
   const fetchData = async (currentStoreId: string) => {
@@ -85,8 +91,40 @@ export default function StocksScreen() {
     setFormTVA('0');
     setFormUnit('UN');
     setFormRecipe([]);
+    setFormImage(null);
     setEditingCategory(null);
     setEditingItem(null);
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setFormImage(result.assets[0].uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert("Erreur", "Permission caméra refusée.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setFormImage(result.assets[0].uri);
+    }
   };
 
   const handleSaveCategory = async () => {
@@ -143,6 +181,7 @@ export default function StocksScreen() {
         payload.price = Number(formPrice);
         payload.taxRate = Number(formTVA) / 100;
         payload.icon = formIcon;
+        if (formImage) payload.image = formImage;
       } else {
         payload.quantity = Number(formQty);
         payload.cost = Number(formCost);
@@ -519,6 +558,35 @@ export default function StocksScreen() {
                                     </TouchableOpacity>
                                 ))}
                             </ScrollView>
+
+                            <Text style={styles.inputLabel}>Photo de l'article</Text>
+                            <View style={styles.imagePickerContainer}>
+                                {formImage ? (
+                                    <View style={styles.imagePreviewWrapper}>
+                                        <Image source={{ uri: ApiService.getFileUrl(formImage) || undefined }} style={styles.imagePreview} />
+                                        <TouchableOpacity 
+                                            style={styles.removeImageBtn} 
+                                            onPress={() => setFormImage(null)}
+                                        >
+                                            <FontAwesome name="times" size={12} color="#fff" />
+                                        </TouchableOpacity>
+                                    </View>
+                                ) : (
+                                    <View style={styles.imagePlaceholder}>
+                                        <FontAwesome name="camera" size={30} color="#475569" />
+                                    </View>
+                                )}
+                                <View style={styles.imagePickerActions}>
+                                    <TouchableOpacity style={styles.pickerActionBtn} onPress={takePhoto}>
+                                        <FontAwesome name="camera" size={16} color="#fff" />
+                                        <Text style={styles.pickerActionText}>Prendre</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={[styles.pickerActionBtn, { backgroundColor: 'rgba(255,255,255,0.05)' }]} onPress={pickImage}>
+                                        <FontAwesome name="image" size={16} color="#94a3b8" />
+                                        <Text style={[styles.pickerActionText, { color: '#94a3b8' }]}>Galerie</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
                         </>
                     )}
                     
@@ -602,11 +670,10 @@ export default function StocksScreen() {
                                             key={sidx} 
                                             style={styles.selectableItem}
                                             onPress={() => {
-                                                const qty = prompt("Quantité pour une portion ?", "0.1");
-                                                if (qty && !isNaN(Number(qty))) {
-                                                    setFormRecipe([...formRecipe, { stockItemId: si.id, name: si.name, quantity: qty, unit: si.unit?.name || si.unit || 'UN' }]);
-                                                    setAddingIngredient(false);
-                                                }
+                                                setSelectedIngredientForQty(si);
+                                                setTempIngredientQty('0.1');
+                                                setAddingIngredient(false); // Close the list modal first
+                                                setTimeout(() => setIngredientQtyModalVisible(true), 300); // Small delay for smooth transition
                                             }}
                                         >
                                             <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>{si.name}</Text>
@@ -660,6 +727,50 @@ export default function StocksScreen() {
                             {formUnit === u && <FontAwesome name="check-circle" size={18} color="#10b981" />}
                         </TouchableOpacity>
                     ))}
+                </View>
+            </View>
+        </View>
+      </Modal>
+
+      {/* Quantity Modal for Ingredient */}
+      <Modal visible={ingredientQtyModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+            <TouchableOpacity style={styles.modalBackdrop} onPress={() => setIngredientQtyModalVisible(false)} />
+            <View style={[styles.modalSheet, { height: 'auto', paddingBottom: 40 }]}>
+                <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Quantité par portion</Text>
+                    <TouchableOpacity onPress={() => { setIngredientQtyModalVisible(false); setAddingIngredient(true); }}><FontAwesome name="times" size={20} color="#fff" /></TouchableOpacity>
+                </View>
+                <View style={{ padding: 25 }}>
+                    <Text style={{ color: '#fff', fontSize: 16, marginBottom: 15 }}>
+                        Combien de <Text style={{ color: Colors.primary, fontWeight: 'bold' }}>{selectedIngredientForQty?.name}</Text> ({selectedIngredientForQty?.unit?.name || selectedIngredientForQty?.unit || 'UN'}) est utilisé pour une portion de {formName} ?
+                    </Text>
+                    <TextInput 
+                        style={styles.modalInput} 
+                        value={tempIngredientQty} 
+                        onChangeText={setTempIngredientQty} 
+                        keyboardType="numeric" 
+                        autoFocus
+                        placeholder="0.1" 
+                        placeholderTextColor="#475569" 
+                    />
+                    <TouchableOpacity 
+                        style={styles.saveBtn} 
+                        onPress={() => {
+                            if (tempIngredientQty && !isNaN(Number(tempIngredientQty))) {
+                                setFormRecipe([...formRecipe, { 
+                                    stockItemId: selectedIngredientForQty.id, 
+                                    name: selectedIngredientForQty.name, 
+                                    quantity: tempIngredientQty, 
+                                    unit: selectedIngredientForQty.unit?.name || selectedIngredientForQty.unit || 'UN' 
+                                }]);
+                                setIngredientQtyModalVisible(false);
+                                setAddingIngredient(false);
+                            }
+                        }}
+                    >
+                        <Text style={styles.saveBtnText}>Ajouter l'ingrédient</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
         </View>
@@ -1011,4 +1122,34 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
     borderColor: '#10b981',
   },
+  // Image Picker Styles
+  imagePickerContainer: {
+    flexDirection: 'row', gap: 15, marginTop: 10, marginBottom: 20,
+    backgroundColor: 'transparent',
+  },
+  imagePreviewWrapper: {
+    width: 100, height: 100, borderRadius: 16, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+  },
+  imagePreview: { width: '100%', height: '100%' },
+  removeImageBtn: {
+    position: 'absolute', top: 5, right: 5,
+    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+    width: 24, height: 24, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  imagePlaceholder: {
+    width: 100, height: 100, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  imagePickerActions: { flex: 1, gap: 10, justifyContent: 'center' },
+  pickerActionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: Colors.primary, paddingVertical: 10, paddingHorizontal: 15,
+    borderRadius: 12,
+  },
+  pickerActionText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+
 });

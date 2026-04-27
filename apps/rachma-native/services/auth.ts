@@ -5,6 +5,8 @@ const TOKEN_KEY = 'rachma_token';
 const STORE_ID_KEY = 'rachma_store_id';
 const USER_KEY = 'rachma_user';
 const TERMINAL_ID_KEY = 'rachma_terminal_id';
+const APP_MODE_KEY = 'rachma_app_mode';
+const RADIUS_KEY = 'rachma_search_radius';
 
 // Web fallback: SecureStore is not available on web
 const storage = {
@@ -92,6 +94,42 @@ export const AuthService = {
     } catch (error) {
       console.error('Failed to get session:', error);
       return { isPaired: false, isUnlocked: false, token: null, storeId: null, terminalId: null, user: null };
+    }
+  },
+
+  // --- App Mode Persistence ---
+  async getAppMode(): Promise<'RACHMA' | 'FULL'> {
+    try {
+      const mode = await storage.getItem(APP_MODE_KEY);
+      return (mode as 'RACHMA' | 'FULL') || 'FULL';
+    } catch (e) {
+      return 'FULL';
+    }
+  },
+
+  async setAppMode(mode: 'RACHMA' | 'FULL') {
+    try {
+      await storage.setItem(APP_MODE_KEY, mode);
+    } catch (e) {
+      console.error('Failed to set app mode:', e);
+    }
+  },
+
+  // --- Search Radius Persistence ---
+  async getSearchRadius(): Promise<number> {
+    try {
+      const r = await storage.getItem(RADIUS_KEY);
+      return r ? parseInt(r) : 50; // default 50km
+    } catch (e) {
+      return 50;
+    }
+  },
+
+  async setSearchRadius(radius: number) {
+    try {
+      await storage.setItem(RADIUS_KEY, radius.toString());
+    } catch (e) {
+      console.error('Failed to set radius:', e);
     }
   },
 

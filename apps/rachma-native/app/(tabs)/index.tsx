@@ -15,6 +15,7 @@ export default function DashboardScreen() {
   const [storeId, setStoreId] = useState('1');
   const [activeMgmt, setActiveMgmt] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [appMode, setAppMode] = useState<'RACHMA' | 'FULL'>('FULL');
   const router = useRouter();
 
   // Load the real storeId from secure storage
@@ -23,6 +24,7 @@ export default function DashboardScreen() {
       if (session?.storeId) setStoreId(session.storeId);
       if (session?.user) setUser(session.user);
     });
+    AuthService.getAppMode().then(setAppMode);
   }, []);
 
   // Handle Android Back Button
@@ -43,32 +45,6 @@ export default function DashboardScreen() {
     }, [])
   );
 
-  const handleLogout = () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Voulez-vous vraiment vous déconnecter ?')) {
-        AuthService.clearSession().then(() => {
-          router.replace('/login');
-        });
-      }
-      return;
-    }
-
-    Alert.alert(
-      'Déconnexion',
-      'Voulez-vous vraiment vous déconnecter ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Déconnecter',
-          style: 'destructive',
-          onPress: async () => {
-            await AuthService.clearSession();
-            router.replace('/login');
-          },
-        },
-      ]
-    );
-  };
 
   const fetchData = async () => {
     try {
@@ -123,9 +99,6 @@ export default function DashboardScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', gap: 10 }}>
             <TouchableOpacity style={styles.iconCircleHeader} onPress={() => router.push('/metrics')}>
               <FontAwesome name="line-chart" size={16} color="#64748b" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.profileBtn} onPress={handleLogout}>
-              <FontAwesome name="sign-out" size={22} color={Colors.danger} />
             </TouchableOpacity>
           </View>
         </View>
