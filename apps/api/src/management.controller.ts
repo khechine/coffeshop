@@ -47,13 +47,16 @@ export class ManagementController {
     unitId?: string; taxRate?: number; canBeTakeaway?: boolean;
     icon?: string; image?: string;
   }): Promise<any> {
+    if (!body.name || body.price === undefined || body.price === null) {
+      throw new Error("Nom et Prix sont requis.");
+    }
     return prisma.product.create({
       data: {
         name: body.name,
-        price: body.price,
-        categoryId: body.categoryId,
-        storeId: body.storeId,
-        unitId: body.unitId || null,
+        price: Number(body.price),
+        category: { connect: { id: body.categoryId } },
+        store: { connect: { id: body.storeId } },
+        unit: body.unitId ? { connect: { id: body.unitId } } : undefined,
         taxRate: body.taxRate !== undefined ? body.taxRate : 0.19,
         canBeTakeaway: body.canBeTakeaway ?? true,
         icon: body.icon || null,
@@ -74,9 +77,11 @@ export class ManagementController {
       where: { id },
       data: {
         ...(body.name && { name: body.name }),
-        ...(body.price !== undefined && { price: body.price }),
-        ...(body.categoryId && { categoryId: body.categoryId }),
-        ...(body.unitId !== undefined && { unitId: body.unitId || null }),
+        ...(body.price !== undefined && { price: Number(body.price) }),
+        ...(body.categoryId && { category: { connect: { id: body.categoryId } } }),
+        ...(body.unitId !== undefined && { 
+          unit: body.unitId ? { connect: { id: body.unitId } } : { disconnect: true } 
+        }),
         ...(body.active !== undefined && { active: body.active }),
         ...(body.taxRate !== undefined && { taxRate: body.taxRate }),
         ...(body.canBeTakeaway !== undefined && { canBeTakeaway: body.canBeTakeaway }),

@@ -101,12 +101,12 @@ export default function MetricsScreen() {
         <View style={styles.mainMetricsGrid}>
            <View style={[styles.mainMetricCard, { borderLeftColor: Colors.secondary, borderLeftWidth: 4 }]}>
               <Text style={styles.metricLabel}>Ventes Totales</Text>
-              <Text style={[styles.metricValue, { color: '#fff' }]}>{stats.orderCount || 18}</Text>
+              <Text style={[styles.metricValue, { color: '#fff' }]}>{stats.orderCount || 0}</Text>
               <Text style={{ fontSize: 10, color: Colors.textSecondary }}>↑ tickets encaissés</Text>
            </View>
            <View style={[styles.mainMetricCard, { borderLeftColor: Colors.primary, borderLeftWidth: 4 }]}>
               <Text style={styles.metricLabel}>Chiffre d'Affaires</Text>
-              <Text style={[styles.metricValue, { color: Colors.primary }]}>{fmtMoney(stats.totalSales || 1382.2)} <Text style={styles.currency}>DT</Text></Text>
+              <Text style={[styles.metricValue, { color: Colors.primary }]}>{fmtMoney(stats.totalSales || 0)} <Text style={styles.currency}>DT</Text></Text>
            </View>
         </View>
 
@@ -118,8 +118,8 @@ export default function MetricsScreen() {
            </View>
            <View style={[styles.mainMetricCard, { borderLeftColor: Colors.secondary, borderLeftWidth: 4 }]}>
               <Text style={styles.metricLabel}>Profit Net Estimé</Text>
-              <Text style={[styles.metricValue, { color: '#fff' }]}>{fmtMoney(stats.netProfit || 182.2)} <Text style={styles.currency}>DT</Text></Text>
-              <Text style={{ fontSize: 10, color: Colors.danger }}>Dépenses: {fmtMoney(stats.totalExpenses || 1200)} DT</Text>
+              <Text style={[styles.metricValue, { color: '#fff' }]}>{fmtMoney(stats.netProfit || 0)} <Text style={styles.currency}>DT</Text></Text>
+              <Text style={{ fontSize: 10, color: Colors.danger }}>Dépenses: {fmtMoney(stats.totalExpenses || 0)} DT</Text>
            </View>
         </View>
 
@@ -129,24 +129,25 @@ export default function MetricsScreen() {
             <FontAwesome name="users" size={16} color={Colors.secondary} />
             <Text style={styles.cardTitle}>Performance Staff</Text>
           </View>
-          {(stats.topStaff?.length ? stats.topStaff : [
-            { name: 'Haythem', revenue: 992.8 },
-            { name: 'Ali', revenue: 290.5 },
-          ]).map((staff: any, i: number, arr: any[]) => {
-            const maxRev = Math.max(...arr.map(s => s.revenue));
-            const percentage = (staff.revenue / maxRev) * 100;
-            return (
-              <View key={i} style={styles.staffRow}>
-                 <View style={styles.staffInfo}>
-                    <Text style={styles.staffName}>{staff.name}</Text>
-                    <Text style={[styles.staffAmount, { color: i === 0 ? Colors.primary : Colors.textSecondary }]}>{fmtMoney(staff.revenue)} DT</Text>
-                 </View>
-                 <View style={styles.progressContainer}>
-                    <View style={[styles.progressBar, { width: `${percentage}%`, backgroundColor: i === 0 ? Colors.primary : Colors.secondary }]} />
-                 </View>
-              </View>
-            );
-          })}
+          {stats.topStaff?.length > 0 ? (
+            stats.topStaff.map((staff: any, i: number, arr: any[]) => {
+              const maxRev = Math.max(...arr.map(s => s.revenue));
+              const percentage = (staff.revenue / maxRev) * 100;
+              return (
+                <View key={i} style={styles.staffRow}>
+                   <View style={styles.staffInfo}>
+                      <Text style={styles.staffName}>{staff.name}</Text>
+                      <Text style={[styles.staffAmount, { color: i === 0 ? Colors.primary : Colors.textSecondary }]}>{fmtMoney(staff.revenue)} DT</Text>
+                   </View>
+                   <View style={styles.progressContainer}>
+                      <View style={[styles.progressBar, { width: `${percentage}%`, backgroundColor: i === 0 ? Colors.primary : Colors.secondary }]} />
+                   </View>
+                </View>
+              );
+            })
+          ) : (
+            <Text style={{ color: Colors.textSecondary, fontSize: 12, textAlign: 'center', padding: 10 }}>Aucune donnée de performance staff</Text>
+          )}
         </View>
 
         {/* ── SECTION: TOP PRODUCTS ───────────────────────────── */}
@@ -160,21 +161,19 @@ export default function MetricsScreen() {
               <Text style={[styles.th, { textAlign: 'center' }]}>Volume</Text>
               <Text style={[styles.th, { textAlign: 'right' }]}>CA Généré</Text>
            </View>
-           {(stats.topProducts?.length ? stats.topProducts : [
-             { name: 'Americano', qty: 128, revenue: 448.0 },
-             { name: 'Café crème', qty: 68, revenue: 204.0 },
-             { name: 'Cappuccino', qty: 51, revenue: 222.5 },
-             { name: 'Café express', qty: 30, revenue: 36.0 },
-             { name: 'Chicha premium', qty: 21, revenue: 315.0 },
-           ]).map((p: any, i: number) => (
-             <View key={i} style={styles.tableRow}>
-                <View style={{ flex: 2, backgroundColor: 'transparent' }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>{p.name}</Text>
-                </View>
-                <Text style={[styles.td, { textAlign: 'center' }]}>{p.qty} u.</Text>
-                <Text style={[styles.td, { textAlign: 'right', color: Colors.primary, fontWeight: '700' }]}>{fmtMoney(p.revenue)} DT</Text>
-             </View>
-           ))}
+           {stats.topProducts?.length > 0 ? (
+             stats.topProducts.map((p: any, i: number) => (
+               <View key={i} style={styles.tableRow}>
+                  <View style={{ flex: 2, backgroundColor: 'transparent' }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>{p.name}</Text>
+                  </View>
+                  <Text style={[styles.td, { textAlign: 'center' }]}>{p.qty} u.</Text>
+                  <Text style={[styles.td, { textAlign: 'right', color: Colors.primary, fontWeight: '700' }]}>{fmtMoney(p.revenue)} DT</Text>
+               </View>
+             ))
+           ) : (
+             <Text style={{ color: Colors.textSecondary, fontSize: 12, textAlign: 'center', padding: 20 }}>Aucune donnée de vente aujourd'hui</Text>
+           )}
         </View>
 
         {/* ── SECTION: PERFORMANCE TABLES ───────────────────────── */}
@@ -183,17 +182,16 @@ export default function MetricsScreen() {
             <FontAwesome name="navicon" size={16} color={Colors.secondary} />
             <Text style={styles.cardTitle}>Performance Tables</Text>
           </View>
-          {(stats.tablePerformance || [
-            { name: 'Session Simpliste', revenue: 174.5 },
-            { name: 'Table T2', revenue: 25.0 },
-            { name: 'T1', revenue: 4.5 },
-            { name: 'T2', revenue: 3.0 },
-          ]).map((t: any, i: number) => (
-            <View key={i} style={styles.tableRow}>
-              <Text style={[styles.td, { color: '#fff', flex: 2 }]}>Table: {t.name}</Text>
-              <Text style={[styles.td, { textAlign: 'right', color: Colors.secondary, fontWeight: '700' }]}>{fmtMoney(t.revenue)} DT</Text>
-            </View>
-          ))}
+          {stats.tablePerformance?.length > 0 ? (
+            stats.tablePerformance.map((t: any, i: number) => (
+              <View key={i} style={styles.tableRow}>
+                <Text style={[styles.td, { color: '#fff', flex: 2 }]}>Table: {t.name}</Text>
+                <Text style={[styles.td, { textAlign: 'right', color: Colors.secondary, fontWeight: '700' }]}>{fmtMoney(t.revenue)} DT</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={{ color: Colors.textSecondary, fontSize: 12, textAlign: 'center', padding: 10 }}>Aucune donnée de tables</Text>
+          )}
         </View>
 
         {/* ── SECTION: PROFIT MARGIN ──────────────────────────── */}
