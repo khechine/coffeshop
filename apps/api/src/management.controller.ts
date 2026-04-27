@@ -750,7 +750,7 @@ export class ManagementController {
         id: `order-pending-${po.id}`,
         type: 'ORDER',
         title: `Nouvelle Commande PENDING`,
-        message: `Commande de ${po.store?.name || 'Magasin Inconnu'} pour ${po.total} DT`,
+        message: `Commande de Client Masqué pour ${po.total} DT`,
         date: po.createdAt,
       });
     }
