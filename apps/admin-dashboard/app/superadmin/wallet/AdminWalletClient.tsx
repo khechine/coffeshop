@@ -193,11 +193,15 @@ export default function AdminWalletClient({ initialRequests, initialTransactions
                             <span className="text-sm font-black text-slate-900 dark:text-white">{Number(req.amount).toFixed(3)} DT</span>
                          </td>
                          <td className="p-6">
-                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                               req.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
-                            }`}>
-                               {req.status === 'APPROVED' ? 'Approuvé' : 'Refusé'}
-                            </span>
+                            {req.status === 'APPROVED' ? (
+                               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-100/50 dark:border-emerald-500/20">
+                                  <CheckCircle2 size={10} /> Approuvé
+                               </div>
+                            ) : (
+                               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 dark:bg-rose-500/10 text-rose-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-rose-100/50 dark:border-rose-500/20">
+                                  <XCircle size={10} /> Refusé
+                               </div>
+                            )}
                          </td>
                          <td className="p-6">
                             <p className="text-xs font-medium text-slate-500 line-clamp-1 italic max-w-[200px]">{req.adminNotes || '—'}</p>
@@ -281,10 +285,10 @@ export default function AdminWalletClient({ initialRequests, initialTransactions
                                <span className="text-xs font-black text-slate-700 dark:text-slate-300">{t.wallet?.vendor?.companyName || 'Système'}</span>
                             </td>
                             <td className="p-6">
-                               <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest w-fit ${
-                                 t.type === 'COMMISSION' ? 'bg-rose-50 text-rose-600' : 
-                                 t.type === 'DEPOSIT' ? 'bg-emerald-50 text-emerald-600' :
-                                 'bg-slate-50 text-slate-600'
+                               <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest w-fit border ${
+                                 t.type === 'COMMISSION' ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 border-rose-100/50 dark:border-rose-500/20' : 
+                                 t.type === 'DEPOSIT' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border-emerald-100/50 dark:border-emerald-500/20' :
+                                 'bg-slate-50 dark:bg-slate-800 text-slate-600 border-slate-200/50 dark:border-slate-800'
                                }`}>
                                   {isPositive ? <ArrowUpRight size={10} /> : <ArrowDownLeft size={10} />}
                                   {t.type}
@@ -368,9 +372,9 @@ function DepositRequestCard({ req, adminNotes, setAdminNotes, isPending, handleP
               </div>
             </div>
             <div className="text-right">
-              <span className="px-5 py-2 bg-amber-100 text-amber-700 rounded-2xl text-[10px] font-black uppercase tracking-widest animate-pulse">
-                Action Requise
-              </span>
+              <div className="inline-flex items-center gap-2 px-5 py-2 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-500 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-amber-200/50 dark:border-amber-500/20 animate-pulse">
+                <Clock size={12} /> Action Requise
+              </div>
               <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-tighter">Soumis à {new Date(req.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
             </div>
           </div>
