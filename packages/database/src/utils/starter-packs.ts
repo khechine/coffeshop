@@ -4,6 +4,18 @@ export async function seedTunisianStarterPack(prisma: PrismaClient, storeId: str
   const store = await prisma.store.findUnique({ where: { id: storeId } });
   if (!store) throw new Error('Store not found');
 
+  // Empêcher l'installation multiple (Vérification par catégorie clé)
+  const existing = await prisma.category.findFirst({
+    where: { 
+      storeId: storeId,
+      name: { in: ['CAFÉS & CHAUD', 'CHICHA (NARGUILÉ)', 'JUS & CITRONNADE'] }
+    }
+  });
+
+  if (existing) {
+    throw new Error('Le Pack Initial Tunisie est déjà installé ou des catégories similaires existent.');
+  }
+
   // 1. Initialiser les Unités
   const unitsMap: Record<string, string> = {};
   const units = ['kg', 'g', 'ml', 'litre', 'pièce'];

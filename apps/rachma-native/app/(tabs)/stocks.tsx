@@ -158,8 +158,8 @@ export default function StocksScreen() {
         try {
           await ApiService.delete(`/management/categories/${id}`);
           onRefresh();
-        } catch (error) {
-          Alert.alert("Erreur", "Suppression impossible.");
+        } catch (error: any) {
+          Alert.alert("Erreur", error.message || "Suppression impossible.");
         }
       }}
     ]);
@@ -217,8 +217,8 @@ export default function StocksScreen() {
         try {
           await ApiService.delete(`${endpoint}/${id}`);
           onRefresh();
-        } catch (error) {
-          Alert.alert("Erreur", "Suppression impossible.");
+        } catch (error: any) {
+          Alert.alert("Erreur", error.message || "Suppression impossible.");
         }
       }}
     ]);

@@ -56,11 +56,12 @@ export class ManagementController {
     name: string; price: number; categoryId: string; storeId: string; 
     unitId?: string; taxRate?: number; canBeTakeaway?: boolean;
     icon?: string; image?: string;
+    recipeItems?: { stockItemId: string; quantity: number; isPackaging?: boolean; consumeType?: string }[];
   }): Promise<any> {
     if (!body.name || body.price === undefined || body.price === null) {
-      throw new Error("Nom et Prix sont requis.");
+      throw new BadRequestException("Nom et Prix sont requis.");
     }
-    return prisma.product.create({
+    const product = await prisma.product.create({
       data: {
         name: body.name,
         price: Number(body.price),
@@ -75,6 +76,20 @@ export class ManagementController {
       },
       include: { category: true },
     });
+
+    if (body.recipeItems && body.recipeItems.length > 0) {
+      await prisma.recipeItem.createMany({
+        data: body.recipeItems.map(ri => ({
+          productId: product.id,
+          stockItemId: ri.stockItemId,
+          quantity: ri.quantity,
+          isPackaging: ri.isPackaging || false,
+          consumeType: ri.consumeType || 'BOTH'
+        }))
+      });
+    }
+
+    return product;
   }
 
   @Put('products/:id')
@@ -82,8 +97,9 @@ export class ManagementController {
     name?: string; price?: number; categoryId?: string; unitId?: string; 
     active?: boolean; taxRate?: number; canBeTakeaway?: boolean;
     icon?: string; image?: string;
+    recipeItems?: { stockItemId: string; quantity: number; isPackaging?: boolean; consumeType?: string }[];
   }): Promise<any> {
-    return prisma.product.update({
+    const product = await prisma.product.update({
       where: { id },
       data: {
         ...(body.name && { name: body.name }),
@@ -100,6 +116,23 @@ export class ManagementController {
       },
       include: { category: true },
     });
+
+    if (body.recipeItems) {
+      await prisma.$transaction([
+        prisma.recipeItem.deleteMany({ where: { productId: id } }),
+        prisma.recipeItem.createMany({
+          data: body.recipeItems.map(ri => ({
+            productId: id,
+            stockItemId: ri.stockItemId,
+            quantity: ri.quantity,
+            isPackaging: ri.isPackaging || false,
+            consumeType: ri.consumeType || 'BOTH'
+          }))
+        })
+      ]);
+    }
+
+    return product;
   }
 
 
@@ -108,7 +141,13 @@ export class ManagementController {
     // Safety check for sales history
     const salesCount = await prisma.saleItem.count({ where: { productId: id } });
     if (salesCount > 0) {
-      throw new Error(`Ce produit est lié à ${salesCount} ventes. Suppression impossible.`);
+      throw new BadRequestException(`Ce produit est lié à ${salesCount} ventes. Suppression impossible.`);
+    }
+
+    // Safety check for special orders (B2B)
+    const specialOrdersCount = await prisma.specialOrder.count({ where: { productId: id } });
+    if (specialOrdersCount > 0) {
+      throw new BadRequestException(`Ce produit est lié à ${specialOrdersCount} commandes B2B. Suppression impossible.`);
     }
 
     // 1. Delete recipe
@@ -176,6 +215,12 @@ export class ManagementController {
   @Delete('categories/:id')
   async deleteCategory(@Param('id') id: string): Promise<any> {
     return prisma.$transaction(async (tx) => {
+      // 0. Check for child categories
+      const childrenCount = await tx.category.count({ where: { parentId: id } });
+      if (childrenCount > 0) {
+        throw new BadRequestException(`Impossible de supprimer : cette catégorie contient ${childrenCount} sous-catégories.`);
+      }
+
       // 1. Check if any product in this category has sales
       const products = await tx.product.findMany({ where: { categoryId: id } });
       const productIds = products.map(p => p.id);
@@ -1187,11 +1232,11 @@ export class ManagementController {
     // Only vendor-actionable statuses — STOCKED is reserved for the café (via /receive)
     const vendorAllowedStatuses = ['CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
     if (!vendorAllowedStatuses.includes(body.status)) {
-      throw new Error(`Status '${body.status}' is not vendor-actionable.`);
+      throw new BadRequestException(`Status '${body.status}' is not vendor-actionable.`);
     }
 
     const order = await prisma.supplierOrder.findUnique({ where: { id } });
-    if (!order) throw new Error("Order not found");
+    if (!order) throw new BadRequestException("Order not found");
 
     const previousStatus = order.status;
 
