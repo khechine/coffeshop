@@ -234,7 +234,7 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
               <tr>
                 <th>Fonctionnalité</th>
                 {staff.map(m => (
-                  <th key={m.id} style={{ textAlign: 'center', fontSize: '11px' }}>{m.name.split(' ')[0]}</th>
+                  <th key={m.id} style={{ textAlign: 'center', fontSize: '11px' }}>{(m.name || 'Staff').split(' ')[0]}</th>
                 ))}
               </tr>
             </thead>

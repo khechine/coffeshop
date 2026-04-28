@@ -17,11 +17,11 @@ export default async function AdminDashboardPage() {
 
   const salesCount = await prisma.sale.count({ where: { storeId: store.id } });
   const salesAgg = await prisma.sale.aggregate({ where: { storeId: store.id }, _sum: { total: true } });
-  const revenue = Number(salesAgg._sum.total || 0);
+  const revenue = Number(salesAgg?._sum?.total || 0);
 
-  const stockItems = await prisma.stockItem.findMany({ where: { storeId: store.id } });
+  const stockItems = (await prisma.stockItem.findMany({ where: { storeId: store.id } })) || [];
   const criticalStockCount = stockItems.filter(i => Number(i.quantity) <= Number(i.minThreshold)).length;
-  const inventoryValue = stockItems.reduce((acc, i) => acc + (Number(i.quantity) * Number(i.cost || 0)), 0);
+  const inventoryValue = stockItems.reduce((acc, i) => acc + (Number(i.quantity || 0) * Number(i.cost || 0)), 0);
 
   const productsCount = await prisma.product.count({ where: { storeId: store.id } });
   const staffCount = await prisma.user.count({ where: { storeId: store.id } });
@@ -65,7 +65,7 @@ export default async function AdminDashboardPage() {
     take: 5
   });
 
-  const baristaIds = salesByBarista.map(s => s.baristaId as string);
+  const baristaIds = salesByBarista.map(s => s.baristaId).filter(Boolean) as string[];
   const baristas = await prisma.user.findMany({
      where: { id: { in: baristaIds } },
      select: { id: true, name: true }
@@ -77,6 +77,7 @@ export default async function AdminDashboardPage() {
   });
 
   const productStats = saleItems.reduce((acc: any, item) => {
+    if (!item.product) return acc;
     const name = item.product.name;
     if (!acc[name]) acc[name] = { name, quantity: 0, revenue: 0 };
     acc[name].quantity += item.quantity;
@@ -89,7 +90,7 @@ export default async function AdminDashboardPage() {
     .slice(0, 5);
 
   const bestBaristaData = salesByBarista[0];
-  const bestBaristaName = baristas.find(u => u.id === bestBaristaData?.baristaId)?.name || 'N/A';
+  const bestBaristaName = bestBaristaData ? (baristas.find(u => u.id === bestBaristaData.baristaId)?.name || 'N/A') : 'N/A';
   const bestBaristaRev = Number(bestBaristaData?._sum.total || 0);
 
   return (
