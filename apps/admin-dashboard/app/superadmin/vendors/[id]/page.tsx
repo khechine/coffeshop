@@ -11,6 +11,7 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
     where: { id },
     include: {
       user: true,
+      commissionRule: true,
       vendorProducts: true,
       orders: {
         include: { 
@@ -23,13 +24,17 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
     }
   });
 
+  const rules = await (prisma as any).commissionRule.findMany({
+    orderBy: { name: 'asc' }
+  });
+
   if (!vendor) {
     notFound();
   }
 
   return (
     <div className="flex flex-col gap-8 p-6 max-w-8xl mx-auto">
-      <VendorDetailClient vendor={vendor} />
+      <VendorDetailClient vendor={vendor} rules={rules} />
     </div>
   );
 }

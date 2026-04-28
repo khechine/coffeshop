@@ -16,6 +16,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     { label: 'Catalogue & Flux', icon: Package, href: '/superadmin/marketplace' },
     { label: 'Carte de Tunisie', icon: MapPin, href: '/superadmin/map' },
     { label: 'Plans & Abonnements', icon: CreditCard, href: '/superadmin/plans' },
+    { label: 'Règles Commissions', icon: ShieldCheck, href: '/superadmin/commissions' },
     { label: 'Référentiels Globaux', icon: Database, href: '/superadmin/referentiels' },
     { label: 'Gestion Portefeuilles', icon: Wallet, href: '/superadmin/wallet', badge: 'Dépôts' },
     { label: 'Gestion Utilisateurs', icon: Users, href: '/superadmin/users' },

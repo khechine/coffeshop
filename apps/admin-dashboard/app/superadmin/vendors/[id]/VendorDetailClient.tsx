@@ -9,12 +9,22 @@ import {
   ChevronRight, Box
 } from 'lucide-react';
 import Link from 'next/link';
-import { approveVendorAction, rejectVendorAction } from '../../../actions';
+import { approveVendorAction, rejectVendorAction, assignCommissionRuleToVendor } from '../../../actions';
 
-export default function VendorDetailClient({ vendor }: { vendor: any }) {
+export default function VendorDetailClient({ vendor, rules }: { vendor: any, rules: any[] }) {
   const [activeTab, setActiveTab] = useState<'catalog' | 'orders'>('catalog');
   const [productSearch, setProductSearch] = useState('');
   const [isPending, startTransition] = useTransition();
+
+  const handleAssignRule = (ruleId: string | null) => {
+    startTransition(async () => {
+      try {
+        await assignCommissionRuleToVendor(vendor.id, ruleId);
+      } catch (err: any) {
+        alert(err.message);
+      }
+    });
+  };
 
   const filteredProducts = vendor.products.filter((p: any) => 
     p.name.toLowerCase().includes(productSearch.toLowerCase())
@@ -146,34 +156,70 @@ export default function VendorDetailClient({ vendor }: { vendor: any }) {
 
             <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Commission Marketplace</h3>
-              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl mb-4 border border-slate-100 dark:border-slate-800">
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Taux par Défaut</span>
-                <span className="text-lg font-black text-indigo-600">{(Number(vendor.commissionRate || 0.01) * 100).toFixed(1)}%</span>
-              </div>
               
-              {(() => {
-                 let tiersList = [];
-                 try {
-                     if (vendor.commissionTiers) {
-                         tiersList = typeof vendor.commissionTiers === 'string' ? JSON.parse(vendor.commissionTiers) : vendor.commissionTiers;
-                     }
-                 } catch(e) {}
-                 
-                 if (Array.isArray(tiersList) && tiersList.length > 0) {
-                     return (
-                         <div className="space-y-2">
-                           <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Paliers Volume Actifs</div>
-                           {tiersList.sort((a: any, b: any) => a.minAmount - b.minAmount).map((tier: any, i: number) => (
-                             <div key={i} className="flex justify-between items-center bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 p-3 rounded-xl">
-                               <span className="text-xs font-bold text-slate-500">Dès {tier.minAmount} DT</span>
-                               <span className="text-sm font-black text-emerald-500">{(tier.rate * 100).toFixed(1)}%</span>
-                             </div>
-                           ))}
-                         </div>
-                     );
-                 }
-                 return null;
-              })()}
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Règle Appliquée</label>
+                  <select 
+                    value={vendor.commissionRuleId || ""} 
+                    onChange={(e) => handleAssignRule(e.target.value || null)}
+                    disabled={isPending}
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">(Par Défaut Global / Individuel)</option>
+                    {rules.map(rule => (
+                      <option key={rule.id} value={rule.id}>{rule.name} ({(rule.baseRate * 100).toFixed(1)}%)</option>
+                    ))}
+                  </select>
+                </div>
+
+                {vendor.commissionRule ? (
+                  <div className="p-4 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl border border-indigo-100 dark:border-indigo-500/20">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] font-black text-indigo-600 uppercase">Taux de base</span>
+                      <span className="text-lg font-black text-indigo-700 dark:text-indigo-400">{(vendor.commissionRule.baseRate * 100).toFixed(1)}%</span>
+                    </div>
+                    {Array.isArray(vendor.commissionRule.tiers) && vendor.commissionRule.tiers.length > 0 && (
+                      <div className="space-y-2 mt-3 pt-3 border-t border-indigo-200/30">
+                        {vendor.commissionRule.tiers.sort((a: any, b: any) => a.minAmount - b.minAmount).map((tier: any, i: number) => (
+                          <div key={i} className="flex justify-between text-[10px] font-bold">
+                            <span className="text-indigo-600/70">Dès {tier.minAmount} DT</span>
+                            <span className="text-indigo-700">{(tier.rate * 100).toFixed(2)}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] font-black text-slate-400 uppercase">Taux Individuel</span>
+                      <span className="text-lg font-black text-slate-700">{(Number(vendor.commissionRate || 0.01) * 100).toFixed(1)}%</span>
+                    </div>
+                    {(() => {
+                      let tiersList = [];
+                      try {
+                        if (vendor.commissionTiers) {
+                          tiersList = typeof vendor.commissionTiers === 'string' ? JSON.parse(vendor.commissionTiers) : vendor.commissionTiers;
+                        }
+                      } catch(e) {}
+                      if (Array.isArray(tiersList) && tiersList.length > 0) {
+                        return (
+                          <div className="space-y-1 mt-2">
+                            {tiersList.sort((a: any, b: any) => a.minAmount - b.minAmount).map((tier: any, i: number) => (
+                              <div key={i} className="flex justify-between text-[10px] font-bold text-slate-500">
+                                <span>Dès {tier.minAmount} DT</span>
+                                <span>{(tier.rate * 100).toFixed(1)}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="pt-6 border-t border-slate-100 dark:border-slate-800">

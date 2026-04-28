@@ -759,9 +759,16 @@ model VendorProfile {
   stockItems     StockItem[]
   
   wallet         VendorWallet?
-  commissionRate Decimal @default(0.01) // Negotiation margin (per order total)
+  
+  // Commission Management
+  commissionRuleId String?
+  commissionRule   CommissionRule? @relation(fields: [commissionRuleId], references: [id])
+  
+  commissionRate Decimal @default(0.01) // Legacy / Manual Override
   commissionTiers Json?  // Format: [{ minAmount: number, rate: number }]
+  
   depositRequests WalletDepositRequest[]
+
 
   // Anti-leakage tracking
   interactions   VendorInteraction[]     @relation("VendorInteractions")
@@ -782,6 +789,18 @@ model CourierProfile {
   currentLng  Float?
   orders      SupplierOrder[]
   createdAt   DateTime        @default(now())
+}
+
+model CommissionRule {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  baseRate    Decimal  @default(0.01)
+  tiers       Json?    // Array of { minAmount: number, rate: number }
+  isDefault   Boolean  @default(false)
+  vendors     VendorProfile[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 enum OrderStatus {

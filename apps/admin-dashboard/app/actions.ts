@@ -2510,6 +2510,84 @@ export async function deleteActivityPole(id: string) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+//  COMMISSION RULES (MARKETPLACE)
+// ══════════════════════════════════════════════════════════════
+
+export async function getCommissionRules() {
+  const user = await getUser();
+  if (user?.role !== 'SUPERADMIN') throw new Error('Action non autorisée');
+  return (prisma as any).commissionRule.findMany({
+    orderBy: { createdAt: 'desc' }
+  });
+}
+
+export async function createCommissionRule(data: { name: string; description?: string; baseRate: number; tiers: any[]; isDefault?: boolean }) {
+  const user = await getUser();
+  if (user?.role !== 'SUPERADMIN') throw new Error('Action non autorisée');
+  
+  if (data.isDefault) {
+    await (prisma as any).commissionRule.updateMany({
+      where: { isDefault: true },
+      data: { isDefault: false }
+    });
+  }
+
+  const rule = await (prisma as any).commissionRule.create({
+    data: {
+      name: data.name,
+      description: data.description,
+      baseRate: data.baseRate,
+      tiers: data.tiers,
+      isDefault: data.isDefault || false
+    }
+  });
+
+  revalidatePath('/superadmin/commissions');
+  return rule;
+}
+
+export async function updateCommissionRule(id: string, data: { name?: string; description?: string; baseRate?: number; tiers?: any[]; isDefault?: boolean }) {
+  const user = await getUser();
+  if (user?.role !== 'SUPERADMIN') throw new Error('Action non autorisée');
+
+  if (data.isDefault) {
+    await (prisma as any).commissionRule.updateMany({
+      where: { isDefault: true, id: { not: id } },
+      data: { isDefault: false }
+    });
+  }
+
+  const rule = await (prisma as any).commissionRule.update({
+    where: { id },
+    data
+  });
+
+  revalidatePath('/superadmin/commissions');
+  return rule;
+}
+
+export async function deleteCommissionRule(id: string) {
+  const user = await getUser();
+  if (user?.role !== 'SUPERADMIN') throw new Error('Action non autorisée');
+
+  await (prisma as any).commissionRule.delete({ where: { id } });
+  revalidatePath('/superadmin/commissions');
+}
+
+export async function assignCommissionRuleToVendor(vendorId: string, ruleId: string | null) {
+  const user = await getUser();
+  if (user?.role !== 'SUPERADMIN') throw new Error('Action non autorisée');
+
+  await prisma.vendorProfile.update({
+    where: { id: vendorId },
+    data: { commissionRuleId: ruleId }
+  });
+
+  revalidatePath(`/superadmin/vendors/${vendorId}`);
+  revalidatePath('/superadmin/vendors');
+}
+
 //  MARKETPLACE CATEGORIES (SuperAdmin managed)
 // ══════════════════════════════════════════════════════════════
 // Categorires management moved to MarketplaceCategory actions section

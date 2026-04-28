@@ -1087,6 +1087,67 @@ export class ManagementController {
     });
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // COMMISSION RULES (SUPERADMIN)
+  // ═══════════════════════════════════════════════════════════
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Get('admin/commission-rules')
+  async getCommissionRules(): Promise<any[]> {
+    return (prisma as any).commissionRule.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Post('admin/commission-rules')
+  async createCommissionRule(@Body() data: any): Promise<any> {
+    if (data.isDefault) {
+      await (prisma as any).commissionRule.updateMany({
+        where: { isDefault: true },
+        data: { isDefault: false }
+      });
+    }
+    return (prisma as any).commissionRule.create({
+      data
+    });
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Put('admin/commission-rules/:id')
+  async updateCommissionRule(@Param('id') id: string, @Body() data: any): Promise<any> {
+    if (data.isDefault) {
+      await (prisma as any).commissionRule.updateMany({
+        where: { isDefault: true, id: { not: id } },
+        data: { isDefault: false }
+      });
+    }
+    return (prisma as any).commissionRule.update({
+      where: { id },
+      data
+    });
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Delete('admin/commission-rules/:id')
+  async deleteCommissionRule(@Param('id') id: string): Promise<any> {
+    return (prisma as any).commissionRule.delete({
+      where: { id }
+    });
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Post('admin/vendors/:vendorId/assign-rule')
+  async assignCommissionRule(@Param('vendorId') vendorId: string, @Body() body: { ruleId: string | null }): Promise<any> {
+    return prisma.vendorProfile.update({
+      where: { id: vendorId },
+      data: {
+        commissionRuleId: body.ruleId
+      }
+    });
+  }
+
+
   @UseGuards(MarketplaceAuthGuard)
   @Put('vendor/orders/:id/status')
   async updateVendorOrderStatus(@Param('id') id: string, @Body() body: {
@@ -1114,7 +1175,10 @@ export class ManagementController {
       try {
         const vendor = await prisma.vendorProfile.findUnique({
           where: { id: updatedOrder.vendorId },
-          include: { wallet: true }
+          include: { 
+            wallet: true,
+            commissionRule: true
+          }
         });
 
         // Check if settlement already exists to prevent double deduction
@@ -1123,19 +1187,37 @@ export class ManagementController {
         });
 
         if (vendor && !existingSettlement) {
-          let finalRate = Number(vendor.commissionRate);
-          if (isNaN(finalRate) || finalRate === 0) {
-            finalRate = 0.01;
-          }
           const totalNum = Number(updatedOrder.total || 0);
+          
+          let baseRate = 0.01;
+          let tiersRaw: any = null;
 
-          if (vendor.commissionTiers) {
+          // 1. Priority: Assigned Rule
+          if (vendor.commissionRule) {
+            baseRate = Number(vendor.commissionRule.baseRate);
+            tiersRaw = vendor.commissionRule.tiers;
+          } else {
+            // 2. Default Global Rule
+            const defaultRule = await (prisma as any).commissionRule.findFirst({
+              where: { isDefault: true }
+            });
+            if (defaultRule) {
+              baseRate = Number(defaultRule.baseRate);
+              tiersRaw = defaultRule.tiers;
+            } else {
+              // 3. Fallback: Vendor Override
+              baseRate = Number(vendor.commissionRate);
+              if (isNaN(baseRate) || baseRate === 0) {
+                baseRate = 0.01;
+              }
+              tiersRaw = vendor.commissionTiers;
+            }
+          }
+
+          let finalRate = baseRate;
+          if (tiersRaw) {
             try {
-              const tiersRaw = typeof vendor.commissionTiers === 'string' 
-                ? JSON.parse(vendor.commissionTiers) 
-                : vendor.commissionTiers;
-              const tiers = Array.isArray(tiersRaw) ? tiersRaw : [];
-              
+              const tiers = Array.isArray(tiersRaw) ? tiersRaw : (typeof tiersRaw === 'string' ? JSON.parse(tiersRaw) : []);
               if (tiers.length > 0) {
                 const sortedTiers = tiers.sort((a: any, b: any) => b.minAmount - a.minAmount);
                 for (const tier of sortedTiers) {
@@ -1145,10 +1227,11 @@ export class ManagementController {
                   }
                 }
               }
-            } catch (jsonErr) {
-               console.warn(`[Marketplace] Failed to parse commissionTiers for vendor ${vendor.id}`);
+            } catch (e) {
+              console.warn("[Marketplace] Error parsing tiers for calculation", e);
             }
           }
+
 
           const commissionAmount = totalNum * finalRate;
 
