@@ -1079,7 +1079,7 @@ export async function getMarketplaceData() {
     featured: featuredRaw.map(mapProduct),
     flashSales: flashSalesRaw.map(mapProduct),
     products: productsRaw.map(mapProduct),
-    bundles: bundlesRaw.map(b => ({
+    bundles: bundlesRaw.map((b: any) => ({
       ...b,
       price: Number(b.price),
       items: b.items.map((i: any) => ({
@@ -2608,7 +2608,7 @@ export async function assignCommissionRuleToVendor(vendorId: string, ruleId: str
   const user = await getUser();
   if (user?.role !== 'SUPERADMIN') throw new Error('Action non autorisée');
 
-  await prisma.vendorProfile.update({
+  await (prisma.vendorProfile as any).update({
     where: { id: vendorId },
     data: { commissionRuleId: ruleId }
   });

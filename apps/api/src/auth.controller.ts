@@ -9,7 +9,7 @@ export class AuthController {
   health() { return { status: 'ok', time: new Date().toISOString() }; }
 
   @Get('verify-staff-pin')
-  async verifyStaffPin(@Query('pin') pin: string, @Query('storeId') storeId: string) {
+  async verifyStaffPin(@Query('pin') pin: string, @Query('storeId') storeId: string): Promise<any> {
     console.log(`🔐 Verification PIN [${pin}] pour boutique [${storeId}]`);
 
     if (!pin || !storeId) {
@@ -42,7 +42,7 @@ export class AuthController {
   async activateTerminal(
     @Query('code') code: string,
     @Query('storeId') storeId: string
-  ) {
+  ): Promise<any> {
     if (!code || code.length !== 6 || !storeId) {
       throw new UnauthorizedException('Code (6 chiffres) et ID Boutique requis');
     }
@@ -86,7 +86,7 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() body: any) {
+  async login(@Body() body: any): Promise<any> {
     const { email, password } = body;
     if (!email || !password) {
       throw new UnauthorizedException('Email et mot de passe requis');
@@ -148,7 +148,7 @@ export class AuthController {
   }
 
   @Post('register')
-  async register(@Body() body: any) {
+  async register(@Body() body: any): Promise<any> {
     const { email, password, name, role, companyName } = body;
     console.log(`📝 Inscription demandée: [${email}] avec rôle [${role}]`);
 
@@ -247,7 +247,7 @@ export class AuthController {
   }
 
   @Post('update-profile')
-  async updateProfile(@Body() body: { id: string; name?: string; email?: string; pinCode?: string }) {
+  async updateProfile(@Body() body: { id: string; name?: string; email?: string; pinCode?: string }): Promise<any> {
     console.log(`👤 Mise à jour profil pour [${body.id}]`);
     
     if (!body.id) throw new UnauthorizedException('ID Utilisateur requis');

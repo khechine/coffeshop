@@ -464,7 +464,7 @@ export default function RachmaScreen() {
               onPress={async () => {
                 if (!storeId) return;
                 Vibration.vibrate(50);
-                if (Platform.OS === 'web' ? window.confirm('Installer le Pack Initial Tunisie ?') : true) {
+                if (Platform.OS === 'web' ? window.confirm('Installer le Pack Initial Tunisie (Produits, Recettes & Emballages) ?') : true) {
                   try {
                     setRefreshing(true);
                     const res = await ApiService.seedTunisia(storeId);
@@ -805,7 +805,7 @@ export default function RachmaScreen() {
                    if (Platform.OS !== 'web') {
                       showAlert({
                         title: 'Pack Initial Tunisie',
-                        message: 'Voulez-vous installer les produits et recettes populaires ?',
+                        message: 'Voulez-vous installer les produits, recettes et emballages populaires en Tunisie ?',
                         type: 'warning',
                         buttons: [
                           { text: 'Annuler', style: 'cancel' },
@@ -820,7 +820,7 @@ export default function RachmaScreen() {
                           }}
                         ]
                       });
-                   } else if (window.confirm('Installer Pack Tunisie ?')) {
+                   } else if (window.confirm('Installer le Pack Initial Tunisie (Café, Thé, Chicha, Recettes & Emballages) ?')) {
                       const res = await ApiService.seedTunisia(storeId);
                       window.alert(res.message);
                       syncProducts();

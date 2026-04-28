@@ -8,7 +8,7 @@ export class SalesController {
   constructor(private readonly salesService: SalesService) {}
 
   @Get('verify/pin')
-  async verifyStaffPin(@Query('pin') pin: string, @Query('storeId') storeId: string) {
+  async verifyStaffPin(@Query('pin') pin: string, @Query('storeId') storeId: string): Promise<any> {
     if (!pin || !storeId) throw new UnauthorizedException('Champs requis');
     const user = await prisma.user.findFirst({
       where: { storeId: storeId.trim(), pinCode: pin.trim() },
@@ -54,7 +54,7 @@ export class SalesController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('mode') mode?: string,
-  ) {
+  ): Promise<any> {
     return this.salesService.getSalesHistory(storeId, {
       baristaId,
       startDate,
@@ -67,7 +67,7 @@ export class SalesController {
   async updatePreparation(
     @Param('id') id: string,
     @Body() body: { status: string, preparedById: string, preparationStation?: string }
-  ) {
+  ): Promise<any> {
     return this.salesService.updatePreparationStatus(
       id, 
       body.status, 
@@ -80,7 +80,7 @@ export class SalesController {
   async cancelSale(
     @Param('id') id: string,
     @Body() body: { canceledById: string }
-  ) {
+  ): Promise<any> {
     return this.salesService.cancelSale(id, body.canceledById);
   }
 
@@ -100,7 +100,7 @@ export class SalesController {
   }
 
   @Get('management/staff/:storeId')
-  async getStaff(@Param('storeId') storeId: string) {
+  async getStaff(@Param('storeId') storeId: string): Promise<any> {
     return prisma.user.findMany({
       where: { storeId },
       select: {
@@ -119,7 +119,7 @@ export class SalesController {
   }
 
   @Get('management/sessions/:storeId')
-  async getSessions(@Param('storeId') storeId: string) {
+  async getSessions(@Param('storeId') storeId: string): Promise<any> {
     return prisma.staffSessionLog.findMany({
       where: { storeId },
       include: { user: { select: { name: true } } },
@@ -132,7 +132,7 @@ export class SalesController {
   async updateStaff(
     @Param('id') id: string,
     @Body() body: { name?: string; role?: string; permissions?: string[]; defaultPosMode?: string; assignedTables?: string[] }
-  ) {
+  ): Promise<any> {
     return prisma.user.update({
       where: { id },
       data: {
@@ -149,7 +149,7 @@ export class SalesController {
   async updateStaffPin(
     @Param('id') id: string,
     @Body() body: { pinCode: string | null }
-  ) {
+  ): Promise<any> {
     return prisma.user.update({
       where: { id },
       data: { pinCode: body.pinCode }

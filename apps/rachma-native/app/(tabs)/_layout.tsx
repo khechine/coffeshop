@@ -102,7 +102,7 @@ export default function TabLayout() {
       if (!storeId) return;
       Alert.alert(
         'Pack Initial Tunisie',
-        'Voulez-vous installer le pack (Café, Thé, Citronnade, Chicha, Recettes...) ?',
+        'Installer le Pack Initial Tunisie (Produits, Recettes & Emballages) ?',
         [
           { text: 'Annuler', style: 'cancel' },
           {

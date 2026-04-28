@@ -407,7 +407,7 @@ export default function StocksScreen() {
                         style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#10b981', borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 8 }}
                         onPress={async () => {
                            if (!storeId) return;
-                           Alert.alert('Pack Initial Tunisie', 'Installer les produits, recettes et emballages ?', [
+                           Alert.alert('Pack Initial Tunisie', 'Installer les produits, recettes et emballages populaires ?', [
                               { text: 'Annuler', style: 'cancel' },
                               { text: 'Installer', onPress: async () => {
                                  try {
@@ -502,7 +502,7 @@ export default function StocksScreen() {
                 style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#10b981', borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 8 }}
                 onPress={async () => {
                     if (!storeId) return;
-                    Alert.alert('Pack Initial Tunisie', 'Installer les matières premières et emballages ?', [
+                    Alert.alert('Pack Initial Tunisie', 'Installer les matières premières, recettes et emballages populaires ?', [
                       { text: 'Annuler', style: 'cancel' },
                       { text: 'Installer', onPress: async () => {
                           try {
