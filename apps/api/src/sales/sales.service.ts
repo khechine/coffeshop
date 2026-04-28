@@ -2,13 +2,17 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { prisma } from '@coffeeshop/database';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { InventoryService } from '../inventory/inventory.service';
+import { SalesGateway } from '../websockets/sales.gateway';
 import * as crypto from 'crypto';
 
 @Injectable()
 export class SalesService {
   private readonly logger = new Logger(SalesService.name);
 
-  constructor(private readonly inventoryService: InventoryService) {}
+  constructor(
+    private readonly inventoryService: InventoryService,
+    private readonly salesGateway: SalesGateway
+  ) {}
 
   async createSale(dto: CreateSaleDto): Promise<any> {
     try {
@@ -145,6 +149,10 @@ export class SalesService {
       }
 
       this.logger.log(`Sale ${sale.id} completed. Total: ${sale.total}`);
+      
+      // Broadcast to real-time owner dashboard
+      this.salesGateway.broadcastSaleCompleted(dto.storeId, sale);
+
       return sale;
 
     } catch (error) {

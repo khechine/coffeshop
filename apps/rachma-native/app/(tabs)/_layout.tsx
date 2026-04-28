@@ -151,6 +151,11 @@ export default function TabLayout() {
               <FontAwesome name="th" size={18} color="#94a3b8" />
               <Text style={styles.adminLinkText}>Configuration Tables</Text>
             </TouchableOpacity>
+            
+            <TouchableOpacity style={[styles.adminLink, { borderColor: 'rgba(99, 102, 241, 0.3)', backgroundColor: 'rgba(99, 102, 241, 0.05)' }]} onPress={() => { setShowSettings(false); router.push('/live'); }}>
+              <FontAwesome name="feed" size={18} color="#6366f1" />
+              <Text style={[styles.adminLinkText, { color: '#6366f1' }]}>Live Dashboard (Owner)</Text>
+            </TouchableOpacity>
           </View>
         </View>
       );

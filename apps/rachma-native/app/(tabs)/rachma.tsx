@@ -11,6 +11,7 @@ import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
+import { SocketService } from '@/services/socket';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 import { useRouter } from 'expo-router';
@@ -78,7 +79,10 @@ export default function RachmaScreen() {
 
   useEffect(() => {
     AuthService.getSession().then(s => { 
-      if (s?.storeId) setStoreId(s.storeId); 
+      if (s?.storeId) {
+        setStoreId(s.storeId); 
+        SocketService.joinStore(s.storeId);
+      }
       if (s?.user) {
         setUser(s.user);
         setEditName(s.user.name || '');
@@ -202,6 +206,15 @@ export default function RachmaScreen() {
     setLogs(updated);
     saveLogs(updated);
     playFeedback(pkgId ? 'pkg' : (mode === 'sale' ? 'sale' : 'loss'));
+
+    // Emit live event
+    SocketService.emitRachmaAction({
+      storeId,
+      action: 'add',
+      productId,
+      baristaId: user?.id || 'Unknown',
+      timestamp: new Date().toISOString()
+    });
   };
 
   // ── Long press: undo last entry ──
@@ -212,6 +225,15 @@ export default function RachmaScreen() {
     setLogs(updated);
     saveLogs(updated);
     playFeedback('undo');
+
+    // Emit live event
+    SocketService.emitRachmaAction({
+      storeId,
+      action: 'undo',
+      productId,
+      baristaId: user?.id || 'Unknown',
+      timestamp: new Date().toISOString()
+    });
   };
 
   const handleLock = () => {
