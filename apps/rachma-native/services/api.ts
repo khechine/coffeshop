@@ -76,6 +76,10 @@ export const ApiService = {
       console.error(`ApiService.delete(${endpoint}) failed:`, error);
       throw error;
     }
+  },
+
+  async seedTunisia(storeId: string) {
+    return this.post(`/management/seed-tunisia/${storeId}`, {});
   }
 };
 

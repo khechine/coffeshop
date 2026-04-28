@@ -1,6 +1,6 @@
 'use server';
 
-import { prisma } from '@coffeeshop/database';
+import { prisma, seedTunisianStarterPack } from '@coffeeshop/database';
 import { revalidatePath } from 'next/cache';
 import * as bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
@@ -13,55 +13,55 @@ export async function getStore() {
   if (!userId) return null;
 
   try {
-     // Robust fetch for user and store
-     const user = await (prisma as any).user.findUnique({
-       where: { id: userId }
-     });
+    // Robust fetch for user and store
+    const user = await (prisma as any).user.findUnique({
+      where: { id: userId }
+    });
 
-     if (user?.storeId) {
-        const store = await (prisma as any).store.findUnique({
-          where: { id: user.storeId },
-          include: {
-            subscription: {
-              include: { plan: true }
-            }
+    if (user?.storeId) {
+      const store = await (prisma as any).store.findUnique({
+        where: { id: user.storeId },
+        include: {
+          subscription: {
+            include: { plan: true }
           }
-        });
-
-        if (store) {
-           const storeObj: any = store;
-           const plan = storeObj?.subscription?.plan;
-           
-           // Combined access: from Plan OR manual override (Forced TRUE for all plans as per requirement)
-           const hasMarketplace = true; // (plan?.hasMarketplace === true) || (storeObj?.forceMarketplaceAccess === true);
-           storeObj.hasMarketplace = hasMarketplace;
-           
-           return storeObj;
         }
-     }
-   } catch (err) {
-      console.error("getStore error, trying robust fallback", err);
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { storeId: true }
       });
-      
-      if (user?.storeId) {
-        const store = await prisma.store.findUnique({
-          where: { id: user.storeId },
-          include: {
-            subscription: {
-              include: { plan: true }
-            }
-          }
-        });
-        if (store) {
-          const storeObj: any = store;
-          storeObj.hasMarketplace = true; // (storeObj.subscription?.plan?.hasMarketplace === true) || (storeObj.forceMarketplaceAccess === true);
-          return storeObj;
-        }
+
+      if (store) {
+        const storeObj: any = store;
+        const plan = storeObj?.subscription?.plan;
+
+        // Combined access: from Plan OR manual override (Forced TRUE for all plans as per requirement)
+        const hasMarketplace = true; // (plan?.hasMarketplace === true) || (storeObj?.forceMarketplaceAccess === true);
+        storeObj.hasMarketplace = hasMarketplace;
+
+        return storeObj;
       }
-   }
+    }
+  } catch (err) {
+    console.error("getStore error, trying robust fallback", err);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { storeId: true }
+    });
+
+    if (user?.storeId) {
+      const store = await prisma.store.findUnique({
+        where: { id: user.storeId },
+        include: {
+          subscription: {
+            include: { plan: true }
+          }
+        }
+      });
+      if (store) {
+        const storeObj: any = store;
+        storeObj.hasMarketplace = true; // (storeObj.subscription?.plan?.hasMarketplace === true) || (storeObj.forceMarketplaceAccess === true);
+        return storeObj;
+      }
+    }
+  }
   return null;
 }
 
@@ -119,9 +119,9 @@ export async function toggleFiscalMode(enabled: boolean, pinCode?: string) {
 export async function createProduct(data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; recipe?: { stockItemId: string; quantity: number; consumeType?: string; isPackaging?: boolean }[] }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
-  
-  await prisma.product.create({ 
-    data: { 
+
+  await prisma.product.create({
+    data: {
       name: data.name,
       price: data.price,
       categoryId: data.categoryId,
@@ -139,7 +139,7 @@ export async function createProduct(data: { name: string; price: number; categor
           isPackaging: r.isPackaging || false
         }))
       } : undefined
-    } 
+    }
   });
   revalidatePath('/admin/products');
 }
@@ -147,8 +147,8 @@ export async function createProduct(data: { name: string; price: number; categor
 
 export async function updateProduct(id: string, data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; recipe?: { stockItemId: string; quantity: number; consumeType?: string; isPackaging?: boolean }[] }) {
   await prisma.recipeItem.deleteMany({ where: { productId: id } });
-  await prisma.product.update({ 
-    where: { id }, 
+  await prisma.product.update({
+    where: { id },
     data: {
       name: data.name,
       price: data.price,
@@ -181,7 +181,7 @@ export async function deleteProduct(id: string) {
   try {
     // 1. Delete associated recipe items
     await prisma.recipeItem.deleteMany({ where: { productId: id } });
-    
+
     // 2. Delete the product
     await prisma.product.delete({ where: { id } });
     revalidatePath('/admin/products');
@@ -198,24 +198,28 @@ export async function createStockItem(data: { name: string; unitId?: string; qua
   const store = await getStore();
   if (!store) throw new Error('Store not found');
   const { unitId, preferredVendorId, preferredSupplierId, ...rest } = data;
-  await prisma.stockItem.create({ data: { 
-    ...rest, 
-    storeId: store.id,
-    unitId: unitId || undefined,
-    preferredVendorId: preferredVendorId || undefined,
-    preferredSupplierId: preferredSupplierId || undefined
-  }});
+  await prisma.stockItem.create({
+    data: {
+      ...rest,
+      storeId: store.id,
+      unitId: unitId || undefined,
+      preferredVendorId: preferredVendorId || undefined,
+      preferredSupplierId: preferredSupplierId || undefined
+    }
+  });
   revalidatePath('/admin/stock');
 }
 
 export async function updateStockItem(id: string, data: { name: string; unitId?: string; quantity: number; minThreshold: number; cost: number; preferredVendorId?: string; preferredSupplierId?: string }) {
   const { unitId, preferredVendorId, preferredSupplierId, ...rest } = data;
-  await prisma.stockItem.update({ where: { id }, data: {
-    ...rest,
-    unitId: unitId || undefined,
-    preferredVendorId: preferredVendorId || undefined,
-    preferredSupplierId: preferredSupplierId || undefined
-  }});
+  await prisma.stockItem.update({
+    where: { id }, data: {
+      ...rest,
+      unitId: unitId || undefined,
+      preferredVendorId: preferredVendorId || undefined,
+      preferredSupplierId: preferredSupplierId || undefined
+    }
+  });
   revalidatePath('/admin/stock');
 }
 
@@ -307,7 +311,7 @@ async function incrementStoreStock(orderId: string) {
       // If marketplace/manual order (no stockItemId), try to find or create it
       if (!stockItemId && item.name) {
         let stockItem = await tx.stockItem.findFirst({
-          where: { 
+          where: {
             storeId: order.storeId,
             name: { equals: item.name, mode: 'insensitive' }
           }
@@ -332,7 +336,7 @@ async function incrementStoreStock(orderId: string) {
           const oldCost = Number(currentItem.cost || 0);
           const newQty = Number(item.quantity);
           const newPrice = Number(item.price);
-          
+
           let finalCost = newPrice;
           if (oldQty > 0) {
             finalCost = ((oldQty * oldCost) + (newQty * newPrice)) / (oldQty + newQty);
@@ -340,7 +344,7 @@ async function incrementStoreStock(orderId: string) {
 
           await tx.stockItem.update({
             where: { id: stockItemId },
-            data: { 
+            data: {
               quantity: { increment: newQty },
               cost: finalCost
             }
@@ -367,10 +371,10 @@ export async function deleteSupplierOrder(id: string) {
 async function checkStaffActionAuth() {
   const user = await getUser();
   if (!user) throw new Error('Authentification requise');
-  
+
   const isOwner = user.role === 'STORE_OWNER';
   const hasStaffPerm = (user.permissions as string[])?.includes('STAFF');
-  
+
   if (!isOwner && !hasStaffPerm) {
     throw new Error('Action non autorisée : Vous n\'avez pas le droit de gérer le personnel.');
   }
@@ -399,9 +403,9 @@ export async function createStaffMember(data: { name: string; email: string; pho
 
 export async function updateStaffMember(id: string, data: { name: string; email: string; phone: string; role: string; defaultPosMode?: string; permissions?: string[]; assignedTables?: string[] }) {
   await checkStaffActionAuth();
-  await prisma.user.update({ 
-    where: { id }, 
-    data: { 
+  await prisma.user.update({
+    where: { id },
+    data: {
       name: data.name,
       email: data.email,
       phone: data.phone,
@@ -409,7 +413,7 @@ export async function updateStaffMember(id: string, data: { name: string; email:
       defaultPosMode: data.defaultPosMode,
       permissions: data.permissions,
       assignedTables: data.assignedTables
-    } 
+    }
   });
   revalidatePath('/admin/staff');
 }
@@ -417,15 +421,15 @@ export async function updateStaffMember(id: string, data: { name: string; email:
 export async function deleteStaffMember(id: string) {
   const authUser = await checkStaffActionAuth();
   if (authUser.id === id) throw new Error('Vous ne pouvez pas vous supprimer vous-même.');
-  
+
   // 1. Clean up session logs
   await prisma.staffSessionLog.deleteMany({ where: { userId: id } });
-  
+
   // 2. Disconnect from sales history to avoid Restrict violation
   // The sales will remain in the database but will no longer point to this user
   await prisma.sale.updateMany({ where: { baristaId: id }, data: { baristaId: null } });
   await prisma.sale.updateMany({ where: { takenById: id }, data: { takenById: null } });
-  
+
   // 3. Delete the user
   await prisma.user.delete({ where: { id } });
   revalidatePath('/admin/staff');
@@ -454,7 +458,7 @@ export async function deleteCategory(id: string) {
 export async function checkSubdomainAvailability(subdomain: string) {
   const sub = subdomain.toLowerCase().trim();
   const forbidden = ['api', 'admin', 'www', 'support', 'app', 'dev', 'mail', 'test', 'status', 'dashboard', 'auth', 'login', 'register'];
-  
+
   if (forbidden.includes(sub)) {
     return { available: false, forbidden: true };
   }
@@ -478,8 +482,8 @@ export async function checkEmailAvailability(email: string) {
 }
 
 export async function registerStoreAction(data: any) {
-  const { 
-    email, password, name, storeName, 
+  const {
+    email, password, name, storeName,
     address, city, phone, subdomain,
     officialDocs
   } = data;
@@ -491,7 +495,7 @@ export async function registerStoreAction(data: any) {
   const existingEmail = await prisma.user.findUnique({
     where: { email: email.toLowerCase().trim() }
   });
-  
+
   if (existingEmail) {
     throw new Error('Un compte avec cet email existe déjà');
   }
@@ -499,18 +503,18 @@ export async function registerStoreAction(data: any) {
   const existingSubdomain = await prisma.store.findUnique({
     where: { subdomain: subdomain.toLowerCase().trim() }
   });
-  
+
   if (existingSubdomain) {
     throw new Error('Ce sous-domaine est déjà utilisé');
   }
 
   const sub = subdomain.toLowerCase().trim();
   const forbidden = ['api', 'admin', 'www', 'support', 'app', 'dev', 'mail', 'test', 'status', 'dashboard', 'auth', 'login', 'register'];
-  
+
   if (forbidden.includes(sub)) {
     throw new Error('Ce sous-domaine n\'est pas autorisé');
   }
-  
+
   // Hash password before saving
   const hashedPassword = await bcrypt.hash(password, 10);
   const trialEndsAt = new Date();
@@ -519,19 +523,19 @@ export async function registerStoreAction(data: any) {
   // Prepare docs array for the JSON field
   const docs = [];
   if (officialDocs?.rne?.base64) {
-    docs.push({ 
-      name: 'RNE - Document Officiel', 
-      url: officialDocs.rne.base64, 
-      type: 'RNE', 
+    docs.push({
+      name: 'RNE - Document Officiel',
+      url: officialDocs.rne.base64,
+      type: 'RNE',
       status: 'PENDING',
       fileName: officialDocs.rne.name
     });
   }
   if (officialDocs?.cin?.base64) {
-    docs.push({ 
-      name: 'CIN - Document Identité', 
-      url: officialDocs.cin.base64, 
-      type: 'CIN', 
+    docs.push({
+      name: 'CIN - Document Identité',
+      url: officialDocs.cin.base64,
+      type: 'CIN',
       status: 'PENDING',
       fileName: officialDocs.cin.name
     });
@@ -579,14 +583,14 @@ export async function loginUser(email: string, pass: string) {
   // Use (prisma as any) to bypass environment-specific client validation bugs
   const user = await (prisma as any).user.findUnique({ where: { email } });
   if (!user) return { error: 'Utilisateur non trouvé' };
-  
+
   const isMatch = await bcrypt.compare(pass, user.password);
   if (!isMatch) return { error: 'Mot de passe incorrect' };
-  
-  const response = { 
-    id: user.id, 
-    name: user.name, 
-    role: user.role, 
+
+  const response = {
+    id: user.id,
+    name: user.name,
+    role: user.role,
     storeId: user.storeId,
     permissions: user.permissions,
     defaultPosMode: user.defaultPosMode
@@ -594,7 +598,7 @@ export async function loginUser(email: string, pass: string) {
 
 
   cookies().set('userId', user.id, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
-  
+
   return response;
 }
 
@@ -656,15 +660,15 @@ export async function updateStoreLoyaltyRates(earnRate: number, redeemRate: numb
 
   return await prisma.store.update({
     where: { id: store.id },
-    data: { 
+    data: {
       loyaltyEarnRate: earnRate,
-      loyaltyRedeemRate: redeemRate 
+      loyaltyRedeemRate: redeemRate
     }
   });
 }
 
-export async function recordSale(data: { 
-  total: number; 
+export async function recordSale(data: {
+  total: number;
   subtotal?: number;
   discount?: number;
   paymentMethod?: string;
@@ -712,7 +716,7 @@ export async function recordSale(data: {
 
       isFiscal = true;
       const currentYear = new Date().getFullYear();
-      
+
       // 3. Increment atomic sequence for fiscal number
       const updatedStore = await (tx as any).store.update({
         where: { id: store.id },
@@ -746,7 +750,7 @@ export async function recordSale(data: {
       const unitPriceHt = item.price / (1 + taxRate);
       const itemTotalHt = unitPriceHt * item.quantity;
       const itemTaxAmount = itemTotalHt * taxRate;
-      
+
       totalHtGlobal += itemTotalHt;
       totalTaxGlobal += itemTaxAmount;
 
@@ -770,7 +774,7 @@ export async function recordSale(data: {
     if (isFiscal) {
       hashInputS = `${fiscalNumber}|${data.total}|${now.toISOString()}|${previousHash}`;
       hash = crypto.createHash('sha256').update(hashInputS).digest('hex');
-      
+
       // Signature HMAC (Security)
       const secret = process.env.FISCAL_SECRET || 'nacef-default-secret-2026';
       signature = crypto.createHmac('sha256', secret).update(hash).digest('hex');
@@ -875,7 +879,7 @@ export async function recordSale(data: {
       }
 
       // 3.B Earn points
-      const points = Math.floor(data.total); 
+      const points = Math.floor(data.total);
       if (points > 0) {
         await tx.loyaltyTransaction.create({
           data: {
@@ -917,10 +921,10 @@ export async function generateZReport() {
 
   // 2. Fetch all sales of the day
   const sales = await prisma.sale.findMany({
-    where: { 
-      storeId: store.id, 
+    where: {
+      storeId: store.id,
       isVoid: false,
-      createdAt: { gte: new Date(new Date().setHours(0,0,0,0)) }
+      createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
     },
     include: { items: true }
   });
@@ -1002,26 +1006,26 @@ export async function getMarketplaceData() {
 
   const [categories, featuredRaw, flashSalesRaw, productsRaw, bundlesRaw] = await Promise.all([
     (prisma as any).mktCategory.findMany({ include: { subcategories: true } }),
-    (prisma as any).vendorProduct.findMany({ 
-      where: { isFeatured: true }, 
-      include: { vendor: true, productStandard: true }, 
-      orderBy: { createdAt: 'desc' } 
+    (prisma as any).vendorProduct.findMany({
+      where: { isFeatured: true },
+      include: { vendor: true, productStandard: true },
+      orderBy: { createdAt: 'desc' }
     }),
-    (prisma as any).vendorProduct.findMany({ 
-      where: { isFlashSale: true }, 
-      include: { vendor: true, productStandard: true }, 
-      orderBy: { createdAt: 'desc' } 
+    (prisma as any).vendorProduct.findMany({
+      where: { isFlashSale: true },
+      include: { vendor: true, productStandard: true },
+      orderBy: { createdAt: 'desc' }
     }),
-    (prisma as any).vendorProduct.findMany({ 
-      include: { vendor: true, productStandard: true }, 
-      orderBy: { createdAt: 'desc' } 
+    (prisma as any).vendorProduct.findMany({
+      include: { vendor: true, productStandard: true },
+      orderBy: { createdAt: 'desc' }
     }),
-    (prisma as any).mktBundle.findMany({ 
-      where: { isActive: true }, 
-      include: { 
-        vendor: true, 
-        items: { include: { vendorProduct: { include: { productStandard: true } } } } 
-      } 
+    (prisma as any).mktBundle.findMany({
+      where: { isActive: true },
+      include: {
+        vendor: true,
+        items: { include: { vendorProduct: { include: { productStandard: true } } } }
+      }
     })
   ]);
 
@@ -1042,7 +1046,7 @@ export async function getMarketplaceData() {
       lat: p.vendor.lat ? Number(p.vendor.lat) : null,
       lng: p.vendor.lng ? Number(p.vendor.lng) : null
     } : null;
-    
+
     const result: any = {
       id: p.id,
       name: p.name || p.productStandard?.name || 'Produit sans nom',
@@ -1070,10 +1074,10 @@ export async function getMarketplaceData() {
     return result;
   };
 
-  return { 
-    categories, 
-    featured: featuredRaw.map(mapProduct), 
-    flashSales: flashSalesRaw.map(mapProduct), 
+  return {
+    categories,
+    featured: featuredRaw.map(mapProduct),
+    flashSales: flashSalesRaw.map(mapProduct),
     products: productsRaw.map(mapProduct),
     bundles: bundlesRaw.map(b => ({
       ...b,
@@ -1101,7 +1105,7 @@ export async function getMarketplaceBenchmarkData(vendorId: string) {
   allProducts.forEach((p: any) => { if (p.categoryId) categoryIdSet.add(p.categoryId); });
   const categoryIds: string[] = [];
   categoryIdSet.forEach(id => categoryIds.push(id));
-  const categories = categoryIds.length > 0 
+  const categories = categoryIds.length > 0
     ? await (prisma as any).mktCategory.findMany({ where: { id: { in: categoryIds } } })
     : [];
 
@@ -1152,15 +1156,15 @@ export async function getMarketplaceBenchmarkData(vendorId: string) {
     .map(g => {
       const hasCompetitors = g.allPrices.length > 0;
       const competitorCount = g.vendorPrices.size;
-      const min  = hasCompetitors ? Math.min(...g.allPrices) : null;
-      const max  = hasCompetitors ? Math.max(...g.allPrices) : null;
-      const avg  = hasCompetitors ? g.allPrices.reduce((a, b) => a + b, 0) / g.allPrices.length : null;
+      const min = hasCompetitors ? Math.min(...g.allPrices) : null;
+      const max = hasCompetitors ? Math.max(...g.allPrices) : null;
+      const avg = hasCompetitors ? g.allPrices.reduce((a, b) => a + b, 0) / g.allPrices.length : null;
 
       let position: 'cheapest' | 'competitive' | 'expensive' | 'exclusive' | 'unset' = 'unset';
       if (g.myPrice !== null && avg !== null) {
-        if (g.myPrice < avg * 0.9)      position = 'cheapest';
+        if (g.myPrice < avg * 0.9) position = 'cheapest';
         else if (g.myPrice > avg * 1.1) position = 'expensive';
-        else                             position = 'competitive';
+        else position = 'competitive';
       } else if (g.myPrice !== null && !hasCompetitors) {
         position = 'exclusive';
       }
@@ -1239,7 +1243,7 @@ export async function getUser() {
   // Check cookie first (server-side)
   const userId = cookies().get('userId')?.value;
   if (userId) {
-    return (prisma as any).user.findUnique({ 
+    return (prisma as any).user.findUnique({
       where: { id: userId },
       select: { id: true, name: true, role: true, permissions: true }
     });
@@ -1251,7 +1255,7 @@ export async function getUser() {
 export async function resolveCategoryProposal(id: string, action: 'approve' | 'reject', newName?: string, newCategoryId?: string) {
   const cookieStore = cookies();
   const userId = cookieStore.get('userId')?.value;
-  
+
   if (!userId) {
     throw new Error('Session expirée. Veuillez vous reconnecter.');
   }
@@ -1263,7 +1267,7 @@ export async function resolveCategoryProposal(id: string, action: 'approve' | 'r
 
   await (prisma as any).mktSubcategory.update({
     where: { id },
-    data: { 
+    data: {
       status: action === 'approve' ? 'ACTIVE' : 'REJECTED',
       name: (action === 'approve' && newName) ? newName.trim() : undefined,
       categoryId: (action === 'approve' && newCategoryId) ? newCategoryId : undefined,
@@ -1276,7 +1280,7 @@ export async function resolveCategoryProposal(id: string, action: 'approve' | 'r
 export async function updateMarketplaceCategoryAction(id: string, data: { name?: string; icon?: string }) {
   const cookieStore = cookies();
   const userId = cookieStore.get('userId')?.value;
-  
+
   if (!userId) {
     throw new Error('Session expirée. Veuillez vous reconnecter.');
   }
@@ -1310,7 +1314,7 @@ export async function updateMarketplaceCategoryAction(id: string, data: { name?:
 export async function migrateSubcategoryAction(subcategoryId: string, newCategoryId: string) {
   const cookieStore = cookies();
   const userId = cookieStore.get('userId')?.value;
-  
+
   if (!userId) {
     throw new Error('Session expirée. Veuillez vous reconnecter.');
   }
@@ -1329,7 +1333,7 @@ export async function migrateSubcategoryAction(subcategoryId: string, newCategor
 export async function deleteMarketplaceCategoryAction(id: string) {
   const cookieStore = cookies();
   const userId = cookieStore.get('userId')?.value;
-  
+
   if (!userId) {
     throw new Error('Session expirée. Veuillez vous reconnecter.');
   }
@@ -1360,7 +1364,7 @@ export async function deleteMarketplaceCategoryAction(id: string) {
 export async function createMarketplaceCategoryAction(data: { name: string; icon?: string }) {
   const cookieStore = cookies();
   const userId = cookieStore.get('userId')?.value;
-  
+
   if (!userId) {
     throw new Error('Session expirée. Veuillez vous reconnecter.');
   }
@@ -1368,13 +1372,13 @@ export async function createMarketplaceCategoryAction(data: { name: string; icon
   const user = await (prisma as any).user.findUnique({ where: { id: userId } });
   if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
 
-  await (prisma as any).mktCategory.create({ 
+  await (prisma as any).mktCategory.create({
     data: {
       name: data.name,
       slug: data.name.toLowerCase().replace(/ /g, '-'),
       icon: data.icon,
       status: 'ACTIVE'
-    } 
+    }
   });
   revalidatePath('/superadmin/marketplace/categories');
   revalidatePath('/marketplace');
@@ -1396,7 +1400,7 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
     let existingSupplier = await prisma.supplier.findFirst({
       where: { name: `[Marketplace] ${vendor.companyName}` }
     });
-    
+
     if (!existingSupplier) {
       existingSupplier = await prisma.supplier.create({
         data: {
@@ -1434,10 +1438,10 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
 }
 
 export async function registerVendorAction(data: any) {
-  const { 
-    email, password, name, companyName, 
+  const {
+    email, password, name, companyName,
     phone, address, city, description,
-    officialDocs 
+    officialDocs
   } = data;
 
   if (!email || !password || !name || !companyName) {
@@ -1447,29 +1451,29 @@ export async function registerVendorAction(data: any) {
   const existingEmail = await prisma.user.findUnique({
     where: { email: email.toLowerCase().trim() }
   });
-  
+
   if (existingEmail) {
     throw new Error('Un compte avec cet email existe déjà');
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  
+
   // Prepare docs array for the JSON field
   const docs = [];
   if (officialDocs?.rne?.base64) {
-    docs.push({ 
-      name: 'RNE - Registre Commerce', 
-      url: officialDocs.rne.base64, 
-      type: 'RNE', 
+    docs.push({
+      name: 'RNE - Registre Commerce',
+      url: officialDocs.rne.base64,
+      type: 'RNE',
       status: 'PENDING',
       fileName: officialDocs.rne.name
     });
   }
   if (officialDocs?.cin?.base64) {
-    docs.push({ 
-      name: 'CIN - Gérant', 
-      url: officialDocs.cin.base64, 
-      type: 'CIN', 
+    docs.push({
+      name: 'CIN - Gérant',
+      url: officialDocs.cin.base64,
+      type: 'CIN',
       status: 'PENDING',
       fileName: officialDocs.cin.name
     });
@@ -1483,7 +1487,7 @@ export async function registerVendorAction(data: any) {
       role: 'VENDOR'
     }
   });
-  
+
   await prisma.vendorProfile.create({
     data: {
       userId: user.id,
@@ -1533,24 +1537,24 @@ export async function getVendorPortalData() {
   // Now fetch the deep data using the vendorProfile.id directly
   const vendor = await (prisma as any).vendorProfile.findUnique({
     where: { id: vendorProfile.id },
-    include: { 
+    include: {
       vendorProducts: {
         include: { productStandard: true }
       },
       activityPoles: true,
       mktSectors: true,
       bundles: {
-        include: { 
-          items: { 
-            include: { 
-              vendorProduct: { 
-                include: { productStandard: true } 
-              } 
-            } 
-          } 
+        include: {
+          items: {
+            include: {
+              vendorProduct: {
+                include: { productStandard: true }
+              }
+            }
+          }
         }
       },
-      orders: { 
+      orders: {
         include: { items: true, store: true },
         orderBy: { createdAt: 'desc' }
       }
@@ -1645,7 +1649,7 @@ export async function getVendorPortalData() {
         vendorProduct: mapProduct(i.vendorProduct)
       }))
     });
-    
+
     return {
       ...vendor,
       products: (vendor.vendorProducts || []).map(mapProduct),
@@ -1739,7 +1743,7 @@ export async function deleteMarketplaceBundleAction(id: string) {
   if (!bundle || bundle.vendorId !== vendor.id) throw new Error('Non autorisé');
 
   await (prisma as any).mktBundle.delete({ where: { id } });
-  
+
   revalidatePath('/vendor/portal/catalog');
   revalidatePath('/marketplace');
 }
@@ -1753,9 +1757,9 @@ export async function approveMarketplaceOrderAction(orderId: string, role: 'VEND
 
   const order = await (prisma as any).supplierOrder.findUnique({
     where: { id: orderId },
-    include: { 
+    include: {
       vendor: { include: { wallet: true } },
-      settlement: true 
+      settlement: true
     }
   });
 
@@ -1793,7 +1797,7 @@ export async function approveMarketplaceOrderAction(orderId: string, role: 'VEND
   // 3. Finalize if both approved
   if (updatedSettlement.vendorApproved && updatedSettlement.superadminApproved && !updatedSettlement.isProcessed) {
     const wallet = order.vendor.wallet;
-    
+
     if (!wallet) throw new Error('Portefeuille introuvable');
 
     const amountToDeduct = Number(updatedSettlement.commissionAmount);
@@ -2034,10 +2038,10 @@ export async function importCsvProductsAction(rows: {
 
       if (row.categoryName) {
         const catName = row.categoryName.trim();
-        
+
         // Try to find category first (case-insensitive)
         let category = allCategories.find((c: any) => c.name.toLowerCase() === catName.toLowerCase());
-        
+
         // If not found, try to find as subcategory
         if (!category) {
           const subcat = allSubcategories.find((s: any) => s.name.toLowerCase() === catName.toLowerCase());
@@ -2047,7 +2051,7 @@ export async function importCsvProductsAction(rows: {
           }
         } else {
           categoryId = category.id;
-          
+
           // If subcategory name provided, try to match it within the category
           if (row.subcategoryName) {
             const subName = row.subcategoryName.trim();
@@ -2055,21 +2059,21 @@ export async function importCsvProductsAction(rows: {
             if (subcat) {
               subcategoryId = subcat.id;
             } else {
-            // Create new subcategory as HIDDEN
-            const newSub = await (prisma as any).mktSubcategory.create({
-              data: {
-                name: subName,
-                slug: subName.toLowerCase().replace(/ /g, '-'),
-                categoryId: category.id,
-                status: 'HIDDEN',
-              }
-            });
-            subcategoryId = newSub.id;
-            results.newCategories.push(`Sous-catégorie "${subName}" créée (masquée, en attente d'approbation)`);
+              // Create new subcategory as HIDDEN
+              const newSub = await (prisma as any).mktSubcategory.create({
+                data: {
+                  name: subName,
+                  slug: subName.toLowerCase().replace(/ /g, '-'),
+                  categoryId: category.id,
+                  status: 'HIDDEN',
+                }
+              });
+              subcategoryId = newSub.id;
+              results.newCategories.push(`Sous-catégorie "${subName}" créée (masquée, en attente d'approbation)`);
             }
           }
         }
-        
+
         // If category still not found, create it as HIDDEN (needs approval)
         if (!category && catName) {
           const newCat = await (prisma as any).mktCategory.create({
@@ -2087,8 +2091,8 @@ export async function importCsvProductsAction(rows: {
       const brandVal = row.brand?.trim() || null;
       const minQty = row.minOrderQty && row.minOrderQty > 0 ? row.minOrderQty : 1;
 
-      const existing = await (prisma as any).vendorProduct.findFirst({ 
-        where: { name: row.name, vendorId } 
+      const existing = await (prisma as any).vendorProduct.findFirst({
+        where: { name: row.name, vendorId }
       });
 
       if (existing) {
@@ -2163,10 +2167,10 @@ export async function updateSupplierOrderStatus(orderId: string, status: OrderSt
         // Fetch bundle components
         const bundle = await (prisma as any).mktBundle.findUnique({
           where: { id: (item as any).mktBundleId },
-          include: { 
-            items: { 
-              include: { vendorProduct: true } 
-            } 
+          include: {
+            items: {
+              include: { vendorProduct: true }
+            }
           }
         });
 
@@ -2197,7 +2201,7 @@ export async function updateSupplierOrderStatus(orderId: string, status: OrderSt
 // Helper for atomic stock updates
 async function upsertStockItem(storeId: string, name: string, quantity: number, price: number) {
   let stockItem = await (prisma as any).stockItem.findFirst({
-    where: { 
+    where: {
       storeId,
       name: { equals: name, mode: 'insensitive' }
     }
@@ -2208,7 +2212,7 @@ async function upsertStockItem(storeId: string, name: string, quantity: number, 
       where: { id: stockItem.id },
       data: {
         quantity: { increment: quantity },
-        cost: price 
+        cost: price
       }
     });
   } else {
@@ -2325,19 +2329,19 @@ export async function deleteUserAction(id: string) {
 // ══════════════════════════════════════════════════════════════
 export async function getCourierPortalData() {
   const courier = await prisma.courierProfile.findFirst({
-    include: { 
-      orders: { 
-        include: { 
-          items: true, 
-          store: true, 
-          vendor: true 
+    include: {
+      orders: {
+        include: {
+          items: true,
+          store: true,
+          vendor: true
         },
         orderBy: { createdAt: 'desc' }
-      } 
+      }
     }
   });
   if (!courier) return null;
-  
+
   // Transform Decimal to Number for client-side serialization
   return {
     ...courier,
@@ -2400,25 +2404,25 @@ export async function updateStoreAdminAction(id: string, data: any) {
 // --- SUPERADMIN PLANS / SUBSCRIPTIONS ---
 export async function createPlanAction(data: any) {
   try {
-    await (prisma.plan as any).create({ 
+    await (prisma.plan as any).create({
       data: {
         ...data,
         price: Number(data.price),
         hasMarketplace: data.hasMarketplace ?? true
-      } 
+      }
     });
   } catch (err: any) {
     if (err.message.includes('Unknown argument `hasMarketplace`')) {
       const { hasMarketplace, ...rest } = data;
-      const plan = await prisma.plan.create({ 
+      const plan = await prisma.plan.create({
         data: { ...rest, price: Number(data.price) }
       });
       if (hasMarketplace !== undefined) {
-         // Force boolean literal update
-         await prisma.$executeRawUnsafe(
-           `UPDATE "Plan" SET "hasMarketplace" = ${hasMarketplace ? 'true' : 'false'} WHERE id = $1`, 
-           plan.id
-         );
+        // Force boolean literal update
+        await prisma.$executeRawUnsafe(
+          `UPDATE "Plan" SET "hasMarketplace" = ${hasMarketplace ? 'true' : 'false'} WHERE id = $1`,
+          plan.id
+        );
       }
     } else {
       throw err;
@@ -2451,7 +2455,7 @@ export async function updatePlanAction(id: string, data: any) {
       if (hasMarketplace !== undefined) {
         // Force boolean literal update
         await prisma.$executeRawUnsafe(
-          `UPDATE "Plan" SET "hasMarketplace" = ${hasMarketplace ? 'true' : 'false'} WHERE id = $1`, 
+          `UPDATE "Plan" SET "hasMarketplace" = ${hasMarketplace ? 'true' : 'false'} WHERE id = $1`,
           id
         );
       }
@@ -2480,7 +2484,7 @@ export async function deletePlanAction(id: string) {
 export async function assignPlanAction(storeId: string, planId: string) {
   const expiresAt = new Date();
   expiresAt.setMonth(expiresAt.getMonth() + 1); // 1 month from now
-  
+
   await prisma.subscription.upsert({
     where: { storeId },
     create: {
@@ -2495,7 +2499,7 @@ export async function assignPlanAction(storeId: string, planId: string) {
       expiresAt,
     }
   });
-  
+
   revalidatePath('/');
   revalidatePath('/superadmin/plans');
 }
@@ -2550,7 +2554,7 @@ export async function getCommissionRules() {
 export async function createCommissionRule(data: { name: string; description?: string; baseRate: number; tiers: any[]; isDefault?: boolean }) {
   const user = await getUser();
   if (user?.role !== 'SUPERADMIN') throw new Error('Action non autorisée');
-  
+
   if (data.isDefault) {
     await (prisma as any).commissionRule.updateMany({
       where: { isDefault: true },
@@ -2624,14 +2628,14 @@ export async function createProductCategoryAction(data: { name: string; color?: 
   const store = await getStore();
   if (!store) throw new Error('Action non autorisée : Aucun magasin trouvé.');
 
-  await prisma.category.create({ 
-    data: { 
+  await prisma.category.create({
+    data: {
       name: data.name,
       color: data.color || "#6366F1",
       icon: data.icon || null,
       parentId: data.parentId || null,
       storeId: store.id
-    } 
+    }
   });
   revalidatePath('/admin/products/categories');
   revalidatePath('/pos');
@@ -2751,7 +2755,7 @@ export async function getExpensesAction() {
 export async function createExpenseAction(data: { category: string; amount: number; description?: string; date: string }) {
   const store = await getStore();
   if (!store) return;
-  
+
   try {
     await (prisma.expense as any).create({
       data: {
@@ -2810,16 +2814,16 @@ export async function getTerminalsAction() {
 export async function getTerminalAction(id: string) {
   const store = await getStore();
   if (!store) throw new Error('Non authentifié');
-  
+
   const terminal = await (prisma.posTerminal as any).findUnique({
     where: { id },
     include: { store: true }
   });
-  
+
   if (!terminal || terminal.storeId !== store.id) {
     throw new Error('Terminal introuvable');
   }
-  
+
   return terminal;
 }
 
@@ -2827,7 +2831,7 @@ export async function createTerminalAction(nickname: string) {
   const store = await getStore();
   if (!store) return;
   try {
-     await (prisma.posTerminal as any).create({
+    await (prisma.posTerminal as any).create({
       data: {
         nickname,
         storeId: store.id,
@@ -2871,15 +2875,29 @@ export async function generateTerminalCodeAction(id: string) {
 
 export async function deleteTerminalAction(id: string) {
   try {
-     await (prisma as any).posTerminal.delete({ where: { id } });
+    await (prisma as any).posTerminal.delete({ where: { id } });
   } catch (e) {
-     await prisma.$executeRawUnsafe(`DELETE FROM "PosTerminal" WHERE id = $1`, id);
+    await prisma.$executeRawUnsafe(`DELETE FROM "PosTerminal" WHERE id = $1`, id);
   }
   revalidatePath('/admin/terminals');
 }
 
+// SEED TUNISIAN STARTER PACK
+
+/**
+ * SEED TUNISIAN STARTER PACK
+ * Initialisation complète avec produits populaires tunisiens, 
+ * matières premières (grammages) et emballages.
+ */
+export async function seedTunisianStarterPackAction(storeId: string) {
+  const result = await seedTunisianStarterPack(prisma as any, storeId);
+  revalidatePath('/admin/products');
+  revalidatePath('/admin/stock');
+  return result;
+}
+
 export async function seedDemoProductsAction(storeId: string) {
-  const store = await prisma.store.findUnique({ 
+  const store = await prisma.store.findUnique({
     where: { id: storeId },
     include: { subscription: { include: { plan: true } } }
   });
@@ -3125,7 +3143,7 @@ export async function seedDemoProductsAction(storeId: string) {
     });
     posCategoriesMap[c.name] = cat.id;
   }
-  
+
   // 5.4 Finished Products (Menu Import)
   const finishedProductsData = [
     { name: 'Café express', cat: 'Cafés', price: 1.2 },
@@ -3133,46 +3151,46 @@ export async function seedDemoProductsAction(storeId: string) {
     { name: 'Capucin', cat: 'Cafés', price: 2.0 },
     { name: 'Cappuccino', cat: 'Cafés', price: 3.5 },
     { name: 'Café crème', cat: 'Cafés', price: 3.0 },
-    
+
     { name: 'Thé nature', cat: 'Thés', price: 1.0 },
     { name: 'Thé menthe', cat: 'Thés', price: 1.2 },
     { name: 'Thé amande', cat: 'Thés', price: 2.5 },
-    
+
     { name: 'Chocolat chaud', cat: 'Boissons chaudes', price: 3.0 },
     { name: 'Latte', cat: 'Boissons chaudes', price: 3.5 },
     { name: 'Mokaccino', cat: 'Boissons chaudes', price: 4.0 },
-    
+
     { name: 'Eau 0.5L', cat: 'Boissons froides', price: 1.0 },
     { name: 'Eau gazeuse', cat: 'Boissons froides', price: 1.5 },
     { name: 'Soda', cat: 'Boissons froides', price: 2.0 },
-    
+
     { name: 'Jus orange', cat: 'Jus', price: 4.0 },
     { name: 'Jus citron', cat: 'Jus', price: 3.5 },
     { name: 'Jus fraise', cat: 'Jus', price: 5.0 },
     { name: 'Cocktail fruits', cat: 'Jus', price: 6.0 },
-    
+
     { name: 'Milkshake fraise', cat: 'Milkshake', price: 6.0 },
     { name: 'Milkshake chocolat', cat: 'Milkshake', price: 6.0 },
     { name: 'Milkshake banane', cat: 'Milkshake', price: 5.5 },
-    
+
     { name: 'Gâteau chocolat', cat: 'Pâtisserie', price: 4.5 },
     { name: 'Tarte', cat: 'Pâtisserie', price: 4.0 },
     { name: 'Millefeuille', cat: 'Pâtisserie', price: 3.5 },
     { name: 'Cheesecake', cat: 'Pâtisserie', price: 5.0 },
     { name: 'Croissant', cat: 'Pâtisserie', price: 1.5 },
-    
+
     { name: 'Sandwich thon', cat: 'Snack', price: 4.0 },
     { name: 'Sandwich poulet', cat: 'Snack', price: 5.0 },
     { name: 'Panini', cat: 'Snack', price: 5.5 },
     { name: 'Pizza', cat: 'Snack', price: 8.0 },
-    
+
     { name: 'Crêpe chocolat', cat: 'Crêpes', price: 3.5 },
     { name: 'Crêpe nutella', cat: 'Crêpes', price: 4.0 },
     { name: 'Gaufre', cat: 'Crêpes', price: 4.0 },
-    
+
     { name: 'Chicha simple', cat: 'Chicha', price: 10.0 },
     { name: 'Chicha premium', cat: 'Chicha', price: 15.0 },
-    
+
     { name: 'Supplément lait', cat: 'Extras', price: 0.5 },
     { name: 'Supplément chocolat', cat: 'Extras', price: 0.5 },
     { name: 'Supplément fruit', cat: 'Extras', price: 1.0 },
@@ -3229,7 +3247,7 @@ export async function resetDemoDataAction(storeId: string) {
   // Delete children first, then parents to avoid FK constraint errors
   await prisma.category.deleteMany({ where: { storeId, parentId: { not: null } } });
   await prisma.category.deleteMany({ where: { storeId } });
-  
+
   await prisma.storeTable.deleteMany({ where: { storeId } });
 
   revalidatePath('/admin/products');
@@ -3318,6 +3336,30 @@ export async function generateZReportAction(terminalId?: string) {
 
   revalidatePath('/admin/reports');
   return JSON.parse(JSON.stringify(result));
+}
+
+export async function deleteZReportAction(reportId: string) {
+  const store = await getStore();
+  if (!store) throw new Error('Boutique non trouvée');
+
+  // Verify ownership
+  const report = await prisma.zReport.findFirst({
+    where: { id: reportId, storeId: store.id }
+  });
+  if (!report) throw new Error('Rapport non trouvé');
+
+  // Unlink sales
+  await prisma.sale.updateMany({
+    where: { zReportId: reportId },
+    data: { zReportId: null }
+  });
+
+  await prisma.zReport.delete({
+    where: { id: reportId }
+  });
+
+  revalidatePath('/admin/reports');
+  return { success: true };
 }
 
 // ══════════════════════════════════════════════════════════════

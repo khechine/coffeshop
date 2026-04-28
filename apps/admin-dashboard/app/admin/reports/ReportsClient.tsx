@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { FileText, Plus, CheckCircle, Download, Calendar, ShieldCheck, Tag } from 'lucide-react';
-import { generateZReportAction } from '../../actions';
+import { FileText, Plus, CheckCircle, Download, Calendar, ShieldCheck, Tag, Trash2, Eraser } from 'lucide-react';
+import { generateZReportAction, deleteZReportAction } from '../../actions';
 
 export default function ReportsClient({ initialReports, storeName }: { initialReports: any[]; storeName: string; }) {
   const [reports, setReports] = useState(initialReports || []);
@@ -12,10 +12,40 @@ export default function ReportsClient({ initialReports, storeName }: { initialRe
     startTransition(async () => {
       try {
         const result = await generateZReportAction();
-        setReports([result, ...reports]);
+        setReports([result, ...reports].sort((a, b) => new Date(b.reportDay).getTime() - new Date(a.reportDay).getTime()));
         alert("Rapport Z généré avec succès !");
       } catch (e: any) {
         alert(e.message);
+      }
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    if (!window.confirm("Supprimer ce rapport ?")) return;
+    startTransition(async () => {
+      try {
+        await deleteZReportAction(id);
+        setReports(reports.filter(r => r.id !== id));
+      } catch (e: any) {
+        alert(e.message);
+      }
+    });
+  };
+
+  const handleCleanEmpty = () => {
+    const emptyReports = reports.filter(r => Number(r.totalTtc) === 0);
+    if (emptyReports.length === 0) return alert("Aucun rapport vide trouvé.");
+    if (!window.confirm(`Supprimer ${emptyReports.length} rapports vides (0.000 DT) ?`)) return;
+    
+    startTransition(async () => {
+      try {
+        for (const r of emptyReports) {
+          await deleteZReportAction(r.id);
+        }
+        setReports(reports.filter(r => Number(r.totalTtc) > 0));
+        alert("Nettoyage terminé !");
+      } catch (e: any) {
+        alert("Erreur lors du nettoyage");
       }
     });
   };
@@ -27,14 +57,24 @@ export default function ReportsClient({ initialReports, storeName }: { initialRe
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><FileText size={28} color="#6366F1" /> Reporting & Clôtures NACEF</h1>
           <p>Conformité fiscale : Rapports Z journaliers pour {storeName}</p>
         </div>
-        <button 
-          onClick={handleGenerate} 
-          disabled={isPending}
-          className="btn btn-primary" 
-          style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          {isPending ? 'Génération...' : <><Plus size={18} /> Générer Z-Report du Jour</>}
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button 
+            onClick={handleCleanEmpty} 
+            disabled={isPending}
+            className="btn btn-outline" 
+            style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: '#EF4444', borderColor: '#FEE2E2' }}
+          >
+            <Eraser size={18} /> Nettoyer Vides
+          </button>
+          <button 
+            onClick={handleGenerate} 
+            disabled={isPending}
+            className="btn btn-primary" 
+            style={{ padding: '12px 24px', borderRadius: '12px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            {isPending ? 'Génération...' : <><Plus size={18} /> Générer Z-Report du Jour</>}
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '24px' }}>
@@ -91,9 +131,18 @@ export default function ReportsClient({ initialReports, storeName }: { initialRe
               </div>
             )}
 
-            <button className="btn btn-outline" style={{ width: '100%', padding: '12px', borderRadius: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-               <Download size={18} /> Télécharger le PDF
-            </button>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={() => handleDelete(report.id)}
+                className="btn btn-outline" 
+                style={{ flex: 1, padding: '12px', borderRadius: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#EF4444' }}
+              >
+                <Trash2 size={18} /> Supprimer
+              </button>
+              <button className="btn btn-outline" style={{ flex: 2, padding: '12px', borderRadius: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <Download size={18} /> Télécharger
+              </button>
+            </div>
           </div>
         ))}
         {reports.length === 0 && (

@@ -4,11 +4,12 @@ import * as bcrypt from 'bcrypt';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
-import { prisma } from '@coffeeshop/database';
+import { prisma, seedTunisianStarterPack } from '@coffeeshop/database';
 import { MarketplaceAuthGuard } from './auth/marketplace.guard';
 import { InteractionService } from './marketplace/interaction.service';
 
 interface CreateMarketplaceProductDto {
+// ...
   name: string;
   price: number;
   categoryId: string;
@@ -27,6 +28,15 @@ interface CreateMarketplaceProductDto {
 @Controller('management')
 export class ManagementController {
   constructor(private readonly interactionService: InteractionService) {}
+
+  @Post('seed-tunisia/:storeId')
+  async seedTunisia(@Param('storeId') storeId: string): Promise<any> {
+    try {
+      return await seedTunisianStarterPack(prisma as any, storeId);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════
   // PRODUCTS CRUD
@@ -165,11 +175,32 @@ export class ManagementController {
 
   @Delete('categories/:id')
   async deleteCategory(@Param('id') id: string): Promise<any> {
-    const productsCount = await prisma.product.count({ where: { categoryId: id } });
-    if (productsCount > 0) {
-      throw new BadRequestException(`Impossible de supprimer : cette catégorie contient encore ${productsCount} produits.`);
-    }
-    return prisma.category.delete({ where: { id } });
+    return prisma.$transaction(async (tx) => {
+      // 1. Check if any product in this category has sales
+      const products = await tx.product.findMany({ where: { categoryId: id } });
+      const productIds = products.map(p => p.id);
+      
+      const salesCount = await tx.saleItem.count({
+        where: { productId: { in: productIds } }
+      });
+
+      if (salesCount > 0) {
+        throw new BadRequestException(`Impossible de supprimer : ${salesCount} ventes sont liées à des produits de cette catégorie.`);
+      }
+
+      // 2. Delete recipes for these products
+      await tx.recipeItem.deleteMany({
+        where: { productId: { in: productIds } }
+      });
+
+      // 3. Delete products
+      await tx.product.deleteMany({
+        where: { categoryId: id }
+      });
+
+      // 4. Delete the category
+      return tx.category.delete({ where: { id } });
+    });
   }
   
   @Post('upload')

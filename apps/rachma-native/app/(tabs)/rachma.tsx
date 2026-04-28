@@ -297,8 +297,9 @@ export default function RachmaScreen() {
         if (!product) return;
         const saleCount = productLogs.filter((l: any) => l?.startsWith('sale')).length;
         if (saleCount > 0) {
-          items.push({ productId: productId, quantity: saleCount, price: product.price });
-          calculatedTotal += (saleCount * product.price);
+          const price = Number(product.price || 0);
+          items.push({ productId: productId, quantity: saleCount, price: price });
+          calculatedTotal += (saleCount * price);
         }
       });
       
@@ -456,7 +457,31 @@ export default function RachmaScreen() {
       >
         {filtered.length === 0 && (
           <View style={styles.emptyState}>
-            <RNText style={styles.emptyText}>Aucun produit. Tirez pour actualiser.</RNText>
+            <FontAwesome name="coffee" size={60} color="rgba(255,255,255,0.05)" style={{ marginBottom: 20 }} />
+            <RNText style={styles.emptyText}>Aucun produit configuré.</RNText>
+            <TouchableOpacity 
+              style={{ marginTop: 25, paddingHorizontal: 30, paddingVertical: 15, backgroundColor: Colors.primary, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+              onPress={async () => {
+                if (!storeId) return;
+                Vibration.vibrate(50);
+                if (Platform.OS === 'web' ? window.confirm('Installer le Pack Initial Tunisie ?') : true) {
+                  try {
+                    setRefreshing(true);
+                    const res = await ApiService.seedTunisia(storeId);
+                    if (Platform.OS === 'web') window.alert(res.message);
+                    else showAlert({ title: 'Succès', message: res.message, type: 'success' });
+                    syncProducts();
+                  } catch (error: any) {
+                    showAlert({ title: 'Erreur', message: 'Installation impossible', type: 'error' });
+                  } finally {
+                    setRefreshing(false);
+                  }
+                }
+              }}
+            >
+              <FontAwesome name="magic" size={18} color="#fff" />
+              <RNText style={{ color: '#fff', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 }}>Installer Pack Tunisie</RNText>
+            </TouchableOpacity>
           </View>
         )}
         {filtered.map(product => {
@@ -768,6 +793,45 @@ export default function RachmaScreen() {
 
               <TouchableOpacity style={styles.saveProfileBtn} onPress={handleUpdateProfile}>
                 <Text style={styles.saveProfileText}>ENREGISTRER</Text>
+              </TouchableOpacity>
+
+              <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: 20 }} />
+              
+              <Text style={styles.sectionTitle}>MAINTENANCE</Text>
+              <TouchableOpacity 
+                style={[styles.settingRow, { backgroundColor: 'rgba(16, 185, 129, 0.05)', borderColor: 'rgba(16, 185, 129, 0.2)', borderWidth: 1, borderRadius: 20, padding: 15 }]} 
+                onPress={async () => {
+                   if (!storeId) return;
+                   if (Platform.OS !== 'web') {
+                      showAlert({
+                        title: 'Pack Initial Tunisie',
+                        message: 'Voulez-vous installer les produits et recettes populaires ?',
+                        type: 'warning',
+                        buttons: [
+                          { text: 'Annuler', style: 'cancel' },
+                          { text: 'Installer', onPress: async () => {
+                             try {
+                                const res = await ApiService.seedTunisia(storeId);
+                                showAlert({ title: 'Succès', message: res.message, type: 'success' });
+                                syncProducts();
+                             } catch (e) {
+                                showAlert({ title: 'Erreur', message: 'Echec installation', type: 'error' });
+                             }
+                          }}
+                        ]
+                      });
+                   } else if (window.confirm('Installer Pack Tunisie ?')) {
+                      const res = await ApiService.seedTunisia(storeId);
+                      window.alert(res.message);
+                      syncProducts();
+                   }
+                }}
+              >
+                <View style={{ backgroundColor: 'transparent' }}>
+                  <Text style={[styles.settingLabel, { color: '#10b981' }]}>Installer Pack Tunisie</Text>
+                  <Text style={styles.settingSub}>Café, Thé, Chicha & Recettes</Text>
+                </View>
+                <FontAwesome name="magic" size={24} color="#10b981" />
               </TouchableOpacity>
 
               <View style={{ height: 50 }} />

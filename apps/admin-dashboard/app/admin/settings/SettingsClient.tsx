@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useTransition, useEffect, useRef } from 'react';
-import { updateStore, seedDemoProductsAction, resetDemoDataAction } from '../../actions';
+import { updateStore, seedDemoProductsAction, resetDemoDataAction, seedTunisianStarterPackAction } from '../../actions';
 import { 
   Building2, MapPin, Store, Crosshair, Save, Clock, 
   CheckCircle2, FileCheck, AlertCircle, ShieldCheck, 
   FileUp, Eye, Upload, X, ShoppingCart, Sparkles, 
-  RotateCcw, Search, Map as MapIcon, Navigation
+  RotateCcw, Search, Map as MapIcon, Navigation, RefreshCw
 } from 'lucide-react';
 
 import 'leaflet/dist/leaflet.css';
@@ -160,7 +160,7 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
   const label: React.CSSProperties = { display: 'block', fontSize: '11px', fontWeight: 800, color: '#94A3B8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' };
 
   return (
-    <div className="flex flex-col gap-8 max-w-5xl mx-auto py-8 px-4 animate-in fade-in duration-700">
+    <div className="flex flex-col gap-8 py-8 animate-in fade-in duration-700">
       
       {/* Premium Header */}
       <div className="flex flex-col gap-2">
@@ -472,7 +472,20 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
             <div className="flex flex-wrap gap-4 justify-center">
                <button
                   onClick={() => {
-                     if (!confirm('Installer les données de démo ?')) return;
+                     if (!confirm('Installer le Pack Initial Tunisie (Café, Thé, Citronnade, Chicha, Recettes...) ?')) return;
+                     startTransition(async () => {
+                        const res = await seedTunisianStarterPackAction(store.id);
+                        alert(res.message);
+                     });
+                  }}
+                  disabled={isPending}
+                  className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3 shadow-lg shadow-emerald-600/20"
+               >
+                  <Sparkles size={16} /> Pack Initial Tunisie
+               </button>
+               <button
+                  onClick={() => {
+                     if (!confirm('Installer les données de démo génériques ?')) return;
                      startTransition(async () => {
                         await seedDemoProductsAction(store.id);
                         alert('Boutique initialisée avec succès !');
@@ -481,11 +494,11 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
                   disabled={isPending}
                   className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3"
                >
-                  <Sparkles size={16} /> Installer la Démo
+                  <Sparkles size={16} /> Démo Générique
                </button>
                <button
                   onClick={() => {
-                     if (!confirm('Réinitialiser toutes les données ?')) return;
+                     if (!confirm('Réinitialiser toutes les données (Produits, Stock, Catégories) ?')) return;
                      startTransition(async () => {
                         await resetDemoDataAction(store.id);
                         alert('Boutique réinitialisée.');

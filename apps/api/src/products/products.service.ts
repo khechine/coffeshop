@@ -4,7 +4,7 @@ import { prisma } from '@coffeeshop/database';
 @Injectable()
 export class ProductsService {
   async getProducts(storeId?: string): Promise<any[]> {
-    return prisma.product.findMany({
+    const products = await prisma.product.findMany({
       where: {
         AND: [
           storeId ? { storeId } : {},
@@ -23,6 +23,11 @@ export class ProductsService {
         name: 'asc',
       },
     });
+
+    return products.map(p => ({
+      ...p,
+      price: Number(p.price)
+    }));
   }
 
 

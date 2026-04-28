@@ -5,6 +5,7 @@ import { Platform, View, TouchableOpacity, Alert, Modal, Text, StyleSheet } from
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthService } from '@/services/auth';
+import { ApiService } from '@/services/api';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -21,6 +22,8 @@ export default function TabLayout() {
   const [appMode, setAppMode] = useState<'RACHMA' | 'FULL'>('FULL');
   const [showSettings, setShowSettings] = useState(false);
   const [radius, setRadius] = useState(50);
+  const [storeId, setStoreId] = useState<string | null>(null);
+  const [isSeeding, setIsSeeding] = useState(false);
   const router = useRouter();
   const segments = useSegments();
   const currentTab = segments[segments.length - 1] || 'index';
@@ -33,6 +36,7 @@ export default function TabLayout() {
         setPermissions(session.user.permissions || []);
         setAuthMode(session.user.authMode || '');
       }
+      setStoreId(session.storeId);
       const mode = await AuthService.getAppMode();
       setAppMode(mode);
       const r = await AuthService.getSearchRadius();
@@ -46,11 +50,13 @@ export default function TabLayout() {
   const isTerminal = authMode === 'PIN' || !authMode;
 
   const isFullMode = appMode === 'FULL';
+  const isRachmaOnly = appMode === 'RACHMA';
 
-  const hasRachmaAccess = (isTerminal || isOwnerRole) && (isOwnerRole || permissions.includes('RACHMA') || role === 'RACHMA' || role === 'CASHIER');
+  const hasRachmaAccess = isRachmaOnly && (isTerminal || isOwnerRole) && (isOwnerRole || permissions.includes('RACHMA') || role === 'RACHMA' || role === 'CASHIER');
   const hasPosAccess = isFullMode && (isTerminal || isOwnerRole) && (isOwnerRole || permissions.includes('POS') || permissions.includes('TABLES') || role === 'POS' || role === 'CASHIER');
   const hasTablesAccess = isFullMode && (isTerminal || isOwnerRole) && (isOwnerRole || permissions.includes('TABLES') || role === 'TABLES' || role === 'CASHIER');
   const hasManagementAccess = isManager || isOwnerRole;
+  const hasMarketplaceAccess = hasManagementAccess && !isRachmaOnly;
 
   const handleLogout = () => {
     Alert.alert(
@@ -92,6 +98,32 @@ export default function TabLayout() {
     const isDashboard = segs.length <= 1 || (!segs.includes('pos') && !segs.includes('tables') && !segs.includes('rachma') && !segs.includes('stocks') && !segs.includes('marketplace'));
 
 
+    const handleSeedTunisia = async () => {
+      if (!storeId) return;
+      Alert.alert(
+        'Pack Initial Tunisie',
+        'Voulez-vous installer le pack (Café, Thé, Citronnade, Chicha, Recettes...) ?',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          {
+            text: 'Installer',
+            onPress: async () => {
+              try {
+                setIsSeeding(true);
+                const res = await ApiService.seedTunisia(storeId);
+                Alert.alert('Succès', res.message);
+                setShowSettings(false);
+              } catch (error: any) {
+                Alert.alert('Erreur', error.message || 'Échec de l\'installation');
+              } finally {
+                setIsSeeding(false);
+              }
+            },
+          },
+        ]
+      );
+    };
+
     if (isDashboard) {
       return (
         <View style={{ backgroundColor: 'transparent' }}>
@@ -102,6 +134,15 @@ export default function TabLayout() {
           <Text style={styles.modalSub}>Gestion de la boutique et du personnel.</Text>
           
           <View style={{ gap: 10 }}>
+            <TouchableOpacity 
+              style={[styles.adminLink, { borderColor: 'rgba(16, 185, 129, 0.3)', backgroundColor: 'rgba(16, 185, 129, 0.05)' }]} 
+              onPress={handleSeedTunisia}
+              disabled={isSeeding}
+            >
+              <FontAwesome name="magic" size={18} color="#10b981" />
+              <Text style={[styles.adminLinkText, { color: '#10b981' }]}>{isSeeding ? 'Installation...' : 'Pack Initial Tunisie'}</Text>
+            </TouchableOpacity>
+            
             <TouchableOpacity style={styles.adminLink} onPress={() => { setShowSettings(false); router.push('/team'); }}>
               <FontAwesome name="users" size={18} color="#94a3b8" />
               <Text style={styles.adminLinkText}>Gestion Personnel</Text>
@@ -109,10 +150,6 @@ export default function TabLayout() {
             <TouchableOpacity style={styles.adminLink} onPress={() => { setShowSettings(false); router.push('/table-config'); }}>
               <FontAwesome name="th" size={18} color="#94a3b8" />
               <Text style={styles.adminLinkText}>Configuration Tables</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.adminLink} onPress={() => { setShowSettings(false); }}>
-              <FontAwesome name="lock" size={18} color="#94a3b8" />
-              <Text style={styles.adminLinkText}>Modifier PIN / Codes</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -136,8 +173,8 @@ export default function TabLayout() {
             <FontAwesome name="briefcase" size={20} color="#10b981" />
           </View>
           <View style={styles.modeInfo}>
-            <Text style={styles.modeName}>Mode Rachma Only</Text>
-            <Text style={styles.modeDescription}>Gestion & Marché B2B uniquement.</Text>
+            <Text style={styles.modeName}>Focus Rachma (Caisse)</Text>
+            <Text style={styles.modeDescription}>Interface simplifiée pour les ventes rapides.</Text>
           </View>
           {appMode === 'RACHMA' && <FontAwesome name="check-circle" size={20} color="#10b981" />}
         </TouchableOpacity>
@@ -150,8 +187,8 @@ export default function TabLayout() {
             <FontAwesome name="desktop" size={20} color="#6366f1" />
           </View>
           <View style={styles.modeInfo}>
-            <Text style={styles.modeName}>Mode Complet</Text>
-            <Text style={styles.modeDescription}>Toutes les fonctions (Table + Caisse).</Text>
+            <Text style={styles.modeName}>Mode Gestion Complète</Text>
+            <Text style={styles.modeDescription}>Tableau de bord, B2B & Caisse temps-réel.</Text>
           </View>
           {appMode === 'FULL' && <FontAwesome name="check-circle" size={20} color="#6366f1" />}
         </TouchableOpacity>
@@ -269,7 +306,7 @@ export default function TabLayout() {
           title: 'B2B',
           tabBarLabel: 'Marché',
           tabBarIcon: ({ color }) => <TabBarIcon name="shopping-cart" color={color} />,
-          href: hasManagementAccess ? '/(tabs)/marketplace' : null,
+          href: hasMarketplaceAccess ? '/(tabs)/marketplace' : null,
         }}
       />
       <Tabs.Screen

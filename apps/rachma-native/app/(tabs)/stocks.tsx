@@ -397,6 +397,35 @@ export default function StocksScreen() {
               <>
                 <Text style={styles.sectionTitle}>Mes Catégories</Text>
                 <View style={styles.categoryList}>
+                  {displayCategories.length === 0 && search.length === 0 && (
+                    <View style={{ padding: 40, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 32, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+                      <FontAwesome name="magic" size={40} color="rgba(16, 185, 129, 0.2)" style={{ marginBottom: 15 }} />
+                      <Text style={{ color: '#94a3b8', textAlign: 'center', fontSize: 13, lineHeight: 20, marginBottom: 20 }}>
+                        Commencez rapidement en installant les produits les plus populaires en Tunisie.
+                      </Text>
+                      <TouchableOpacity 
+                        style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#10b981', borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                        onPress={async () => {
+                           if (!storeId) return;
+                           Alert.alert('Pack Initial Tunisie', 'Installer les produits, recettes et emballages ?', [
+                              { text: 'Annuler', style: 'cancel' },
+                              { text: 'Installer', onPress: async () => {
+                                 try {
+                                    setRefreshing(true);
+                                    await ApiService.seedTunisia(storeId);
+                                    onRefresh();
+                                 } catch (e) {
+                                    Alert.alert('Erreur', 'Installation impossible');
+                                 }
+                              }}
+                           ]);
+                        }}
+                      >
+                        <FontAwesome name="magic" size={16} color="#fff" />
+                        <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>PACK INITIAL TUNISIE</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                   {displayCategories.map((cat: any, i: number) => (
                     <TouchableOpacity key={i} style={[styles.categoryCard, styles.glassCard]} onPress={() => setSelectedCategory(cat)}>
                       <View style={[styles.catIconContainer, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
@@ -463,6 +492,35 @@ export default function StocksScreen() {
           </View>
 
           <Text style={styles.sectionTitle}>Stock des Matières Premières</Text>
+          {searchedItems.length === 0 && search.length === 0 && (
+            <View style={{ padding: 40, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 32, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+              <FontAwesome name="cube" size={40} color="rgba(16, 185, 129, 0.2)" style={{ marginBottom: 15 }} />
+              <Text style={{ color: '#94a3b8', textAlign: 'center', fontSize: 13, lineHeight: 20, marginBottom: 20 }}>
+                Configurez vos matières premières (café, lait, gobelets) ou utilisez le pack standard.
+              </Text>
+              <TouchableOpacity 
+                style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#10b981', borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                onPress={async () => {
+                    if (!storeId) return;
+                    Alert.alert('Pack Initial Tunisie', 'Installer les matières premières et emballages ?', [
+                      { text: 'Annuler', style: 'cancel' },
+                      { text: 'Installer', onPress: async () => {
+                          try {
+                            setRefreshing(true);
+                            await ApiService.seedTunisia(storeId);
+                            onRefresh();
+                          } catch (e) {
+                            Alert.alert('Erreur', 'Installation impossible');
+                          }
+                      }}
+                    ]);
+                }}
+              >
+                <FontAwesome name="magic" size={16} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>PACK INITIAL TUNISIE</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           {searchedItems.map((item, idx) => (
             <TouchableOpacity 
               key={idx} 

@@ -161,7 +161,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
       
       {/* Top Navbar */}
       <nav className="glass-nav" style={{ position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '16px 32px' }}>
+        <div style={{ maxWidth: 'var(--container-max-w)', margin: '0 auto', padding: '16px var(--page-px)' }}>
           <div className="nav-container">
             <div className="search-container">
               <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} size={18} />
@@ -259,7 +259,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
 
         {/* Main Content Area */}
         <main className="mkt-content-area">
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ maxWidth: 'var(--container-max-w)', margin: '0 auto' }}>
           
           {viewMode === 'products' ? (
             <>
@@ -499,7 +499,7 @@ function BundleDetailsModal({ bundle, onClose, addToCart }: any) {
           
           <div style={{ background: '#F8FAFC', borderRadius: 24, padding: 24, marginBottom: 32 }}>
              <h4 style={{ fontSize: 13, fontWeight: 900, color: '#1E1B4B', textTransform: 'uppercase', marginBottom: 16, letterSpacing: '0.05em' }}>Produits inclus :</h4>
-             <div style={{ dispay: 'flex', flexDirection: 'column', gap: 12 }}>
+             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {bundle.items.map((item: any, idx: number) => (
                   <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 12, borderBottom: idx === bundle.items.length - 1 ? 'none' : '1px solid #E2E8F0', marginBottom: 12 }}>
                      <div style={{ width: 48, height: 48, borderRadius: 12, overflow: 'hidden', flexShrink: 0 }}>

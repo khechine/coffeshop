@@ -85,7 +85,7 @@ export class SalesService {
           data: {
             id: dto.id || undefined,
             storeId: dto.storeId,
-            total: dto.total,
+            total: totalTtcGlobal,
             totalHt: Math.round(totalHtGlobal * 1000) / 1000,
             totalTax: Math.round(totalTaxGlobal * 1000) / 1000,
             taxBreakdown: taxBreakdown as any,
