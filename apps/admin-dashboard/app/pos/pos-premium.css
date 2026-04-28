@@ -37,6 +37,13 @@
   --pos-input-bg: #334155;
   --pos-modal-bg: #1E293B;
   --pos-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.15);
+  --pos-glass-bg: rgba(30, 41, 59, 0.7);
+  --pos-glass-border: rgba(255, 255, 255, 0.1);
+}
+
+:root {
+  --pos-glass-bg: rgba(255, 255, 255, 0.7);
+  --pos-glass-border: rgba(255, 255, 255, 0.4);
 }
 
 .pos-premium-container {
@@ -251,9 +258,26 @@
 }
 
 .product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.12);
   border-color: var(--pos-primary);
+}
+
+.product-min-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: var(--pos-accent);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 900;
+  z-index: 2;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .product-image-container {

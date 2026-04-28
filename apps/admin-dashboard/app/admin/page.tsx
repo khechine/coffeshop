@@ -94,125 +94,172 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="page-content">
-      <div className="page-header">
+      <div className="page-header" style={{ marginBottom: '40px' }}>
         <div>
-          <h1>Tableau de Bord</h1>
-          <p>Supervision du café, stocks et performance staff</p>
+          <h1 style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-1px' }}>Bonjour, {store.name} 👋</h1>
+          <p style={{ fontSize: '15px', color: '#64748B', marginTop: '6px', fontWeight: 500 }}>Voici l'état de performance de votre établissement aujourd'hui.</p>
         </div>
-        <Link href="/pos" className="btn btn-primary">
-          <Coffee size={16} />
-          Ouvrir la Caisse
-          <ArrowRight size={16} />
-        </Link>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <Link href="/admin/metrics" className="btn" style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid #E2E8F0', color: '#1E293B', fontWeight: 700 }}>
+             <TrendingUp size={16} /> Analyser
+          </Link>
+          <Link href="/pos" className="btn btn-primary" style={{ padding: '12px 24px', borderRadius: '14px', fontSize: '14px' }}>
+            <Coffee size={18} />
+            Accès Caisse
+            <ArrowRight size={18} />
+          </Link>
+        </div>
       </div>
 
-      <div className="kpi-grid">
-        <div className="kpi-card blue">
-          <div className="kpi-icon blue"><ShoppingCart size={22} /></div>
-          <div>
-            <div className="kpi-label">Ventes Totales</div>
-            <div className="kpi-value">{salesCount}</div>
-            <div className="kpi-sub kpi-trend-up">↑ tickets encaissés</div>
+      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+        {/* REVENU CARD - PREMIUM GRADIENT */}
+        <div className="kpi-card" style={{ 
+          background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)', 
+          color: '#fff', 
+          border: 'none',
+          padding: '28px',
+          borderRadius: '24px',
+          boxShadow: '0 20px 40px rgba(79, 70, 229, 0.25)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', width: '48px', height: '48px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TrendingUp size={24} color="#fff" />
+            </div>
+            <span style={{ fontSize: '11px', fontWeight: 800, background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '100px', textTransform: 'uppercase' }}>Aujourd'hui</span>
           </div>
-        </div>
-
-        <div className="kpi-card green">
-          <div className="kpi-icon green"><TrendingUp size={22} /></div>
-          <div>
-            <div className="kpi-label">Chiffre d'Affaires</div>
-            <div className="kpi-value">{revenue.toFixed(3)} DT</div>
-          </div>
-        </div>
-
-        <div className="kpi-card purple">
-          <div className="kpi-icon purple"><User size={22} /></div>
-          <div>
-            <div className="kpi-label">Top Vendeur</div>
-            <div className="kpi-value" style={{ fontSize: '18px' }}>{bestBaristaName}</div>
-            <div className="kpi-sub">{bestBaristaRev.toFixed(3)} DT</div>
-          </div>
-        </div>
-
-        <div className="kpi-card orange">
-          <div className="kpi-icon orange"><AlertTriangle size={22} /></div>
-          <div>
-            <div className="kpi-label">Alerte Stocks</div>
-            <div className="kpi-value">{criticalStockCount}</div>
-            <div className="kpi-sub" style={{color: criticalStockCount > 0 ? '#EF4444' : '#10B981'}}>
-              {criticalStockCount > 0 ? '⚠ Rupture possible' : 'Stocks OK'}
+          <div style={{ marginTop: '24px' }}>
+            <div className="kpi-label" style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '4px' }}>Chiffre d'Affaires</div>
+            <div className="kpi-value" style={{ color: '#fff', fontSize: '32px', fontWeight: 900 }}>{revenue.toFixed(3)} <span style={{ fontSize: '16px', opacity: 0.8 }}>DT</span></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
+              <div style={{ padding: '2px 8px', background: 'rgba(16, 185, 129, 0.2)', borderRadius: '6px', fontSize: '12px', fontWeight: 700, color: '#34D399' }}>+12%</div>
+              <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>vs hier</span>
             </div>
           </div>
         </div>
 
-        <div className="kpi-card" style={{ background: netProfit >= 0 ? '#F0FDF4' : '#FEF2F2', borderColor: netProfit >= 0 ? '#BBF7D0' : '#FEE2E2' }}>
-          <div className="kpi-icon" style={{ background: netProfit >= 0 ? '#DCFCE7' : '#FEE2E2', color: netProfit >= 0 ? '#10B981' : '#EF4444' }}><Wallet size={22} /></div>
-          <div>
-            <div className="kpi-label">Profit Net Estimé</div>
-            <div className="kpi-value" style={{ color: netProfit >= 0 ? '#10B981' : '#EF4444' }}>{netProfit.toFixed(3)} DT</div>
-            <div className="kpi-sub" style={{ color: '#64748B' }}>Dépenses: {totalExpenses.toFixed(3)} DT</div>
+        {/* TICKETS CARD */}
+        <div className="kpi-card" style={{ 
+          background: '#fff', 
+          padding: '28px',
+          borderRadius: '24px',
+          border: '1px solid #F1F5F9'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ background: '#F0F9FF', width: '48px', height: '48px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ShoppingCart size={24} color="#0EA5E9" />
+            </div>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Volume</span>
+          </div>
+          <div style={{ marginTop: '24px' }}>
+            <div className="kpi-label" style={{ marginBottom: '4px' }}>Tickets Encaissés</div>
+            <div className="kpi-value" style={{ fontSize: '32px', fontWeight: 900 }}>{salesCount} <span style={{ fontSize: '16px', color: '#94A3B8' }}>cmd.</span></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
+              <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>Moyenne: {(revenue/salesCount || 0).toFixed(3)} DT</span>
+            </div>
+          </div>
+        </div>
+
+        {/* STAFF CARD */}
+        <div className="kpi-card" style={{ 
+          background: '#fff', 
+          padding: '28px',
+          borderRadius: '24px',
+          border: '1px solid #F1F5F9'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ background: '#F5F3FF', width: '48px', height: '48px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <User size={24} color="#8B5CF6" />
+            </div>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Équipe</span>
+          </div>
+          <div style={{ marginTop: '24px' }}>
+            <div className="kpi-label" style={{ marginBottom: '4px' }}>Top Vendeur</div>
+            <div className="kpi-value" style={{ fontSize: '24px', fontWeight: 900 }}>{bestBaristaName}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
+              <span style={{ fontSize: '14px', color: '#10B981', fontWeight: 800 }}>{bestBaristaRev.toFixed(3)} DT</span>
+              <span style={{ fontSize: '12px', color: '#94A3B8' }}>réalisés</span>
+            </div>
+          </div>
+        </div>
+
+        {/* PROFIT / MARGE CARD */}
+        <div className="kpi-card" style={{ 
+          background: netProfit >= 0 ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)' : 'linear-gradient(135deg, #DC2626 0%, #EF4444 100%)', 
+          color: '#fff',
+          border: 'none',
+          padding: '28px',
+          borderRadius: '24px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', width: '48px', height: '48px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Wallet size={24} color="#fff" />
+            </div>
+            <span style={{ fontSize: '11px', fontWeight: 800, background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '100px', textTransform: 'uppercase' }}>Estimation</span>
+          </div>
+          <div style={{ marginTop: '24px' }}>
+            <div className="kpi-label" style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '4px' }}>Profit Net (Journalier)</div>
+            <div className="kpi-value" style={{ color: '#fff', fontSize: '32px', fontWeight: 900 }}>{netProfit.toFixed(3)} <span style={{ fontSize: '16px', opacity: 0.8 }}>DT</span></div>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '12px' }}>Dépenses: {totalExpenses.toFixed(3)} DT</div>
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '24px', marginTop: '30px' }}>
-        <div className="card" style={{ border: 'none', boxShadow: 'var(--shadow-md)' }}>
-           <div className="card-header" style={{ background: '#fff', borderBottom: '1px solid #F1F5F9' }}>
-             <span className="card-title" style={{ fontSize: '14px', fontWeight: 800, color: '#1E293B' }}><Zap size={16} /> Meilleurs Produits</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '30px', marginTop: '40px' }}>
+        {/* PRODUCT ANALYTICS */}
+        <div className="card" style={{ borderRadius: '24px', border: '1px solid #F1F5F9', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.02)' }}>
+           <div style={{ padding: '24px', background: '#F8FAFC', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+             <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '8px' }}>
+               <Zap size={18} color="#F59E0B" /> Meilleurs Produits
+             </h3>
+             <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>Volume Ventes</span>
            </div>
            <div style={{ padding: '24px' }}>
               {topProducts.map((p: any, idx) => (
-                <div key={idx} style={{ marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
-                    <span style={{ fontWeight: 700, color: '#475569' }}>{p.name}</span>
-                    <span style={{ fontWeight: 800, color: '#64748B' }}>{p.quantity} <span style={{ fontSize: '11px', fontWeight: 500 }}>u.</span></span>
+                <div key={idx} style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, color: '#64748B' }}>{idx+1}</div>
+                      <span style={{ fontWeight: 700, color: '#334155' }}>{p.name}</span>
+                    </div>
+                    <span style={{ fontWeight: 800, color: '#1E293B' }}>{p.quantity} <span style={{ fontSize: '11px', fontWeight: 500, color: '#94A3B8' }}>u.</span></span>
                   </div>
-                  <div className="progress-track" style={{ height: '8px', background: '#F1F5F9' }}>
-                    <div className="progress-fill" style={{ width: `${(p.revenue / revenue) * 100}%`, background: 'linear-gradient(90deg, #6366F1, #818CF8)', borderRadius: '100px' }} />
+                  <div style={{ height: '8px', background: '#F1F5F9', borderRadius: '100px', overflow: 'hidden' }}>
+                    <div style={{ width: `${(p.revenue / revenue) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #6366F1, #8B5CF6)', borderRadius: '100px' }} />
                   </div>
-                  <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '6px', fontWeight: 600 }}>CA généré: {p.revenue.toFixed(3)} DT</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                    <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>CA: {p.revenue.toFixed(3)} DT</span>
+                    <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: 700 }}>{((p.revenue/revenue)*100).toFixed(1)}% du total</span>
+                  </div>
                 </div>
               ))}
            </div>
         </div>
 
-        <div className="card" style={{ border: 'none', boxShadow: 'var(--shadow-md)' }}>
-           <div className="card-header" style={{ background: '#fff', borderBottom: '1px solid #F1F5F9' }}>
-             <span className="card-title" style={{ fontSize: '14px', fontWeight: 800, color: '#1E293B' }}><User size={16} /> Performance Staff</span>
+        {/* STAFF PERFORMANCE */}
+        <div className="card" style={{ borderRadius: '24px', border: '1px solid #F1F5F9', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.02)' }}>
+           <div style={{ padding: '24px', background: '#F8FAFC', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+             <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '8px' }}>
+               <Users size={18} color="#6366F1" /> Performance Staff
+             </h3>
+             <Link href="/admin/staff" style={{ fontSize: '12px', fontWeight: 700, color: '#6366F1' }}>Gérer l'Équipe</Link>
            </div>
            <div style={{ padding: '24px' }}>
               {salesByBarista.map((b, idx) => {
                 const name = baristas.find(u => u.id === b.baristaId)?.name || 'Inconnu';
                 const rev = Number(b._sum.total || 0);
                 return (
-                  <div key={idx} style={{ marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
-                      <span style={{ fontWeight: 700, color: '#475569' }}>{name}</span>
-                      <span style={{ fontWeight: 800, color: '#10B981' }}>{rev.toFixed(3)} DT</span>
+                  <div key={idx} style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5', fontWeight: 800 }}>
+                      {name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="progress-track" style={{ height: '8px', background: '#F1F5F9' }}>
-                      <div className="progress-fill" style={{ width: `${(rev/revenue)*100}%`, background: 'linear-gradient(90deg, #10B981, #34D399)', borderRadius: '100px' }} />
-                    </div>
-                  </div>
-                );
-              })}
-           </div>
-        </div>
-
-        <div className="card" style={{ border: 'none', boxShadow: 'var(--shadow-md)' }}>
-           <div className="card-header" style={{ background: '#fff', borderBottom: '1px solid #F1F5F9' }}>
-             <span className="card-title" style={{ fontSize: '14px', fontWeight: 800, color: '#1E293B' }}><Layers size={16} /> Performance Tables</span>
-           </div>
-           <div style={{ padding: '24px' }}>
-              {salesByTable.map((t, idx) => {
-                const total = Number(t._sum.total || 0);
-                return (
-                  <div key={idx} style={{ marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
-                      <span style={{ fontWeight: 700, color: '#475569' }}>Table: {t.tableName}</span>
-                      <span style={{ fontWeight: 800, color: '#6366F1' }}>{total.toFixed(3)} DT</span>
-                    </div>
-                    <div className="progress-track" style={{ height: '8px', background: '#F1F5F9' }}>
-                      <div className="progress-fill" style={{ width: `${(total/revenue)*100}%`, background: 'linear-gradient(90deg, #6366F1, #C084FC)', borderRadius: '100px' }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <span style={{ fontWeight: 700, color: '#334155', fontSize: '14px' }}>{name}</span>
+                        <span style={{ fontWeight: 800, color: '#10B981', fontSize: '14px' }}>{rev.toFixed(3)} DT</span>
+                      </div>
+                      <div style={{ height: '6px', background: '#F1F5F9', borderRadius: '100px', overflow: 'hidden' }}>
+                        <div style={{ width: `${(rev/revenue)*100}%`, height: '100%', background: '#10B981', borderRadius: '100px' }} />
+                      </div>
                     </div>
                   </div>
                 );

@@ -5,7 +5,7 @@ import {
   Building2, MapPin, Phone, Mail, 
   Package, CheckCircle2, XCircle, Search, 
   BarChart3, Calendar, ShieldCheck, ShoppingBag,
-  ExternalLink
+  ExternalLink, Wallet
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { approveVendorAction, rejectVendorAction } from '../../actions';
@@ -141,20 +141,27 @@ export default function VendorsListClient({ initialVendors }: { initialVendors: 
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-px bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden mb-6 border border-slate-100 dark:border-slate-800">
+                <div className="grid grid-cols-3 gap-px bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden mb-6 border border-slate-100 dark:border-slate-800">
                   <div className="bg-slate-50/50 dark:bg-slate-900/40 p-4 text-center">
                     <div className="flex items-center justify-center gap-2 mb-1">
                       <ShoppingBag size={14} className="text-indigo-500" />
-                      <span className="text-sm font-black text-slate-900 dark:text-white">{v.products?.length || 0}</span>
+                      <span className="text-sm font-black text-slate-900 dark:text-white">{v.products?.length || v.vendorProducts?.length || 0}</span>
                     </div>
                     <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Produits</div>
                   </div>
                   <div className="bg-slate-50/50 dark:bg-slate-900/40 p-4 text-center">
                     <div className="flex items-center justify-center gap-2 mb-1">
-                      <BarChart3 size={14} className="text-amber-500" />
-                      <span className="text-sm font-black text-slate-900 dark:text-white">{v.categories?.length || 0}</span>
+                      <Wallet size={14} className="text-emerald-500" />
+                      <span className="text-sm font-black text-slate-900 dark:text-white">{Number(v.wallet?.balance || 0).toFixed(2)}</span>
                     </div>
-                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Catégories</div>
+                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Solde DT</div>
+                  </div>
+                  <div className="bg-slate-50/50 dark:bg-slate-900/40 p-4 text-center">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <BarChart3 size={14} className="text-amber-500" />
+                      <span className="text-sm font-black text-slate-900 dark:text-white">KPI</span>
+                    </div>
+                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Performance</div>
                   </div>
                 </div>
               </div>

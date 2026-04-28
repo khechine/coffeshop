@@ -7,7 +7,8 @@ export default async function SuperAdminVendorsPage() {
   const vendorsRaw = await (prisma as any).vendorProfile.findMany({
     include: { 
       user: true, 
-      vendorProducts: true
+      vendorProducts: true,
+      wallet: true
     },
     orderBy: { createdAt: 'desc' }
   });

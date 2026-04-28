@@ -13,6 +13,14 @@ export default async function VendorDetailPage({ params }: { params: { id: strin
       user: true,
       commissionRule: true,
       vendorProducts: true,
+      wallet: {
+        include: {
+          transactions: {
+            orderBy: { createdAt: 'desc' },
+            take: 50
+          }
+        }
+      },
       orders: {
         include: { 
           store: true,

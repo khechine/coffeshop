@@ -6,7 +6,7 @@ import {
   History, User, Coffee, LogOut, Lock, LayoutGrid, CreditCard,
   ChevronRight, AlertCircle, Save, ArrowLeft, MoreVertical, ClipboardList,
   ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, Search,
-  X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck
+  X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale } from '../actions';
@@ -97,7 +97,7 @@ export default function PremiumPOSClient({
     });
   };
 
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [tableOrders, setTableOrders] = useState<Record<string, CartItem[]>>({});
   const [category, setCategory] = useState('Tous');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTable, setSelectedTable] = useState<any | null>(null);
@@ -140,7 +140,9 @@ export default function PremiumPOSClient({
     return matchesCat && matchesSearch;
   });
 
-  const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const currentCart = selectedTable ? (tableOrders[selectedTable.id] || []) : [];
+
+  const subtotal = currentCart.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const discountFromPoints = isRedeemingPoints && selectedCustomer 
     ? Math.min(selectedCustomer.loyaltyPoints / loyaltyRedeemRate, subtotal)
     : 0;
@@ -178,24 +180,73 @@ export default function PremiumPOSClient({
     }
   };
 
-  const addToCart = (product: Product) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
-      if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+  // --- Table Persistence ---
+  useEffect(() => {
+    const saved = localStorage.getItem('pos_premium_orders');
+    if (saved) {
+      try {
+        setTableOrders(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to load table orders", e);
       }
-      return [...prev, { ...product, quantity: 1 }];
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('pos_premium_orders', JSON.stringify(tableOrders));
+  }, [tableOrders]);
+
+  const addToCart = (product: Product & { minOrderQty?: number }) => {
+    if (!selectedTable) return;
+    const tableId = selectedTable.id;
+    const minQty = Number(product.minOrderQty || 1);
+
+    setTableOrders(prev => {
+      const tableCart = prev[tableId] || [];
+      const existing = tableCart.find(item => item.id === product.id);
+      
+      let newCart;
+      if (existing) {
+        newCart = tableCart.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      } else {
+        newCart = [...tableCart, { ...product, quantity: minQty }];
+      }
+      
+      return { ...prev, [tableId]: newCart };
     });
   };
 
   const updateQty = (id: string, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === id) {
-        const newQty = Math.max(0, item.quantity + delta);
-        return { ...item, quantity: newQty };
-      }
-      return item;
-    }).filter(item => item.quantity > 0));
+    if (!selectedTable) return;
+    const tableId = selectedTable.id;
+
+    setTableOrders(prev => {
+      const tableCart = prev[tableId] || [];
+      const newCart = tableCart.map(item => {
+        if (item.id === id) {
+          const minQty = (item as any).minOrderQty || 1;
+          let newQty = item.quantity + delta;
+          
+          // Enforce min quantity if decreasing
+          if (delta < 0 && newQty < minQty) {
+            newQty = 0; // Remove item if it goes below min
+          }
+          
+          return { ...item, quantity: newQty };
+        }
+        return item;
+      }).filter(item => item.quantity > 0);
+
+      return { ...prev, [tableId]: newCart };
+    });
+  };
+
+  const clearCart = () => {
+    if (!selectedTable) return;
+    setTableOrders(prev => {
+      const { [selectedTable.id]: _, ...rest } = prev;
+      return rest;
+    });
   };
 
   const handleCustomerSearch = async (val: string) => {
@@ -214,7 +265,7 @@ export default function PremiumPOSClient({
         total,
         subtotal,
         discount: discountFromPoints,
-        items: cart.map(i => ({ productId: i.id, quantity: i.quantity, price: i.price })),
+        items: currentCart.map(i => ({ productId: i.id, quantity: i.quantity, price: i.price })),
         baristaId: cashierId || 'pos-internal',
         terminalId: selectedTerminalId || undefined,
         tableName: selectedTable?.label || 'Directe',
@@ -229,7 +280,7 @@ export default function PremiumPOSClient({
       });
 
       alert("Vente enregistrée avec succès !");
-      setCart([]);
+      clearCart();
       setSelectedCustomer({
         id: 'passager',
         name: 'Client Passager',
@@ -388,16 +439,54 @@ export default function PremiumPOSClient({
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 24 }}>
-               {initialTables.map((t: any) => (
-                 <div key={t.id} className="customer-selector" style={{ height: 180, flexDirection: 'column', background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', gap: 12, cursor: 'pointer' }}
-                   onClick={() => { setSelectedTable(t); setView('POS'); }}>
-                    <div style={{ width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                       <Users size={32} color="#fff" />
+                {initialTables.map((t: any) => {
+                  const tableCart = tableOrders[t.id] || [];
+                  const hasOrder = tableCart.length > 0;
+                  const tableTotal = tableCart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
+                  return (
+                    <div key={t.id} className={`customer-selector ${hasOrder ? 'has-active-order' : ''}`} 
+                      style={{ 
+                        height: 180, 
+                        flexDirection: 'column', 
+                        background: hasOrder ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.05)', 
+                        borderColor: hasOrder ? 'var(--pos-primary)' : 'rgba(255,255,255,0.1)', 
+                        borderWidth: hasOrder ? 2 : 1,
+                        justifyContent: 'center', 
+                        gap: 12, 
+                        cursor: 'pointer',
+                        position: 'relative',
+                        boxShadow: hasOrder ? '0 10px 25px -5px rgba(99, 102, 241, 0.4)' : 'none'
+                      }}
+                      onClick={() => { setSelectedTable(t); setView('POS'); }}>
+                       
+                       {hasOrder && (
+                         <div style={{ 
+                           position: 'absolute', top: 12, right: 12, 
+                           background: 'var(--pos-primary)', color: '#fff', 
+                           padding: '4px 10px', borderRadius: 10, 
+                           fontSize: 12, fontWeight: 900,
+                           boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
+                         }}>
+                            {tableTotal.toFixed(3)} DT
+                         </div>
+                       )}
+
+                       <div style={{ 
+                         width: 70, height: 70, borderRadius: '50%', 
+                         background: hasOrder ? 'var(--pos-primary)' : 'rgba(255,255,255,0.1)', 
+                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                         transition: 'all 0.3s'
+                       }}>
+                          <Users size={32} color="#fff" />
+                       </div>
+                       <div style={{ color: '#fff', fontWeight: 900, fontSize: 22 }}>{t.label}</div>
+                       <div style={{ color: hasOrder ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.4)', fontSize: 13 }}>
+                          {hasOrder ? `${tableCart.length} articles` : `Table ${t.capacity} pers.`}
+                       </div>
                     </div>
-                    <div style={{ color: '#fff', fontWeight: 900, fontSize: 22 }}>{t.label}</div>
-                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Table {t.capacity} pers.</div>
-                 </div>
-               ))}
+                  );
+                })}
                {initialTables.length === 0 && (
                  <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 80, color: 'rgba(255,255,255,0.2)' }}>
                     <AlertCircle size={64} style={{ margin: '0 auto 20px' }} />
@@ -499,18 +588,18 @@ export default function PremiumPOSClient({
                       onClick={() => {
                         if (hasChildren) {
                           setCurrentParentCategoryId(cat.id);
-                          setCategory(cat.name); // Filter by parent category initially
+                          setCategory(cat.name);
                         } else {
                           setCategory(cat.name);
                         }
                       }}
-                      style={isActive ? { backgroundColor: catColor, color: '#fff', borderColor: catColor } : { color: catColor, borderColor: catColor + '40' }}
+                      style={isActive ? { backgroundColor: catColor, color: '#fff', borderColor: catColor, boxShadow: `0 8px 20px ${catColor}40` } : { color: catColor, borderColor: catColor + '30', background: 'var(--pos-glass-bg)', backdropFilter: 'blur(10px)' }}
                     >
                       <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <CatIcon size={20} />
+                        <CatIcon size={22} />
                       </div>
-                      <span style={{ flex: 1, textAlign: 'left' }}>{cat.name}</span>
-                      {hasChildren && <ChevronRight size={16} />}
+                      <span style={{ flex: 1, textAlign: 'left', fontWeight: 900, fontSize: 14 }}>{cat.name}</span>
+                      {hasChildren && <ChevronRight size={16} opacity={0.5} />}
                     </button>
                   );
                 })}
@@ -554,7 +643,7 @@ export default function PremiumPOSClient({
                 style={{ display: 'none', padding: '0 16px', height: 48, borderRadius: 14, position: 'relative' }}
               >
                  <ShoppingCart size={20} />
-                 {cart.length > 0 && <span className="cart-badge-dot">{cart.length}</span>}
+                 {currentCart.length > 0 && <span className="cart-badge-dot">{currentCart.length}</span>}
               </button>
 
               {/* MODE INDICATOR CENTERED */}
@@ -581,28 +670,36 @@ export default function PremiumPOSClient({
           </header>
 
           <div className="pos-product-grid">
-            {filteredProducts.map(product => (
-              <div key={product.id} className="product-card" onClick={() => addToCart(product)}>
-                 <div className="product-image-container" style={{ height: 210 }}>
-                   {product.image ? (
-                     <img src={product.image} className="product-image" alt={product.name} />
-                   ) : (
-                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#CBD5E1', background: '#F8FAFC' }}>
-                       <Coffee size={64} strokeWidth={1} />
+            {filteredProducts.map(product => {
+               const minQty = (product as any).minOrderQty || 1;
+               return (
+                <div key={product.id} className="product-card" onClick={() => addToCart(product)} style={{ position: 'relative' }}>
+                   {minQty > 1 && (
+                     <div className="product-min-badge">
+                        <Package size={12} /> min. {minQty}
                      </div>
                    )}
-                 </div>
-                 <div className="product-info" style={{ padding: 18 }}>
-                   <span className="product-name" style={{ fontSize: 17, marginBottom: 8, height: 44, display: 'block' }}>{product.name}</span>
-                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="product-price" style={{ fontSize: 20 }}>{product.price.toFixed(3)} DT</span>
-                      <div className="btn-premium btn-premium-primary" style={{ width: 32, height: 32, padding: 0, borderRadius: 8 }}>
-                         <Plus size={18} />
-                      </div>
+                   <div className="product-image-container" style={{ height: 210 }}>
+                     {product.image ? (
+                       <img src={product.image} className="product-image" alt={product.name} />
+                     ) : (
+                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#CBD5E1', background: 'linear-gradient(135deg, var(--pos-bg) 0%, var(--pos-input-bg) 100%)' }}>
+                         <Coffee size={64} strokeWidth={1} />
+                       </div>
+                     )}
                    </div>
-                 </div>
-              </div>
-            ))}
+                   <div className="product-info" style={{ padding: 18 }}>
+                     <span className="product-name" style={{ fontSize: 17, marginBottom: 8, height: 44, display: 'block', fontWeight: 900 }}>{product.name}</span>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="product-price" style={{ fontSize: 20, fontWeight: 1000, color: 'var(--pos-primary)' }}>{product.price.toFixed(3)} DT</span>
+                        <div className="btn-premium btn-premium-primary" style={{ width: 36, height: 36, padding: 0, borderRadius: 10, boxShadow: '0 4px 10px rgba(99, 102, 241, 0.3)' }}>
+                           <Plus size={20} />
+                        </div>
+                     </div>
+                   </div>
+                </div>
+               );
+            })}
           </div>
         </>
         ) : view === 'CUSTOMERS' ? (
@@ -862,7 +959,7 @@ export default function PremiumPOSClient({
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button style={{ background: 'none', border: 'none', color: 'var(--pos-text-muted)', cursor: 'pointer' }} className="mobile-only-btn" onClick={() => setIsCartOpenMobile(false)}><X size={24} /></button>
-                <button style={{ background: 'none', border: 'none', color: 'var(--pos-danger)', cursor: 'pointer' }} onClick={() => setCart([])}><Trash2 size={20} /></button>
+                <button style={{ background: 'none', border: 'none', color: 'var(--pos-danger)', cursor: 'pointer' }} onClick={clearCart}><Trash2 size={20} /></button>
               </div>
            </div>
            
@@ -901,7 +998,7 @@ export default function PremiumPOSClient({
         </div>
 
         <div className="cart-items">
-          {cart.map(item => (
+          {currentCart.map(item => (
             <div key={item.id} className="cart-item">
               <div className="cart-item-info">
                 <div className="cart-item-name">{item.name}</div>
@@ -914,7 +1011,7 @@ export default function PremiumPOSClient({
               </div>
             </div>
           ))}
-          {cart.length === 0 && (
+          {currentCart.length === 0 && (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.2, marginTop: 100 }}>
               <ShoppingCart size={80} strokeWidth={1} />
               <p style={{ fontWeight: 900, fontSize: 18 }}>Panier Vide</p>
@@ -949,8 +1046,8 @@ export default function PremiumPOSClient({
         </div>
 
         <div className="cart-actions">
-           <button className="btn-premium btn-premium-orange" style={{ height: 60 }} onClick={() => alert("Brouillon sauvegardé")}><Save size={20} /> Brouillon</button>
-           <button className="btn-premium btn-premium-primary" style={{ height: 60 }} disabled={cart.length === 0} onClick={() => setIsPaymentModalOpen(true)}>
+           <button className="btn-premium btn-premium-orange" style={{ height: 60 }} onClick={() => { setView('TABLES'); setSelectedTable(null); }}><Save size={20} /> Mettre en attente</button>
+           <button className="btn-premium btn-premium-primary" style={{ height: 60 }} disabled={currentCart.length === 0} onClick={() => setIsPaymentModalOpen(true)}>
              <CheckCircle size={22} /> Encaisser
            </button>
         </div>

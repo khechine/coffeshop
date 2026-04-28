@@ -6,15 +6,19 @@ import {
   Package, CheckCircle2, XCircle, Search, 
   BarChart3, Calendar, ShieldCheck, ShoppingBag,
   ArrowLeft, ExternalLink, Tag, Filter,
-  ChevronRight, Box
+  ChevronRight, Box, Wallet, TrendingUp, DollarSign,
+  ArrowUpRight, ArrowDownLeft, Clock, AlertTriangle, Check, RefreshCcw
 } from 'lucide-react';
 import Link from 'next/link';
 import { approveVendorAction, rejectVendorAction, assignCommissionRuleToVendor } from '../../../actions';
 
 export default function VendorDetailClient({ vendor, rules }: { vendor: any, rules: any[] }) {
-  const [activeTab, setActiveTab] = useState<'catalog' | 'orders'>('catalog');
+  const [activeTab, setActiveTab] = useState<'overview' | 'catalog' | 'orders' | 'wallet'>('overview');
   const [productSearch, setProductSearch] = useState('');
   const [isPending, startTransition] = useTransition();
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletAmount, setWalletAmount] = useState('');
+  const [walletDesc, setWalletDesc] = useState('');
 
   const handleAssignRule = (ruleId: string | null) => {
     startTransition(async () => {
@@ -44,6 +48,33 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
     startTransition(async () => {
       try {
         await rejectVendorAction(id);
+      } catch (err: any) {
+        alert(err.message);
+      }
+    });
+  };
+
+  const handleWalletAction = () => {
+    if (!walletAmount || isNaN(Number(walletAmount))) return;
+    startTransition(async () => {
+      try {
+        // We'll need to define this action or use an existing one
+        const { depositToWalletAction } = await import('../../../actions');
+        await depositToWalletAction(vendor.id, Number(walletAmount), walletDesc);
+        setShowWalletModal(false);
+        setWalletAmount('');
+        setWalletDesc('');
+      } catch (err: any) {
+        alert(err.message);
+      }
+    });
+  };
+
+  const handleApproveSettlement = (orderId: string) => {
+    startTransition(async () => {
+      try {
+        const { approveMarketplaceOrderAction } = await import('../../../actions');
+        await approveMarketplaceOrderAction(orderId, 'SUPERADMIN');
       } catch (err: any) {
         alert(err.message);
       }
@@ -120,8 +151,59 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
                  {vendor.status === 'ACTIVE' ? 'Suspendre ce vendeur' : 'Ré-activer le compte'}
                </button>
              )}
+               <button 
+                onClick={() => setShowWalletModal(true)}
+                className="px-6 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 font-black text-sm hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all"
+               >
+                 Reversement / Retrait
+               </button>
           </div>
         </div>
+      </div>
+
+      {/* KPI Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          { 
+            label: "Volume d'affaires", 
+            value: `${vendor.orders.reduce((acc: number, o: any) => acc + Number(o.total), 0).toFixed(3)} DT`, 
+            icon: TrendingUp, 
+            color: "indigo",
+            desc: "Total des ventes marketplace"
+          },
+          { 
+            label: "Commissions Plateforme", 
+            value: `${vendor.orders.reduce((acc: number, o: any) => acc + Number(o.settlement?.commissionAmount || 0), 0).toFixed(3)} DT`, 
+            icon: DollarSign, 
+            color: "rose",
+            desc: "Revenus générés par la plateforme"
+          },
+          { 
+            label: "Solde Wallet", 
+            value: `${Number(vendor.wallet?.balance || 0).toFixed(3)} DT`, 
+            icon: Wallet, 
+            color: "emerald",
+            desc: "Disponible pour retrait / reversement"
+          },
+          { 
+            label: "Commandes", 
+            value: vendor.orders.length, 
+            icon: ShoppingBag, 
+            color: "amber",
+            desc: "Volume total de transactions"
+          }
+        ].map((kpi, i) => (
+          <div key={i} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-[32px] shadow-sm flex flex-col gap-4 relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
+            <div className={`p-3 bg-${kpi.color}-50 dark:bg-${kpi.color}-500/10 rounded-2xl text-${kpi.color}-600 w-fit`}>
+              <kpi.icon size={24} />
+            </div>
+            <div>
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{kpi.label}</div>
+              <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{kpi.value}</div>
+              <div className="text-[10px] font-bold text-slate-400 mt-1">{kpi.desc}</div>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -240,31 +322,65 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
         {/* Dynamic Content Area (Tabs) */}
         <div className="lg:col-span-3 space-y-6">
           {/* Section Selector */}
-          <div className="flex gap-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-3xl w-fit shadow-sm">
-            <button 
-              onClick={() => setActiveTab('catalog')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all ${
-                activeTab === 'catalog' 
-                  ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' 
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <Package size={18} /> Catalogue de Produits
-            </button>
-            <button 
-              onClick={() => setActiveTab('orders')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all ${
-                activeTab === 'orders' 
-                  ? 'bg-white dark:bg-slate-800 text-amber-600 shadow-sm' 
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <ShoppingBag size={18} /> Historique des Commandes
-            </button>
+          <div className="flex flex-wrap gap-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-3xl w-fit shadow-sm">
+            {[
+              { id: 'overview', label: 'Vue d\'ensemble', icon: BarChart3, color: 'indigo' },
+              { id: 'catalog', label: 'Catalogue', icon: Package, color: 'indigo' },
+              { id: 'orders', label: 'Commandes', icon: ShoppingBag, color: 'amber' },
+              { id: 'wallet', label: 'Portefeuille (Wallet)', icon: Wallet, color: 'emerald' },
+            ].map((tab) => (
+              <button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all ${
+                  activeTab === tab.id 
+                    ? `bg-white dark:bg-slate-800 text-${tab.color}-600 shadow-sm` 
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <tab.icon size={18} /> {tab.label}
+              </button>
+            ))}
           </div>
 
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] overflow-hidden shadow-sm">
-            {activeTab === 'catalog' ? (
+            {activeTab === 'overview' ? (
+              <div className="p-10 text-center space-y-8">
+                <div className="max-w-md mx-auto">
+                   <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-500/10 rounded-3xl flex items-center justify-center text-indigo-600 mx-auto mb-6">
+                      <BarChart3 size={40} />
+                   </div>
+                   <h3 className="text-xl font-black text-slate-900 dark:text-white">Performance du Vendeur</h3>
+                   <p className="text-sm text-slate-500 mt-2 font-medium">Récapitulatif des activités récentes et indicateurs clés de performance.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                   <div className="p-6 bg-slate-50 dark:bg-slate-950 rounded-[32px] border border-slate-100 dark:border-slate-800 text-left">
+                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Dernière Vente</div>
+                      {vendor.orders[0] ? (
+                        <div>
+                          <div className="text-lg font-black text-slate-900 dark:text-white">{Number(vendor.orders[0].total).toFixed(3)} DT</div>
+                          <div className="text-xs font-bold text-slate-400 mt-1">{new Date(vendor.orders[0].createdAt).toLocaleDateString('fr-FR', { dateStyle: 'full' })}</div>
+                        </div>
+                      ) : (
+                        <div className="text-xs font-bold text-slate-400">Aucune commande enregistrée.</div>
+                      )}
+                   </div>
+                   <div className="p-6 bg-slate-50 dark:bg-slate-950 rounded-[32px] border border-slate-100 dark:border-slate-800 text-left">
+                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Produit le plus vendu</div>
+                      <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-600 font-black">
+                            {vendor.vendorProducts?.[0]?.name?.charAt(0) || '-'}
+                         </div>
+                         <div>
+                            <div className="text-sm font-black text-slate-900 dark:text-white">{vendor.vendorProducts?.[0]?.name || '—'}</div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{vendor.vendorProducts?.[0]?.category?.name || 'Catalog Item'}</div>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+              </div>
+            ) : activeTab === 'catalog' ? (
               <div className="flex flex-col">
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-wrap gap-4 items-center justify-between">
                   <div className="relative min-w-[300px]">
@@ -334,7 +450,7 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
                   </table>
                 </div>
               </div>
-            ) : (
+            ) : activeTab === 'orders' ? (
               <div className="flex flex-col">
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-950/30">
                   <h4 className="text-sm font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
@@ -411,7 +527,18 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
                               </span>
                             </td>
                             <td className="p-6 text-right pr-8">
-                              <button className="text-xs font-black text-slate-400 hover:text-indigo-600 transition-colors underline decoration-indigo-500/20 underline-offset-4">VOIR BON</button>
+                               <div className="flex items-center justify-end gap-3">
+                                  {!o.settlement?.superadminApproved && (o.status === 'STOCKED' || o.status === 'DELIVERED') && (
+                                     <button 
+                                      onClick={() => handleApproveSettlement(o.id)}
+                                      disabled={isPending}
+                                      className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-[9px] font-black uppercase hover:bg-emerald-500 transition-colors shadow-sm"
+                                     >
+                                        Approuver
+                                     </button>
+                                  )}
+                                  <button className="text-xs font-black text-slate-400 hover:text-indigo-600 transition-colors underline decoration-indigo-500/20 underline-offset-4">VOIR BON</button>
+                               </div>
                             </td>
                           </tr>
                         );
@@ -427,10 +554,157 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
                   </table>
                 </div>
               </div>
+            ) : (
+              <div className="flex flex-col">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-emerald-50/30 dark:bg-emerald-950/30 flex justify-between items-center">
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                      <Wallet size={18} className="text-emerald-500" /> Journal du Wallet
+                    </h4>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Transactions, commissions et reversements</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                       <div className="text-[10px] font-black text-slate-400 uppercase">SOLDE ACTUEL</div>
+                       <div className="text-lg font-black text-emerald-600 leading-none">{Number(vendor.wallet?.balance || 0).toFixed(3)} DT</div>
+                    </div>
+                    <button className="p-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-600 hover:text-indigo-600 transition-colors shadow-sm">
+                       <RefreshCcw size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-8 border-b border-slate-100 dark:border-slate-800 bg-emerald-50/20 dark:bg-emerald-950/20 grid grid-cols-1 md:grid-cols-3 gap-8">
+                   <div className="space-y-1">
+                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Commissions</div>
+                      <div className="text-xl font-black text-rose-600">
+                         {vendor.wallet?.transactions?.filter((t: any) => t.type === 'COMMISSION').reduce((acc: number, t: any) => acc + Math.abs(Number(t.amount)), 0).toFixed(3)} DT
+                      </div>
+                   </div>
+                   <div className="space-y-1 border-l border-slate-100 dark:border-slate-800 pl-8">
+                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reversements Effectués</div>
+                      <div className="text-xl font-black text-emerald-600">
+                         {vendor.wallet?.transactions?.filter((t: any) => t.amount < 0 && t.type !== 'COMMISSION').reduce((acc: number, t: any) => acc + Math.abs(Number(t.amount)), 0).toFixed(3)} DT
+                      </div>
+                   </div>
+                   <div className="space-y-1 border-l border-slate-100 dark:border-slate-800 pl-8">
+                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dernière Opération</div>
+                      <div className="text-sm font-black text-slate-700 dark:text-slate-300">
+                         {vendor.wallet?.transactions?.[0] ? new Date(vendor.wallet.transactions[0].createdAt).toLocaleDateString('fr-FR') : 'Aucune'}
+                      </div>
+                   </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                   <table className="w-full text-left border-collapse">
+                      <thead>
+                         <tr className="bg-slate-50 dark:bg-slate-950">
+                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest first:pl-8">Date</th>
+                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
+                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
+                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Montant</th>
+                            <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Détails</th>
+                         </tr>
+                      </thead>
+                      <tbody>
+                         {vendor.wallet?.transactions?.map((t: any) => {
+                            const isPositive = Number(t.amount) > 0;
+                            return (
+                               <tr key={t.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                  <td className="p-6 first:pl-8">
+                                     <div className="text-[10px] font-black text-slate-400 uppercase">{new Date(t.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                                  </td>
+                                  <td className="p-6">
+                                     <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest w-fit ${
+                                       t.type === 'COMMISSION' ? 'bg-rose-50 text-rose-600' : 
+                                       t.type === 'DEPOSIT' ? 'bg-emerald-50 text-emerald-600' :
+                                       'bg-slate-50 text-slate-600'
+                                     }`}>
+                                        {t.type === 'COMMISSION' ? <ArrowDownLeft size={10} /> : <ArrowUpRight size={10} />}
+                                        {t.type}
+                                     </div>
+                                  </td>
+                                  <td className="p-6">
+                                     <div className="text-xs font-bold text-slate-600 dark:text-slate-400">{t.description || '—'}</div>
+                                  </td>
+                                  <td className="p-6">
+                                     <div className={`text-sm font-black ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                        {isPositive ? '+' : ''}{Number(t.amount).toFixed(3)} DT
+                                     </div>
+                                  </td>
+                                  <td className="p-6 text-right pr-8">
+                                     <button className="text-slate-300 hover:text-indigo-600"><ChevronRight size={16} /></button>
+                                  </td>
+                               </tr>
+                            );
+                         })}
+                         {(!vendor.wallet?.transactions || vendor.wallet.transactions.length === 0) && (
+                            <tr>
+                               <td colSpan={5} className="p-20 text-center text-slate-400 font-black text-xs uppercase tracking-widest italic bg-slate-50/20">
+                                  Aucune transaction dans le wallet.
+                               </td>
+                            </tr>
+                         )}
+                      </tbody>
+                   </table>
+                </div>
+              </div>
             )}
           </div>
         </div>
       </div>
+
+
+      {/* Wallet Action Modal */}
+      {showWalletModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[40px] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-6">
+              <div className="flex justify-between items-center">
+                 <h3 className="text-xl font-black text-slate-900 dark:text-white">Reversement Manuel</h3>
+                 <button onClick={() => setShowWalletModal(false)} className="text-slate-400 hover:text-slate-900"><XCircle size={24} /></button>
+              </div>
+              
+              <div className="space-y-4">
+                 <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Montant (DT)</label>
+                    <input 
+                      type="number" 
+                      placeholder="Ex: 50.000"
+                      value={walletAmount}
+                      onChange={(e) => setWalletAmount(e.target.value)}
+                      className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-black focus:ring-2 focus:ring-indigo-500 outline-none"
+                    />
+                    <p className="text-[9px] text-slate-400 mt-1 font-bold italic">Utilisez un signe négatif (-) pour effectuer un retrait.</p>
+                 </div>
+                 <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Description / Motif</label>
+                    <textarea 
+                      placeholder="Indiquez la raison de l'opération..."
+                      value={walletDesc}
+                      onChange={(e) => setWalletDesc(e.target.value)}
+                      className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none h-24"
+                    />
+                 </div>
+              </div>
+
+              <div className="flex gap-4">
+                 <button 
+                  onClick={() => setShowWalletModal(false)}
+                  className="flex-1 py-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-slate-400 font-black text-sm"
+                 >
+                    Annuler
+                 </button>
+                 <button 
+                  onClick={handleWalletAction}
+                  disabled={isPending || !walletAmount}
+                  className="flex-[2] py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/30 disabled:opacity-50"
+                 >
+                    Confirmer l'opération
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 }

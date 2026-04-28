@@ -1139,7 +1139,7 @@ export class ManagementController {
   @UseGuards(MarketplaceAuthGuard)
   @Post('admin/vendors/:vendorId/assign-rule')
   async assignCommissionRule(@Param('vendorId') vendorId: string, @Body() body: { ruleId: string | null }): Promise<any> {
-    return prisma.vendorProfile.update({
+    return (prisma as any).vendorProfile.update({
       where: { id: vendorId },
       data: {
         commissionRuleId: body.ruleId
@@ -1173,7 +1173,7 @@ export class ManagementController {
     // 💳 Marketplace Commission Deduction on Acceptance (CONFIRMED)
     if (body.status === 'CONFIRMED' && previousStatus === 'PENDING' && updatedOrder.vendorId) {
       try {
-        const vendor = await prisma.vendorProfile.findUnique({
+        const vendor = await (prisma as any).vendorProfile.findUnique({
           where: { id: updatedOrder.vendorId },
           include: { 
             wallet: true,
@@ -1236,7 +1236,7 @@ export class ManagementController {
           const commissionAmount = totalNum * finalRate;
 
           if (commissionAmount > 0) {
-            const walletId = vendor.wallet ? vendor.wallet.id : (await prisma.vendorWallet.create({
+            const walletId = vendor.wallet ? vendor.wallet.id : (await (prisma as any).vendorWallet.create({
               data: { vendorId: vendor.id, balance: 0 }
             })).id;
 

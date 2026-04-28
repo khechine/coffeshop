@@ -191,21 +191,6 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
           </div>
         )}
 
-        {/* Terminaux & Matériel - Independent Group */}
-        {(hasPerm('TERMINALS') || role === 'STORE_OWNER') && (showNacefModules || isRachma) && (
-          <div className="nav-group tech-group" style={{ marginTop: '12px' }}>
-            {displayExpanded && (
-              <div className="nav-section-header" style={{ padding: '0 12px 6px' }}>
-                <span className="nav-section-label" style={{ padding: 0 }}>Terminaux & Matériel</span>
-              </div>
-            )}
-            <Link href="/admin/terminals" className={`nav-item${isActive('/admin/terminals') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
-              <Tablet size={18} />
-              {displayExpanded && <span>Gestion Terminaux POS</span>}
-            </Link>
-          </div>
-        )}
-
         {/* PILOTAGE */}
         {(hasPerm('DASHBOARD') || role === 'STORE_OWNER') && (
           <div className="nav-group">
@@ -223,40 +208,10 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
                     {displayExpanded && <span>Vue d'ensemble</span>}
                   </Link>
                 )}
-                {hasPerm('POS') && (
-                  <Link href="/admin/tables" title="Plan de Salle" className={`nav-item${isActive('/admin/tables') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
-                    <LayoutGrid size={18} />
-                    {displayExpanded && <span>Plan de Salle</span>}
-                  </Link>
-                )}
-                {hasPerm('STAFF') && (
-                  <Link href="/admin/staff" className={`nav-item${isActive('/admin/staff') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
-                    <Users size={18} />
-                    {displayExpanded && <span>Équipe & Accès</span>}
-                  </Link>
-                )}
                 {role === 'STORE_OWNER' && (
-                  <Link href="/admin/expenses" title="Gestion Dépenses" className={`nav-item${isActive('/admin/expenses') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
-                    <CreditCard size={18} />
-                    {displayExpanded && <span>Gestion Dépenses</span>}
-                  </Link>
-                )}
-                {role === 'STORE_OWNER' && (
-                  <Link href="/admin/metrics" title="Metrics & Analytics" className={`nav-item${isActive('/admin/metrics') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
-                    <BarChart3 size={18} />
-                    {displayExpanded && <span>Metrics & Analytics</span>}
-                  </Link>
-                )}
-                {role === 'STORE_OWNER' && showNacefModules && (
-                  <Link href="/admin/reports" title="Rapports Z (NACEF)" className={`nav-item${isActive('/admin/reports') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
-                    <FileText size={18} />
-                    {displayExpanded && <span>Rapports Z (NACEF)</span>}
-                  </Link>
-                )}
-                {role === 'STORE_OWNER' && (
-                  <Link href="/admin/settings" title="Configuration Admin" className={`nav-item${isActive('/admin/settings') || isActive('/admin/subscription') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
-                    <Settings size={18} />
-                    {displayExpanded && <span>Configuration Admin</span>}
+                  <Link href="/admin/configuration" title="Configuration Admin" className={`nav-item${isActive('/admin/configuration') ? ' active' : ''}`} style={{ justifyContent: 'flex-start', border: '1px solid rgba(99,102,241,0.15)', background: isActive('/admin/configuration') ? 'rgba(99,102,241,0.15)' : 'transparent', marginTop: '4px' }}>
+                    <Settings size={18} color="#818CF8" />
+                    {displayExpanded && <span style={{ color: '#C7D2FE' }}>Configuration Admin</span>}
                   </Link>
                 )}
               </>
