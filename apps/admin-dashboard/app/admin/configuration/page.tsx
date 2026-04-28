@@ -16,9 +16,9 @@ export default async function ConfigurationPage() {
   });
 
   // Fetch tables
-  const tables = await prisma.table.findMany({
+  const tables = await prisma.storeTable.findMany({
     where: { storeId: store.id },
-    orderBy: { name: 'asc' },
+    orderBy: { label: 'asc' },
   });
 
   // Fetch terminals
@@ -53,7 +53,7 @@ export default async function ConfigurationPage() {
   // Sales summary
   const salesCount = await prisma.sale.count({ where: { storeId: store.id } });
   const salesAgg = await prisma.sale.aggregate({ where: { storeId: store.id }, _sum: { total: true } });
-  const revenue = Number(salesAgg._sum.total || 0);
+  const revenue = Number(salesAgg?._sum?.total || 0);
 
   const isFiscalEnabled = (store as any)?.isFiscalEnabled === true;
 
