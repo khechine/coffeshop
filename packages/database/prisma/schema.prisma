@@ -537,6 +537,7 @@ model Category {
 model Product {
   id         String   @id @default(cuid())
   name       String
+  nameAr     String?
   price      Decimal
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])

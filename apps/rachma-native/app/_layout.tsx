@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthService } from '@/services/auth';
 import { AlertProvider } from '@/components/AlertContext';
+import { initI18n } from '../locales/i18n';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -33,16 +34,17 @@ export default function RootLayout() {
 
   const router = useRouter();
 
-  // Check auth state
+  // Check auth state and init i18n
   useEffect(() => {
-    async function checkAuth() {
+    async function initApp() {
+      await initI18n();
       const session = await AuthService.getSession();
       setAuthState({
         isPaired: session.isPaired,
         isUnlocked: session.isUnlocked
       });
     }
-    checkAuth();
+    initApp();
   }, []);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.

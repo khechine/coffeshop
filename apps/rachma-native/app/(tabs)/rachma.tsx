@@ -16,6 +16,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 import { useRouter } from 'expo-router';
 import { useAlert } from '@/components/AlertContext';
+import i18n from '../../locales/i18n';
 
 // ────────────────────────────────────────────────
 // Types
@@ -26,6 +27,7 @@ type Product = {
   category: string; icon: string; takeaway: boolean;
   packagings: Packaging[];
   image?: string;
+  nameAr?: string | null;
 };
 type LogEntry = string; // 'sale' | 'loss' | 'sale:PKG_ID'
 type Logs = Record<string, LogEntry[]>;
@@ -122,7 +124,8 @@ export default function RachmaScreen() {
           icon: p.icon || icon, 
           takeaway: p.takeaway ?? true,
           packagings: p.packagings || [],
-          image: p.image
+          image: p.image,
+          nameAr: p.nameAr,
         };
       });
       setProducts(mapped);
@@ -550,7 +553,7 @@ export default function RachmaScreen() {
                      <RNText style={{ fontSize: 22 }}>{product.icon}</RNText>
                    )}
                    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                    <RNText style={styles.productName} numberOfLines={1}>{product.name}</RNText>
+                    <RNText style={styles.productName} numberOfLines={1}>{i18n.locale === 'ar' && product.nameAr ? product.nameAr : product.name}</RNText>
                     <RNText style={styles.productPrice}>{Number(product.price).toFixed(3)} DT</RNText>
                    </View>
                 </View>
@@ -631,7 +634,7 @@ export default function RachmaScreen() {
 
               {reportItems.map(item => item && (
                 <RNView key={item.product.id} style={styles.reportRow}>
-                  <RNText style={styles.reportRowName}>{item.product.icon} {item.product.name}</RNText>
+                  <RNText style={styles.reportRowName}>{item.product.icon} {i18n.locale === 'ar' && item.product.nameAr ? item.product.nameAr : item.product.name}</RNText>
                   <RNView style={styles.reportRowBadges}>
                     {item.soldCount > 0 && <RNView style={styles.badgeSale}><RNText style={styles.badgeText}>{item.soldCount}</RNText></RNView>}
                     {item.lostCount > 0 && <RNView style={styles.badgeLoss}><RNText style={styles.badgeText}>{item.lostCount}</RNText></RNView>}

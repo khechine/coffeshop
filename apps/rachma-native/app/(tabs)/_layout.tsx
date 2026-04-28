@@ -6,6 +6,8 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthService } from '@/services/auth';
 import { ApiService } from '@/services/api';
+import i18n, { setAppLanguage } from '../../locales/i18n';
+import * as Updates from 'expo-updates';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -90,6 +92,22 @@ export default function TabLayout() {
   const updateRadius = async (r: number) => {
     await AuthService.setSearchRadius(r);
     setRadius(r);
+  };
+
+  const handleLanguageChange = async (lang: 'fr' | 'ar') => {
+    const needsReload = await setAppLanguage(lang);
+    if (needsReload) {
+      Alert.alert(
+        i18n.t('profile.language'),
+        i18n.t('profile.languageRestartMsg'),
+        [
+          { text: i18n.t('profile.cancel'), style: 'cancel' },
+          { text: i18n.t('profile.restart'), onPress: () => Updates.reloadAsync() }
+        ]
+      );
+    } else {
+      setShowSettings(false);
+    }
   };
 
   const renderSettingsContent = () => {
@@ -203,9 +221,27 @@ export default function TabLayout() {
             onPress={() => { setShowSettings(false); router.push('/live'); }}
           >
             <FontAwesome name="feed" size={18} color="#6366f1" />
-            <Text style={[styles.adminLinkText, { color: '#6366f1' }]}>Live Dashboard (Owner)</Text>
+            <Text style={[styles.adminLinkText, { color: '#6366f1' }]}>{i18n.t('nav.live')} (Owner)</Text>
           </TouchableOpacity>
         )}
+
+        <View style={{ marginTop: 25 }}>
+          <Text style={styles.modalSub}>{i18n.t('profile.language')}</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity 
+              style={[styles.modeOption, i18n.locale === 'fr' && styles.modeOptionActive, { flex: 1, marginBottom: 0 }]} 
+              onPress={() => handleLanguageChange('fr')}
+            >
+              <Text style={[styles.modeName, { textAlign: 'center', width: '100%' }]}>{i18n.t('profile.language_fr')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.modeOption, i18n.locale === 'ar' && styles.modeOptionActive, { flex: 1, marginBottom: 0 }]} 
+              onPress={() => handleLanguageChange('ar')}
+            >
+              <Text style={[styles.modeName, { textAlign: 'center', width: '100%' }]}>{i18n.t('profile.language_ar')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     );
   };
@@ -280,7 +316,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="pos"
         options={{
-          title: 'Caisse',
+          title: i18n.t('nav.pointOfSale'),
           tabBarIcon: ({ color }) => <TabBarIcon name="calculator" color={color} />,
           headerShown: false,
           href: hasPosAccess ? '/(tabs)/pos' : null,
@@ -333,7 +369,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: 'Ventes',
+          title: i18n.t('nav.history'),
           href: null,
         }}
       />
