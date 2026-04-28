@@ -1885,6 +1885,31 @@ export async function getPendingDepositsAction() {
   });
 }
 
+export async function getAllWalletRequestsAction() {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (user?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  return (prisma as any).walletDepositRequest.findMany({
+    include: { vendor: true },
+    orderBy: { updatedAt: 'desc' }
+  });
+}
+
+export async function getGlobalWalletTransactionsAction() {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (user?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  return (prisma as any).walletTransaction.findMany({
+    include: { wallet: { include: { vendor: true } } },
+    orderBy: { createdAt: 'desc' },
+    take: 100
+  });
+}
+
 export async function processDepositRequestAction(requestId: string, status: 'APPROVED' | 'REJECTED', adminNotes?: string) {
   const userId = cookies().get('userId')?.value;
   if (!userId) throw new Error('Non authentifié');

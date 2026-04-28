@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Check, X, ShieldCheck, Percent, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Check, X, ShieldCheck, Percent, AlertCircle, Edit2, Calendar } from 'lucide-react';
 import { createCommissionRule, updateCommissionRule, deleteCommissionRule } from '../../actions';
 
-export default function CommissionRulesClient({ rules: initialRules }: { rules: any[] }) {
-  const [rules, setRules] = useState(initialRules);
+export default function CommissionRulesClient({ rules: initialRules = [] }: { rules: any[] }) {
+  const [rules, setRules] = useState(initialRules || []);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,17 +89,17 @@ export default function CommissionRulesClient({ rules: initialRules }: { rules: 
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div className="flex flex-col gap-10">
       
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="flex justify-between items-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-8 rounded-[32px] border border-white dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none">
         <div>
-          <h1 style={{ fontSize: '32px', fontWeight: 900, color: '#1E293B', margin: 0 }}>Règles de Commission</h1>
-          <p style={{ margin: '8px 0 0', color: '#64748B', fontSize: '16px' }}>Gérez les taux et tranches de commission applicables aux vendeurs.</p>
+          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Règles de Commission</h1>
+          <p className="mt-2 text-slate-500 font-medium tracking-tight">Gérez les taux et tranches de commission applicables aux vendeurs certifiés.</p>
         </div>
         {!isAdding && (
           <button 
             onClick={() => setIsAdding(true)}
-            style={{ padding: '12px 24px', borderRadius: '16px', background: '#4F46E5', color: '#fff', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+            className="px-8 py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/30 flex items-center gap-2"
           >
             <Plus size={20} /> Nouvelle Règle
           </button>
@@ -107,161 +107,166 @@ export default function CommissionRulesClient({ rules: initialRules }: { rules: 
       </div>
 
       {isAdding && (
-        <div style={{ background: '#fff', borderRadius: '32px', border: '1px solid #4F46E5', padding: '32px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 900 }}>{editingId ? 'Modifier la règle' : 'Créer une nouvelle règle'}</h3>
-            <button onClick={resetForm} style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer' }}><X size={24} /></button>
+        <div className="bg-white dark:bg-slate-900 rounded-[40px] p-10 border border-indigo-500/20 shadow-2xl animate-in slide-in-from-top-4 duration-500">
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white">{editingId ? 'Modifier la règle' : 'Créer une nouvelle règle'}</h3>
+            <button onClick={resetForm} className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><X size={28} /></button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div className="space-y-6">
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 700, color: '#475569' }}>Nom de la règle</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Nom de la règle</label>
                 <input 
                   type="text" 
                   value={name} 
                   onChange={(e) => setName(e.target.value)}
                   placeholder="ex: Standard B2B, Premium Vendeur..."
-                  style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0', outline: 'none' }}
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-black focus:ring-2 focus:ring-indigo-500 outline-none"
                 />
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 700, color: '#475569' }}>Description (Optionnel)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Description (Optionnel)</label>
                 <textarea 
                   value={description} 
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="A quoi sert cette règle..."
-                  style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0', outline: 'none', minHeight: '80px' }}
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none min-h-[100px]"
                 />
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 700, color: '#475569' }}>Taux de base (%)</label>
-                <div style={{ position: 'relative' }}>
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Taux de base (%)</label>
+                <div className="relative">
                   <input 
                     type="number" 
                     step="0.1"
                     value={baseRate} 
                     onChange={(e) => setBaseRate(Number(e.target.value))}
-                    style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0', outline: 'none' }}
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-black focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
-                  <Percent size={16} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+                  <Percent size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '10px' }}>
+              <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
                 <input 
                   type="checkbox" 
                   id="isDefault"
                   checked={isDefault}
                   onChange={(e) => setIsDefault(e.target.checked)}
-                  style={{ width: '20px', height: '20px' }}
+                  className="w-5 h-5 rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
-                <label htmlFor="isDefault" style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Définir comme règle par défaut</label>
+                <label htmlFor="isDefault" className="text-sm font-black text-slate-900 dark:text-white cursor-pointer">Définir comme règle par défaut</label>
               </div>
             </div>
 
-            <div style={{ background: '#F8FAFC', padding: '24px', borderRadius: '24px', border: '1px solid #E2E8F0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <label style={{ fontSize: '14px', fontWeight: 900, color: '#1E293B' }}>Tranches de Commission (Optionnel)</label>
+            <div className="bg-slate-50/50 dark:bg-slate-950/50 p-8 rounded-[32px] border border-slate-200 dark:border-slate-800">
+              <div className="flex justify-between items-center mb-6">
+                <label className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Tranches de Commission (Optionnel)</label>
                 <button 
                   onClick={handleAddTier}
-                  style={{ padding: '6px 12px', borderRadius: '8px', background: '#fff', border: '1px solid #E2E8F0', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                  className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-[10px] font-black text-indigo-600 hover:bg-indigo-50 transition-colors shadow-sm"
                 >
-                  + Ajouter
+                  + Ajouter une tranche
                 </button>
               </div>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                 {tiers.map((tier, idx) => (
-                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 40px', gap: '12px', alignItems: 'center' }}>
-                    <input 
-                      type="number" 
-                      placeholder="Min DT"
-                      value={tier.minAmount}
-                      onChange={(e) => handleTierChange(idx, 'minAmount', Number(e.target.value))}
-                      style={{ padding: '8px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '13px' }}
-                    />
-                    <div style={{ position: 'relative' }}>
+                  <div key={idx} className="grid grid-cols-[1fr,1fr,40px] gap-3 items-center animate-in zoom-in-95 duration-200">
+                    <div className="relative">
+                       <input 
+                        type="number" 
+                        placeholder="Min DT"
+                        value={tier.minAmount}
+                        onChange={(e) => handleTierChange(idx, 'minAmount', Number(e.target.value))}
+                        className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black"
+                       />
+                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-400">DT</span>
+                    </div>
+                    <div className="relative">
                       <input 
                         type="number" 
                         step="0.001"
                         placeholder="Taux (ex: 0.01)"
                         value={tier.rate}
                         onChange={(e) => handleTierChange(idx, 'rate', Number(e.target.value))}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '13px' }}
+                        className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black text-indigo-600"
                       />
+                      <Percent size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     </div>
-                    <button onClick={() => handleRemoveTier(idx)} style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                    <button onClick={() => handleRemoveTier(idx)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
                       <Trash2 size={18} />
                     </button>
                   </div>
                 ))}
                 {tiers.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '20px', color: '#94A3B8', fontSize: '12px', fontStyle: 'italic' }}>
+                  <div className="text-center py-10 text-slate-400 font-bold text-[10px] uppercase tracking-widest italic border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
                     Aucune tranche définie. Seul le taux de base sera appliqué.
                   </div>
                 )}
               </div>
-              <div style={{ marginTop: '16px', padding: '12px', background: '#FEF3C7', borderRadius: '12px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                <AlertCircle size={16} color="#D97706" style={{ marginTop: '2px', flexShrink: 0 }} />
-                <p style={{ margin: 0, fontSize: '11px', color: '#92400E', lineHeight: 1.4 }}>
-                  Les tranches sont appliquées si le montant de la commande est supérieur ou égal au seuil défini.
+              <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-950/20 rounded-2xl border border-amber-100 dark:border-amber-900/30 flex gap-3 items-start">
+                <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[10px] font-bold text-amber-800 dark:text-amber-400 leading-relaxed">
+                  Les tranches sont appliquées en priorité : si le montant de la commande atteint le seuil défini, le taux de la tranche remplace le taux de base.
                 </p>
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px', borderTop: '1px solid #E2E8F0', paddingTop: '24px' }}>
-            <button onClick={resetForm} style={{ padding: '12px 24px', borderRadius: '12px', background: '#F1F5F9', color: '#475569', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
+          <div className="flex justify-end gap-4 mt-10 pt-8 border-t border-slate-100 dark:border-slate-800">
+            <button onClick={resetForm} className="px-8 py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black text-sm hover:bg-slate-200 transition-all">Annuler</button>
             <button 
               onClick={handleSubmit} 
               disabled={loading}
-              style={{ padding: '12px 32px', borderRadius: '12px', background: '#4F46E5', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
+              className="px-10 py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/30 disabled:opacity-50"
             >
-              {loading ? 'Enregistrement...' : editingId ? 'Mettre à jour' : 'Créer la règle'}
+              {loading ? 'Enregistrement...' : editingId ? 'Mettre à jour la règle' : 'Créer la règle'}
             </button>
           </div>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '24px' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
         {rules.map(rule => (
-          <div key={rule.id} style={{ background: '#fff', borderRadius: '24px', border: '1px solid #E2E8F0', padding: '24px', transition: '0.2s', position: 'relative' }}>
+          <div key={rule.id} className="group bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800 p-8 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
             {rule.isDefault && (
-              <div style={{ position: 'absolute', top: '-12px', right: '24px', background: '#4F46E5', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
-                <Check size={12} strokeWidth={4} /> PAR DÉFAUT
+              <div className="absolute top-0 right-0 bg-indigo-600 text-white px-4 py-1.5 rounded-bl-2xl text-[9px] font-black tracking-widest flex items-center gap-1.5">
+                <Check size={10} strokeWidth={4} /> PAR DÉFAUT
               </div>
             )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <div style={{ width: 48, height: 48, background: '#EEF2FF', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5' }}>
-                <Percent size={24} />
+            
+            <div className="flex justify-between items-start mb-8">
+              <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-600">
+                <ShieldCheck size={28} />
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => handleEdit(rule)} style={{ padding: '8px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#64748B', cursor: 'pointer' }}>
-                  Modifier
+              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => handleEdit(rule)} className="p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-400 hover:text-indigo-600 transition-colors">
+                  <Edit2 size={16} />
                 </button>
-                <button onClick={() => handleDelete(rule.id)} style={{ padding: '8px', borderRadius: '10px', background: '#FEF2F2', border: '1px solid #FEE2E2', color: '#EF4444', cursor: 'pointer' }}>
-                  <Trash2 size={18} />
+                <button onClick={() => handleDelete(rule.id)} className="p-2.5 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-xl text-rose-400 hover:text-rose-600 transition-colors">
+                  <Trash2 size={16} />
                 </button>
               </div>
             </div>
             
-            <h4 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 800, color: '#1E293B' }}>{rule.name}</h4>
-            <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748B', lineHeight: 1.5 }}>{rule.description || 'Aucune description'}</p>
+            <h4 className="text-xl font-black text-slate-900 dark:text-white mb-2">{rule.name}</h4>
+            <p className="text-sm font-medium text-slate-500 leading-relaxed mb-8 h-10 line-clamp-2">{rule.description || 'Aucune description spécifiée pour cette règle.'}</p>
             
-            <div style={{ padding: '16px', background: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>Taux de base</span>
-                <span style={{ fontSize: '14px', color: '#1E293B', fontWeight: 900 }}>{(rule.baseRate * 100).toFixed(1)}%</span>
+            <div className="p-6 bg-slate-50 dark:bg-slate-950/50 rounded-[24px] border border-slate-100 dark:border-slate-800 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taux Standard</span>
+                <span className="text-xl font-black text-slate-900 dark:text-white">{(rule.baseRate * 100).toFixed(1)}%</span>
               </div>
               
               {Array.isArray(rule.tiers) && rule.tiers.length > 0 && (
-                <div style={{ borderTop: '1px dashed #E2E8F0', paddingTop: '12px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Tranches actives</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Paliers Progressifs</div>
+                  <div className="space-y-2">
                     {rule.tiers.sort((a: any, b: any) => a.minAmount - b.minAmount).map((tier: any, idx: number) => (
-                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                        <span style={{ color: '#475569' }}>≥ {tier.minAmount} DT</span>
-                        <span style={{ color: '#4F46E5', fontWeight: 700 }}>{(tier.rate * 100).toFixed(2)}%</span>
+                      <div key={idx} className="flex justify-between items-center bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                        <span className="text-[10px] font-black text-slate-600 dark:text-slate-400">≥ {tier.minAmount} DT</span>
+                        <span className="text-[11px] font-black text-indigo-600">{(tier.rate * 100).toFixed(2)}%</span>
                       </div>
                     ))}
                   </div>
@@ -269,17 +274,22 @@ export default function CommissionRulesClient({ rules: initialRules }: { rules: 
               )}
             </div>
             
-            <div style={{ marginTop: '16px', fontSize: '11px', color: '#94A3B8' }}>
-              Créée le {new Date(rule.createdAt).toLocaleDateString('fr-FR')}
+            <div className="mt-8 flex justify-between items-center">
+               <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5">
+                  <Calendar size={12} /> {new Date(rule.createdAt).toLocaleDateString('fr-FR')}
+               </div>
+               <div className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">ID: {rule.id.slice(0,8)}</div>
             </div>
           </div>
         ))}
 
         {rules.length === 0 && !isAdding && (
-          <div style={{ gridColumn: 'span 3', padding: '60px', textAlign: 'center', background: '#fff', borderRadius: '32px', border: '1px dashed #E2E8F0' }}>
-             <ShieldCheck size={48} color="#CBD5E1" style={{ marginBottom: '16px' }} />
-             <h3 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: 900, color: '#1E293B' }}>Aucune règle définie</h3>
-             <p style={{ margin: 0, color: '#64748B' }}>Commencez par créer votre première règle de commission marketplace.</p>
+          <div className="col-span-full py-32 flex flex-col items-center justify-center bg-white dark:bg-slate-900 rounded-[40px] border-4 border-dashed border-slate-100 dark:border-slate-800">
+             <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-3xl flex items-center justify-center text-slate-200 mb-6">
+                <ShieldCheck size={48} />
+             </div>
+             <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Aucune règle définie</h3>
+             <p className="text-slate-500 font-medium">Commencez par créer votre première règle de commission marketplace.</p>
           </div>
         )}
       </div>

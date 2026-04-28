@@ -6,9 +6,9 @@ import { Search, Filter, Package, ShoppingCart } from 'lucide-react';
 export default function SuperAdminMarketplaceClient({ products, orders }: { products: any[], orders: any[] }) {
   const [searchTerm, setSearchTerm] = useState('');
   
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.vendor.companyName.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProducts = (products || []).filter(p => 
+    (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.vendor?.companyName || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (

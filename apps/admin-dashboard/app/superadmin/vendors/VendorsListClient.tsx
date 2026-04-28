@@ -12,7 +12,7 @@ import { approveVendorAction, rejectVendorAction } from '../../actions';
 
 type VendorWithDetails = any;
 
-export default function VendorsListClient({ initialVendors }: { initialVendors: VendorWithDetails[] }) {
+export default function VendorsListClient({ initialVendors = [] }: { initialVendors: VendorWithDetails[] }) {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -22,8 +22,10 @@ export default function VendorsListClient({ initialVendors }: { initialVendors: 
   const cities = Array.from(new Set(initialVendors.map(v => v.city).filter(Boolean)));
 
   const filteredVendors = initialVendors.filter(v => {
-    const matchesSearch = v.companyName.toLowerCase().includes(search.toLowerCase()) || 
-                          v.id.toLowerCase().includes(search.toLowerCase());
+    const companyName = v.companyName || '';
+    const vendorId = String(v.id || '');
+    const matchesSearch = companyName.toLowerCase().includes(search.toLowerCase()) || 
+                          vendorId.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || v.status === statusFilter;
     const matchesCity = cityFilter === 'ALL' || v.city === cityFilter;
     return matchesSearch && matchesStatus && matchesCity;

@@ -20,8 +20,10 @@ export default function CafeListClient({ initialStores }: { initialStores: Store
   const cities = Array.from(new Set(initialStores.map(s => s.city).filter(Boolean)));
 
   const filteredStores = initialStores.filter(s => {
-    const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) || 
-                          s.id.toLowerCase().includes(search.toLowerCase());
+    const name = s.name || '';
+    const id = String(s.id || '');
+    const matchesSearch = name.toLowerCase().includes(search.toLowerCase()) || 
+                          id.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || s.status === statusFilter;
     const matchesCity = cityFilter === 'ALL' || s.city === cityFilter;
     return matchesSearch && matchesStatus && matchesCity;

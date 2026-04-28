@@ -58,9 +58,9 @@ export default function MonitoringClient({ initialStats, initialRisks }: { initi
     setHistory(data);
   };
 
-  const filteredRisks = risks.filter(r => 
-    r.storeName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    r.vendorName.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredRisks = (risks || []).filter(r => 
+    (r.storeName || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (r.vendorName || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (

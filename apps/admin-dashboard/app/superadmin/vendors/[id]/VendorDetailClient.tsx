@@ -15,6 +15,8 @@ import { approveVendorAction, rejectVendorAction, assignCommissionRuleToVendor }
 export default function VendorDetailClient({ vendor, rules }: { vendor: any, rules: any[] }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'catalog' | 'orders' | 'wallet'>('overview');
   const [productSearch, setProductSearch] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState('ALL');
   const [isPending, startTransition] = useTransition();
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [walletAmount, setWalletAmount] = useState('');
@@ -30,8 +32,19 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
     });
   };
 
-  const filteredProducts = vendor.products.filter((p: any) => 
-    p.name.toLowerCase().includes(productSearch.toLowerCase())
+  const products = vendor.products || vendor.vendorProducts || [];
+  const filteredProducts = products.filter((p: any) => 
+    (p.name || '').toLowerCase().includes(productSearch.toLowerCase())
+  );
+
+  const orders = vendor.orders || [];
+  const filteredOrders = orders.filter((o: any) => 
+    orderStatusFilter === 'ALL' || o.status === orderStatusFilter
+  );
+
+  const transactions = vendor.wallet?.transactions || [];
+  const filteredTransactions = transactions.filter((t: any) => 
+    transactionTypeFilter === 'ALL' || t.type === transactionTypeFilter
   );
 
   const handleApprove = (id: string) => {
@@ -452,11 +465,28 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
               </div>
             ) : activeTab === 'orders' ? (
               <div className="flex flex-col">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-950/30">
-                  <h4 className="text-sm font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                    <ShoppingBag size={18} className="text-amber-500" /> Flux des Commandes B2B
-                  </h4>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sourcing et distribution Marketplace</p>
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-950/30 flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                      <ShoppingBag size={18} className="text-amber-500" /> Flux des Commandes B2B
+                    </h4>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sourcing et distribution Marketplace</p>
+                  </div>
+                  <div className="flex gap-2">
+                     {['ALL', 'PENDING', 'CONFIRMED', 'DELIVERED', 'STOCKED', 'CANCELLED'].map(status => (
+                       <button 
+                        key={status}
+                        onClick={() => setOrderStatusFilter(status)}
+                        className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                          orderStatusFilter === status 
+                            ? 'bg-amber-100 text-amber-700 shadow-sm' 
+                            : 'bg-slate-100 text-slate-400 hover:text-slate-600'
+                        }`}
+                       >
+                          {status === 'ALL' ? 'Toutes' : status}
+                       </button>
+                     ))}
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -473,7 +503,7 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
                       </tr>
                     </thead>
                     <tbody>
-                      {vendor.orders.map((o: any) => {
+                      {filteredOrders.map((o: any) => {
                         const orderStatusColors: any = {
                           'PENDING':   { bg: 'bg-amber-50 dark:bg-amber-500/10',   text: 'text-amber-600',   label: 'En attente' },
                           'CONFIRMED': { bg: 'bg-indigo-50 dark:bg-indigo-500/10',  text: 'text-indigo-600',  label: 'Acceptée' },
@@ -543,10 +573,10 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
                           </tr>
                         );
                       })}
-                      {vendor.orders.length === 0 && (
+                      {filteredOrders.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="p-20 text-center text-slate-400 font-black text-xs uppercase tracking-widest italic bg-slate-50/20">
-                            Aucune commande n'a encore été passée chez ce fournisseur.
+                          <td colSpan={7} className="p-20 text-center text-slate-400 font-black text-xs uppercase tracking-widest italic bg-slate-50/20">
+                            Aucune commande ne correspond au filtre.
                           </td>
                         </tr>
                       )}
@@ -557,11 +587,28 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
             ) : (
               <div className="flex flex-col">
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-emerald-50/30 dark:bg-emerald-950/30 flex justify-between items-center">
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                      <Wallet size={18} className="text-emerald-500" /> Journal du Wallet
-                    </h4>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Transactions, commissions et reversements</p>
+                  <div className="flex flex-col md:flex-row md:items-center gap-6">
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                        <Wallet size={18} className="text-emerald-500" /> Journal du Wallet
+                      </h4>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Transactions, commissions et reversements</p>
+                    </div>
+                    <div className="flex gap-2">
+                       {['ALL', 'COMMISSION', 'DEPOSIT', 'WITHDRAWAL'].map(type => (
+                         <button 
+                          key={type}
+                          onClick={() => setTransactionTypeFilter(type)}
+                          className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                            transactionTypeFilter === type 
+                              ? 'bg-emerald-100 text-emerald-700 shadow-sm' 
+                              : 'bg-slate-100 text-slate-400 hover:text-slate-600'
+                          }`}
+                         >
+                            {type === 'ALL' ? 'Toutes' : type}
+                         </button>
+                       ))}
+                    </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
@@ -607,7 +654,7 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
                          </tr>
                       </thead>
                       <tbody>
-                         {vendor.wallet?.transactions?.map((t: any) => {
+                         {filteredTransactions.map((t: any) => {
                             const isPositive = Number(t.amount) > 0;
                             return (
                                <tr key={t.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
@@ -617,10 +664,10 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
                                   <td className="p-6">
                                      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest w-fit ${
                                        t.type === 'COMMISSION' ? 'bg-rose-50 text-rose-600' : 
-                                       t.type === 'DEPOSIT' ? 'bg-emerald-50 text-emerald-600' :
+                                       t.type === 'DEPOSIT' || (t.type === 'WITHDRAWAL' && !isPositive) ? 'bg-emerald-50 text-emerald-600' :
                                        'bg-slate-50 text-slate-600'
                                      }`}>
-                                        {t.type === 'COMMISSION' ? <ArrowDownLeft size={10} /> : <ArrowUpRight size={10} />}
+                                        {isPositive ? <ArrowUpRight size={10} /> : <ArrowDownLeft size={10} />}
                                         {t.type}
                                      </div>
                                   </td>
@@ -638,10 +685,10 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
                                </tr>
                             );
                          })}
-                         {(!vendor.wallet?.transactions || vendor.wallet.transactions.length === 0) && (
+                         {filteredTransactions.length === 0 && (
                             <tr>
                                <td colSpan={5} className="p-20 text-center text-slate-400 font-black text-xs uppercase tracking-widest italic bg-slate-50/20">
-                                  Aucune transaction dans le wallet.
+                                  Aucune transaction ne correspond au filtre.
                                </td>
                             </tr>
                          )}
