@@ -20,7 +20,7 @@
   --sidebar-w: 280px;
   --sidebar-collapsed-w: 88px;
   --topbar-h: 70px;
-  --container-max-w: 1280px;
+  --container-max-w: 1600px;
   
   --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / .1), 0 1px 2px -1px rgb(0 0 0 / .1);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -2px rgb(0 0 0 / .1);
@@ -238,25 +238,28 @@ html, body {
 }
 
 .nav-item:hover {
-  background: rgba(255,255,255,.08);
+  background: rgba(255,255,255,.05);
   color: #fff;
+  transform: translateX(4px);
 }
 
 .nav-item.active {
-  background: rgba(99,102,241,.3);
+  background: linear-gradient(90deg, rgba(99,102,241,0.2) 0%, rgba(99,102,241,0.05) 100%);
   color: #fff;
+  border-left: 3px solid #6366F1;
+}
+
+.nav-item.active svg {
+  color: #818CF8;
+  filter: drop-shadow(0 0 8px rgba(99,102,241,0.6));
+}
+
+.nav-item.active span {
+  font-weight: 700;
 }
 
 .nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 20px;
-  background: #6366F1;
-  border-radius: 0 2px 2px 0;
+  display: none; /* Removed old indicator */
 }
 
 .nav-item-badge {
@@ -520,16 +523,22 @@ html, body {
 
 /* ===== PAGE CONTENT ===== */
 .page-content {
-  padding: 32px 24px;
+  padding: 32px 40px;
   flex: 1;
   max-width: var(--container-max-w);
   width: 100%;
   margin: 0 auto;
 }
 
+@media (max-width: 1024px) {
+  .page-content {
+    padding: 24px 20px;
+  }
+}
+
 @media (max-width: 640px) {
   .page-content {
-    padding: 16px;
+    padding: 16px 12px;
   }
 }
 

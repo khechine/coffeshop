@@ -79,10 +79,10 @@ export async function toggleStoreMarketplaceAccess(storeId: string, enabled: boo
   revalidatePath('/superadmin/cafes');
 }
 
-export async function updateStore(data: { name: string; address: string; city: string; phone: string; lat?: number; lng?: number }) {
+export async function updateStore(data: { name: string; address: string; city: string; governorate?: string; phone: string; lat?: number; lng?: number }) {
   const store = await getStore();
   if (!store) return;
-  await prisma.store.update({ where: { id: store.id }, data });
+  await (prisma.store as any).update({ where: { id: store.id }, data });
   revalidatePath('/');
 }
 
@@ -2805,6 +2805,22 @@ export async function getTerminalsAction() {
       store.id
     );
   }
+}
+
+export async function getTerminalAction(id: string) {
+  const store = await getStore();
+  if (!store) throw new Error('Non authentifié');
+  
+  const terminal = await (prisma.posTerminal as any).findUnique({
+    where: { id },
+    include: { store: true }
+  });
+  
+  if (!terminal || terminal.storeId !== store.id) {
+    throw new Error('Terminal introuvable');
+  }
+  
+  return terminal;
 }
 
 export async function createTerminalAction(nickname: string) {

@@ -2,7 +2,12 @@
 
 import React, { useState, useTransition, useEffect, useRef } from 'react';
 import { updateStore, seedDemoProductsAction, resetDemoDataAction } from '../../actions';
-import { Building2, MapPin, Store, Crosshair, Save, Clock, CheckCircle2, FileCheck, AlertCircle, ShieldCheck, FileUp, Eye, Upload, X, ShoppingCart, Sparkles, RotateCcw } from 'lucide-react';
+import { 
+  Building2, MapPin, Store, Crosshair, Save, Clock, 
+  CheckCircle2, FileCheck, AlertCircle, ShieldCheck, 
+  FileUp, Eye, Upload, X, ShoppingCart, Sparkles, 
+  RotateCcw, Search, Map as MapIcon, Navigation
+} from 'lucide-react';
 
 import 'leaflet/dist/leaflet.css';
 
@@ -14,6 +19,7 @@ interface StoreProps {
   name: string;
   address: string | null;
   city: string | null;
+  governorate: string | null;
   phone: string | null;
   lat: number | null;
   lng: number | null;
@@ -32,6 +38,7 @@ interface StoreProps {
 
 export default function SettingsClient({ store }: { store: StoreProps }) {
   const [isPending, startTransition] = useTransition();
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
@@ -40,6 +47,7 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
     name: store.name,
     address: store.address || '',
     city: store.city || '',
+    governorate: store.governorate || '',
     phone: store.phone || '',
     lat: store.lat || 36.80,
     lng: store.lng || 10.18,
@@ -51,6 +59,43 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
       await updateStore(form);
       alert('Paramètres enregistrés avec succès !');
     });
+  };
+
+  // Function to search coordinates based on address
+  const handleGeocode = async () => {
+    if (!form.address && !form.city) {
+      alert('Veuillez saisir au moins une adresse ou une ville.');
+      return;
+    }
+
+    setIsGeocoding(true);
+    try {
+      const query = `${form.address}, ${form.city}, ${form.governorate}, Tunisia`;
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        const newLat = parseFloat(lat);
+        const newLng = parseFloat(lon);
+
+        setForm(f => ({ ...f, lat: newLat, lng: newLng }));
+        
+        if (mapRef.current) {
+          mapRef.current.setView([newLat, newLng], 16);
+          if (markerRef.current) {
+            markerRef.current.setLatLng([newLat, newLng]);
+          }
+        }
+      } else {
+        alert("Nous n'avons pas pu localiser cette adresse. Veuillez ajuster manuellement sur la carte.");
+      }
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      alert('Erreur lors de la recherche de coordonnées.');
+    } finally {
+      setIsGeocoding(false);
+    }
   };
 
   useEffect(() => {
@@ -69,14 +114,14 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
         const customIcon = L.divIcon({
           className: 'custom-div-icon',
           html: `
-            <div style="background-color: #4F46E5; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+            <div style="background-color: #4F46E5; width: 40px; height: 40px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; border: 4px solid white; box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);">
               <div style="transform: rotate(45deg); color: white; margin-bottom: 2px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
               </div>
             </div>
           `,
-          iconSize: [32, 32],
-          iconAnchor: [16, 32],
+          iconSize: [40, 40],
+          iconAnchor: [20, 40],
         });
 
         markerRef.current = L.marker([form.lat, form.lng], { 
@@ -108,46 +153,54 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
   }, []);
 
   const field: React.CSSProperties = { 
-    width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #E2E8F0', 
+    width: '100%', padding: '14px 18px', borderRadius: '16px', border: '1.5px solid #E2E8F0', 
     fontSize: '14px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
-    background: '#F8FAFC'
+    background: '#F8FAFC', transition: 'all 0.2s', fontWeight: 600
   };
-  const label: React.CSSProperties = { display: 'block', fontSize: '11px', fontWeight: 800, color: '#94A3B8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' };
+  const label: React.CSSProperties = { display: 'block', fontSize: '11px', fontWeight: 800, color: '#94A3B8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="flex flex-col gap-8 max-w-5xl mx-auto py-8 px-4 animate-in fade-in duration-700">
       
+      {/* Premium Header */}
+      <div className="flex flex-col gap-2">
+         <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Configuration de l'Établissement</h1>
+         <p className="text-sm font-medium text-slate-500 tracking-tight">Gérez l'identité, la localisation et les paramètres fiscaux de votre café.</p>
+      </div>
+
       {/* Trial & Verification Banner */}
-      <div className="card" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-         <div style={{ padding: '24px', display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
-            <div style={{ flex: 1, minWidth: '200px' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                  <div style={{ width: '40px', height: '40px', background: '#6366F110', color: '#6366F1', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                     <Clock size={20} />
+      <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] shadow-sm overflow-hidden">
+         <div className="p-10 flex flex-wrap gap-12">
+            <div className="flex-1 min-w-[280px] space-y-6">
+               <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner">
+                     <Clock size={24} />
                   </div>
                   <div>
-                     <div style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Période d'Essai</div>
-                     <div style={{ fontSize: '18px', fontWeight: 900, color: '#1E293B' }}>
+                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Période d'Essai</div>
+                     <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                         {store.trialEndsAt ? Math.max(0, Math.ceil((new Date(store.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0} Jours restants
                      </div>
                   </div>
                </div>
-               <div style={{ fontSize: '13px', color: '#64748B', lineHeight: '1.5' }}>
-                  Profitez de toutes les fonctionnalités. Après 30 jours, un abonnement sera requis.
-               </div>
+               <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                  Votre établissement est actuellement en mode test. Profitez de toutes les fonctionnalités premium pour configurer votre business.
+               </p>
             </div>
 
-            <div style={{ flex: 1.5, minWidth: '300px' }}>
-               <div style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', marginBottom: '16px' }}>État du Compte</div>
-               <div style={{ display: 'flex', gap: '12px' }}>
+            <div className="flex-1.5 min-w-[320px] space-y-4">
+               <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Checklist d'Activation</div>
+               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {[
-                    { label: 'Email', done: true, icon: <CheckCircle2 size={16} /> },
-                    { label: 'Documents', done: store.status !== 'PENDING_DOCS', icon: <FileCheck size={16} /> },
-                    { label: 'Activation', done: store.isVerified, icon: <ShieldCheck size={16} /> }
+                    { label: 'Email', done: true, icon: <CheckCircle2 size={18} /> },
+                    { label: 'Documents', done: store.status !== 'PENDING_DOCS', icon: <FileCheck size={18} /> },
+                    { label: 'Identité', done: store.isVerified, icon: <ShieldCheck size={18} /> }
                   ].map((s, i) => (
-                    <div key={i} style={{ flex: 1, padding: '12px', borderRadius: '14px', background: s.done ? '#F0FDF4' : '#FFF7ED', border: `1.5px solid ${s.done ? '#DCFCE7' : '#FFEDD5'}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                       <div style={{ color: s.done ? '#16A34A' : '#EA580C' }}>{s.icon}</div>
-                       <div style={{ fontSize: '11px', fontWeight: 800, color: s.done ? '#16A34A' : '#EA580C' }}>{s.label}</div>
+                    <div key={i} className={`p-4 rounded-2xl border flex flex-col items-center gap-3 transition-all ${
+                      s.done ? 'bg-emerald-50 border-emerald-100 dark:bg-emerald-500/5' : 'bg-amber-50 border-amber-100 dark:bg-amber-500/5'
+                    }`}>
+                       <div className={s.done ? 'text-emerald-600' : 'text-amber-600'}>{s.icon}</div>
+                       <div className={`text-[10px] font-black uppercase tracking-widest ${s.done ? 'text-emerald-700' : 'text-amber-700'}`}>{s.label}</div>
                     </div>
                   ))}
                </div>
@@ -155,268 +208,298 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
          </div>
       </div>
 
-      {/* Plan Features Card */}
-      {(() => {
-        const currentPlan = store.subscription?.plan?.name || 'Rachma';
-        const planDef = getPlanFeatures(currentPlan);
-        return (
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '20px' }}>{planDef.icon}</span> Plan {currentPlan}
-              </span>
-              <span style={{ padding: '4px 12px', borderRadius: '20px', background: planDef.color + '15', color: planDef.color, fontSize: '11px', fontWeight: 800 }}>
-                {planDef.tagline}
-              </span>
-            </div>
-            <div style={{ padding: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                {planDef.features.map(f => (
-                  <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '10px', background: f.included ? '#F0FDF4' : '#F8FAFC', border: `1px solid ${f.included ? '#DCFCE7' : '#F1F5F9'}` }}>
-                    <span>{f.included ? '✅' : '❌'}</span>
-                    <span style={{ fontSize: '12px', fontWeight: f.included ? 700 : 400, color: f.included ? '#1E293B' : '#94A3B8' }}>{f.label}</span>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+         
+         {/* Left Column: Map & Location */}
+         <div className="space-y-8">
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] shadow-sm overflow-hidden flex flex-col h-full">
+               <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
+                        <MapIcon size={20} />
+                     </div>
+                     <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Géo-localisation</h3>
                   </div>
-                ))}
-              </div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Précision Satellite</div>
+               </div>
+               
+               <div className="relative flex-1 min-h-[400px]">
+                  <div ref={mapContainerRef} className="h-full w-full z-0" />
+                  
+                  {/* Floating Action Buttons on Map */}
+                  <div className="absolute bottom-8 right-8 z-10 flex flex-col gap-3">
+                     <button type="button" 
+                        onClick={() => {
+                           if (navigator.geolocation) {
+                              navigator.geolocation.getCurrentPosition((pos) => {
+                                 const { latitude, longitude } = pos.coords;
+                                 setForm(f => ({ ...f, lat: latitude, lng: longitude }));
+                                 if (mapRef.current) mapRef.current.setView([latitude, longitude], 17);
+                                 if (markerRef.current) markerRef.current.setLatLng([latitude, longitude]);
+                              });
+                           }
+                        }}
+                        className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl flex items-center justify-center text-indigo-600 hover:scale-110 active:scale-95 transition-all border border-slate-100 dark:border-slate-700"
+                        title="Ma position actuelle"
+                     >
+                        <Crosshair size={22} />
+                     </button>
+                  </div>
+               </div>
+
+               <div className="p-8 bg-slate-50/50 dark:bg-slate-950/20 border-t border-slate-50 dark:border-slate-800 grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                     <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Latitude</div>
+                     <div className="font-mono text-xs font-black text-slate-900 dark:text-white">{form.lat.toFixed(6)}</div>
+                  </div>
+                  <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                     <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Longitude</div>
+                     <div className="font-mono text-xs font-black text-slate-900 dark:text-white">{form.lng.toFixed(6)}</div>
+                  </div>
+               </div>
             </div>
-          </div>
-        );
-      })()}
-
-      {(store.subscription?.plan?.name || '').toUpperCase() !== 'RACHMA' && (
-        <FiscalSettings 
-          storeId={store.id} 
-          isFiscalEnabled={store.isFiscalEnabled} 
-          planName={store.subscription?.plan?.name || 'FREE'}
-        />
-      )}
-
-      {/* Official Documents Section */}
-      <div className="card">
-         <div className="card-header">
-            <span className="card-title"><FileCheck size={16} /> Documents Officiels (Requis pour Marketplace)</span>
          </div>
-         <div style={{ padding: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-               <div>
-                  <label style={label}>Copie du KBIS / RNE</label>
-                  <div style={{ border: '2px dashed #E2E8F0', borderRadius: '16px', padding: '30px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
-                     <FileUp size={24} color="#94A3B8" style={{ marginBottom: '8px' }} />
-                     <div style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>Cliquez pour uploader</div>
-                     <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>PDF, JPG ou PNG</div>
+
+         {/* Right Column: Identity Form */}
+         <div className="space-y-8">
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] shadow-sm overflow-hidden">
+               <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
+                        <Store size={20} />
+                     </div>
+                     <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Identité Boutique</h3>
                   </div>
                </div>
-               <div>
-                  <label style={label}>Matricule Fiscal</label>
-                  <div style={{ border: '2px dashed #E2E8F0', borderRadius: '16px', padding: '30px', textAlign: 'center', cursor: 'pointer' }}>
-                     <FileUp size={24} color="#94A3B8" style={{ marginBottom: '8px' }} />
-                     <div style={{ fontSize: '13px', fontWeight: 600, color: '#64748B' }}>Cliquez pour uploader</div>
-                     <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>PDF, JPG ou PNG</div>
+
+               <form onSubmit={handleSubmit} className="p-10 space-y-8">
+                  <div className="space-y-6">
+                     <div>
+                        <label style={label}>Nom de l'Enseigne</label>
+                        <input
+                           style={field}
+                           value={form.name}
+                           onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                           placeholder="Ex: Mon Café Gourmet"
+                           required
+                        />
+                     </div>
+
+                     <div className="space-y-4">
+                        <label style={label}>Localisation Détaillée</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                           <div className="sm:col-span-2">
+                              <input
+                                 style={field}
+                                 value={form.address}
+                                 onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+                                 placeholder="Adresse (Rue, N°...)"
+                              />
+                           </div>
+                           <input
+                              style={field}
+                              value={form.city}
+                              onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
+                              placeholder="Ville"
+                           />
+                           <input
+                              style={field}
+                              value={form.governorate}
+                              onChange={e => setForm(f => ({ ...f, governorate: e.target.value }))}
+                              placeholder="Gouvernorat"
+                           />
+                        </div>
+                        <button 
+                           type="button"
+                           onClick={handleGeocode}
+                           disabled={isGeocoding}
+                           className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-3 group border border-slate-200 dark:border-slate-700"
+                        >
+                           {isGeocoding ? <RefreshCw size={14} className="animate-spin" /> : <Navigation size={14} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />}
+                           Confirmer la position sur la carte
+                        </button>
+                     </div>
+
+                     <div>
+                        <label style={label}>Contact Téléphonique</label>
+                        <input
+                           style={field}
+                           value={form.phone}
+                           onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                           placeholder="Numéro de l'établissement"
+                        />
+                     </div>
+                  </div>
+
+                  <div className="pt-4">
+                     <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-[24px] font-black text-sm uppercase tracking-widest shadow-2xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3" disabled={isPending}>
+                        {isPending ? <RefreshCw size={20} className="animate-spin" /> : <><Save size={20} /> Sauvegarder les Paramètres</>}
+                     </button>
+                  </div>
+               </form>
+            </div>
+         </div>
+
+      </div>
+
+      {/* Plan Features & Fiscal */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+         {(() => {
+            const currentPlan = store.subscription?.plan?.name || 'Rachma';
+            const planDef = getPlanFeatures(currentPlan);
+            return (
+               <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] shadow-sm overflow-hidden flex flex-col">
+                  <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm text-xl">
+                           {planDef.icon}
+                        </div>
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Forfait {currentPlan}</h3>
+                     </div>
+                     <span className="px-4 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100 dark:border-indigo-500/20">
+                        {planDef.tagline}
+                     </span>
+                  </div>
+                  <div className="p-10 flex-1">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {planDef.features.map(f => (
+                           <div key={f.label} className={`flex items-center gap-3 p-4 rounded-2xl border transition-all ${
+                              f.included ? 'bg-emerald-50/50 border-emerald-100/50 dark:bg-emerald-500/5' : 'bg-slate-50/50 border-slate-100 dark:bg-slate-500/5'
+                           }`}>
+                              <span className="text-sm">{f.included ? '✅' : '❌'}</span>
+                              <span className={`text-xs font-bold tracking-tight ${f.included ? 'text-slate-900 dark:text-white' : 'text-slate-400 line-through'}`}>{f.label}</span>
+                           </div>
+                        ))}
+                     </div>
+                  </div>
+               </div>
+            );
+         })()}
+
+         {(store.subscription?.plan?.name || '').toUpperCase() !== 'RACHMA' && (
+            <FiscalSettings 
+               storeId={store.id} 
+               isFiscalEnabled={store.isFiscalEnabled} 
+               planName={store.subscription?.plan?.name || 'FREE'}
+            />
+         )}
+      </div>
+
+      {/* Official Documents & Marketplace */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+         <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] shadow-sm overflow-hidden">
+            <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
+               <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
+                     <FileCheck size={20} />
+                  </div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Documents Officiels</h3>
+               </div>
+            </div>
+            <div className="p-10">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                     <label style={label}>Copie du KBIS / RNE</label>
+                     <div className="h-48 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[32px] flex flex-col items-center justify-center gap-4 bg-slate-50 dark:bg-slate-950/50 hover:border-indigo-400 hover:bg-indigo-50/10 transition-all cursor-pointer group">
+                        <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-300 group-hover:text-indigo-600 shadow-sm transition-all">
+                           <Upload size={24} />
+                        </div>
+                        <div className="text-center">
+                           <div className="text-xs font-black text-slate-900 dark:text-white tracking-tight">Charger le document</div>
+                           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">PDF, JPG ou PNG</div>
+                        </div>
+                     </div>
+                  </div>
+                  <div>
+                     <label style={label}>Matricule Fiscal</label>
+                     <div className="h-48 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[32px] flex flex-col items-center justify-center gap-4 bg-slate-50 dark:bg-slate-950/50 hover:border-indigo-400 hover:bg-indigo-50/10 transition-all cursor-pointer group">
+                        <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-300 group-hover:text-indigo-600 shadow-sm transition-all">
+                           <Upload size={24} />
+                        </div>
+                        <div className="text-center">
+                           <div className="text-xs font-black text-slate-900 dark:text-white tracking-tight">Charger le document</div>
+                           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">PDF, JPG ou PNG</div>
+                        </div>
+                     </div>
                   </div>
                </div>
             </div>
-            
-            {!store.isVerified && (
-               <div style={{ marginTop: '20px', padding: '16px', background: '#FEF2F2', borderRadius: '12px', border: '1px solid #FEE2E2', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <AlertCircle size={20} color="#EF4444" />
-                  <p style={{ fontSize: '13px', color: '#B91C1C', margin: 0 }}>
-                     <b>Attention:</b> Tant que vos documents ne sont pas vérifiés, vous ne pourrez pas passer de commandes sur le Marketplace B2B.
+         </div>
+
+         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] shadow-sm overflow-hidden flex flex-col">
+            <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800">
+               <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
+                     <ShoppingCart size={20} />
+                  </div>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Marketplace B2B</h3>
+               </div>
+            </div>
+            <div className="p-10 flex-1 flex flex-col justify-center gap-8">
+               <div className={`p-8 rounded-[32px] border transition-all flex flex-col gap-4 text-center ${
+                  store.forceMarketplaceAccess ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'
+               }`}>
+                  <div className={`text-sm font-black uppercase tracking-[0.2em] ${store.forceMarketplaceAccess ? 'text-emerald-600' : 'text-rose-600'}`}>
+                     {store.forceMarketplaceAccess ? 'Accès Autorisé' : 'Accès Restreint'}
+                  </div>
+                  <p className="text-xs font-medium text-slate-500 leading-relaxed">
+                     {store.forceMarketplaceAccess 
+                        ? 'Vous pouvez commander directement auprès de nos fournisseurs partenaires.' 
+                        : 'Votre forfait actuel ne vous permet pas de commander via le marketplace.'}
                   </p>
                </div>
-            )}
+               <button className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-50" disabled>
+                  Upgrade Forfait
+               </button>
+            </div>
          </div>
       </div>
-      
-      {/* Map Section - Priority on Mobile */}
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div className="card-header">
-          <span className="card-title"><MapPin size={16} /> Position sur la Carte</span>
-          <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>Déplacez le marqueur bleu</div>
-        </div>
-        <div style={{ position: 'relative', height: '300px', width: '100%' }}>
-          <div ref={mapContainerRef} style={{ height: '100%', width: '100%' }} />
-          <button type="button" 
-            onClick={() => {
-              if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition((pos) => {
-                  const { latitude, longitude } = pos.coords;
-                  setForm(f => ({ ...f, lat: latitude, lng: longitude }));
-                  if (mapRef.current) mapRef.current.setView([latitude, longitude], 15);
-                  if (markerRef.current) markerRef.current.setLatLng([latitude, longitude]);
-                });
-              }
-            }}
-            style={{ position: 'absolute', bottom: '16px', right: '16px', zIndex: 1000, background: '#fff', border: 'none', padding: '12px', borderRadius: '50%', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Crosshair size={20} color="#4F46E5" />
-          </button>
-        </div>
+
+      {/* Demo Actions */}
+      <div className="bg-slate-900 dark:bg-slate-950 rounded-[48px] p-12 text-white relative overflow-hidden group">
+         <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Sparkles size={200} />
+         </div>
+         <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-12">
+            <div className="max-w-md space-y-4 text-center md:text-left">
+               <h3 className="text-2xl font-black tracking-tight flex items-center gap-3 justify-center md:justify-start">
+                  <Sparkles size={24} className="text-indigo-400" /> Mode Démonstration
+               </h3>
+               <p className="text-sm font-medium text-slate-400 leading-relaxed">
+                  Testez instantanément votre coffeeshop avec des données fictives pré-configurées. Vous pourrez les supprimer d'un clic avant le passage en production.
+               </p>
+            </div>
+            <div className="flex flex-wrap gap-4 justify-center">
+               <button
+                  onClick={() => {
+                     if (!confirm('Installer les données de démo ?')) return;
+                     startTransition(async () => {
+                        await seedDemoProductsAction(store.id);
+                        alert('Boutique initialisée avec succès !');
+                     });
+                  }}
+                  disabled={isPending}
+                  className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3"
+               >
+                  <Sparkles size={16} /> Installer la Démo
+               </button>
+               <button
+                  onClick={() => {
+                     if (!confirm('Réinitialiser toutes les données ?')) return;
+                     startTransition(async () => {
+                        await resetDemoDataAction(store.id);
+                        alert('Boutique réinitialisée.');
+                     });
+                  }}
+                  disabled={isPending}
+                  className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3"
+               >
+                  <RotateCcw size={16} /> Tout Effacer
+               </button>
+            </div>
+         </div>
       </div>
 
-      {/* Form Section */}
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title"><Store size={16} /> Détails de l'Établissement</span>
-        </div>
-        
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px' }}>
-          <div>
-            <label style={label}>Nom de l'Enseigne</label>
-            <input
-              style={field}
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="Nom du café"
-              required
-            />
-          </div>
-
-          <div>
-            <label style={label}>Adresse Physique</label>
-            <input
-              style={field}
-              value={form.address}
-              onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-              placeholder="Rue, numéro..."
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div>
-              <label style={label}>Ville</label>
-              <input
-                style={field}
-                value={form.city}
-                onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
-                placeholder="Ville"
-              />
-            </div>
-            <div>
-              <label style={label}>Téléphone</label>
-              <input
-                style={field}
-                value={form.phone}
-                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                placeholder="Contact"
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', opacity: 0.7 }}>
-            <div>
-              <label style={label}>Lat.</label>
-              <input style={{ ...field, fontSize: '12px' }} value={form.lat.toFixed(6)} readOnly disabled />
-            </div>
-            <div>
-              <label style={label}>Long.</label>
-              <input style={{ ...field, fontSize: '12px' }} value={form.lng.toFixed(6)} readOnly disabled />
-            </div>
-          </div>
-
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '16px', borderRadius: '14px', fontSize: '15px', fontWeight: 800, marginTop: '8px', boxShadow: '0 4px 12px rgba(79, 70, 229, 0.2)' }} disabled={isPending}>
-            {isPending ? 'Enregistrement...' : <><Save size={18} /> Sauvegarder</>}
-          </button>
-        </form>
-      </div>
-
-      {/* Marketplace Access Toggle */}
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title"><ShoppingCart size={16} /> Accès Marketplace B2B</span>
-        </div>
-        <div style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: store.forceMarketplaceAccess ? '#ECFDF5' : '#FEF2F2', borderRadius: '12px' }}>
-            <div>
-              <div style={{ fontWeight: 800, color: store.forceMarketplaceAccess ? '#065F46' : '#991B1B' }}>
-                {store.forceMarketplaceAccess ? 'Activé' : 'Désactivé'}
-              </div>
-              <div style={{ fontSize: '13px', color: store.forceMarketplaceAccess ? '#047857' : '#B91C1C' }}>
-                {store.forceMarketplaceAccess 
-                  ? 'Vous avez accès au marketplace fournisseurs.' 
-                  : 'Votre forfait n\'inclut pas l\'accès marketplace.'}
-              </div>
-            </div>
-            <div style={{ width: '48px', height: '28px', background: store.forceMarketplaceAccess ? '#10B981' : '#E5E7EB', borderRadius: '14px', position: 'relative', cursor: 'not-allowed', opacity: 0.6 }}>
-              <div style={{ width: '24px', height: '24px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', left: store.forceMarketplaceAccess ? '22px' : '2px', transition: '0.2s' }} />
-            </div>
-          </div>
-          {!store.forceMarketplaceAccess && (
-            <p style={{ fontSize: '12px', color: '#64748B', marginTop: '12px' }}>Contactez l'administrateur pour activer l'accès marketplace.</p>
-          )}
-        </div>
-      </div>
-
-      {/* Documents Officiels */}
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title"><FileCheck size={16} /> Documents Officiels</span>
-        </div>
-        <div style={{ padding: '20px' }}>
-          {(store.officialDocs as any[])?.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {(store.officialDocs as any[]).map((doc: any, idx: number) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <FileCheck size={18} className="text-emerald-500" />
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '14px' }}>{doc.name}</div>
-                      <div style={{ fontSize: '12px', color: '#64748B' }}>{doc.type} · {doc.status}</div>
-                    </div>
-                  </div>
-                  <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ padding: '8px 12px', background: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '12px', fontWeight: 700, color: '#4F46E5', textDecoration: 'none' }}>
-                    <Eye size={14} style={{ marginRight: '4px' }} /> Voir
-                  </a>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '30px', color: '#94A3B8' }}>
-              <FileCheck size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-              <p style={{ fontSize: '14px', fontWeight: 600 }}>Aucun document上传é</p>
-              <p style={{ fontSize: '12px', marginTop: '4px' }}>Les documents officiels seront demandés lors de la vérification.</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title"><Sparkles size={16} /> Démo Boutique</span>
-        </div>
-        <div style={{ padding: '20px' }}>
-          <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '16px' }}>
-            Ajoutez des produits, catégories et stock fictifs pour tester votre coffeeshop, puis supprimez-les quand vous êtes prêt.
-          </p>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={() => {
-                if (!confirm('Ajouter les données demo? Cela va créer catégories, produits et stock.')) return;
-                startTransition(async () => {
-                  await seedDemoProductsAction(store.id);
-                  alert('Produits demo ajoutés avec succès!');
-                });
-              }}
-              disabled={isPending}
-              style={{ flex: 1, padding: '12px 16px', background: '#10B981', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-            >
-              <Sparkles size={16} /> Installer Demo
-            </button>
-            <button
-              onClick={() => {
-                if (!confirm('Supprimer toutes les données demo? Cette action est irréversible.')) return;
-                startTransition(async () => {
-                  await resetDemoDataAction(store.id);
-                  alert('Données demo supprimées.');
-                });
-              }}
-              disabled={isPending}
-              style={{ flex: 1, padding: '12px 16px', background: '#EF4444', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-            >
-              <RotateCcw size={16} /> Reset
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

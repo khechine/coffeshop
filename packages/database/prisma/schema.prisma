@@ -97,6 +97,7 @@ model Store {
   subdomain String?  @unique
   address   String?
   city      String?
+  governorate String?
   phone     String?
   lat       Float?
   lng       Float?

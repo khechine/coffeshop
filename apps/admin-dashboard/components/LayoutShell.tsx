@@ -124,25 +124,39 @@ export default function LayoutShell({
           </div>
 
           <div className="topbar-right">
-            <button className="theme-toggle-btn" onClick={toggleTheme} title={theme === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'}>
-              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-            </button>
-            <div className="alert-bell">
-              <Bell size={18} />
-              <span className="alert-dot" />
+            <div className="flex items-center gap-2 pr-4 border-r border-slate-100 dark:border-slate-800">
+              <button 
+                className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all active:scale-95" 
+                onClick={toggleTheme} 
+                title={theme === 'light' ? 'Mode Sombre' : 'Mode Clair'}
+              >
+                {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+              </button>
+              <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all cursor-pointer relative group">
+                <Bell size={18} />
+                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900" />
+              </div>
             </div>
             
-            <div className={`topbar-user-profile ${mounted ? '' : 'loading'}`}>
-               <div className="user-info-text topbar-info-desktop">
-                  <span className="user-name">{mounted ? cashierName : 'Administrateur'}</span>
-                  <span className="user-role">{(role || user?.role || 'STORE_OWNER').replace('_', ' ')}</span>
+            <div className="flex items-center gap-4 pl-2">
+               <div className="user-info-text hidden md:flex flex-col items-end">
+                  <span className="text-[13px] font-black text-slate-900 dark:text-white leading-none mb-1">
+                    {mounted ? cashierName : 'Chargement...'}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    {(role || user?.role || 'GÉRANT').replace('_', ' ')}
+                  </span>
                </div>
-               <div className="user-avatar-wrapper">
-                  <div className="user-avatar" style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '15px' }}>
+               <div className="relative group">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-indigo-200 dark:shadow-none hover:scale-105 transition-all cursor-pointer">
                     {(mounted ? cashierName : 'A').charAt(0).toUpperCase()}
                   </div>
                </div>
-               <button onClick={handleLogout} className="topbar-logout-btn" title="Déconnexion">
+               <button 
+                onClick={handleLogout} 
+                className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all active:scale-95" 
+                title="Déconnexion"
+               >
                   <LogOut size={16} />
                </button>
             </div>
