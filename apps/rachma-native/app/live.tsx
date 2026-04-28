@@ -21,6 +21,7 @@ export default function LiveDashboardScreen() {
   const [events, setEvents] = useState<LiveEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [todayTotal, setTodayTotal] = useState(0);
+  const [ongoingTotal, setOngoingTotal] = useState(0);
 
   useEffect(() => {
     AuthService.getSession().then((session) => {
@@ -41,8 +42,31 @@ export default function LiveDashboardScreen() {
 
       setEvents((prev) => [newEvent, ...prev].slice(0, 100)); // Keep last 100 events
 
-      if (payload.type === 'sale_completed' && payload.data?.total) {
-        setTodayTotal((prev) => prev + Number(payload.data.total));
+      if ((payload.type === 'rachma_tap' || payload.type === 'table_updated') && payload.price) {
+        const amt = Number(payload.price);
+        if (!isNaN(amt)) {
+          setOngoingTotal(prev => prev + (payload.action === 'add' ? amt : -amt));
+        }
+      }
+
+      if (payload.type === 'sale_completed' && payload.data) {
+        const totalRaw = payload.data.total;
+        let amountToAdd = 0;
+        if (typeof totalRaw === 'number') amountToAdd = totalRaw;
+        else if (typeof totalRaw === 'string') amountToAdd = Number(totalRaw);
+        else if (totalRaw && typeof totalRaw === 'object' && totalRaw.d) {
+          if (typeof totalRaw.toString === 'function' && !totalRaw.toString().includes('object')) {
+            amountToAdd = Number(totalRaw.toString());
+          } else {
+            amountToAdd = Number(totalRaw.d.join('')) / Math.pow(10, totalRaw.e || 1);
+          }
+        }
+        
+        if (!isNaN(amountToAdd) && amountToAdd > 0) {
+          setTodayTotal((prev) => prev + amountToAdd);
+          // Assuming the batch was completed, reset ongoing total
+          setOngoingTotal(0); 
+        }
       }
     };
 
@@ -64,9 +88,12 @@ export default function LiveDashboardScreen() {
   };
 
   const renderEventDescription = (event: LiveEvent) => {
-    if (event.type === 'rachma_tap') {
+    if (event.type === 'rachma_tap' || event.type === 'table_updated') {
       const actionText = event.data.action === 'add' ? 'a ajouté' : 'a retiré';
-      return <Text style={styles.eventText}><Text style={styles.bold}>{event.data.baristaId}</Text> {actionText} un produit <Text style={styles.dim}>(Rachma)</Text></Text>;
+      const productName = event.data.productName ? ` ${event.data.productName}` : ' un produit';
+      const takeawayText = event.data.isTakeaway ? ' (à emporter)' : '';
+      const modeContext = event.type === 'table_updated' ? `(${event.data.tableName})` : '(Rachma)';
+      return <Text style={styles.eventText}><Text style={styles.bold}>{event.data.baristaName || event.data.baristaId}</Text> {actionText}<Text style={{ fontWeight: 'bold', color: '#f8fafc' }}>{productName}</Text>{takeawayText} <Text style={styles.dim}>{modeContext}</Text></Text>;
     }
     if (event.type === 'sale_completed') {
       return <Text style={styles.eventText}>Vente encaissée pour <Text style={{ color: '#10b981', fontWeight: 'bold' }}>{Number(event.data.total).toFixed(3)} DT</Text> <Text style={styles.dim}>#{event.data.fiscalNumber || event.data.id?.substring(0,6)}</Text></Text>;
@@ -95,6 +122,10 @@ export default function LiveDashboardScreen() {
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>ENCAISSÉ (LIVE)</Text>
           <Text style={styles.statValue}>+ {todayTotal.toFixed(3)} DT</Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: 'rgba(245, 158, 11, 0.05)', borderColor: 'rgba(245, 158, 11, 0.2)', marginTop: 10 }]}>
+          <Text style={[styles.statLabel, { color: '#f59e0b' }]}>EN COURS (TAPS NON CLÔTURÉS)</Text>
+          <Text style={styles.statValue}>+ {Math.max(0, ongoingTotal).toFixed(3)} DT</Text>
         </View>
       </View>
 

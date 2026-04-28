@@ -54,15 +54,15 @@ export class SalesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('rachma_action')
   handleRachmaAction(
-    @MessageBody() data: { storeId: string; action: string; productId: string; baristaId: string; timestamp: string },
+    @MessageBody() data: { storeId: string; action: string; productId: string; baristaName: string; timestamp: string; productName?: string; isTakeaway?: boolean; price?: number; tableName?: string },
     @ConnectedSocket() client: Socket,
   ) {
     // Broadcast live action to the store room (excluding the sender)
     if (data.storeId) {
       this.logger.log(`Broadcasting rachma_action for store ${data.storeId}: ${data.action} on ${data.productId}`);
       client.to(data.storeId).emit('live_activity', {
-        type: 'rachma_tap',
-        ...data,
+        type: data.tableName ? 'table_updated' : 'rachma_tap',
+        data, // send data object properly
       });
     }
   }

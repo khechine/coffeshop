@@ -10,6 +10,7 @@ import { AuthService } from '@/services/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { SocketService } from '@/services/socket';
 
 // ────────────────────────────────────────────────
 // Types
@@ -32,10 +33,17 @@ export default function PosScreen() {
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [cartOpen, setCartOpen] = useState(false);
   const [storeId, setStoreId] = useState('1');
+  const [user, setUser] = useState<any>(null);
   const router = useRouter();
 
   useEffect(() => {
-    AuthService.getSession().then(s => { if (s?.storeId) setStoreId(s.storeId); });
+    AuthService.getSession().then(s => { 
+      if (s?.storeId) {
+        setStoreId(s.storeId);
+        SocketService.joinStore(s.storeId);
+      }
+      if (s?.user) setUser(s.user);
+    });
   }, []);
 
   // Load products
@@ -110,6 +118,22 @@ export default function PosScreen() {
   const addToCart = (id: string) => {
     const updated = { ...cart, [id]: (cart[id] || 0) + 1 };
     setCart(updated); saveCart(updated); Vibration.vibrate(8);
+    
+    if (tableId) {
+      const product = products.find(p => p.id === id);
+      if (product) {
+        SocketService.emitRachmaAction({
+          storeId,
+          action: 'add',
+          productId: id,
+          productName: product.name,
+          price: product.price,
+          baristaName: user?.name || user?.id || 'Barista',
+          timestamp: new Date().toISOString(),
+          tableName: tableId
+        } as any);
+      }
+    }
   };
 
   const removeFromCart = (id: string) => {
@@ -117,6 +141,22 @@ export default function PosScreen() {
     if (updated[id] > 1) updated[id]--;
     else delete updated[id];
     setCart(updated); saveCart(updated);
+    
+    if (tableId) {
+      const product = products.find(p => p.id === id);
+      if (product) {
+        SocketService.emitRachmaAction({
+          storeId,
+          action: 'undo',
+          productId: id,
+          productName: product.name,
+          price: product.price,
+          baristaName: user?.name || user?.id || 'Barista',
+          timestamp: new Date().toISOString(),
+          tableName: tableId
+        } as any);
+      }
+    }
   };
 
   const clearCart = () => { setCart({}); saveCart({}); };

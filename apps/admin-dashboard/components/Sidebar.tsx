@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, ShoppingCart, History, Store, Tablet, Users, CreditCard, Settings, 
   Boxes, Coffee, BarChart3, ChevronDown, ChevronRight, Package, FileText, TrendingUp,
-  Layers, LayoutGrid, Truck, ShoppingBag
+  Layers, LayoutGrid, Truck, ShoppingBag, Activity
 } from 'lucide-react';
 
 import { logoutUser } from '../app/actions';
@@ -209,10 +209,16 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
                   </Link>
                 )}
                 {role === 'STORE_OWNER' && (
-                  <Link href="/admin/configuration" title="Configuration Admin" className={`nav-item${isActive('/admin/configuration') ? ' active' : ''}`} style={{ justifyContent: 'flex-start', border: '1px solid rgba(99,102,241,0.15)', background: isActive('/admin/configuration') ? 'rgba(99,102,241,0.15)' : 'transparent', marginTop: '4px' }}>
-                    <Settings size={18} color="#818CF8" />
-                    {displayExpanded && <span style={{ color: '#C7D2FE' }}>Configuration Admin</span>}
-                  </Link>
+                  <>
+                    <Link href="/admin/live" title="Live Tracker (Direct)" className={`nav-item${isActive('/admin/live') ? ' active' : ''}`} style={{ justifyContent: 'flex-start', border: '1px solid rgba(16, 185, 129, 0.15)', background: isActive('/admin/live') ? 'rgba(16, 185, 129, 0.15)' : 'transparent', marginTop: '4px' }}>
+                      <Activity size={18} color="#10B981" />
+                      {displayExpanded && <span style={{ color: '#6EE7B7' }}>Live Tracker (Direct)</span>}
+                    </Link>
+                    <Link href="/admin/configuration" title="Configuration Admin" className={`nav-item${isActive('/admin/configuration') ? ' active' : ''}`} style={{ justifyContent: 'flex-start', border: '1px solid rgba(99,102,241,0.15)', background: isActive('/admin/configuration') ? 'rgba(99,102,241,0.15)' : 'transparent', marginTop: '4px' }}>
+                      <Settings size={18} color="#818CF8" />
+                      {displayExpanded && <span style={{ color: '#C7D2FE' }}>Configuration Admin</span>}
+                    </Link>
+                  </>
                 )}
               </>
             )}

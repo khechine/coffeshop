@@ -212,7 +212,10 @@ export default function RachmaScreen() {
       storeId,
       action: 'add',
       productId,
-      baristaId: user?.id || 'Unknown',
+      productName: product.name,
+      price: Number(product.price || 0),
+      isTakeaway: !!pkgId,
+      baristaName: user?.name || user?.id || 'Inconnu',
       timestamp: new Date().toISOString()
     });
   };
@@ -231,7 +234,10 @@ export default function RachmaScreen() {
       storeId,
       action: 'undo',
       productId,
-      baristaId: user?.id || 'Unknown',
+      productName: products.find(p => p.id === productId)?.name || 'Produit',
+      price: Number(products.find(p => p.id === productId)?.price || 0),
+      isTakeaway: existing[existing.length - 1]?.includes(':'),
+      baristaName: user?.name || user?.id || 'Inconnu',
       timestamp: new Date().toISOString()
     });
   };

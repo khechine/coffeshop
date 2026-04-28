@@ -195,8 +195,17 @@ export default function TabLayout() {
             <Text style={styles.modeName}>Mode Gestion Complète</Text>
             <Text style={styles.modeDescription}>Tableau de bord, B2B & Caisse temps-réel.</Text>
           </View>
-          {appMode === 'FULL' && <FontAwesome name="check-circle" size={20} color="#6366f1" />}
         </TouchableOpacity>
+
+        {isOwnerRole && (
+          <TouchableOpacity 
+            style={[styles.adminLink, { borderColor: 'rgba(99, 102, 241, 0.3)', backgroundColor: 'rgba(99, 102, 241, 0.05)', marginTop: 15 }]} 
+            onPress={() => { setShowSettings(false); router.push('/live'); }}
+          >
+            <FontAwesome name="feed" size={18} color="#6366f1" />
+            <Text style={[styles.adminLinkText, { color: '#6366f1' }]}>Live Dashboard (Owner)</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };

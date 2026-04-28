@@ -19,7 +19,9 @@ export default function HistoryScreen() {
       // For now, let's fetch a summary or mock some history
       const data = await ApiService.get(`/management/reports/summary/${currentStoreId}`);
       // Since the API doesn't have a direct "all sales" for mobile management yet, we'll use the summary to show daily totals
-      setHistory(data?.chart || []);
+      const chartData = data?.chart || [];
+      // Filter out days with 0 sales so we only see actual history
+      setHistory(chartData.filter((item: any) => Number(item.total || 0) > 0));
     } catch (error) {
       console.error("Failed to fetch history:", error);
     } finally {
