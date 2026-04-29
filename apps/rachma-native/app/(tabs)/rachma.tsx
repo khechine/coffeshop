@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, ScrollView, TouchableOpacity, View as RNView,
-  Text as RNText, Vibration, RefreshControl, Platform, Modal, TextInput, Image
+  Text as RNText, Vibration, RefreshControl, Platform, Modal, TextInput, Image, useWindowDimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -42,6 +42,15 @@ const SLOT_COUNT = 20;
 // ────────────────────────────────────────────────
 export default function RachmaScreen() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isTablet = width > 768;
+  // On tablets the product cards are 2-column, so each card is half-width minus margins
+  const cardInnerWidth = isTablet
+    ? (width - 12 * 3) / 2 - 14 * 2
+    : width - 12 * 2 - 14 * 2;
+  // 10 slots per row, 9 gaps of 6px
+  const slotSize = Math.floor((cardInnerWidth - 9 * 6) / 10);
+  const cardWidth = isTablet ? (width - 12 * 3) / 2 : undefined;
   const [products, setProducts] = useState<Product[]>([]);
   const [logs, setLogs] = useState<Logs>({});
   const [mode, setMode] = useState<'sale' | 'loss'>('sale');
@@ -458,7 +467,7 @@ export default function RachmaScreen() {
       {/* ── Product list ── */}
       <ScrollView
         style={styles.productList}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={[{ paddingBottom: 120 }, isTablet && { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 6 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); syncProducts(); }} tintColor={Colors.primary} />}
       >
         {filtered.length === 0 && (
@@ -503,7 +512,7 @@ export default function RachmaScreen() {
           return (
             <TouchableOpacity
               key={product.id}
-              style={styles.productCard}
+              style={[styles.productCard, isTablet && { width: cardWidth }]}
               onPress={() => handleAdd(product.id)}
               onLongPress={() => {
                 Vibration.vibrate(30);
@@ -556,13 +565,13 @@ export default function RachmaScreen() {
               {/* Slot grid */}
               <View style={styles.slotsGrid}>
                 {displaySlots.map((slot, i) => {
-                  if (!slot) return <View key={i} style={styles.slotEmpty} />;
+                  if (!slot) return <View key={i} style={[styles.slotEmpty, { width: slotSize, height: slotSize }]} />;
                   const isLoss = slot === 'loss';
                   const hasPkg = slot.includes(':');
                   const pkgId = hasPkg ? slot.split(':')[1] : null;
                   const pkg = pkgId ? product.packagings.find(p => p.id === pkgId) : null;
                   return (
-                    <View key={i} style={[styles.slot, isLoss ? styles.slotLoss : styles.slotSale]}>
+                    <View key={i} style={[styles.slot, isLoss ? styles.slotLoss : styles.slotSale, { width: slotSize, height: slotSize }]}>
                       {pkg && <RNText style={styles.slotIcon}>{pkg.icon}</RNText>}
                       {!pkg && !isLoss && <FontAwesome name="times" size={16} color={Colors.primary} />}
                       {isLoss && <FontAwesome name="times" size={16} color={Colors.danger} />}
@@ -659,16 +668,16 @@ export default function RachmaScreen() {
             </View>
 
             <ScrollView style={{ flex: 1 }}>
-              <View style={styles.statsGrid}>
-                <View style={styles.statCard}>
+              <View style={[styles.statsGrid, isTablet && { flexDirection: 'row', gap: 12 }]}>
+                <View style={[styles.statCard, isTablet && { flex: 1 }]}>
                    <Text style={styles.statLabel}>{i18n.t('rachma.today')}</Text>
                   <Text style={styles.statValue}>{stats.today.toFixed(3)} DT</Text>
                 </View>
-                <View style={[styles.statCard, { backgroundColor: 'rgba(99,102,241,0.08)' }]}>
+                <View style={[styles.statCard, { backgroundColor: 'rgba(99,102,241,0.08)' }, isTablet && { flex: 1 }]}>
                    <Text style={styles.statLabel}>{i18n.t('rachma.week')}</Text>
                   <Text style={styles.statValue}>{stats.week.toFixed(3)} DT</Text>
                 </View>
-                <View style={styles.statCard}>
+                <View style={[styles.statCard, isTablet && { flex: 1 }]}>
                    <Text style={styles.statLabel}>{i18n.t('rachma.month')}</Text>
                   <Text style={styles.statValue}>{stats.month.toFixed(3)} DT</Text>
                 </View>
@@ -955,18 +964,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   slotEmpty: {
-    width: (Platform as any).isPad ? 50 : '8.6%', 
-    aspectRatio: 1, 
+    aspectRatio: 1,
     borderRadius: 8,
     backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1, 
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
   },
   slot: {
-    width: (Platform as any).isPad ? 50 : '8.6%', 
-    aspectRatio: 1, 
+    aspectRatio: 1,
     borderRadius: 8,
-    alignItems: 'center', 
+    alignItems: 'center',
     justifyContent: 'center',
   },
   slotSale: { backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.4)' },

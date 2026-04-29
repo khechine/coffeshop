@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, View as RNView } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, View as RNView, useWindowDimensions } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
@@ -9,6 +9,8 @@ import i18n from '../../locales/i18n';
 
 export default function HistoryScreen() {
   const [loading, setLoading] = useState(true);
+  const { width } = useWindowDimensions();
+  const isTablet = width > 768;
   const [refreshing, setRefreshing] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [storeId, setStoreId] = useState('');
@@ -78,24 +80,28 @@ export default function HistoryScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
         }
       >
-        {history.length > 0 ? history.map((item, idx) => (
-          <View key={idx} style={[styles.historyCard, styles.glassCard]}>
-            <View style={styles.cardInfo}>
-                <View style={styles.dateBox}>
-                   <Text style={styles.day}>{new Date(item.date).getDate()}</Text>
-                   <Text style={styles.month}>{new Date(item.date).toLocaleString(i18n.locale, { month: 'short' }).toUpperCase()}</Text>
+        {history.length > 0 ? (
+          <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 15 } : {}}>
+            {history.map((item, idx) => (
+              <View key={idx} style={[styles.historyCard, styles.glassCard, isTablet && { width: '48%' }]}>
+                <View style={styles.cardInfo}>
+                    <View style={styles.dateBox}>
+                       <Text style={styles.day}>{new Date(item.date).getDate()}</Text>
+                       <Text style={styles.month}>{new Date(item.date).toLocaleString(i18n.locale, { month: 'short' }).toUpperCase()}</Text>
+                    </View>
+                    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                        <Text style={styles.cardTitle}>{i18n.t('history.salesOf', { date: new Date(item.date).toLocaleDateString(i18n.locale) })}</Text>
+                        <Text style={styles.cardSub}>{i18n.t('history.validatedBySystem')}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end', backgroundColor: 'transparent' }}>
+                        <Text style={styles.cardAmount}>{Number(item.total || 0).toFixed(3)} DT</Text>
+                        <Text style={styles.cardStatus}>{i18n.t('history.completed')}</Text>
+                    </View>
                 </View>
-                <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                    <Text style={styles.cardTitle}>{i18n.t('history.salesOf', { date: new Date(item.date).toLocaleDateString(i18n.locale) })}</Text>
-                    <Text style={styles.cardSub}>{i18n.t('history.validatedBySystem')}</Text>
-                </View>
-                <View style={{ alignItems: 'flex-end', backgroundColor: 'transparent' }}>
-                    <Text style={styles.cardAmount}>{Number(item.total || 0).toFixed(3)} DT</Text>
-                    <Text style={styles.cardStatus}>{i18n.t('history.completed')}</Text>
-                </View>
-            </View>
+              </View>
+            ))}
           </View>
-        )) : (
+        ) : (
           <View style={styles.emptyState}>
              <FontAwesome name="history" size={64} color="rgba(255,255,255,0.05)" />
              <Text style={styles.emptyText}>{i18n.t('history.emptyHistory')}</Text>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, Alert, Platform } from 'react-native';
+import { StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, Alert, Platform, useWindowDimensions } from 'react-native';
 import i18n from '../../locales/i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
@@ -14,6 +14,8 @@ import { useLocalSearchParams } from 'expo-router';
 
 export default function StocksScreen() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isTablet = width > 768;
   const { tab } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -397,7 +399,7 @@ export default function StocksScreen() {
             ) : (
               <>
                 <Text style={styles.sectionTitle}>{i18n.t('stocks.myCategories')}</Text>
-                <View style={styles.categoryList}>
+                <View style={[styles.categoryList, isTablet && styles.categoryListTablet]}>
                   {displayCategories.length === 0 && search.length === 0 && (
                     <View style={{ padding: 40, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 32, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
                       <FontAwesome name="magic" size={40} color="rgba(16, 185, 129, 0.2)" style={{ marginBottom: 15 }} />
@@ -428,7 +430,7 @@ export default function StocksScreen() {
                     </View>
                   )}
                   {displayCategories.map((cat: any, i: number) => (
-                    <TouchableOpacity key={i} style={[styles.categoryCard, styles.glassCard]} onPress={() => setSelectedCategory(cat)}>
+                    <TouchableOpacity key={i} style={[styles.categoryCard, styles.glassCard, isTablet && styles.categoryCardTablet]} onPress={() => setSelectedCategory(cat)}>
                       <View style={[styles.catIconContainer, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
                          <Text style={styles.catEmoji}>{cat.icon || '📦'}</Text>
                       </View>
@@ -907,6 +909,14 @@ const styles = StyleSheet.create({
   },
   categoryList: {
     gap: 12,
+  },
+  categoryListTablet: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 15,
+  },
+  categoryCardTablet: {
+    width: '48%',
   },
   categoryCard: {
     flexDirection: 'row',

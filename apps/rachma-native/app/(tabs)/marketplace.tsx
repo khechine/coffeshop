@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet, ScrollView, TouchableOpacity, Image,
-  ActivityIndicator, RefreshControl, Dimensions, TextInput,
-  Modal, Platform, useColorScheme, Animated,
+  ActivityIndicator, RefreshControl, TextInput,
+  Modal, Platform, useColorScheme, Animated, useWindowDimensions,
 } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
@@ -24,7 +24,6 @@ try {
   console.warn('LinearGradient module not found, using fallback View');
 }
 
-const { width } = Dimensions.get('window');
 const BANNER_IMAGE = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=1000';
 
 // ---------- theme tokens ----------
@@ -49,6 +48,10 @@ type ViewMode = 'PRODUCTS' | 'VENDORS' | 'PACKS';
 export default function MarketplaceScreen() {
   const scheme = useColorScheme();
   const T = DARK; // Force dark luxury as per user request/mockup
+  const { width } = useWindowDimensions();
+  const isTablet = width > 768;
+  const numCols = isTablet ? 3 : 2;
+  const cardWidth = (width - 40 - (numCols - 1) * 15) / numCols;
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -457,7 +460,7 @@ export default function MarketplaceScreen() {
 
             <View style={styles.grid}>
               {filteredProducts.map((p, i) => (
-                <TouchableOpacity key={p.id} style={styles.premiumCard} onPress={() => setSelectedProduct(p)}>
+                <TouchableOpacity key={p.id} style={[styles.premiumCard, { width: cardWidth }]} onPress={() => setSelectedProduct(p)}>
                   <View style={styles.cardImgContainer}>
                     {p.image ? (
                         <Image source={{ uri: p.image }} style={styles.cardImg} />
@@ -494,9 +497,9 @@ export default function MarketplaceScreen() {
         )}
 
         {viewMode === 'VENDORS' && (
-           <View style={{ gap: 15 }}>
+           <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 15 } : { gap: 15 }}>
               {filteredVendors.map(v => (
-                <TouchableOpacity key={v.id} style={styles.vendorRow} onPress={() => setSelectedVendor(v)}>
+                <TouchableOpacity key={v.id} style={[styles.vendorRow, isTablet && { width: '48%' }]} onPress={() => setSelectedVendor(v)}>
                    <View style={styles.vendorAvatar}>
                       <Text style={{ fontSize: 24, fontWeight: '900' }}>🏪</Text>
                    </View>
@@ -1068,7 +1071,7 @@ const styles = StyleSheet.create({
   heroTitle: { color: '#fff', fontSize: 20, fontWeight: '900' },
   heroPrice: { color: '#94a3b8', fontSize: 13, fontWeight: '600' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 15 },
-  premiumCard: { width: (width - 55) / 2, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  premiumCard: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   cardImgContainer: { height: 110, backgroundColor: 'rgba(255,255,255,0.02)', alignItems: 'center', justifyContent: 'center' },
   cardImg: { width: '100%', height: '100%', objectFit: 'cover' },
   flashBadge: { position: 'absolute', top: 10, left: 10, backgroundColor: '#f59e0b', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },

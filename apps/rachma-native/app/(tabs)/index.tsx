@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Platform, Modal, BackHandler } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Platform, Modal, BackHandler, useWindowDimensions } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
@@ -10,6 +10,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import i18n from '../../locales/i18n';
 
 export default function DashboardScreen() {
+  const { width } = useWindowDimensions();
+  const isTablet = width > 768;
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<any>(null);
@@ -89,7 +91,7 @@ export default function DashboardScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
         }
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, isTablet && styles.tabletContainer]}
       >
         {/* Header Section */}
         <View style={styles.header}>
@@ -122,9 +124,9 @@ export default function DashboardScreen() {
         )}
 
         {/* ── SECTION: PERFORMANCE FINANCIÈRE (REFINED) ── */}
-        <View style={styles.screenshotMetrics}>
+        <View style={[styles.screenshotMetrics, isTablet && styles.tabletMetrics]}>
           {/* Aujourd'hui - Large Card */}
-          <LinearGradient colors={['#7c3aed', '#6d28d9']} style={styles.todayCard}>
+          <LinearGradient colors={['#7c3aed', '#6d28d9']} style={[styles.todayCard, isTablet && styles.tabletTodayCard]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent' }}>
               <Text style={styles.screenCardTitle}>{i18n.t('dashboard.today')}</Text>
               <Text style={styles.screenCardDate}>{new Date().toLocaleDateString(i18n.locale === 'ar' ? 'ar-TN' : 'fr-FR', { day: 'numeric', month: 'short' })}</Text>
@@ -146,9 +148,9 @@ export default function DashboardScreen() {
             </View>
           </LinearGradient>
 
-          <View style={styles.screenGrid}>
+          <View style={[styles.screenGrid, isTablet && styles.tabletScreenGrid]}>
             {/* Hier */}
-            <LinearGradient colors={['#475569', '#334155']} style={styles.screenSmallCard}>
+            <LinearGradient colors={['#475569', '#334155']} style={[styles.screenSmallCard, isTablet && styles.tabletSmallCard]}>
                <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent' }}>
                  <Text style={styles.screenSmallLabel}>{i18n.t('dashboard.yesterday')}</Text>
                  <Text style={styles.screenSmallDate}>{(new Date().getDate() - 1)}/{new Date().getMonth() + 1}</Text>
@@ -162,7 +164,7 @@ export default function DashboardScreen() {
             </LinearGradient>
 
             {/* Cette Semaine */}
-            <LinearGradient colors={['#0891b2', '#0e7490']} style={styles.screenSmallCard}>
+            <LinearGradient colors={['#0891b2', '#0e7490']} style={[styles.screenSmallCard, isTablet && styles.tabletSmallCard]}>
                <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent' }}>
                  <Text style={styles.screenSmallLabel}>{i18n.t('dashboard.week')}</Text>
                  <Text style={styles.screenSmallDate}></Text>
@@ -176,7 +178,7 @@ export default function DashboardScreen() {
             </LinearGradient>
 
             {/* Ce Mois */}
-            <LinearGradient colors={['#0d9488', '#0f766e']} style={styles.screenSmallCard}>
+            <LinearGradient colors={['#0d9488', '#0f766e']} style={[styles.screenSmallCard, isTablet && styles.tabletSmallCard]}>
                <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent' }}>
                  <Text style={styles.screenSmallLabel}>{i18n.t('dashboard.month')}</Text>
                  <Text style={styles.screenSmallDate}>{new Date().toLocaleDateString(i18n.locale === 'ar' ? 'ar-TN' : 'fr-FR', { month: 'long' })}</Text>
@@ -190,7 +192,7 @@ export default function DashboardScreen() {
             </LinearGradient>
 
             {/* Total Cumulé */}
-            <LinearGradient colors={['#ea580c', '#c2410c']} style={styles.screenSmallCard}>
+            <LinearGradient colors={['#ea580c', '#c2410c']} style={[styles.screenSmallCard, isTablet && styles.tabletSmallCard]}>
                <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent' }}>
                  <Text style={styles.screenSmallLabel}>{i18n.t('dashboard.totalAllTime')}</Text>
                </View>
@@ -213,154 +215,66 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.mgmtGrid}>
-          <TouchableOpacity 
-            style={[styles.mgmtCard, styles.glassCard, { borderLeftColor: Colors.secondary, borderLeftWidth: 3 }]}
-            onPress={() => router.push('/stocks?tab=PRODUCTS')}
-          >
-            <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-              <FontAwesome name="archive" size={20} color={Colors.secondary} />
-            </View>
-            <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.products')}</Text>
-            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.productsSub')}</Text>
-          </TouchableOpacity>
- 
-          <TouchableOpacity 
-            style={[styles.mgmtCard, styles.glassCard, { borderLeftColor: Colors.primary, borderLeftWidth: 3 }]}
-            onPress={() => router.push('/stocks?tab=MATERIALS')}
-          >
-            <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-              <FontAwesome name="bar-chart" size={20} color={Colors.primary} />
-            </View>
-            <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.stocks')}</Text>
-            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.stocksSub')}</Text>
-          </TouchableOpacity>
- 
-          <TouchableOpacity 
-            style={[styles.mgmtCard, styles.glassCard, { borderLeftColor: Colors.warning, borderLeftWidth: 3 }]}
-            onPress={() => router.push('/marketplace')}
-          >
-            <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
-              <FontAwesome name="shopping-basket" size={20} color={Colors.warning} />
-            </View>
-            <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.b2bMarket')}</Text>
-            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.b2bMarketSub')}</Text>
-          </TouchableOpacity>
- 
-          <TouchableOpacity 
-            style={[styles.mgmtCard, styles.glassCard, { borderLeftColor: Colors.danger, borderLeftWidth: 3 }]}
-            onPress={() => router.push('/suppliers')}
-          >
-            <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
-              <FontAwesome name="handshake-o" size={18} color={Colors.danger} />
-            </View>
-            <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.partners')}</Text>
-            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.partnersSub')}</Text>
-          </TouchableOpacity>
- 
-          <TouchableOpacity 
-            style={[styles.mgmtCard, styles.glassCard, { borderLeftColor: '#a855f7', borderLeftWidth: 3 }]}
-            onPress={() => router.push('/history')}
-          >
-            <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
-              <FontAwesome name="history" size={20} color="#a855f7" />
-            </View>
-            <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.sales')}</Text>
-            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.salesSub')}</Text>
-          </TouchableOpacity>
- 
-          <TouchableOpacity 
-            style={[styles.mgmtCard, styles.glassCard, { borderLeftColor: Colors.primary, borderLeftWidth: 3 }]}
-            onPress={() => router.push('/rachma')}
-          >
-            <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-              <FontAwesome name="bolt" size={20} color={Colors.primary} />
-            </View>
-            <Text style={styles.mgmtCardTitle}>{i18n.t('nav.live')}</Text>
-            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.liveSub') || 'Activité en direct'}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.mgmtCard, styles.glassCard]}
-            onPress={() => router.push('/scanner')}
-          >
-            <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(148, 163, 184, 0.1)' }]}>
-              <FontAwesome name="qrcode" size={20} color="#94a3b8" />
-            </View>
-            <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.scanner')}</Text>
-            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.scannerSub')}</Text>
-          </TouchableOpacity>
-
-          {isOwner && (
-            <>
-              <TouchableOpacity 
-                style={[styles.mgmtCard, styles.glassCard]}
-                onPress={() => router.push('/metrics')}
-              >
-                <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(56, 189, 248, 0.1)' }]}>
-                  <FontAwesome name="line-chart" size={20} color="#38bdf8" />
-                </View>
-                <Text style={styles.mgmtCardTitle}>{i18n.t('nav.metrics').toUpperCase()}</Text>
-                <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.metricsSub')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={[styles.mgmtCard, styles.glassCard]}
-                onPress={() => router.push('/terminals')}
-              >
-                <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-                  <FontAwesome name="desktop" size={20} color={Colors.primary} />
-                </View>
-                <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.terminals')}</Text>
-                <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.terminalsSub')}</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.mgmtCard, styles.glassCard]}
-                onPress={() => router.push('/team')}
-              >
-                <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(236, 72, 153, 0.1)' }]}>
-                  <FontAwesome name="users" size={20} color="#ec4899" />
-                </View>
-                <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.team')}</Text>
-                <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.teamSub')}</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-        {/* ── SECTION: CHARTS (REFINED) ────────────────────────── */}
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>{i18n.t('dashboard.ticketVolume')}</Text>
-          <View style={styles.chartArea}>
-             <View style={styles.chartBars}>
-                {(stats.weeklyOrderHistory || [0, 0, 0, 0, 0, 0, 0]).map((val: number, i: number) => (
-                  <View key={i} style={styles.barCol}>
-                    <View style={[styles.bar, { height: Math.max(8, val * 25), backgroundColor: '#10b981', opacity: 0.8 }]} />
-                    <Text style={styles.barLabel}>{i18n.t('dashboard.daysShort').split(',')[i]}</Text>
-                  </View>
-                ))}
-             </View>
-             <View style={styles.chartLegend}>
-                <View style={{ backgroundColor: '#10b981', width: 6, height: 6, borderRadius: 3, marginRight: 6 }} />
-                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '600' }}>{i18n.t('dashboard.ticketCount')}</Text>
-             </View>
-          </View>
+          {[
+            { id: 'products', route: '/stocks?tab=PRODUCTS', icon: 'archive', color: Colors.secondary, title: 'dashboard.products', sub: 'dashboard.productsSub' },
+            { id: 'stocks', route: '/stocks?tab=MATERIALS', icon: 'bar-chart', color: Colors.primary, title: 'dashboard.stocks', sub: 'dashboard.stocksSub' },
+            { id: 'marketplace', route: '/marketplace', icon: 'shopping-basket', color: Colors.warning, title: 'dashboard.b2bMarket', sub: 'dashboard.b2bMarketSub' },
+            { id: 'partners', route: '/suppliers', icon: 'handshake-o', color: Colors.danger, title: 'dashboard.partners', sub: 'dashboard.partnersSub' },
+            { id: 'sales', route: '/history', icon: 'history', color: '#a855f7', title: 'dashboard.sales', sub: 'dashboard.salesSub' },
+            { id: 'live', route: '/rachma', icon: 'bolt', color: Colors.primary, title: 'nav.live', sub: 'dashboard.liveSub' },
+            { id: 'scanner', route: '/scanner', icon: 'qrcode', color: '#94a3b8', title: 'dashboard.scanner', sub: 'dashboard.scannerSub' },
+            ...(isOwner ? [
+              { id: 'metrics', route: '/metrics', icon: 'line-chart', color: '#38bdf8', title: 'nav.metrics', sub: 'dashboard.metricsSub' },
+              { id: 'terminals', route: '/terminals', icon: 'desktop', color: Colors.primary, title: 'dashboard.terminals', sub: 'dashboard.terminalsSub' },
+              { id: 'team', route: '/team', icon: 'users', color: '#ec4899', title: 'dashboard.team', sub: 'dashboard.teamSub' }
+            ] : [])
+          ].map((item) => (
+            <TouchableOpacity 
+              key={item.id}
+              style={[styles.mgmtCard, styles.glassCard, isTablet && styles.tabletMgmtCard, { borderLeftColor: item.color, borderLeftWidth: 3 }]}
+              onPress={() => router.push(item.route as any)}
+            >
+              <View style={[styles.mgmtIconCircle, { backgroundColor: `${item.color}15` }]}>
+                <FontAwesome name={item.icon as any} size={20} color={item.color} />
+              </View>
+              <Text style={styles.mgmtCardTitle}>{i18n.t(item.title).toUpperCase()}</Text>
+              <Text style={styles.mgmtCardSub}>{i18n.t(item.sub)}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>{i18n.t('dashboard.revenueVolume')}</Text>
-          <View style={styles.chartArea}>
-             <View style={styles.chartBars}>
-                {(stats.weeklySalesHistory || [0, 0, 0, 0, 0, 0, 0]).map((val: any, i: number) => {
-                  const numVal = typeof val === 'object' ? val.total : val;
-                  const maxVal = Math.max(...(stats.weeklySalesHistory?.map((h:any) => typeof h === 'object' ? h.total : h) || [100]));
-                  return (
+        {/* ── SECTION: CHARTS ── */}
+        <View style={[isTablet && { flexDirection: 'row', gap: 20, marginTop: 20 }]}>
+          <View style={[styles.chartContainer, isTablet && { flex: 1 }]}>
+            <Text style={styles.chartTitle}>{i18n.t('dashboard.ticketVolume')}</Text>
+            <View style={styles.chartArea}>
+              <View style={styles.chartBars}>
+                  {(stats.weeklyOrderHistory || [0, 0, 0, 0, 0, 0, 0]).map((val: number, i: number) => (
                     <View key={i} style={styles.barCol}>
-                      <View style={[styles.bar, { height: Math.max(8, (numVal / maxVal) * 100), backgroundColor: '#6366f1', opacity: 0.8 }]} />
-                      <Text style={styles.barLabel}>{i18n.t('dashboard.daysVeryShort').split(',')[i]}</Text>
+                      <View style={[styles.bar, { height: Math.max(8, val * 25), backgroundColor: '#10b981', opacity: 0.8 }]} />
+                      <Text style={styles.barLabel}>{i18n.t('dashboard.daysShort').split(',')[i]}</Text>
                     </View>
-                  );
-                })}
-             </View>
+                  ))}
+              </View>
+            </View>
+          </View>
+
+          <View style={[styles.chartContainer, isTablet && { flex: 1 }]}>
+            <Text style={styles.chartTitle}>{i18n.t('dashboard.revenueVolume')}</Text>
+            <View style={styles.chartArea}>
+              <View style={styles.chartBars}>
+                  {(stats.weeklySalesHistory || [0, 0, 0, 0, 0, 0, 0]).map((val: any, i: number) => {
+                    const numVal = typeof val === 'object' ? val.total : val;
+                    const maxVal = Math.max(...(stats.weeklySalesHistory?.map((h:any) => typeof h === 'object' ? h.total : h) || [100]));
+                    return (
+                      <View key={i} style={styles.barCol}>
+                        <View style={[styles.bar, { height: Math.max(8, (numVal / maxVal) * 100), backgroundColor: '#6366f1', opacity: 0.8 }]} />
+                        <Text style={styles.barLabel}>{i18n.t('dashboard.daysVeryShort').split(',')[i]}</Text>
+                      </View>
+                    );
+                  })}
+              </View>
+            </View>
           </View>
         </View>
 
@@ -369,118 +283,77 @@ export default function DashboardScreen() {
           <View style={{ marginTop: 10, marginBottom: 20 }}>
             <Text style={styles.sectionTitle}>{i18n.t('dashboard.detailedAnalysis')}</Text>
             
-            {/* Profit Net Banner */}
-            <View style={[styles.profitBanner, {
-              backgroundColor: stats.netProfit >= 0 ? 'rgba(16,185,129,0.05)' : 'rgba(239,68,68,0.05)',
-              borderColor: stats.netProfit >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-              marginTop: 10,
-            }]}>
-              <View style={{ backgroundColor: 'transparent' }}>
-                <Text style={styles.profitLabel}>{i18n.t('dashboard.netProfit')}</Text>
-                <Text style={[styles.profitValue, { color: stats.netProfit >= 0 ? Colors.primary : Colors.danger }]}>
-                  {fmtMoney(stats.netProfit ?? stats.totalSales - stats.totalExpenses)} DT
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: 'transparent' }}>
-                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: stats.netProfit >= 0 ? Colors.primary : Colors.danger, marginRight: 6 }} />
-                   <Text style={[styles.profitSub, { color: '#94a3b8' }]}>{i18n.t('dashboard.margin')}: {stats.totalSales > 0 ? ((1 - stats.totalExpenses/stats.totalSales)*100).toFixed(0) : 0}%</Text>
+            <View style={[isTablet && { flexDirection: 'row', gap: 20 }]}>
+              {/* Profit Net Banner */}
+              <View style={[styles.profitBanner, isTablet && { flex: 1 }, {
+                backgroundColor: stats.netProfit >= 0 ? 'rgba(16,185,129,0.05)' : 'rgba(239,68,68,0.05)',
+                borderColor: stats.netProfit >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+              }]}>
+                <View style={{ backgroundColor: 'transparent' }}>
+                  <Text style={styles.profitLabel}>{i18n.t('dashboard.netProfit')}</Text>
+                  <Text style={[styles.profitValue, { color: stats.netProfit >= 0 ? Colors.primary : Colors.danger }]}>
+                    {fmtMoney(stats.netProfit ?? stats.totalSales - stats.totalExpenses)} DT
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: 'transparent' }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: stats.netProfit >= 0 ? Colors.primary : Colors.danger, marginRight: 6 }} />
+                    <Text style={[styles.profitSub, { color: '#94a3b8' }]}>{i18n.t('dashboard.margin')}: {stats.totalSales > 0 ? ((1 - stats.totalExpenses/stats.totalSales)*100).toFixed(0) : 0}%</Text>
+                  </View>
                 </View>
+                <FontAwesome
+                  name={stats.netProfit >= 0 ? 'line-chart' : 'warning'}
+                  size={32}
+                  color={stats.netProfit >= 0 ? Colors.primary : Colors.danger}
+                  style={{ opacity: 0.5 }}
+                />
               </View>
-              <FontAwesome
-                name={stats.netProfit >= 0 ? 'line-chart' : 'warning'}
-                size={32}
-                color={stats.netProfit >= 0 ? Colors.primary : Colors.danger}
-                style={{ opacity: 0.5 }}
-              />
-            </View>
 
-            {/* Top Stats Scrollable list or Grid */}
-            <View style={{ gap: 12 }}>
+              <View style={[isTablet && { flex: 2, flexDirection: 'row', gap: 20 }]}>
                 {stats.topStaff?.length > 0 && (
-                  <View style={[styles.analyticsCard, styles.glassCard]}>
+                  <View style={[styles.analyticsCard, styles.glassCard, { flex: 1, marginBottom: 0 }]}>
                     <View style={styles.analyticsHeader}>
                       <Text style={styles.analyticsTitle}>{i18n.t('dashboard.staffPerformance')}</Text>
                     </View>
-                    {stats.topStaff?.length > 0 ? (
-                      stats.topStaff.slice(0, 3).map((s: any, i: number) => (
-                        <View key={i} style={[styles.rankRow, i === 2 && { borderBottomWidth: 0 }]}>
-                          <View style={[styles.rankNumBox, { backgroundColor: i === 0 ? 'rgba(16,185,129,0.1)' : 'transparent' }]}>
-                            <Text style={[styles.rankNum, i === 0 && { color: Colors.primary }]}>{i + 1}</Text>
-                          </View>
-                          <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                            <Text style={styles.rankName}>{s.name}</Text>
-                            <Text style={styles.rankSub}>{fmtMoney(s.revenue)} DT</Text>
-                          </View>
-                          {i === 0 && <FontAwesome name="trophy" size={14} color="#fbbf24" />}
+                    {stats.topStaff.slice(0, 3).map((s: any, i: number) => (
+                      <View key={i} style={[styles.rankRow, i === 2 && { borderBottomWidth: 0 }]}>
+                        <View style={[styles.rankNumBox, { backgroundColor: i === 0 ? 'rgba(16,185,129,0.1)' : 'transparent' }]}>
+                          <Text style={[styles.rankNum, i === 0 && { color: Colors.primary }]}>{i + 1}</Text>
                         </View>
-                      ))
-                    ) : (
-                      <Text style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: 20 }}>{i18n.t('dashboard.noStaffSales')}</Text>
-                    )}
+                        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                          <Text style={styles.rankName}>{s.name}</Text>
+                          <Text style={styles.rankSub}>{fmtMoney(s.revenue)} DT</Text>
+                        </View>
+                      </View>
+                    ))}
                   </View>
                 )}
 
-                {(stats.topProducts?.length > 0 || true) && (
-                  <View style={[styles.analyticsCard, styles.glassCard]}>
+                {stats.topProducts?.length > 0 && (
+                  <View style={[styles.analyticsCard, styles.glassCard, { flex: 1, marginBottom: 0 }]}>
                     <View style={styles.analyticsHeader}>
                       <Text style={styles.analyticsTitle}>{i18n.t('dashboard.bestProducts')}</Text>
                     </View>
-                    {stats.topProducts?.length > 0 ? (
-                      stats.topProducts.slice(0, 3).map((p: any, i: number) => (
-                        <View key={i} style={[styles.rankRow, i === 2 && { borderBottomWidth: 0 }]}>
-                          <Text style={styles.rankNum}>{i + 1}</Text>
-                          <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                            <Text style={styles.rankName}>{i18n.locale === 'ar' && p.nameAr ? p.nameAr : p.name}</Text>
-                            <Text style={styles.rankSub}>{fmtMoney(p.revenue)} {i18n.t('dashboard.revenueLabel')}</Text>
-                          </View>
-                          <View style={styles.rankBadge}>
-                            <Text style={styles.rankBadgeText}>{i18n.t('dashboard.salesCount', { count: p.qty })}</Text>
-                          </View>
+                    {stats.topProducts.slice(0, 3).map((p: any, i: number) => (
+                      <View key={i} style={[styles.rankRow, i === 2 && { borderBottomWidth: 0 }]}>
+                        <Text style={styles.rankNum}>{i + 1}</Text>
+                        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+                          <Text style={styles.rankName}>{i18n.locale === 'ar' && p.nameAr ? p.nameAr : p.name}</Text>
+                          <Text style={styles.rankSub}>{fmtMoney(p.revenue)} {i18n.t('dashboard.revenueLabel')}</Text>
                         </View>
-                      ))
-                    ) : (
-                      <Text style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: 20 }}>{i18n.t('dashboard.noDataToday')}</Text>
-                    )}
+                      </View>
+                    ))}
                   </View>
                 )}
+              </View>
             </View>
           </View>
         )}
 
-
-
-
         <View style={{ height: 40 }} />
-
       </ScrollView>
-
-      {/* CRUD Modal */}
-      <Modal visible={!!activeMgmt} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity style={{ flex: 1 }} onPress={() => setActiveMgmt(null)} />
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{i18n.t('dashboard.mgmtTitle', { name: activeMgmt })}</Text>
-              <TouchableOpacity onPress={() => setActiveMgmt(null)}>
-                <FontAwesome name="times-circle" size={28} color="#94a3b8" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView contentContainerStyle={styles.modalBody}>
-              <View style={styles.crudPlaceholder}>
-                <FontAwesome name="gears" size={48} color="rgba(255,255,255,0.05)" />
-                <Text style={{ color: '#94a3b8', marginTop: 15, textAlign: 'center' }}>
-                  {i18n.t('dashboard.mgmtSync', { name: activeMgmt })}
-                </Text>
-                <TouchableOpacity style={styles.addItemBtnFull}>
-                    <Text style={{ color: '#fff', fontWeight: '800' }}>{i18n.t('dashboard.cloudManager')}</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   loadingContainer: {
@@ -1010,6 +883,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
+  },
+  // ── Tablet layout overrides ────────────────────────────────────
+  tabletContainer: {
+    paddingHorizontal: 40,
+  },
+  tabletMetrics: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  tabletTodayCard: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  tabletScreenGrid: {
+    flex: 2,
+  },
+  tabletSmallCard: {
+    width: '23.5%',
+  },
+  tabletMgmtCard: {
+    width: '18.5%',
   },
 });
 

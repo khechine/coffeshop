@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet, ScrollView, TouchableOpacity, FlatList,
-  Text as RNText, View as RNView, Modal, Vibration, Platform, Image,
+  Text as RNText, View as RNView, Modal, Vibration, Platform, Image, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
@@ -32,6 +32,8 @@ const TAX_RATE = 0.19;
 // ────────────────────────────────────────────────
 export default function PosScreen() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isTablet = width > 768;
   const { tableId } = useLocalSearchParams<{ tableId?: string }>();
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<Cart>({});
@@ -368,178 +370,204 @@ export default function PosScreen() {
   };
 
   // ── Categories ──
-  const categories = ['ALL', ...Array.from(new Set(products.map(p => p.category)))];
-  const filtered = activeCategory === 'ALL' ? products : products.filter(p => p.category === activeCategory);
+  const categories = useMemo(() => ['ALL', ...Array.from(new Set(products.map(p => p.category)))], [products]);
+  const filtered = useMemo(() => activeCategory === 'ALL' ? products : products.filter(p => p.category === activeCategory), [products, activeCategory]);
 
-  return (
-    <View style={styles.container}>
-      {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12), paddingBottom: 15 }]}>
-        {tableId ? (
-           <TouchableOpacity onPress={() => router.push('/(tabs)/tables')} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent' }}>
-             <FontAwesome name="arrow-left" size={20} color={Colors.primary} style={{ marginRight: 10 }} />
-             <Text style={styles.headerTitle}>{tableId}</Text>
-           </TouchableOpacity>
-        ) : (
-           <Text style={styles.headerTitle}>{i18n.t('pos.pointOfSale')}</Text>
-        )}
-        <TouchableOpacity onPress={handleLock} style={styles.lockBtn}>
-          <FontAwesome name="lock" size={24} color={Colors.danger} />
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Categories ── */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesBar} contentContainerStyle={{ paddingVertical: 10 }}>
-        {categories.map(cat => (
-          <TouchableOpacity
-            key={cat}
-            style={[styles.catBtn, activeCategory === cat && styles.catBtnActive]}
-            onPress={() => setActiveCategory(cat)}
-          >
-            <RNText style={[styles.catBtnText, activeCategory === cat && styles.catBtnTextActive]}>
-              {cat === 'ALL' ? i18n.t('pos.categoryAll') : cat}
-            </RNText>
+  const renderCartContent = () => (
+    <RNView style={[styles.cartSheet, isTablet && styles.tabletCartSheet]}>
+      {/* Sheet header */}
+      <RNView style={styles.cartHeader}>
+        <RNText style={styles.cartTitle}>{tableId ? `🛒 ${i18n.t('pos.bill')} ${tableId}` : `🛒 ${i18n.t('pos.cart')}`}</RNText>
+        {!isTablet && (
+          <TouchableOpacity onPress={() => setCartOpen(false)}>
+            <FontAwesome name="close" size={22} color="#94a3b8" />
           </TouchableOpacity>
+        )}
+      </RNView>
+
+      {/* Cart items */}
+      <ScrollView style={styles.cartItems} contentContainerStyle={{ paddingBottom: 20 }}>
+        {cartItems.length === 0 && (
+          <RNText style={styles.emptyCartText}>{i18n.t('pos.emptyCart')}</RNText>
+        )}
+        {cartItems.map(({ product, qty }) => (
+          <RNView key={product.id} style={styles.cartRow}>
+            <RNView style={styles.cartRowInfo}>
+              <RNText style={styles.cartItemName}>{product.icon} {i18n.locale === 'ar' && (product as any).nameAr ? (product as any).nameAr : product.name}</RNText>
+              <RNText style={styles.cartItemSub}>{qty} × {product.price.toFixed(3)} DT</RNText>
+            </RNView>
+            <RNText style={styles.cartItemTotal}>{(product.price * qty).toFixed(3)}</RNText>
+            <RNView style={styles.qtyControls}>
+              <TouchableOpacity style={styles.qtyBtn} onPress={() => removeFromCart(product.id)}>
+                <RNText style={styles.qtyBtnText}>−</RNText>
+              </TouchableOpacity>
+              <RNText style={styles.qtyNum}>{qty}</RNText>
+              <TouchableOpacity style={styles.qtyBtn} onPress={() => addToCart(product.id)}>
+                <RNText style={styles.qtyBtnText}>+</RNText>
+              </TouchableOpacity>
+            </RNView>
+          </RNView>
         ))}
       </ScrollView>
 
-      {/* ── Product Grid ── */}
-      <FlatList
-        data={filtered}
-        numColumns={(Platform as any).isPad ? 4 : 2}
-        key={((Platform as any).isPad ? 'tab' : 'mob')} // Fix for dynamic numColumns
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.productGrid}
-        renderItem={({ item }) => {
-          const qty = cart[item.id] || 0;
-          return (
-            <TouchableOpacity
-              style={[styles.productCard, qty > 0 && styles.productCardActive]}
-              onPress={() => addToCart(item.id)}
-              activeOpacity={0.85}
-            >
-              {item.image ? (
-                <Image source={{ uri: ApiService.getFileUrl(item.image) || undefined }} style={styles.productImage} />
-              ) : (
-                <RNText style={styles.productEmoji}>{item.icon}</RNText>
-              )}
-              <RNText style={styles.productName} numberOfLines={2}>{i18n.locale === 'ar' && (item as any).nameAr ? (item as any).nameAr : item.name}</RNText>
-              <RNText style={styles.productPrice}>{item.price.toFixed(3)} DT</RNText>
-              {qty > 0 && (
-                <RNView style={styles.qtyBadge}>
-                  <RNText style={styles.qtyBadgeText}>{qty}</RNText>
-                </RNView>
-              )}
-            </TouchableOpacity>
-          );
-        }}
-      />
-
-      {/* ── Cart FAB ── */}
-      <TouchableOpacity
-        style={[styles.cartFab, cartQty === 0 && { opacity: 0.5 }]}
-        onPress={() => setCartOpen(true)}
-        activeOpacity={0.85}
-      >
-        <FontAwesome name="shopping-basket" size={24} color="#ffffff" />
-        {cartQty > 0 && (
-          <RNView style={styles.fabBadge}>
-            <RNText style={styles.fabBadgeText}>{cartQty}</RNText>
+      {/* Totals */}
+      {cartItems.length > 0 && (
+        <RNView style={styles.totalsBox}>
+          <RNView style={styles.totalRow}>
+            <RNText style={styles.totalLabel}>{i18n.t('pos.ht')}</RNText>
+            <RNText style={styles.totalValue}>{totalHT.toFixed(3)} DT</RNText>
           </RNView>
-        )}
-        {subtotalTTC > 0 && (
-          <RNText style={styles.fabTotal}>{subtotalTTC.toFixed(3)} DT</RNText>
-        )}
-      </TouchableOpacity>
-
-      {/* ── Cart Bottom Sheet ── */}
-      <Modal visible={cartOpen} animationType="slide" transparent>
-        <RNView style={styles.cartOverlay}>
-          <TouchableOpacity style={styles.cartBackdrop} onPress={() => setCartOpen(false)} />
-          <RNView style={styles.cartSheet}>
-            {/* Sheet header */}
-            <RNView style={styles.cartHeader}>
-              <RNText style={styles.cartTitle}>{tableId ? `🛒 ${i18n.t('pos.bill')} ${tableId}` : `🛒 ${i18n.t('pos.cart')}`}</RNText>
-              <TouchableOpacity onPress={() => setCartOpen(false)}>
-                <FontAwesome name="close" size={22} color="#94a3b8" />
-              </TouchableOpacity>
-            </RNView>
-
-            {/* Cart items */}
-            <ScrollView style={styles.cartItems}>
-              {cartItems.length === 0 && (
-                <RNText style={styles.emptyCartText}>{i18n.t('pos.emptyCart')}</RNText>
-              )}
-              {cartItems.map(({ product, qty }) => (
-                <RNView key={product.id} style={styles.cartRow}>
-                  <RNView style={styles.cartRowInfo}>
-                    <RNText style={styles.cartItemName}>{product.icon} {i18n.locale === 'ar' && (product as any).nameAr ? (product as any).nameAr : product.name}</RNText>
-                    <RNText style={styles.cartItemSub}>{qty} × {product.price.toFixed(3)} DT</RNText>
-                  </RNView>
-                  <RNText style={styles.cartItemTotal}>{(product.price * qty).toFixed(3)}</RNText>
-                  <RNView style={styles.qtyControls}>
-                    <TouchableOpacity style={styles.qtyBtn} onPress={() => removeFromCart(product.id)}>
-                      <RNText style={styles.qtyBtnText}>−</RNText>
-                    </TouchableOpacity>
-                    <RNText style={styles.qtyNum}>{qty}</RNText>
-                    <TouchableOpacity style={styles.qtyBtn} onPress={() => addToCart(product.id)}>
-                      <RNText style={styles.qtyBtnText}>+</RNText>
-                    </TouchableOpacity>
-                  </RNView>
-                </RNView>
-              ))}
-            </ScrollView>
-
-            {/* Totals */}
-            {cartItems.length > 0 && (
-              <RNView style={styles.totalsBox}>
-                <RNView style={styles.totalRow}>
-                  <RNText style={styles.totalLabel}>{i18n.t('pos.ht')}</RNText>
-                  <RNText style={styles.totalValue}>{totalHT.toFixed(3)} DT</RNText>
-                </RNView>
-                <RNView style={styles.totalRow}>
-                  <RNText style={styles.totalLabel}>{i18n.t('pos.tva')}</RNText>
-                  <RNText style={styles.totalValue}>{totalTax.toFixed(3)} DT</RNText>
-                </RNView>
-                <RNView style={[styles.totalRow, styles.totalRowBig]}>
-                  <RNText style={styles.totalBigLabel}>{i18n.t('pos.totalTtc')}</RNText>
-                  <RNText style={styles.totalBigValue}>{subtotalTTC.toFixed(3)} DT</RNText>
-                </RNView>
-              </RNView>
-            )}
-
-            {/* Actions */}
-            <RNView style={styles.cartActions}>
-              <TouchableOpacity style={styles.clearBtn} onPress={clearCart}>
-                <FontAwesome name="trash" size={18} color={Colors.danger} />
-              </TouchableOpacity>
-              {tableId ? (
-                <>
-                  <TouchableOpacity style={styles.saveTableBtn} onPress={() => { Vibration.vibrate(20); setCartOpen(false); }}>
-                    <FontAwesome name="save" size={18} color="#ffffff" />
-                    <RNText style={styles.checkoutText}>{i18n.t('pos.save')}</RNText>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.checkoutTableBtn} onPress={checkoutTable}>
-                    <FontAwesome name="check" size={18} color="#ffffff" />
-                    <RNText style={styles.checkoutText}>{i18n.t('pos.checkout')}</RNText>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <TouchableOpacity style={styles.checkoutBtn} onPress={checkout}>
-                  <FontAwesome name="check" size={18} color="#ffffff" />
-                  <RNText style={styles.checkoutText}>{i18n.t('pos.checkout')}</RNText>
-                </TouchableOpacity>
-              )}
-            </RNView>
+          <RNView style={styles.totalRow}>
+            <RNText style={styles.totalLabel}>{i18n.t('pos.tva')}</RNText>
+            <RNText style={styles.totalValue}>{totalTax.toFixed(3)} DT</RNText>
+          </RNView>
+          <RNView style={[styles.totalRow, styles.totalRowBig]}>
+            <RNText style={styles.totalBigLabel}>{i18n.t('pos.totalTtc')}</RNText>
+            <RNText style={styles.totalBigValue}>{subtotalTTC.toFixed(3)} DT</RNText>
           </RNView>
         </RNView>
-      </Modal>
+      )}
+
+      {/* Actions */}
+      <RNView style={styles.cartActions}>
+        <TouchableOpacity style={styles.clearBtn} onPress={clearCart}>
+          <FontAwesome name="trash" size={18} color={Colors.danger} />
+        </TouchableOpacity>
+        {tableId ? (
+          <>
+            <TouchableOpacity style={styles.saveTableBtn} onPress={() => { Vibration.vibrate(20); if(!isTablet) setCartOpen(false); }}>
+              <FontAwesome name="save" size={18} color="#ffffff" />
+              <RNText style={styles.checkoutText}>{i18n.t('pos.save')}</RNText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.checkoutTableBtn} onPress={checkoutTable}>
+              <FontAwesome name="check" size={18} color="#ffffff" />
+              <RNText style={styles.checkoutText}>{i18n.t('pos.checkout')}</RNText>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity style={styles.checkoutBtn} onPress={checkout}>
+            <FontAwesome name="check" size={18} color="#ffffff" />
+            <RNText style={styles.checkoutText}>{i18n.t('pos.checkout')}</RNText>
+          </TouchableOpacity>
+        )}
+      </RNView>
+    </RNView>
+  );
+
+  return (
+    <View style={[styles.container, isTablet && styles.tabletContainer]}>
+      {/* ── Main POS Area ── */}
+      <View style={[styles.mainArea, isTablet && styles.tabletMainArea]}>
+        {/* ── Header ── */}
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 12), paddingBottom: 15 }]}>
+          {tableId ? (
+             <TouchableOpacity onPress={() => router.push('/(tabs)/tables')} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent' }}>
+               <FontAwesome name="arrow-left" size={20} color={Colors.primary} style={{ marginRight: 10 }} />
+               <Text style={styles.headerTitle}>{tableId}</Text>
+             </TouchableOpacity>
+          ) : (
+             <Text style={styles.headerTitle}>{i18n.t('pos.pointOfSale')}</Text>
+          )}
+          <TouchableOpacity onPress={handleLock} style={styles.lockBtn}>
+            <FontAwesome name="lock" size={24} color={Colors.danger} />
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Categories ── */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesBar} contentContainerStyle={{ paddingVertical: 10 }}>
+          {categories.map(cat => (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.catBtn, activeCategory === cat && styles.catBtnActive]}
+              onPress={() => setActiveCategory(cat)}
+            >
+              <RNText style={[styles.catBtnText, activeCategory === cat && styles.catBtnTextActive]}>
+                {cat === 'ALL' ? i18n.t('pos.categoryAll') : cat}
+              </RNText>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* ── Product Grid ── */}
+        <FlatList
+          data={filtered}
+          numColumns={isTablet ? 4 : 2}
+          key={isTablet ? 'tab' : 'mob'}
+          keyExtractor={item => item.id}
+          contentContainerStyle={[styles.productGrid, isTablet && styles.tabletProductGrid]}
+          renderItem={({ item }) => {
+            const qty = cart[item.id] || 0;
+            return (
+              <TouchableOpacity
+                style={[styles.productCard, qty > 0 && styles.productCardActive]}
+                onPress={() => addToCart(item.id)}
+                activeOpacity={0.85}
+              >
+                {item.image ? (
+                  <Image source={{ uri: ApiService.getFileUrl(item.image) || undefined }} style={styles.productImage} />
+                ) : (
+                  <RNText style={styles.productEmoji}>{item.icon}</RNText>
+                )}
+                <RNText style={styles.productName} numberOfLines={2}>{i18n.locale === 'ar' && (item as any).nameAr ? (item as any).nameAr : item.name}</RNText>
+                <RNText style={styles.productPrice}>{item.price.toFixed(3)} DT</RNText>
+                {qty > 0 && (
+                  <RNView style={styles.qtyBadge}>
+                    <RNText style={styles.qtyBadgeText}>{qty}</RNText>
+                  </RNView>
+                )}
+              </TouchableOpacity>
+            );
+          }}
+        />
+
+        {/* ── Cart FAB (Mobile Only) ── */}
+        {!isTablet && (
+          <TouchableOpacity
+            style={[styles.cartFab, cartQty === 0 && { opacity: 0.5 }]}
+            onPress={() => setCartOpen(true)}
+            activeOpacity={0.85}
+          >
+            <FontAwesome name="shopping-basket" size={24} color="#ffffff" />
+            {cartQty > 0 && (
+              <RNView style={styles.fabBadge}>
+                <RNText style={styles.fabBadgeText}>{cartQty}</RNText>
+              </RNView>
+            )}
+            {subtotalTTC > 0 && (
+              <RNText style={styles.fabTotal}>{subtotalTTC.toFixed(3)} DT</RNText>
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* ── Cart Sidebar (Tablet Only) ── */}
+      {isTablet && (
+        <View style={styles.sidebar}>
+          {renderCartContent()}
+        </View>
+      )}
+
+      {/* ── Cart Bottom Sheet (Mobile Only) ── */}
+      {!isTablet && (
+        <Modal visible={cartOpen} animationType="slide" transparent>
+          <RNView style={styles.cartOverlay}>
+            <TouchableOpacity style={styles.cartBackdrop} onPress={() => setCartOpen(false)} />
+            {renderCartContent()}
+          </RNView>
+        </Modal>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0f1e' },
+  tabletContainer: { flexDirection: 'row' },
+  
+  mainArea: { flex: 1 },
+  tabletMainArea: { flex: 3, borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.05)' },
+
+  sidebar: { flex: 1.2, backgroundColor: '#0a0f1e' },
 
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -580,6 +608,7 @@ const styles = StyleSheet.create({
 
   // Product grid
   productGrid: { padding: 10, paddingBottom: 160 },
+  tabletProductGrid: { paddingBottom: 40 },
   productCard: {
     flex: 1, margin: 5, borderRadius: 20, padding: 16,
     backgroundColor: 'rgba(16, 20, 35, 0.7)',
@@ -625,6 +654,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a0f1e', borderTopLeftRadius: 32, borderTopRightRadius: 32,
     maxHeight: '85%', paddingBottom: 40,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
+  },
+  tabletCartSheet: {
+    flex: 1, borderTopLeftRadius: 0, borderTopRightRadius: 0, borderLeftWidth: 1,
+    maxHeight: '100%', paddingBottom: 0,
   },
   cartHeader: {
     backgroundColor: '#111827',
@@ -689,3 +722,4 @@ const styles = StyleSheet.create({
   },
   checkoutText: { color: '#ffffff', fontWeight: '800', fontSize: 16 },
 });
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, Alert, Linking } from 'react-native';
+import { StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, Alert, Linking, useWindowDimensions } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
@@ -9,6 +9,8 @@ import i18n from '../../locales/i18n';
 
 export default function SuppliersScreen() {
   const [loading, setLoading] = useState(true);
+  const { width } = useWindowDimensions();
+  const isTablet = width > 768;
   const [refreshing, setRefreshing] = useState(false);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -128,18 +130,20 @@ export default function SuppliersScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
         }
       >
-        {filtered.length > 0 ? filtered.map((s, idx) => (
-          <TouchableOpacity 
-            key={idx} 
-            style={[styles.supplierCard, styles.glassCard]}
-            onPress={() => {
-                setEditingSupplier(s);
-                setFormName(s.name);
-                setFormContact(s.contact || '');
-                setFormPhone(s.phone || '');
-                setIsModalVisible(true);
-            }}
-          >
+        {filtered.length > 0 ? (
+          <View style={isTablet ? { flexDirection: 'row', flexWrap: 'wrap', gap: 15 } : {}}>
+            {filtered.map((s, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.supplierCard, styles.glassCard, isTablet && { width: '48%' }]}
+                onPress={() => {
+                    setEditingSupplier(s);
+                    setFormName(s.name);
+                    setFormContact(s.contact || '');
+                    setFormPhone(s.phone || '');
+                    setIsModalVisible(true);
+                }}
+              >
             <View style={styles.cardHeader}>
                 <View style={styles.avatar}>
                     <Text style={styles.avatarText}>{s.name.substring(0, 1).toUpperCase()}</Text>
@@ -162,8 +166,10 @@ export default function SuppliersScreen() {
                    <Text style={styles.tagText}>{i18n.t('suppliers.ordersCount', { count: s._count?.orders || 0 })}</Text>
                 </View>
             </View>
-          </TouchableOpacity>
-        )) : (
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
           <View style={styles.emptyState}>
              <FontAwesome name="handshake-o" size={64} color="rgba(255,255,255,0.05)" />
              <Text style={styles.emptyText}>{i18n.t('suppliers.emptyState')}</Text>
