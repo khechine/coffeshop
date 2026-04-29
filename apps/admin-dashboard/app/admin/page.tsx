@@ -142,7 +142,10 @@ export default async function AdminDashboardPage() {
           </div>
           <div style={{ marginTop: '24px' }}>
             <div className="kpi-label" style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '4px', fontSize: '13px', fontWeight: 600 }}>Chiffre d'Affaires</div>
-            <div className="kpi-value" style={{ color: '#fff', fontSize: '32px', fontWeight: 900 }}>{revenue.toFixed(3)} <span style={{ fontSize: '16px', opacity: 0.8 }}>DT</span></div>
+            <div className="kpi-value" style={{ color: '#fff', fontSize: '32px', fontWeight: 900, display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              {revenue.toFixed(3)} 
+              <span style={{ fontSize: '16px', opacity: 0.8, fontWeight: 700 }}>DT</span>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
               <div style={{ padding: '2px 8px', background: 'rgba(16, 185, 129, 0.2)', borderRadius: '6px', fontSize: '12px', fontWeight: 700, color: '#34D399' }}>+12%</div>
               <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>vs hier</span>
@@ -176,7 +179,10 @@ export default async function AdminDashboardPage() {
           </div>
           <div style={{ marginTop: '24px' }}>
             <div className="kpi-label" style={{ marginBottom: '4px', fontSize: '13px', fontWeight: 600, color: '#64748B' }}>Tickets Encaissés</div>
-            <div className="kpi-value" style={{ fontSize: '32px', fontWeight: 900, color: '#1E293B' }}>{salesCount} <span style={{ fontSize: '16px', color: '#94A3B8' }}>cmd.</span></div>
+            <div className="kpi-value" style={{ fontSize: '32px', fontWeight: 900, color: '#1E293B', display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              {salesCount} 
+              <span style={{ fontSize: '16px', color: '#94A3B8', fontWeight: 700 }}>cmd.</span>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
               <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 600 }}>Moyenne: {(revenue/salesCount || 0).toFixed(3)} DT</span>
             </div>
@@ -245,7 +251,10 @@ export default async function AdminDashboardPage() {
           </div>
           <div style={{ marginTop: '24px' }}>
             <div className="kpi-label" style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '4px', fontSize: '13px', fontWeight: 600 }}>Profit Net (Journalier)</div>
-            <div className="kpi-value" style={{ color: '#fff', fontSize: '32px', fontWeight: 900 }}>{netProfit.toFixed(3)} <span style={{ fontSize: '16px', opacity: 0.8 }}>DT</span></div>
+            <div className="kpi-value" style={{ color: '#fff', fontSize: '32px', fontWeight: 900, display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              {netProfit.toFixed(3)} 
+              <span style={{ fontSize: '16px', opacity: 0.8, fontWeight: 700 }}>DT</span>
+            </div>
             <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '12px' }}>Dépenses: {totalExpenses.toFixed(3)} DT</div>
           </div>
         </div>

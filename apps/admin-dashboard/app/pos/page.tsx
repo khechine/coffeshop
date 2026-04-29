@@ -82,35 +82,10 @@ export default async function POSPage() {
     items: s.items.map((i: any) => ({ name: i.product?.name || 'Inconnu', quantity: Number(i.quantity), price: Number(i.price) }))
   }));
   
-  // Règle métier : Rachma/STARTER ou Pas de plan + Pas de fiscalité = Système Simpliste (Rachma)
   const planNameUpper = (store.subscription?.plan?.name || '').toUpperCase();
   const isFiscal = !!store.isFiscalEnabled;
-  const isRachmaPlan = !planNameUpper || planNameUpper === 'RACHMA' || planNameUpper === 'STARTER';
-  const isRachmaOnly = planNameUpper === 'RACHMA';
-  
-  if (isRachmaOnly || (isRachmaPlan && !isFiscal)) {
-    return (
-      <>
-        <POSClient
-          storeId={store.id}
-          storeName={store?.name || 'CoffeeSaaS Rachma'} 
-          planName={planNameUpper}
-          isFiscalEnabled={isFiscal}
-          initialProducts={serializedProducts} 
-          initialBaristas={baristas as any} 
-          initialSales={serializedSales}
-          initialTables={tables}
-          terminals={terminals}
-        />
-        {/* Debug indicator for development */}
-        <div style={{ position: 'fixed', bottom: 5, right: 5, fontSize: '10px', color: '#ccc', zIndex: 9999, pointerEvents: 'none' }}>
-          Mode Rachma Active ({planNameUpper})
-        </div>
-      </>
-    );
-  }
 
-  // Sinon, Premium POS pour PRO ou si Fiscalité activée
+  // Premium POS pour tout le monde (Désactivation du mode Rachma Legacy sur demande utilisateur)
   return (
     <>
       <PremiumPOSClient 
@@ -127,7 +102,6 @@ export default async function POSPage() {
         loyaltyEarnRate={Number(store.loyaltyEarnRate || 1)}
         loyaltyRedeemRate={Number(store.loyaltyRedeemRate || 100)}
       />
-      {/* Debug indicator for development */}
       <div style={{ position: 'fixed', bottom: 5, right: 5, fontSize: '10px', color: '#ccc', zIndex: 9999, pointerEvents: 'none' }}>
         Mode Premium Active ({planNameUpper}) {isFiscal ? '[FISC]' : ''}
       </div>
