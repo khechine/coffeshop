@@ -1,7 +1,11 @@
 import { prisma } from '@coffeeshop/database';
 import { getStore } from '../actions';
 import Link from 'next/link';
-import { ShoppingCart, TrendingUp, AlertTriangle, Coffee, ArrowRight, Package, Layers, Users, Zap, ArrowUpRight, User, Wallet } from 'lucide-react';
+import { 
+  ShoppingCart, TrendingUp, AlertTriangle, Coffee, ArrowRight, Package, 
+  Layers, Users, Zap, ArrowUpRight, User, Wallet, Truck, Boxes, FileText, 
+  Settings, Activity, LayoutGrid 
+} from 'lucide-react';
 
 import { redirect } from 'next/navigation';
 
@@ -207,7 +211,72 @@ export default async function AdminDashboardPage() {
       </div>
 
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '30px', marginTop: '40px' }}>
+      {/* CRITICAL ALERTS SECTION */}
+      {(criticalStockCount > 0 || draftOrders.length > 0) && (
+        <div style={{ marginBottom: '32px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertTriangle size={20} color="#F59E0B" /> Actions Requises
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+            {criticalStockCount > 0 && (
+              <Link href="/admin/stock" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#FFF7ED', border: '1px solid #FFEDD5', borderRadius: '16px', textDecoration: 'none' }}>
+                <div style={{ width: '40px', height: '40px', background: '#F97316', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Package size={20} color="#fff" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#9A3412' }}>{criticalStockCount} Articles en Rupture</div>
+                  <div style={{ fontSize: '12px', color: '#C2410C' }}>Le niveau de stock est inférieur au seuil.</div>
+                </div>
+              </Link>
+            )}
+            {draftOrders.length > 0 && (
+              <Link href="/vendor/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '16px', textDecoration: 'none' }}>
+                <div style={{ width: '40px', height: '40px', background: '#3B82F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Truck size={20} color="#fff" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#1E40AF' }}>{draftOrders.length} Commandes en Attente</div>
+                  <div style={{ fontSize: '12px', color: '#1D4ED8' }}>Certains réapprovisionnements sont à valider.</div>
+                </div>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODULE NAVIGATION GRID */}
+      <div style={{ marginBottom: '40px' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', marginBottom: '20px' }}>Pilotage & Modules</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
+          {[
+            { label: 'Sourcing & B2B', sub: 'Marketplace Fournisseurs', icon: Truck, color: '#6366F1', href: '/marketplace', bg: '#EEF2FF' },
+            { label: 'Stock & Inventaire', sub: 'Matières premières & Alertes', icon: Boxes, color: '#F59E0B', href: '/admin/stock', bg: '#FFFBEB' },
+            { label: 'Clients & Fidélité', sub: 'Base client & Points cadeau', icon: Users, color: '#10B981', href: '/admin/customers', bg: '#ECFDF5' },
+            { label: 'Tables & Salles', sub: 'Plan de salle & Occupation', icon: LayoutGrid, color: '#8B5CF6', href: '/admin/tables', bg: '#F5F3FF' },
+            { label: 'Reporting & Clôtures', sub: 'Exports & Rapports journaliers', icon: FileText, color: '#EC4899', href: '/admin/reports', bg: '#FDF2F8' },
+            { label: 'Dépenses & Finance', sub: 'Suivi des coûts & Net profit', icon: Wallet, color: '#06B6D4', href: '/admin/expenses', bg: '#ECFEFF' },
+            { label: 'Configuration', sub: 'Paramètres & Terminaux', icon: Settings, color: '#64748B', href: '/admin/configuration', bg: '#F8FAFC' },
+            { label: 'Live Tracker', sub: 'Ventes en temps réel', icon: Activity, color: '#EF4444', href: '/admin/live', bg: '#FEF2F2' },
+          ].map((mod, i) => (
+            <Link key={i} href={mod.href} style={{ 
+              display: 'flex', flexDirection: 'column', gap: '12px', padding: '24px', 
+              background: '#fff', border: '1px solid #F1F5F9', borderRadius: '20px', 
+              textDecoration: 'none', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+            }} className="hover-lift">
+              <div style={{ width: '48px', height: '48px', background: mod.bg, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <mod.icon size={22} color={mod.color} strokeWidth={2.5} />
+              </div>
+              <div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#1E293B' }}>{mod.label}</div>
+                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', fontWeight: 500 }}>{mod.sub}</div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '30px' }}>
         {/* PRODUCT ANALYTICS */}
         <div className="card" style={{ borderRadius: '24px', border: '1px solid #F1F5F9', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.02)' }}>
            <div style={{ padding: '24px', background: '#F8FAFC', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

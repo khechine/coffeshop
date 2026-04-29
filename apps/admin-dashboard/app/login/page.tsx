@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Coffee, Lock, Mail, Eye, EyeOff, ShieldCheck, Truck, Store, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Coffee, Lock, Mail, Eye, EyeOff, ShieldCheck, Truck, Store, ArrowRight, CheckCircle2, Building2, Package } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { loginUser } from '../actions';
 import Link from 'next/link';
@@ -59,43 +59,48 @@ export default function LoginPage() {
     <div style={{ minHeight: '100vh', background: '#0F172A', display: 'flex', overflow: 'hidden', fontFamily: 'inherit' }}>
       
       {/* Left side: Animated Brand / Info (Visible on Desktop) */}
-      <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px', background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)', color: '#fff' }} className="hide-mobile">
+      <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px', background: 'linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%)', color: '#fff' }} className="hide-mobile">
          {/* Decorative elements */}
-         <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '500px', height: '500px', borderRadius: '50%', background: 'rgba(99,102,241,0.1)', filter: 'blur(80px)' }} />
+         <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '500px', height: '500px', borderRadius: '50%', background: 'rgba(79,70,229,0.15)', filter: 'blur(80px)' }} />
          <div style={{ position: 'absolute', bottom: '10%', right: '0', width: '300px', height: '300px', borderRadius: '50%', background: 'rgba(6,182,212,0.1)', filter: 'blur(60px)' }} />
 
          <div style={{ position: 'relative', zIndex: 1, maxWidth: '500px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px' }}>
-               <div style={{ width: '48px', height: '48px', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Coffee size={28} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '60px' }}>
+               <div style={{ width: '56px', height: '56px', background: 'linear-gradient(135deg, #4F46E5, #06B6D4)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(79,70,229,0.3)' }}>
+                  <Building2 size={32} />
                </div>
-               <span style={{ fontSize: '24px', fontWeight: 900, letterSpacing: '-1px' }}>CoffeeSaaS <span style={{ color: '#818CF8' }}>B2B</span></span>
+               <div style={{ display: 'flex', flexDirection: 'column' }}>
+                 <span style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-1.5px', lineHeight: 1 }}>Alkassa</span>
+                 <span style={{ fontSize: '18px', fontWeight: 800, color: '#818CF8', marginTop: '2px' }}>الكاسة</span>
+               </div>
             </div>
 
-            <h1 style={{ fontSize: '48px', fontWeight: 900, lineHeight: '1.1', marginBottom: '32px', letterSpacing: '-1.5px' }}>
-               Propulsez votre <br />
-               business café.
+            <h1 style={{ fontSize: '56px', fontWeight: 900, lineHeight: '1', marginBottom: '40px', letterSpacing: '-2px' }}>
+               Le futur de la <br />
+               <span style={{ color: '#818CF8' }}>Restauration.</span>
             </h1>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                {[
-                 { icon: <Store size={20} />, title: "Pour les Coffee Shops", desc: "Caisse tactille, gestion de stock et marketplace." },
-                 { icon: <ShieldCheck size={20} />, title: "Pour les Fournisseurs", desc: "Catalogue digital et gestion de commandes b2b." },
-                 { icon: <Truck size={20} />, title: "Pour les Livreurs", desc: "Réseau logistique intégré pour toute la Tunisie." }
+                 { icon: <Coffee size={22} />, title: "Coffeeshops & Salons", desc: "Recettes précises, stock automatisé et fidélité client." },
+                 { icon: <Store size={22} />, title: "Restaurants & Bars", desc: "Plan de salle tactile, serveurs et cuisine connectés." },
+                 { icon: <Package size={22} />, title: "Pâtisseries & Boulangeries", desc: "Commandes spéciales, invendus et réapprovisionnement." }
                ].map((item, i) => (
-                 <div key={i} style={{ display: 'flex', gap: '16px' }}>
-                    <div style={{ color: '#818CF8', marginTop: '4px' }}>{item.icon}</div>
+                 <div key={i} style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818CF8', flexShrink: 0 }}>
+                      {item.icon}
+                    </div>
                     <div>
-                       <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '4px' }}>{item.title}</div>
-                       <div style={{ fontSize: '14px', color: '#94A3B8', lineHeight: '1.5' }}>{item.desc}</div>
+                       <div style={{ fontSize: '18px', fontWeight: 800, marginBottom: '4px' }}>{item.title}</div>
+                       <div style={{ fontSize: '15px', color: '#94A3B8', lineHeight: '1.5' }}>{item.desc}</div>
                     </div>
                  </div>
                ))}
             </div>
          </div>
          
-         <div style={{ position: 'absolute', bottom: '40px', left: '80px', fontSize: '13px', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
-            © 2026 Plateforme Marketplace Tunisie
+         <div style={{ position: 'absolute', bottom: '40px', left: '80px', fontSize: '13px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ShieldCheck size={16} /> <span>Plateforme de gestion sécurisée pour la Tunisie</span>
          </div>
       </div>
 
