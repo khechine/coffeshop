@@ -184,10 +184,16 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
             {(isCollapsed || isSectionOpen('PILOTAGE')) && (
               <>
                 {hasPerm('DASHBOARD') && (
-                  <Link href="/" title="Tableau de bord" className={`nav-item${isActive('/') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
-                    <LayoutDashboard size={18} />
-                    {displayExpanded && <span>Vue d'ensemble</span>}
-                  </Link>
+                  <>
+                    <Link href="/" title="Tableau de bord" className={`nav-item${isActive('/') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
+                      <LayoutDashboard size={18} />
+                      {displayExpanded && <span>Vue d'ensemble</span>}
+                    </Link>
+                    <Link href="/admin/reports" title="Reporting & Clôtures" className={`nav-item${isActive('/admin/reports') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
+                      <FileText size={18} />
+                      {displayExpanded && <span>Reporting & Clôtures</span>}
+                    </Link>
+                  </>
                 )}
                 {role === 'STORE_OWNER' && (
                   <>
