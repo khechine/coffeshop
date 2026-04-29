@@ -2,11 +2,32 @@
 
 import React, { useState, useTransition } from 'react';
 import { FileText, Plus, CheckCircle, Download, Calendar, ShieldCheck, Tag, Trash2, Eraser } from 'lucide-react';
-import { generateZReportAction, deleteZReportAction } from '../../actions';
+import { generateZReportAction, deleteZReportAction, exportDataAction } from '../../actions';
 
 export default function ReportsClient({ initialReports, storeName }: { initialReports: any[]; storeName: string; }) {
   const [reports, setReports] = useState(initialReports || []);
   const [isPending, startTransition] = useTransition();
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const handleExport = (type: 'sales' | 'products' | 'stock' | 'users' | 'full_backup') => {
+    startTransition(async () => {
+      try {
+        const data = await exportDataAction(type, startDate, endDate);
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `coffeeshop_${type}_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (e: any) {
+        alert(e.message);
+      }
+    });
+  };
 
   const handleGenerate = () => {
     startTransition(async () => {
@@ -78,6 +99,46 @@ export default function ReportsClient({ initialReports, storeName }: { initialRe
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '24px' }}>
+        {/* Section Exportation */}
+        <div className="card" style={{ gridColumn: '1 / -1', padding: '32px', background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)', borderRadius: '24px', border: '1px solid #C7D2FE', marginBottom: '16px' }}>
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '20px' }}>
+              <div>
+                 <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#1E1B4B', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Download size={28} color="#4F46E5" /> Exportations & Sauvegardes
+                 </h2>
+                 <p style={{ color: '#4338CA', opacity: 0.8, margin: '4px 0 0', fontWeight: 600 }}>Extrayez vos données pour un usage externe ou sauvegarde</p>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: '#fff', padding: '8px 16px', borderRadius: '16px', border: '1px solid #C7D2FE' }}>
+                 <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Début</label>
+                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ border: 'none', fontWeight: 700, outline: 'none', color: '#1E1B4B', background: 'transparent' }} />
+                 </div>
+                 <div style={{ width: '1px', height: '30px', background: '#E2E8F0' }} />
+                 <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <label style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Fin</label>
+                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ border: 'none', fontWeight: 700, outline: 'none', color: '#1E1B4B', background: 'transparent' }} />
+                 </div>
+              </div>
+           </div>
+
+           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <button onClick={() => handleExport('sales')} disabled={isPending} className="btn-export">
+                 <FileText size={20} /> Ventes & Historique
+              </button>
+              <button onClick={() => handleExport('products')} disabled={isPending} className="btn-export">
+                 <Tag size={20} /> Produits & Menu
+              </button>
+              <button onClick={() => handleExport('stock')} disabled={isPending} className="btn-export">
+                 <CheckCircle size={20} /> Stock & Matières
+              </button>
+              <button onClick={() => handleExport('users')} disabled={isPending} className="btn-export">
+                 <ShieldCheck size={20} /> Staff & Utilisateurs
+              </button>
+              <button onClick={() => handleExport('full_backup')} disabled={isPending} className="btn-export" style={{ background: '#1E1B4B', color: '#fff' }}>
+                 <Plus size={20} /> Sauvegarde Complète
+              </button>
+           </div>
+        </div>
         {reports.map((report) => (
           <div key={report.id} className="card" style={{ padding: '24px', border: '1px solid #E2E8F0', borderRadius: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -152,6 +213,31 @@ export default function ReportsClient({ initialReports, storeName }: { initialRe
           </div>
         )}
       </div>
+      <style jsx>{`
+        .btn-export {
+          padding: 16px;
+          border-radius: 16px;
+          background: #fff;
+          border: 1px solid #C7D2FE;
+          color: #4338CA;
+          font-weight: 800;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .btn-export:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.1);
+          border-color: #4F46E5;
+        }
+        .btn-export:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      `}</style>
     </div>
   );
 }

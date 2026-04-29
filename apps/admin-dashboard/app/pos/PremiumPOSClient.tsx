@@ -120,7 +120,7 @@ export default function PremiumPOSClient({
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [orderSearch, setOrderSearch] = useState('');
-  const [orderFilter, setOrderFilter] = useState<'ALL' | 'PAID' | 'VOID'>('ALL');
+  const [orderFilter, setOrderFilter] = useState<'ALL' | 'PAID' | 'VOID' | 'MINE'>('ALL');
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   
   // Payment Modal
@@ -1044,6 +1044,7 @@ export default function PremiumPOSClient({
                         onChange={(e: any) => setOrderFilter(e.target.value)}
                       >
                          <option value="ALL">Tous les statuts</option>
+                         <option value="MINE">Mes ventes uniquement</option>
                          <option value="PAID">Payés uniquement</option>
                          <option value="VOID">Annulés uniquement</option>
                       </select>
@@ -1062,7 +1063,7 @@ export default function PremiumPOSClient({
                          </thead>
                          <tbody>
                             {orders.filter(o => {
-                              if (orderFilter === 'PAID') return !o.isVoid;
+                              if (orderFilter === 'MINE') return String(o.baristaId) === String(cashierId); if (orderFilter === 'PAID') return !o.isVoid;
                               if (orderFilter === 'VOID') return o.isVoid;
                               return true;
                             }).filter(o => {
@@ -1362,7 +1363,9 @@ export default function PremiumPOSClient({
                 onClick={async () => {
                   try {
                     setIsCreatingCustomer(true);
-                    await createCustomer(newCustomer);
+                    const customer = await createCustomer(newCustomer);
+                    setCustomerResults(prev => [customer, ...prev]);
+                    setSelectedCustomer(customer);
                     alert("Client créé avec succès !");
                     setIsAddCustomerModalOpen(false);
                     setNewCustomer({ name: '', phone: '', email: '' });

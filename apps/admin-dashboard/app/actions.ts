@@ -628,23 +628,35 @@ export async function searchCustomers(query: string) {
 }
 
 export async function createCustomer(data: { name: string; phone: string; email?: string }) {
-  const store = await getStore();
-  if (!store) throw new Error('Store not found');
+  try {
+    const store = await getStore();
+    if (!store) throw new Error('Store not found');
 
-  const existing = await prisma.customer.findFirst({
-    where: { phone: data.phone, storeId: store.id }
-  });
+    // Basic validation
+    if (!data.name || !data.phone) throw new Error('Nom et téléphone requis');
 
-  if (existing) {
-    throw new Error('DUPLICATE_PHONE');
-  }
+    const existing = await prisma.customer.findFirst({
+      where: { phone: data.phone, storeId: store.id }
+    });
 
-  return await prisma.customer.create({
-    data: {
-      ...data,
-      storeId: store.id
+    if (existing) {
+      throw new Error('DUPLICATE_PHONE');
     }
-  });
+
+    const customer = await prisma.customer.create({
+      data: {
+        name: data.name,
+        phone: data.phone,
+        email: data.email || undefined,
+        storeId: store.id
+      }
+    });
+
+    return JSON.parse(JSON.stringify(customer));
+  } catch (error: any) {
+    console.error('[createCustomer Error]:', error);
+    throw new Error(error.message || 'Erreur lors de la création du client');
+  }
 }
 
 export async function updateCustomerPoints(customerId: string, points: number) {
@@ -2851,6 +2863,65 @@ export async function deleteTableAction(id: string) {
   await prisma.storeTable.delete({ where: { id } });
   revalidatePath('/admin/tables');
   revalidatePath('/pos');
+}
+
+// ── Data Export & Backup ────────────────────────────────────────
+export async function exportDataAction(type: 'sales' | 'products' | 'stock' | 'users' | 'full_backup', dateStart?: string, dateEnd?: string) {
+  const store = await getStore();
+  if (!store) throw new Error('Boutique non trouvée');
+
+  const start = dateStart ? new Date(dateStart) : new Date(0);
+  const end = dateEnd ? new Date(dateEnd) : new Date();
+  // Set end to end of day
+  end.setHours(23, 59, 59, 999);
+
+  let data: any;
+
+  if (type === 'sales') {
+    data = await prisma.sale.findMany({
+      where: { storeId: store.id, createdAt: { gte: start, lte: end } },
+      include: { items: { include: { product: true } }, barista: true, customer: true },
+      orderBy: { createdAt: 'desc' }
+    });
+  } else if (type === 'products') {
+    data = await prisma.product.findMany({
+      where: { storeId: store.id },
+      include: { category: true, unit: true },
+      orderBy: { name: 'asc' }
+    });
+  } else if (type === 'stock') {
+    data = await prisma.stockItem.findMany({
+      where: { storeId: store.id },
+      include: { unit: true },
+      orderBy: { name: 'asc' }
+    });
+  } else if (type === 'users') {
+    data = await prisma.user.findMany({
+      where: { storeId: store.id },
+      select: { id: true, name: true, email: true, role: true, phone: true, createdAt: true },
+      orderBy: { name: 'asc' }
+    });
+  } else if (type === 'full_backup') {
+    const tables = {
+      exportDate: new Date().toISOString(),
+      store: await prisma.store.findUnique({ where: { id: store.id } }),
+      products: await prisma.product.findMany({ where: { storeId: store.id } }),
+      categories: await prisma.category.findMany({ where: { storeId: store.id } }),
+      sales: await prisma.sale.findMany({ where: { storeId: store.id }, include: { items: true } }),
+      stockItems: await prisma.stockItem.findMany({ where: { storeId: store.id } }),
+      users: await prisma.user.findMany({ where: { storeId: store.id } }),
+      customers: await prisma.customer.findMany({ where: { storeId: store.id } }),
+      expenses: await prisma.expense.findMany({ where: { storeId: store.id } }),
+      tables: await prisma.storeTable.findMany({ where: { storeId: store.id } }),
+      zones: await prisma.storeZone.findMany({ where: { storeId: store.id } }),
+      terminals: await prisma.posTerminal.findMany({ where: { storeId: store.id } }),
+      zReports: await prisma.zReport.findMany({ where: { storeId: store.id } }),
+      cashSessions: await (prisma as any).cashSession.findMany({ where: { storeId: store.id } })
+    };
+    return JSON.parse(JSON.stringify(tables));
+  }
+
+  return JSON.parse(JSON.stringify(data));
 }
 
 // ══════════════════════════════════════════════════════════════
