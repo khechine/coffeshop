@@ -30,15 +30,16 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
   const [activeZoneId, setActiveZoneId] = useState<string | null>(initialZones[0]?.id || null);
   const [tables, setTables] = useState<Table[]>(initialTables.map(t => ({
     ...t,
-    posX: t.posX || 50,
-    posY: t.posY || 50,
-    width: t.width || 80,
-    height: t.height || 80,
-    shape: t.shape || 'SQUARE'
+    posX: t.posX ?? 50,
+    posY: t.posY ?? 50,
+    width: t.width ?? 80,
+    height: t.height ?? 80,
+    shape: t.shape ?? 'SQUARE'
   })));
   
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -76,11 +77,13 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
     ));
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = async () => {
     if (isDragging && selectedTableId) {
       const table = tables.find(t => t.id === selectedTableId);
       if (table) {
-        updateTablePositionAction(table.id, table.posX, table.posY);
+        setIsSaving(true);
+        await updateTablePositionAction(table.id, table.posX, table.posY);
+        setIsSaving(false);
       }
     }
     setIsDragging(false);
@@ -88,7 +91,9 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
 
   const updateTableProperty = async (id: string, updates: Partial<Table>) => {
     setTables(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    setIsSaving(true);
     await updateTableAction(id, updates as any);
+    setIsSaving(false);
   };
 
   const addNewTable = async () => {
@@ -118,11 +123,36 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
   const handleAddZone = async () => {
     const name = prompt('Nom de la nouvelle zone (ex: Terrasse) :');
     if (name) {
+      setIsSaving(true);
       const zone = await createZoneAction(name);
       if (zone) {
         setZones(prev => [...prev, zone]);
         setActiveZoneId(zone.id);
       }
+      setIsSaving(false);
+    }
+  };
+
+  const handleRenameZone = async (e: React.MouseEvent, id: string, currentName: string) => {
+    e.stopPropagation();
+    const newName = prompt('Nouveau nom de la zone :', currentName);
+    if (newName && newName !== currentName) {
+      setIsSaving(true);
+      await updateZoneAction(id, newName);
+      setZones(prev => prev.map(z => z.id === id ? { ...z, name: newName } : z));
+      setIsSaving(false);
+    }
+  };
+
+  const handleRemoveZone = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (confirm('Supprimer cette zone ? Les tables seront conservées mais n\'auront plus de zone.')) {
+      setIsSaving(true);
+      await deleteZoneAction(id);
+      setZones(prev => prev.filter(z => z.id !== id));
+      if (activeZoneId === id) setActiveZoneId(null);
+      setTables(prev => prev.map(t => t.zoneId === id ? { ...t, zoneId: null } : t));
+      setIsSaving(false);
     }
   };
 
@@ -140,20 +170,25 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {zones.map(z => (
-            <button
-              key={z.id}
-              onClick={() => setActiveZoneId(z.id)}
-              className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
-                activeZoneId === z.id 
-                  ? 'bg-white dark:bg-slate-800 shadow-lg border border-indigo-100 dark:border-indigo-900/30' 
-                  : 'hover:bg-slate-100 dark:hover:bg-slate-900/50'
-              }`}
-            >
-              <span className={`text-xs font-black uppercase tracking-widest ${activeZoneId === z.id ? 'text-indigo-600' : 'text-slate-400'}`}>
-                {z.name}
-              </span>
-              <ChevronRight size={14} className={activeZoneId === z.id ? 'text-indigo-600' : 'text-slate-300'} />
-            </button>
+            <div key={z.id} className="relative group">
+              <button
+                onClick={() => setActiveZoneId(z.id)}
+                className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
+                  activeZoneId === z.id 
+                    ? 'bg-white dark:bg-slate-800 shadow-lg border border-indigo-100 dark:border-indigo-900/30' 
+                    : 'hover:bg-slate-100 dark:hover:bg-slate-900/50'
+                }`}
+              >
+                <span className={`text-xs font-black uppercase tracking-widest ${activeZoneId === z.id ? 'text-indigo-600' : 'text-slate-400'}`}>
+                  {z.name}
+                </span>
+                <ChevronRight size={14} className={activeZoneId === z.id ? 'text-indigo-600' : 'text-slate-300'} />
+              </button>
+              <div className="absolute right-8 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={(e) => handleRenameZone(e, z.id, z.name)} className="p-1 hover:text-indigo-600 text-slate-300"><Sliders size={12} /></button>
+                <button onClick={(e) => handleRemoveZone(e, z.id)} className="p-1 hover:text-rose-600 text-slate-300"><Trash2 size={12} /></button>
+              </div>
+            </div>
           ))}
           <button 
             onClick={handleAddZone}
@@ -232,6 +267,20 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Zone de Service</label>
+                <select 
+                  value={selectedTable.zoneId || ''} 
+                  onChange={(e) => updateTableProperty(selectedTable.id, { zoneId: e.target.value || null })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 rounded-xl border-none text-xs font-bold outline-none ring-1 ring-slate-100 dark:ring-slate-800 focus:ring-indigo-500 appearance-none"
+                >
+                  <option value="">Sans zone</option>
+                  {zones.map(z => (
+                    <option key={z.id} value={z.id}>{z.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         )}
@@ -254,8 +303,10 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
           
           <div className="flex gap-2 pointer-events-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-2 rounded-2xl border border-white dark:border-slate-800 shadow-xl">
              <div className="px-4 py-2 flex items-center gap-2 text-emerald-600">
-                <Save size={16} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Auto-Save Actif</span>
+                <Save size={16} className={isSaving ? "animate-pulse" : ""} />
+                <span className="text-[10px] font-black uppercase tracking-widest">
+                  {isSaving ? "Sauvegarde..." : "Auto-Save Actif"}
+                </span>
              </div>
           </div>
         </div>

@@ -2774,8 +2774,8 @@ export async function updateTablePositionAction(id: string, posX: number, posY: 
     where: { id },
     data: { posX, posY }
   });
-  // No revalidatePath here for performance if called frequently during drag, 
-  // but usually we call it onDragEnd.
+  revalidatePath('/admin/tables');
+  revalidatePath('/pos');
 }
 
 export async function deleteTableAction(id: string) {
