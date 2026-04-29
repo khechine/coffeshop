@@ -137,11 +137,19 @@ export default function PremiumPOSClient({
   // --- Derived ---
   const peakHoursData = React.useMemo(() => {
     const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+    if (!Array.isArray(initialSales)) return { matrix, maxVal: 0 };
+
     initialSales.forEach((sale: any) => {
+      if (!sale?.createdAt) return;
       const date = new Date(sale.createdAt);
+      if (isNaN(date.getTime())) return;
+
       const day = (date.getDay() + 6) % 7; 
       const hour = date.getHours();
-      matrix[day][hour] += 1;
+      
+      if (matrix[day] && typeof hour === 'number' && !isNaN(hour)) {
+        matrix[day][hour] += 1;
+      }
     });
     let maxVal = 0;
     matrix.forEach(row => row.forEach(val => { if(val > maxVal) maxVal = val; }));
@@ -150,10 +158,15 @@ export default function PremiumPOSClient({
 
   const salesByCategory = React.useMemo(() => {
     const counts: Record<string, number> = {};
+    if (!Array.isArray(initialSales)) return [];
+
     initialSales.forEach((sale: any) => {
+      if (!Array.isArray(sale?.items)) return;
+      
       sale.items.forEach((item: any) => {
+        if (!item?.product) return;
         const cat = item.product.category || 'Inconnu';
-        counts[cat] = (counts[cat] || 0) + (Number(item.price) * item.quantity);
+        counts[cat] = (counts[cat] || 0) + (Number(item.price || 0) * (item.quantity || 0));
       });
     });
     const totalSalesVal = Object.values(counts).reduce((a, b) => a + b, 0);
