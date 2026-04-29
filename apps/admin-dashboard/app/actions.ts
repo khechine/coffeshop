@@ -79,10 +79,21 @@ export async function toggleStoreMarketplaceAccess(storeId: string, enabled: boo
   revalidatePath('/superadmin/cafes');
 }
 
-export async function updateStore(data: { name: string; address: string; city: string; governorate?: string; phone: string; lat?: number; lng?: number }) {
+export async function updateStore(data: { 
+  name: string; 
+  address: string; 
+  city: string; 
+  governorate?: string; 
+  phone: string; 
+  lat?: number; 
+  lng?: number;
+  loyaltyEarnRate?: number;
+  loyaltyRedeemRate?: number;
+}) {
   const store = await getStore();
   if (!store) return;
   await (prisma.store as any).update({ where: { id: store.id }, data });
+  revalidatePath('/admin/settings');
   revalidatePath('/');
 }
 

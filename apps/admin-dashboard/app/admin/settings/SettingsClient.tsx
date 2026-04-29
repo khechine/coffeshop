@@ -6,7 +6,7 @@ import {
   Building2, MapPin, Store, Crosshair, Save, Clock, 
   CheckCircle2, FileCheck, AlertCircle, ShieldCheck, 
   FileUp, Eye, Upload, X, ShoppingCart, Sparkles, 
-  RotateCcw, Search, Map as MapIcon, Navigation, RefreshCw
+  RotateCcw, Search, Map as MapIcon, Navigation, RefreshCw, Coins
 } from 'lucide-react';
 
 import 'leaflet/dist/leaflet.css';
@@ -29,6 +29,8 @@ interface StoreProps {
   officialDocs: any[] | null;
   forceMarketplaceAccess: boolean;
   isFiscalEnabled: boolean;
+  loyaltyEarnRate?: number | any;
+  loyaltyRedeemRate?: number | any;
   subscription?: {
     plan?: {
       name: string;
@@ -43,7 +45,17 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    name: string;
+    address: string;
+    city: string;
+    governorate: string;
+    phone: string;
+    lat: number;
+    lng: number;
+    loyaltyEarnRate: number | string;
+    loyaltyRedeemRate: number | string;
+  }>({
     name: store.name,
     address: store.address || '',
     city: store.city || '',
@@ -51,12 +63,18 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
     phone: store.phone || '',
     lat: store.lat || 36.80,
     lng: store.lng || 10.18,
+    loyaltyEarnRate: store.loyaltyEarnRate ? Number(store.loyaltyEarnRate) : 1,
+    loyaltyRedeemRate: store.loyaltyRedeemRate ? Number(store.loyaltyRedeemRate) : 100,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     startTransition(async () => {
-      await updateStore(form);
+      await updateStore({
+        ...form,
+        loyaltyEarnRate: Number(form.loyaltyEarnRate),
+        loyaltyRedeemRate: Number(form.loyaltyRedeemRate),
+      });
       alert('Paramètres enregistrés avec succès !');
     });
   };
@@ -340,6 +358,73 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
             </div>
          </div>
 
+      </div>
+
+      {/* Loyalty Program Section */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] shadow-sm overflow-hidden">
+         <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+               <div className="w-10 h-10 bg-amber-50 dark:bg-amber-500/10 text-amber-600 rounded-2xl flex items-center justify-center shadow-sm">
+                  <Coins size={20} />
+               </div>
+               <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Programme Fidélité</h3>
+            </div>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rétention Client</div>
+         </div>
+         <div className="p-10">
+            <p className="text-sm font-medium text-slate-500 mb-8 max-w-2xl">
+               Paramétrez comment vos clients gagnent et dépensent leurs points de fidélité pour encourager les visites récurrentes.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+               <div className="p-8 bg-slate-50 dark:bg-slate-950/20 rounded-[32px] border border-slate-100 dark:border-slate-800 space-y-6">
+                  <div className="flex items-center justify-between">
+                     <label style={label}>Taux de Gain</label>
+                     <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-[10px] font-black uppercase tracking-widest">Accumulation</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                     <div className="flex-1">
+                        <input
+                           type="number"
+                           style={field}
+                           value={form.loyaltyEarnRate}
+                           onChange={e => setForm(f => ({ ...f, loyaltyEarnRate: e.target.value }))}
+                           placeholder="1"
+                        />
+                     </div>
+                     <div className="text-sm font-bold text-slate-400 whitespace-nowrap">
+                        pts / <span className="text-slate-900 dark:text-white">1 DT dépensé</span>
+                     </div>
+                  </div>
+                  <p className="text-[11px] font-medium text-slate-400 italic leading-relaxed">
+                     Ex: Avec 1 pt / 1 DT, un client qui dépense 10 DT gagnera 10 points.
+                  </p>
+               </div>
+
+               <div className="p-8 bg-slate-50 dark:bg-slate-950/20 rounded-[32px] border border-slate-100 dark:border-slate-800 space-y-6">
+                  <div className="flex items-center justify-between">
+                     <label style={label}>Valeur du Point</label>
+                     <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full text-[10px] font-black uppercase tracking-widest">Utilisation</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                     <div className="flex-1">
+                        <input
+                           type="number"
+                           style={field}
+                           value={form.loyaltyRedeemRate}
+                           onChange={e => setForm(f => ({ ...f, loyaltyRedeemRate: e.target.value }))}
+                           placeholder="100"
+                        />
+                     </div>
+                     <div className="text-sm font-bold text-slate-400 whitespace-nowrap">
+                        pts = <span className="text-slate-900 dark:text-white">1 DT remise</span>
+                     </div>
+                  </div>
+                  <p className="text-[11px] font-medium text-slate-400 italic leading-relaxed">
+                     Ex: Avec 100 pts / 1 DT, un client doit avoir 500 points pour obtenir 5 DT de remise.
+                  </p>
+               </div>
+            </div>
+         </div>
       </div>
 
       {/* Plan Features & Fiscal */}

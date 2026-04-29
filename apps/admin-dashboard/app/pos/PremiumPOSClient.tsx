@@ -143,6 +143,38 @@ export default function PremiumPOSClient({
   const [closingBalance, setClosingBalance] = useState('0');
   const [sessionNotes, setSessionNotes] = useState('');
   
+  // Auto-lock & Inactivity Timer
+  const [lastActivity, setLastActivity] = useState(Date.now());
+  const INACTIVITY_TIMEOUT = 120000; // 2 minutes in ms
+
+  useEffect(() => {
+    if (!cashierId) return;
+
+    const handleActivity = () => {
+      setLastActivity(Date.now());
+    };
+
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('mousedown', handleActivity);
+    window.addEventListener('keypress', handleActivity);
+    window.addEventListener('touchstart', handleActivity);
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now - lastActivity > INACTIVITY_TIMEOUT) {
+        handleLogout();
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => {
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('mousedown', handleActivity);
+      window.removeEventListener('keypress', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+      clearInterval(interval);
+    };
+  }, [cashierId, lastActivity]);
+  
   // --- Derived ---
   const peakHoursData = React.useMemo(() => {
     const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
@@ -319,6 +351,7 @@ export default function PremiumPOSClient({
   };
 
   const processPayment = async () => {
+    setLastActivity(Date.now());
     try {
       const sale = await recordSale({
         total,
@@ -531,6 +564,13 @@ export default function PremiumPOSClient({
         {/* Theme Toggle */}
         <div className="pos-sidebar-icon" onClick={toggleThemeVariant} title="Changer de thème" style={{ cursor: 'pointer', marginBottom: 10 }}>
            {theme === 'mocha' ? <Coffee size={24} /> : <Zap size={24} />}
+        </div>
+
+        <div className="pos-sidebar-icon" style={{ color: 'var(--pos-warning)' }} onClick={handleLogout} title="Verrouiller">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <Lock size={28} />
+            <span style={{ fontSize: 9, fontWeight: 900 }}>VERROUILLER</span>
+          </div>
         </div>
 
         <div className="pos-sidebar-icon" style={{ color: '#EF4444', height: 70, borderTop: '1px solid rgba(255,255,255,0.1)', borderRadius: 0 }} onClick={() => setShowClosingModal(true)} title="Clôturer Session">
