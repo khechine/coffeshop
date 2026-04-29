@@ -415,25 +415,64 @@ export default function PremiumPOSClient({
   if (view === 'TABLES') {
     return (
       <div className="pos-premium-container" data-theme={isDarkMode ? 'dark' : 'light'} style={{ background: 'var(--pos-sidebar)', transition: 'all 0.3s ease' }}>
-         <aside className="pos-sidebar">
+          <aside className="pos-sidebar">
             <div className="pos-sidebar-icon active"><LayoutGrid size={24} /></div>
             <div className="pos-sidebar-icon" onClick={() => setView('ORDERS')}><History size={24} /></div>
             <div className="pos-sidebar-icon" onClick={() => setView('CUSTOMERS')}><Users size={24} /></div>
             <div style={{ flex: 1 }} />
-            {/* Theme Toggle in Sidebar for Tables view */}
             <div className="pos-sidebar-icon" onClick={toggleTheme}>
               {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
             </div>
             <div className="pos-sidebar-icon" style={{ color: '#EF4444' }} onClick={handleLogout}><LogOut size={24} /></div>
-         </aside>
+          </aside>
 
-         <main style={{ flex: 1, padding: 40, overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
+          {/* Mobile Bottom Nav for Tables View */}
+          <nav className="pos-mobile-nav">
+             <div className="mobile-nav-item active">
+                <LayoutGrid />
+                <span>Tables</span>
+             </div>
+             <div className="mobile-nav-item" onClick={() => setView('ORDERS')}>
+                <History />
+                <span>Commandes</span>
+             </div>
+             <div className="mobile-nav-item" onClick={() => setView('CUSTOMERS')}>
+                <Users />
+                <span>Clients</span>
+             </div>
+             <div className="mobile-nav-item" onClick={handleLogout} style={{ color: '#EF4444' }}>
+                <LogOut />
+                <span>Quitter</span>
+             </div>
+          </nav>
+
+          {/* Mobile Bottom Nav for Tables View */}
+          <nav className="pos-mobile-nav">
+             <div className="mobile-nav-item active">
+                <LayoutGrid />
+                <span>Tables</span>
+             </div>
+             <div className="mobile-nav-item" onClick={() => setView('ORDERS')}>
+                <History />
+                <span>Commandes</span>
+             </div>
+             <div className="mobile-nav-item" onClick={() => setView('CUSTOMERS')}>
+                <Users />
+                <span>Clients</span>
+             </div>
+             <div className="mobile-nav-item" onClick={handleLogout} style={{ color: '#EF4444' }}>
+                <LogOut />
+                <span>Quitter</span>
+             </div>
+          </nav>
+
+         <main className="pos-main-content-scroll" style={{ flex: 1, padding: 40, overflowY: 'auto' }}>
+            <div className="tables-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40, flexWrap: 'wrap', gap: 20 }}>
                <div>
                   <h1 style={{ color: '#fff', fontSize: 32, fontWeight: 900, margin: 0 }}>Plan de Salle</h1>
-                  <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0 }}>Sélectionnez une table pour commencer la commande</p>
+                  <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0 }}>Sélectionnez une table</p>
                </div>
-               <button className="btn-premium btn-premium-primary" style={{ padding: '20px 40px', fontSize: 18 }} onClick={() => { setSelectedTable({ id: 'DIRECT', label: 'Vente Directe' }); setView('POS'); }}>
+               <button className="btn-premium btn-premium-primary vente-directe-btn" style={{ padding: '20px 40px', fontSize: 18 }} onClick={() => { setSelectedTable({ id: 'DIRECT', label: 'Vente Directe' }); setView('POS'); }}>
                   <ShoppingBag size={24} /> VENTE DIRECTE
                </button>
             </div>
@@ -525,6 +564,26 @@ export default function PremiumPOSClient({
           </div>
         </div>
       </aside>
+
+      {/* Mobile Bottom Nav for POS View */}
+      <nav className="pos-mobile-nav">
+         <div className={`mobile-nav-item ${(view as any) === 'TABLES' ? 'active' : ''}`} onClick={() => setView('TABLES')}>
+            <LayoutGrid />
+            <span>Tables</span>
+         </div>
+         <div className={`mobile-nav-item ${(view as any) === 'POS' ? 'active' : ''}`} onClick={() => setView('POS')}>
+            <ShoppingCart />
+            <span>Vente</span>
+         </div>
+         <div className={`mobile-nav-item ${(view as any) === 'ORDERS' ? 'active' : ''}`} onClick={() => setView('ORDERS')}>
+            <History />
+            <span>Journal</span>
+         </div>
+         <div className={`mobile-nav-item ${(view as any) === 'CUSTOMERS' ? 'active' : ''}`} onClick={() => setView('CUSTOMERS')}>
+            <Users />
+            <span>Clients</span>
+         </div>
+      </nav>
 
       {/* Main Content Wrapper (Responsive Stack) */}
       <div className="pos-main-wrapper">
@@ -646,8 +705,7 @@ export default function PremiumPOSClient({
                  {currentCart.length > 0 && <span className="cart-badge-dot">{currentCart.length}</span>}
               </button>
 
-              {/* MODE INDICATOR CENTERED */}
-              <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+              <div className="pos-header-mode-indicator" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
                  <div style={{ 
                    padding: '8px 24px', 
                    background: 'rgba(99, 102, 241, 0.05)', 
@@ -709,7 +767,7 @@ export default function PremiumPOSClient({
                 <button className="btn-premium btn-premium-primary" onClick={() => setView('POS')}>Retour au POS</button>
              </div>
 
-             <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 32 }}>
+             <div className="customers-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 32 }}>
                 {/* Customer List Section */}
                 <div style={{ background: '#fff', borderRadius: 24, border: '1px solid var(--pos-border)', padding: 24 }}>
                    <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
@@ -724,39 +782,55 @@ export default function PremiumPOSClient({
                       <button className="btn-premium btn-premium-success" onClick={() => setIsAddCustomerModalOpen(true)}>+ Client</button>
                    </div>
 
-                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead>
-                         <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--pos-bg)' }}>
-                            <th style={{ padding: '12px 16px' }}>Client</th>
-                            <th style={{ padding: '12px 16px' }}>Points</th>
-                            <th style={{ padding: '12px 16px' }}>Dernière Visite</th>
-                            <th style={{ padding: '12px 16px' }}>Actions</th>
-                         </tr>
-                      </thead>
-                      <tbody>
-                         {customerResults.length > 0 ? customerResults.map((c: any) => (
-                           <tr key={c.id} style={{ borderBottom: '1px solid var(--pos-bg)' }}>
-                              <td style={{ padding: '16px' }}>
-                                 <div style={{ fontWeight: 800, color: 'var(--pos-text-main)' }}>{c.name}</div>
+                   <div className="mobile-table-view">
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }} className="desktop-only-table">
+                         <thead>
+                            <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--pos-bg)' }}>
+                               <th style={{ padding: '12px 16px' }}>Client</th>
+                               <th style={{ padding: '12px 16px' }}>Points</th>
+                               <th style={{ padding: '12px 16px' }}>Dernière Visite</th>
+                               <th style={{ padding: '12px 16px' }}>Actions</th>
+                            </tr>
+                         </thead>
+                         <tbody>
+                            {customerResults.length > 0 ? customerResults.map((c: any) => (
+                              <tr key={c.id} style={{ borderBottom: '1px solid var(--pos-bg)' }}>
+                                 <td style={{ padding: '16px' }}>
+                                    <div style={{ fontWeight: 800, color: 'var(--pos-text-main)' }}>{c.name}</div>
+                                    <div style={{ fontSize: 12, color: 'var(--pos-text-muted)' }}>{c.phone}</div>
+                                 </td>
+                                 <td style={{ padding: '16px' }}>
+                                    <div style={{ background: 'var(--pos-bg)', padding: '4px 12px', borderRadius: 8, display: 'inline-block', fontWeight: 900, color: 'var(--pos-primary)' }}>
+                                       {c.loyaltyPoints} pts
+                                    </div>
+                                 </td>
+                                 <td style={{ padding: '16px', color: 'var(--pos-text-muted)', fontSize: 13 }}>{new Date().toLocaleDateString()}</td>
+                                 <td style={{ padding: '16px' }}>
+                                    <button style={{ color: 'var(--pos-primary)', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }} onClick={() => alert(`Ajuster points de ${c.name}`)}>Ajuster</button>
+                                 </td>
+                              </tr>
+                            )) : (
+                              <tr>
+                                 <td colSpan={4} style={{ padding: 40, textAlign: 'center', color: 'var(--pos-text-muted)' }}>Utilisez la recherche pour trouver un client</td>
+                              </tr>
+                            )}
+                         </tbody>
+                      </table>
+                      
+                      <div className="mobile-only-cards" style={{ display: 'none', flexDirection: 'column', gap: 12 }}>
+                         {customerResults.map((c: any) => (
+                           <div key={c.id} style={{ padding: 16, background: 'var(--pos-bg)', borderRadius: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                 <div style={{ fontWeight: 800, fontSize: 15 }}>{c.name}</div>
                                  <div style={{ fontSize: 12, color: 'var(--pos-text-muted)' }}>{c.phone}</div>
-                              </td>
-                              <td style={{ padding: '16px' }}>
-                                 <div style={{ background: 'var(--pos-bg)', padding: '4px 12px', borderRadius: 8, display: 'inline-block', fontWeight: 900, color: 'var(--pos-primary)' }}>
-                                    {c.loyaltyPoints} pts
-                                 </div>
-                              </td>
-                              <td style={{ padding: '16px', color: 'var(--pos-text-muted)', fontSize: 13 }}>{new Date().toLocaleDateString()}</td>
-                              <td style={{ padding: '16px' }}>
-                                 <button style={{ color: 'var(--pos-primary)', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }} onClick={() => alert(`Ajuster points de ${c.name}`)}>Ajuster</button>
-                              </td>
-                           </tr>
-                         )) : (
-                           <tr>
-                              <td colSpan={4} style={{ padding: 40, textAlign: 'center', color: 'var(--pos-text-muted)' }}>Utilisez la recherche pour trouver un client</td>
-                           </tr>
-                         )}
-                      </tbody>
-                   </table>
+                                 <div style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: 'var(--pos-primary)' }}>{c.loyaltyPoints} PTS</div>
+                              </div>
+                              <button className="btn-premium" style={{ padding: '8px 12px', fontSize: 12 }} onClick={() => alert(`Ajuster points de ${c.name}`)}>Gérer</button>
+                           </div>
+                         ))}
+                         {customerResults.length === 0 && <div style={{ textAlign: 'center', padding: 20, color: 'var(--pos-text-muted)' }}>Utilisez la recherche.</div>}
+                      </div>
+                   </div>
                 </div>
 
                 {/* Loyalty Program Settings Sidebar */}
@@ -799,7 +873,7 @@ export default function PremiumPOSClient({
              </div>
           </div>
         ) : (
-          <div style={{ flex: 1, padding: 40, background: 'var(--pos-bg)', display: 'flex', gap: 32, overflow: 'hidden' }}>
+          <div className="orders-container" style={{ flex: 1, padding: 40, background: 'var(--pos-bg)', display: 'flex', gap: 32, overflow: 'hidden' }}>
              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
                    <div>
