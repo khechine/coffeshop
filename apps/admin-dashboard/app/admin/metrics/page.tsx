@@ -4,29 +4,31 @@ import MetricsClient from './MetricsClient';
 
 export const dynamic = 'force-dynamic';
 
-export default async function MetricsPage() {
+export default async function MetricsPage({ searchParams }: { searchParams: { period?: string } }) {
   const store = await getStore();
   if (!store) return <div>Veuillez vous connecter</div>;
 
   const storeId = store.id;
+  const period = searchParams.period || 'week';
 
   // Get date ranges
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const weekAgo = new Date(today);
-  weekAgo.setDate(weekAgo.getDate() - 7);
-  const monthAgo = new Date(today);
-  monthAgo.setMonth(monthAgo.getMonth() - 1);
+  const now = new Date();
+  const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
 
-  const dateMap: Record<string, Date> = {
-    today,
-    week: weekAgo,
-    month: monthAgo,
-  };
+  if (period === 'week') {
+    startDate.setDate(startDate.getDate() - 7);
+  } else if (period === 'month') {
+    startDate.setMonth(startDate.getMonth() - 1);
+  } else {
+    // today - already set to 00:00:00
+  }
+
+  const timeFilter = { storeId, createdAt: { gte: startDate } };
 
   // Core metrics
-  const salesCount = await prisma.sale.count({ where: { storeId } });
-  const salesAgg = await prisma.sale.aggregate({ where: { storeId }, _sum: { total: true } });
+  const salesCount = await prisma.sale.count({ where: timeFilter });
+  const salesAgg = await prisma.sale.aggregate({ where: timeFilter, _sum: { total: true } });
   const revenue = Number(salesAgg._sum.total || 0);
   const avgOrderValue = salesCount > 0 ? revenue / salesCount : 0;
 
@@ -40,35 +42,35 @@ export default async function MetricsPage() {
 
   let expenses = 0;
   try {
-    const expAgg = await (prisma.expense as any).aggregate({ where: { storeId }, _sum: { amount: true } });
+    const expAgg = await (prisma.expense as any).aggregate({ 
+      where: { storeId, createdAt: { gte: startDate } }, 
+      _sum: { amount: true } 
+    });
     expenses = Number(expAgg._sum.amount || 0);
   } catch (e) { expenses = 0; }
   const profit = revenue - expenses;
 
-  // Recent sales
+  // Recent sales (within period)
   const recentSales = await prisma.sale.findMany({
-    where: { storeId },
+    where: timeFilter,
     include: { barista: true, takenBy: true },
     orderBy: { createdAt: 'desc' },
-    take: 20,
+    take: 50,
   }).then(sales => sales.map(s => ({ ...s, total: Number(s.total) })));
 
-  // Sales by day (last 30 days)
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  
+  // Sales by day
   const salesRaw: any[] = await prisma.$queryRawUnsafe(
     `SELECT DATE("createdAt") as date, SUM(total) as total FROM "Sale" WHERE "storeId" = $1 AND "createdAt" >= $2 GROUP BY DATE("createdAt") ORDER BY date`,
-    storeId, thirtyDaysAgo
+    storeId, startDate
   );
   const salesByDay = salesRaw.map((r: any) => ({
     date: new Date(r.date).toLocaleDateString('fr-TN', { day: '2-digit', month: '2-digit' }),
     total: Number(r.total || 0),
   }));
 
-  // Top products
+  // Top products (within period)
   const saleItems = await prisma.saleItem.findMany({
-    where: { sale: { storeId } },
+    where: { sale: timeFilter },
     include: { product: { include: { category: true } } }
   });
 
@@ -87,7 +89,7 @@ export default async function MetricsPage() {
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 10);
 
-  // Sales by category
+  // Sales by category (within period)
   const categoryStats: Record<string, number> = {};
   saleItems.forEach(item => {
     const cat = item.product?.category?.name || 'Non catégorisé';
@@ -97,7 +99,7 @@ export default async function MetricsPage() {
     .map(([category, total]) => ({ category, total }))
     .sort((a, b) => b.total - a.total);
 
-  // Sales by payment method
+  // Sales by payment method (within period)
   const paymentStats: Record<string, number> = {};
   recentSales.forEach(sale => {
     const method = sale.paymentMethod || 'Espèces';
@@ -125,5 +127,5 @@ export default async function MetricsPage() {
     salesByPayment,
   };
 
-  return <MetricsClient data={data} storeName={store.name} />;
+  return <MetricsClient data={data} storeName={store.name} initialPeriod={period as any} />;
 }

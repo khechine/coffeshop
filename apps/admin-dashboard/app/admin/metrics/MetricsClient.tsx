@@ -6,6 +6,8 @@ import {
   AlertTriangle, BarChart3, PieChart, Coffee, Zap
 } from 'lucide-react';
 
+import { useRouter } from 'next/navigation';
+
 interface MetricsData {
   salesCount: number;
   revenue: number;
@@ -27,8 +29,9 @@ interface MetricsData {
 const formatCurrency = (val: number) => val.toFixed(3) + ' DT';
 const formatNumber = (val: number) => val.toLocaleString('fr-TN');
 
-export default function MetricsClient({ data, storeName }: { data: MetricsData; storeName: string }) {
-  const [period, setPeriod] = useState<'today' | 'week' | 'month'>('week');
+export default function MetricsClient({ data, storeName, initialPeriod = 'week' }: { data: MetricsData; storeName: string; initialPeriod?: 'today' | 'week' | 'month' }) {
+  const router = useRouter();
+  const [period, setPeriod] = useState<'today' | 'week' | 'month'>(initialPeriod);
 
   const cards = [
     { label: 'Ventes totales', value: formatNumber(data.salesCount), icon: ShoppingCart, color: '#6366F1', bg: 'bg-indigo-50 dark:bg-indigo-500/10', text: 'text-indigo-600 dark:text-indigo-400' },
@@ -50,7 +53,13 @@ export default function MetricsClient({ data, storeName }: { data: MetricsData; 
         </div>
         <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-1">
           {(['today', 'week', 'month'] as const).map(p => (
-            <button key={p} onClick={() => setPeriod(p)} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${period === p ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}`}>
+            <button key={p} 
+              onClick={() => {
+                setPeriod(p);
+                router.push(`/admin/metrics?period=${p}`);
+              }} 
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${period === p ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'}`}
+            >
               {p === 'today' ? "Aujourd'hui" : p === 'week' ? 'Semaine' : 'Mois'}
             </button>
           ))}
