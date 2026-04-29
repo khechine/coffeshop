@@ -685,7 +685,8 @@ export async function recordSale(data: {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
 
-  const sale = await prisma.$transaction(async (tx) => {
+  try {
+    const sale = await prisma.$transaction(async (tx) => {
     // ── NACEF Compliance Logic ──────────────────────────────────
     let isFiscal = false;
     let fiscalNumber = null;
@@ -809,7 +810,7 @@ export async function recordSale(data: {
         totalHt: Math.round(totalHtGlobal * 1000) / 1000,
         totalTax: Math.round(totalTaxGlobal * 1000) / 1000,
         taxBreakdown: taxBreakdown,
-        change: data.change ?? null,
+        change: (isNaN(data.change || 0)) ? 0 : data.change,
         appVersion: '1.0.0',
         createdAt: now,
         items: {
@@ -821,6 +822,14 @@ export async function recordSale(data: {
         takenBy: true
       }
     });
+
+    // Update active cash session if exists
+    if (data.baristaId) {
+      await (tx as any).cashSession.updateMany({
+        where: { storeId: store.id, baristaId: data.baristaId, status: 'OPEN' },
+        data: { totalSales: { increment: data.total } }
+      });
+    }
 
     // 2. Fiscal Journaling
     if (isFiscal) {
@@ -901,6 +910,10 @@ export async function recordSale(data: {
 
   revalidatePath('/');
   return sale;
+} catch (error: any) {
+  console.error('[recordSale Error]:', error);
+  throw new Error(error.message || 'Une erreur est survenue lors de l\'enregistrement de la vente.');
+}
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2698,6 +2711,62 @@ export async function getStaffSessionLogs(userId: string) {
 export async function logStaffSessionAction(userId: string, storeId: string, action: 'LOGIN' | 'LOGOUT') {
   await prisma.staffSessionLog.create({
     data: { userId, storeId, action }
+  });
+}
+
+// ── Cash Session Management ─────────────────────────────────────
+export async function getActiveCashSession() {
+  const store = await getStore();
+  if (!store) return null;
+  const userId = cookies().get('userId')?.value;
+  if (!userId) return null;
+
+  return (prisma as any).cashSession.findFirst({
+    where: {
+      storeId: store.id,
+      baristaId: userId,
+      status: 'OPEN'
+    }
+  });
+}
+
+export async function openCashSessionAction(openingBalance: number) {
+  const store = await getStore();
+  if (!store) throw new Error('Non autorisé');
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Session expirée');
+
+  // Close any existing open session just in case
+  await (prisma as any).cashSession.updateMany({
+    where: { storeId: store.id, baristaId: userId, status: 'OPEN' },
+    data: { status: 'CLOSED', closedAt: new Date() }
+  });
+
+  return (prisma as any).cashSession.create({
+    data: {
+      storeId: store.id,
+      baristaId: userId,
+      openingBalance,
+      totalSales: 0,
+      status: 'OPEN'
+    }
+  });
+}
+
+export async function closeCashSessionAction(id: string, closingBalance: number, notes?: string) {
+  const session = await (prisma as any).cashSession.findUnique({
+    where: { id }
+  });
+  if (!session) throw new Error('Session non trouvée');
+
+  return (prisma as any).cashSession.update({
+    where: { id },
+    data: {
+      closingBalance,
+      notes,
+      status: 'CLOSED',
+      closedAt: new Date()
+    }
   });
 }
 

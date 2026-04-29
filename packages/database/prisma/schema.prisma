@@ -67,6 +67,7 @@ model User {
   takenSales    Sale[] @relation("takenBy")
   preparedSales Sale[] @relation("preparedBy")
   sessionLogs   StaffSessionLog[]
+  cashSessions  CashSession[] @relation("BaristaSessions")
   specialOrders SpecialOrder[] @relation("takenBy")
 }
 
@@ -136,6 +137,7 @@ model Store {
   specialOrders  SpecialOrder[]
   zReports       ZReport[]
   zones          StoreZone[]
+  cashSessions   CashSession[]
 
 
   activityPoleId String?
@@ -966,4 +968,23 @@ model SpecialOrder {
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model CashSession {
+  id              String   @id @default(cuid())
+  storeId         String
+  store           Store    @relation(fields: [storeId], references: [id])
+  baristaId       String
+  barista         User     @relation("BaristaSessions", fields: [baristaId], references: [id])
+  openingBalance  Decimal
+  closingBalance  Decimal?
+  expectedBalance Decimal?
+  totalSales      Decimal? @default(0)
+  status          String   @default("OPEN") // OPEN, CLOSED
+  openedAt        DateTime @default(now())
+  closedAt        DateTime?
+  notes           String?
+
+  @@index([storeId])
+  @@index([baristaId])
 }

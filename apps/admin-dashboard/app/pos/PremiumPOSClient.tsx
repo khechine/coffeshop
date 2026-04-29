@@ -9,7 +9,7 @@ import {
   X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale } from '../actions';
+import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction } from '../actions';
 import './pos-premium.css';
 
 const ICONS: Record<string, React.FC<any>> = {
@@ -134,6 +134,14 @@ export default function PremiumPOSClient({
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [isCartOpenMobile, setIsCartOpenMobile] = useState(false);
   const [sessionSales, setSessionSales] = useState<any[]>(initialSales);
+  
+  // Cash Session State
+  const [activeSession, setActiveSession] = useState<any>(null);
+  const [showOpeningModal, setShowOpeningModal] = useState(false);
+  const [showClosingModal, setShowClosingModal] = useState(false);
+  const [openingBalance, setOpeningBalance] = useState('0');
+  const [closingBalance, setClosingBalance] = useState('0');
+  const [sessionNotes, setSessionNotes] = useState('');
   
   // --- Derived ---
   const peakHoursData = React.useMemo(() => {
@@ -359,7 +367,21 @@ export default function PremiumPOSClient({
   };
 
   // --- Auth Handlers ---
-  const handlePinSubmit = () => {
+  const checkSession = async () => {
+    try {
+      const session = await getActiveCashSession();
+      if (session) {
+        setActiveSession(session);
+        setShowOpeningModal(false);
+      } else {
+        setShowOpeningModal(true);
+      }
+    } catch (err) {
+      console.error("Session check failed", err);
+    }
+  };
+
+  const handlePinSubmit = async () => {
     const barista = initialBaristas.find(b => b.pinCode === pin);
     if (barista) {
       setCashierId(barista.id);
@@ -367,9 +389,34 @@ export default function PremiumPOSClient({
       localStorage.setItem('pos_cashier_id', barista.id);
       localStorage.setItem('pos_cashier_name', barista.name);
       setPin("");
+      await checkSession();
     } else {
       setError("PIN invalide");
       setPin("");
+    }
+  };
+
+  const handleOpenSession = async () => {
+    try {
+      const session = await openCashSessionAction(Number(openingBalance));
+      setActiveSession(session);
+      setShowOpeningModal(false);
+      alert("Session ouverte avec succès ! Bon service.");
+    } catch (err) {
+      alert("Erreur lors de l'ouverture de la session");
+    }
+  };
+
+  const handleCloseSession = async () => {
+    if (!activeSession) return;
+    try {
+      await closeCashSessionAction(activeSession.id, Number(closingBalance), sessionNotes);
+      alert("Session clôturée avec succès.");
+      setActiveSession(null);
+      setShowClosingModal(false);
+      handleLogout(); // Force logout after closing
+    } catch (err) {
+      alert("Erreur lors de la clôture");
     }
   };
 
@@ -379,6 +426,7 @@ export default function PremiumPOSClient({
     setCashierId(null);
     setCashierName(null);
     setPin("");
+    setActiveSession(null);
   };
 
   useEffect(() => {
@@ -388,6 +436,7 @@ export default function PremiumPOSClient({
     if (cid && cname) {
       setCashierId(cid);
       setCashierName(cname);
+      checkSession();
     }
     if (tid) {
       setSelectedTerminalId(tid);
@@ -484,7 +533,7 @@ export default function PremiumPOSClient({
            {theme === 'mocha' ? <Coffee size={24} /> : <Zap size={24} />}
         </div>
 
-        <div className="pos-sidebar-icon" style={{ color: '#EF4444', height: 70, borderTop: '1px solid rgba(255,255,255,0.1)', borderRadius: 0 }} onClick={handleLogout} title="Clôturer Session">
+        <div className="pos-sidebar-icon" style={{ color: '#EF4444', height: 70, borderTop: '1px solid rgba(255,255,255,0.1)', borderRadius: 0 }} onClick={() => setShowClosingModal(true)} title="Clôturer Session">
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
             <LogOut size={28} />
             <span style={{ fontSize: 9, fontWeight: 900 }}>CLÔTURER</span>
@@ -612,7 +661,7 @@ export default function PremiumPOSClient({
                       <span className="metric-label">VOS VENTES (SESSION)</span>
                       <div style={{ background: 'var(--pos-primary)', padding: 8, borderRadius: 10, opacity: 0.2 }}><Zap size={20} /></div>
                    </div>
-                   <div className="metric-value">{(sessionSales.filter(s => s.cashierId === cashierId).reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} DT</div>
+                   <div className="metric-value">{(sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} DT</div>
                    <div className="metric-trend trend-up"><ChevronUp size={16} /> En direct</div>
                 </div>
                 <div className="metric-card">
@@ -687,17 +736,17 @@ export default function PremiumPOSClient({
                        <div className="metric-card" style={{ flex: 1, background: 'var(--pos-primary)', color: '#fff', minWidth: 300 }}>
                           <div style={{ fontSize: 14, opacity: 0.8, fontWeight: 700 }}>OBJECTIF JOURNALIER (VOTRE SESSION)</div>
                           <div style={{ fontSize: 24, fontWeight: 900 }}>
-                             {(sessionSales.filter(s => s.cashierId === cashierId).reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} / 1200.000 DT
+                             {(sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} / 1200.000 DT
                           </div>
                           <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 12, overflow: 'hidden' }}>
                              <div style={{ 
                                height: '100%', 
-                               width: `${Math.min(100, Math.floor(((sessionSales.filter(s => s.cashierId === cashierId).reduce((acc, s) => acc + Number(s.total), 0)) / 1200) * 100))}%`, 
+                               width: `${Math.min(100, Math.floor(((sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)) / 1200) * 100))}%`, 
                                background: '#fff' 
                              }} />
                           </div>
                           <p style={{ margin: '12px 0 0', fontSize: 11, fontWeight: 600 }}>
-                             Vous êtes à {Math.min(100, Math.floor(((sessionSales.filter(s => s.cashierId === cashierId).reduce((acc, s) => acc + Number(s.total), 0)) / 1200) * 100))}% de votre objectif personnel !
+                             Vous êtes à {Math.min(100, Math.floor(((sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)) / 1200) * 100))}% de votre objectif personnel !
                           </p>
                        </div>
                     </div>
@@ -1036,8 +1085,9 @@ export default function PremiumPOSClient({
                                     <div style={{ fontSize: 11, color: 'var(--pos-text-muted)' }}>{o.tableName || 'Vente directe'}</div>
                                  </td>
                                  <td style={{ padding: '16px', fontWeight: 900, color: 'var(--pos-primary)' }}>{o.total.toFixed(3)} DT</td>
-                                 <td style={{ padding: '16px', fontSize: 12, color: 'var(--pos-text-muted)' }}>
-                                    {new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                 <td style={{ padding: '16px', fontSize: 11, color: 'var(--pos-text-muted)', lineHeight: '1.4' }}>
+                                    <div>{new Date(o.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}</div>
+                                    <div style={{ fontWeight: 700, color: 'var(--pos-text-main)' }}>{new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                  </td>
                                  <td style={{ padding: '16px' }}>
                                     <span className={o.isVoid ? 'badge-void' : 'badge-paid'}>
@@ -1330,6 +1380,95 @@ export default function PremiumPOSClient({
                 {isCreatingCustomer ? "Création..." : "Enregistrer le client"}
               </button>
            </div>
+        </div>
+      )}
+
+      {/* Opening Session Modal */}
+      {showOpeningModal && (
+        <div className="pos-modal-overlay" style={{ zIndex: 4000 }}>
+          <div className="pos-modal-card" style={{ width: 400, textAlign: 'center' }}>
+             <div style={{ width: 64, height: 64, borderRadius: '20px', background: 'var(--pos-accent)', color: 'var(--pos-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                <Banknote size={32} />
+             </div>
+             <h2 style={{ fontSize: 24, fontWeight: 900, marginBottom: 8 }}>Ouverture de Caisse</h2>
+             <p style={{ color: 'var(--pos-text-muted)', marginBottom: 24 }}>Saisissez votre fond de caisse initial pour commencer votre service.</p>
+             
+             <div className="payment-amount-display" style={{ marginBottom: 24, background: 'var(--pos-bg)', padding: '20px', borderRadius: '16px' }}>
+                <span style={{ fontSize: 32, fontWeight: 900, color: 'var(--pos-primary)' }}>{openingBalance} DT</span>
+             </div>
+
+             <div className="keypad-grid" style={{ marginBottom: 24 }}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'C'].map(n => (
+                  <button key={n} className="keypad-btn" style={{ height: 60, fontSize: 20 }} onClick={() => {
+                    if (n === 'C') setOpeningBalance('0');
+                    else if (n === '.') { if (!openingBalance.includes('.')) setOpeningBalance(b => b + '.'); }
+                    else setOpeningBalance(b => b === '0' ? n.toString() : b + n.toString());
+                  }}>{n}</button>
+                ))}
+             </div>
+
+             <button className="btn-premium btn-premium-primary" style={{ width: '100%', height: 60, fontSize: 18 }} onClick={handleOpenSession}>
+                OUVRIR LA SESSION
+             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Closing Session Modal */}
+      {showClosingModal && (
+        <div className="pos-modal-overlay" style={{ zIndex: 4000 }}>
+          <div className="pos-modal-card" style={{ width: 450 }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0 }}>Clôture de Caisse</h2>
+                <X size={24} onClick={() => setShowClosingModal(false)} style={{ cursor: 'pointer' }} />
+             </div>
+             
+             <div style={{ background: 'var(--pos-bg)', padding: 20, borderRadius: 16, marginBottom: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                   <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)' }}>Ventes Session:</span>
+                   <span style={{ fontWeight: 900, color: 'var(--pos-primary)' }}>{Number(activeSession?.totalSales || 0).toFixed(3)} DT</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                   <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)' }}>Fond initial:</span>
+                   <span style={{ fontWeight: 900 }}>{Number(activeSession?.openingBalance || 0).toFixed(3)} DT</span>
+                </div>
+                <div style={{ height: 1, background: 'var(--pos-border)', margin: '16px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18 }}>
+                   <span style={{ fontWeight: 900 }}>Total Attendu:</span>
+                   <span style={{ fontWeight: 900 }}>{(Number(activeSession?.openingBalance || 0) + Number(activeSession?.totalSales || 0)).toFixed(3)} DT</span>
+                </div>
+             </div>
+
+             <div className="payment-amount-display" style={{ marginBottom: 24, background: 'var(--pos-bg)', padding: '15px', borderRadius: '16px' }}>
+                <p style={{ fontSize: 12, fontWeight: 800, margin: '0 0 4px', color: 'var(--pos-text-muted)' }}>MONTANT RÉEL EN CAISSE</p>
+                <span style={{ fontSize: 28, fontWeight: 900, color: 'var(--pos-primary)' }}>{closingBalance} DT</span>
+             </div>
+
+             <div className="keypad-grid" style={{ marginBottom: 24 }}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'C'].map(n => (
+                  <button key={n} className="keypad-btn" style={{ height: 50, fontSize: 18 }} onClick={() => {
+                    if (n === 'C') setClosingBalance('0');
+                    else if (n === '.') { if (!closingBalance.includes('.')) setClosingBalance(b => b + '.'); }
+                    else setClosingBalance(b => b === '0' ? n.toString() : b + n.toString());
+                  }}>{n}</button>
+                ))}
+             </div>
+
+             <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, marginBottom: 8, color: 'var(--pos-text-muted)' }}>NOTES DE CLÔTURE</label>
+                <textarea 
+                  style={{ width: '100%', borderRadius: 12, border: '1px solid var(--pos-border)', padding: 12, background: 'var(--pos-bg)', color: 'var(--pos-text-main)' }}
+                  rows={2}
+                  placeholder="Écart de caisse, remarques..."
+                  value={sessionNotes}
+                  onChange={e => setSessionNotes(e.target.value)}
+                />
+             </div>
+
+             <button className="btn-premium btn-premium-danger" style={{ width: '100%', height: 60, fontSize: 18 }} onClick={handleCloseSession}>
+                VALIDER LA CLÔTURE
+             </button>
+          </div>
         </div>
       )}
       {/* Mobile Bottom Nav */}

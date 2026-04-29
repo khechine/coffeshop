@@ -76,8 +76,8 @@ export default async function POSPage() {
     table: s.tableName || 'Directe',
     cashier: s.barista?.name || 'Inconnu',
     takenBy: (s as any).takenBy?.name || s.barista?.name || 'Inconnu',
-    takenById: (s as any).takenById || s.baristaId,
     cashierId: s.baristaId,
+    createdAt: s.createdAt,
     time: new Date(s.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
     items: s.items.map((i: any) => ({ name: i.product?.name || 'Inconnu', quantity: Number(i.quantity), price: Number(i.price) }))
   }));
