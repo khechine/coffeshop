@@ -75,21 +75,21 @@ export default function PremiumPOSClient({
 
   // --- Theme Management ---
   useEffect(() => {
-    const savedTheme = localStorage.getItem('pos_theme');
-    if (savedTheme === 'dark') {
-      setIsDarkMode(true);
-      document.body.setAttribute('data-theme', 'dark');
+    const savedTheme = localStorage.getItem('pos_theme_variant');
+    if (savedTheme === 'koffie') {
+      setTheme('koffie');
+      document.body.setAttribute('data-theme', 'koffie');
     } else {
       document.body.removeAttribute('data-theme');
     }
   }, []);
 
-  const toggleTheme = () => {
-    setIsDarkMode(prev => {
-      const newVal = !prev;
-      localStorage.setItem('pos_theme', newVal ? 'dark' : 'light');
-      if (newVal) {
-        document.body.setAttribute('data-theme', 'dark');
+  const toggleThemeVariant = () => {
+    setTheme(prev => {
+      const newVal = prev === 'mocha' ? 'koffie' : 'mocha';
+      localStorage.setItem('pos_theme_variant', newVal);
+      if (newVal === 'koffie') {
+        document.body.setAttribute('data-theme', 'koffie');
       } else {
         document.body.removeAttribute('data-theme');
       }
@@ -101,7 +101,8 @@ export default function PremiumPOSClient({
   const [category, setCategory] = useState('Tous');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTable, setSelectedTable] = useState<any | null>(null);
-  const [view, setView] = useState<'TABLES' | 'POS' | 'ORDERS' | 'CUSTOMERS'>('TABLES');
+  const [view, setView] = useState<'TABLES' | 'POS' | 'ORDERS' | 'CUSTOMERS' | 'DASHBOARD'>('DASHBOARD');
+  const [theme, setTheme] = useState<'mocha' | 'koffie'>('mocha');
   const [currentParentCategoryId, setCurrentParentCategoryId] = useState<string | null>(null);
   
   // Customer & Loyalty
@@ -134,6 +135,44 @@ export default function PremiumPOSClient({
   const [isCartOpenMobile, setIsCartOpenMobile] = useState(false);
   
   // --- Derived ---
+  const peakHoursData = React.useMemo(() => {
+    const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+    initialSales.forEach((sale: any) => {
+      const date = new Date(sale.createdAt);
+      const day = (date.getDay() + 6) % 7; 
+      const hour = date.getHours();
+      matrix[day][hour] += 1;
+    });
+    let maxVal = 0;
+    matrix.forEach(row => row.forEach(val => { if(val > maxVal) maxVal = val; }));
+    return { matrix, maxVal };
+  }, [initialSales]);
+
+  const salesByCategory = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    initialSales.forEach((sale: any) => {
+      sale.items.forEach((item: any) => {
+        const cat = item.product.category || 'Inconnu';
+        counts[cat] = (counts[cat] || 0) + (Number(item.price) * item.quantity);
+      });
+    });
+    const totalSalesVal = Object.values(counts).reduce((a, b) => a + b, 0);
+    return Object.entries(counts)
+      .map(([name, val]) => ({ name, val: totalSalesVal > 0 ? (val / totalSalesVal) * 100 : 0 }))
+      .sort((a, b) => b.val - a.val)
+      .slice(0, 3);
+  }, [initialSales]);
+
+  const getIntensityClass = (val: number, maxVal: number) => {
+    if (val === 0) return '';
+    if (maxVal === 0) return '';
+    const ratio = val / maxVal;
+    if (ratio > 0.8) return 'intensity-peak';
+    if (ratio > 0.5) return 'intensity-high';
+    if (ratio > 0.2) return 'intensity-med';
+    return 'intensity-low';
+  };
+
   const filteredProducts = initialProducts.filter(p => {
     const matchesCat = category === 'Tous' || p.category === category;
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -419,6 +458,7 @@ export default function PremiumPOSClient({
         <div className="pos-sidebar-icon" onClick={() => router.push('/')} title="Dashboard" style={{ marginBottom: 20 }}>
           <LayoutDashboard size={28} />
         </div>
+        <div className={`pos-sidebar-icon ${view === 'DASHBOARD' ? 'active' : ''}`} onClick={() => setView('DASHBOARD')} title="Tableau de bord"><LayoutDashboard size={24} /></div>
         <div className={`pos-sidebar-icon ${view === 'TABLES' ? 'active' : ''}`} onClick={() => setView('TABLES')} title="Tables"><LayoutGrid size={24} /></div>
         <div className={`pos-sidebar-icon ${view === 'POS' ? 'active' : ''}`} onClick={() => setView('POS')} title="Vente"><ShoppingCart size={24} /></div>
         <div className={`pos-sidebar-icon ${view === 'ORDERS' ? 'active' : ''}`} onClick={() => setView('ORDERS')} title="Commandes"><History size={24} /></div>
@@ -426,8 +466,8 @@ export default function PremiumPOSClient({
         <div style={{ flex: 1 }} />
         
         {/* Theme Toggle */}
-        <div className="pos-sidebar-icon" onClick={toggleTheme} title="Changer de thème" style={{ cursor: 'pointer', marginBottom: 10 }}>
-           {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+        <div className="pos-sidebar-icon" onClick={toggleThemeVariant} title="Changer de thème" style={{ cursor: 'pointer', marginBottom: 10 }}>
+           {theme === 'mocha' ? <Coffee size={24} /> : <Zap size={24} />}
         </div>
 
         <div className="pos-sidebar-icon" style={{ color: '#EF4444', height: 70, borderTop: '1px solid rgba(255,255,255,0.1)', borderRadius: 0 }} onClick={handleLogout} title="Clôturer Session">
@@ -522,7 +562,125 @@ export default function PremiumPOSClient({
 
       {/* Main Experience Area */}
       <div className="pos-product-section">
-        {view === 'TABLES' ? (
+        {view === 'DASHBOARD' ? (
+          <div style={{ flex: 1, padding: 40, overflowY: 'auto', background: 'var(--pos-bg)' }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
+                <div>
+                   <h1 style={{ fontSize: 32, fontWeight: 900, margin: 0 }}>Tableau de bord</h1>
+                   <p style={{ color: 'var(--pos-text-muted)', margin: 0 }}>Vue d'ensemble de votre boutique</p>
+                </div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                   <div style={{ background: 'var(--pos-card-bg)', padding: '10px 20px', borderRadius: 12, border: '1px solid var(--pos-border)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Clock size={18} /> Aujourd'hui
+                   </div>
+                </div>
+             </div>
+
+             <div className="dashboard-metrics-grid">
+                <div className="metric-card">
+                   <div className="metric-card-header">
+                      <span className="metric-label">REVENU TOTAL</span>
+                      <div style={{ background: 'var(--pos-accent)', padding: 8, borderRadius: 10, opacity: 0.2 }}><Banknote size={20} /></div>
+                   </div>
+                   <div className="metric-value">{(initialSales.reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} DT</div>
+                   <div className="metric-trend trend-up"><ChevronUp size={16} /> 8.8% <span style={{ color: 'var(--pos-text-muted)', fontWeight: 500, marginLeft: 4 }}>vs hier</span></div>
+                </div>
+                <div className="metric-card">
+                   <div className="metric-card-header">
+                      <span className="metric-label">COMMANDES</span>
+                      <div style={{ background: 'var(--pos-success)', padding: 8, borderRadius: 10, opacity: 0.2 }}><ClipboardList size={20} /></div>
+                   </div>
+                   <div className="metric-value">{initialSales.length}</div>
+                   <div className="metric-trend trend-down"><ChevronDown size={16} /> 2.1% <span style={{ color: 'var(--pos-text-muted)', fontWeight: 500, marginLeft: 4 }}>vs hier</span></div>
+                </div>
+                <div className="metric-card">
+                   <div className="metric-card-header">
+                      <span className="metric-label">PROFITS NETS</span>
+                      <div style={{ background: 'var(--pos-primary)', padding: 8, borderRadius: 10, opacity: 0.2 }}><Zap size={20} /></div>
+                   </div>
+                   <div className="metric-value">845.000 DT</div>
+                   <div className="metric-trend trend-up"><ChevronUp size={16} /> 12.4% <span style={{ color: 'var(--pos-text-muted)', fontWeight: 500, marginLeft: 4 }}>vs hier</span></div>
+                </div>
+                <div className="metric-card">
+                   <div className="metric-card-header">
+                      <span className="metric-label">CLIENTS</span>
+                      <div style={{ background: 'var(--pos-warning)', padding: 8, borderRadius: 10, opacity: 0.2 }}><Users size={20} /></div>
+                   </div>
+                   <div className="metric-value">12</div>
+                   <div className="metric-trend trend-up"><ChevronUp size={16} /> 5.6% <span style={{ color: 'var(--pos-text-muted)', fontWeight: 500, marginLeft: 4 }}>vs hier</span></div>
+                </div>
+             </div>
+
+             <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 32 }}>
+                <div className="heatmap-container">
+                   <div className="heatmap-header">
+                      <div>
+                         <h3 style={{ margin: 0, fontWeight: 900 }}>Heures d'Affluence</h3>
+                         <p style={{ margin: 0, fontSize: 13, color: 'var(--pos-text-muted)' }}>Moyenne sur les 30 derniers jours</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)' }}>
+                         <span>Bas</span>
+                         <div style={{ width: 12, height: 12, borderRadius: 3, background: '#EFEBE9' }} />
+                         <div style={{ width: 12, height: 12, borderRadius: 3, background: '#BCAAA4' }} />
+                         <div style={{ width: 12, height: 12, borderRadius: 3, background: '#8D6E63' }} />
+                         <div style={{ width: 12, height: 12, borderRadius: 3, background: '#5D4037' }} />
+                         <span>Pic</span>
+                      </div>
+                   </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day, dIdx) => (
+                        <div key={day} className="heatmap-grid">
+                           <div className="heatmap-row-label">{day}</div>
+                           {peakHoursData.matrix[dIdx].map((val: number, hour: number) => {
+                             const intensity = getIntensityClass(val, peakHoursData.maxVal);
+                             return <div key={hour} className={`heatmap-cell ${intensity}`} title={`${day} ${hour}h: ${val} ventes`} />;
+                           })}
+                        </div>
+                      ))}
+                      <div className="heatmap-grid" style={{ marginTop: 8 }}>
+                         <div className="heatmap-row-label" />
+                         {Array.from({ length: 24 }).map((_, hour) => (
+                           <div key={hour} style={{ fontSize: 9, fontWeight: 800, color: 'var(--pos-text-muted)', textAlign: 'center' }}>
+                             {hour}h
+                           </div>
+                         ))}
+                      </div>
+                   </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                   <div className="metric-card" style={{ flex: 1 }}>
+                      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900 }}>Ventes par Catégorie</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 20 }}>
+                         {salesByCategory.length > 0 ? salesByCategory.map((cat, idx) => (
+                           <div key={cat.name}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 800, marginBottom: 4 }}>
+                                 <span>{cat.name}</span>
+                                 <span>{cat.val.toFixed(0)}%</span>
+                              </div>
+                              <div style={{ height: 8, background: 'var(--pos-input-bg)', borderRadius: 4, overflow: 'hidden' }}>
+                                 <div style={{ height: '100%', width: `${cat.val}%`, background: idx === 0 ? '#5D4037' : idx === 1 ? '#BC6C25' : '#8B5E3C' }} />
+                              </div>
+                           </div>
+                         )) : (
+                           <p style={{ fontSize: 12, color: 'var(--pos-text-muted)' }}>Aucune donnée de vente</p>
+                         )}
+                      </div>
+                   </div>
+                   
+                   <div className="metric-card" style={{ flex: 1, background: 'var(--pos-primary)', color: '#fff' }}>
+                      <div style={{ fontSize: 14, opacity: 0.8, fontWeight: 700 }}>OBJECTIF JOURNALIER</div>
+                      <div style={{ fontSize: 24, fontWeight: 900 }}>845.000 / 1200 DT</div>
+                      <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 12, overflow: 'hidden' }}>
+                         <div style={{ height: '100%', width: '70%', background: '#fff' }} />
+                      </div>
+                      <p style={{ margin: '12px 0 0', fontSize: 11, fontWeight: 600 }}>Vous êtes à 70% de votre objectif ! Continuez comme ça.</p>
+                   </div>
+                </div>
+             </div>
+          </div>
+        ) : view === 'TABLES' ? (
           <main className="pos-main-content-scroll" style={{ flex: 1, padding: 40, overflowY: 'auto' }}>
              <div className="tables-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40, flexWrap: 'wrap', gap: 20 }}>
                 <div>
@@ -1153,6 +1311,10 @@ export default function PremiumPOSClient({
       )}
       {/* Mobile Bottom Nav */}
       <nav className="pos-mobile-nav">
+         <div className={`mobile-nav-item ${view === 'DASHBOARD' ? 'active' : ''}`} onClick={() => setView('DASHBOARD')}>
+            <LayoutDashboard size={20} />
+            <span>Stats</span>
+         </div>
          <div className={`mobile-nav-item ${view === 'TABLES' ? 'active' : ''}`} onClick={() => setView('TABLES')}>
             <LayoutGrid size={20} />
             <span>Tables</span>
@@ -1168,10 +1330,6 @@ export default function PremiumPOSClient({
          <div className={`mobile-nav-item ${view === 'CUSTOMERS' ? 'active' : ''}`} onClick={() => setView('CUSTOMERS')}>
             <Users size={20} />
             <span>Clients</span>
-         </div>
-         <div className="mobile-nav-item" onClick={handleLogout} style={{ color: '#EF4444' }}>
-            <LogOut size={20} />
-            <span>Quitter</span>
          </div>
       </nav>
 
