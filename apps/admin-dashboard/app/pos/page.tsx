@@ -102,9 +102,6 @@ export default async function POSPage() {
         loyaltyEarnRate={Number(store.loyaltyEarnRate || 1)}
         loyaltyRedeemRate={Number(store.loyaltyRedeemRate || 100)}
       />
-      <div style={{ position: 'fixed', bottom: 5, right: 5, fontSize: '10px', color: '#ccc', zIndex: 9999, pointerEvents: 'none' }}>
-        Mode Premium Active ({planNameUpper}) {isFiscal ? '[FISC]' : ''}
-      </div>
     </>
   );
 }

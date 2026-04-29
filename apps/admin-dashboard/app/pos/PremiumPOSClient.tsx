@@ -609,11 +609,11 @@ export default function PremiumPOSClient({
                 </div>
                 <div className="metric-card">
                    <div className="metric-card-header">
-                      <span className="metric-label">PRODUITS VENDUS</span>
+                      <span className="metric-label">VOS VENTES (SESSION)</span>
                       <div style={{ background: 'var(--pos-primary)', padding: 8, borderRadius: 10, opacity: 0.2 }}><Zap size={20} /></div>
                    </div>
-                   <div className="metric-value">{sessionSales.reduce((acc, s) => acc + (s.items?.length || 0), 0)}</div>
-                   <div className="metric-trend trend-up"><ChevronUp size={16} /> 12.4% <span style={{ color: 'var(--pos-text-muted)', fontWeight: 500, marginLeft: 4 }}>vs hier</span></div>
+                   <div className="metric-value">{(sessionSales.filter(s => s.cashierId === cashierId).reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} DT</div>
+                   <div className="metric-trend trend-up"><ChevronUp size={16} /> En direct</div>
                 </div>
                 <div className="metric-card">
                    <div className="metric-card-header">
@@ -626,71 +626,81 @@ export default function PremiumPOSClient({
              </div>
 
              <div className="dashboard-charts-layout">
-                <div className="heatmap-container">
-                   <div className="heatmap-header">
-                      <div>
-                         <h3 style={{ margin: 0, fontWeight: 900 }}>Heures d'Affluence</h3>
-                         <p style={{ margin: 0, fontSize: 13, color: 'var(--pos-text-muted)' }}>Moyenne sur les 30 derniers jours</p>
-                      </div>
-                      <div style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)' }}>
-                         <span>Bas</span>
-                         <div style={{ width: 12, height: 12, borderRadius: 3, background: '#EFEBE9' }} />
-                         <div style={{ width: 12, height: 12, borderRadius: 3, background: '#BCAAA4' }} />
-                         <div style={{ width: 12, height: 12, borderRadius: 3, background: '#8D6E63' }} />
-                         <div style={{ width: 12, height: 12, borderRadius: 3, background: '#5D4037' }} />
-                         <span>Pic</span>
-                      </div>
-                   </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+                    <div className="heatmap-container">
+                       <div className="heatmap-header">
+                          <div>
+                             <h3 style={{ margin: 0, fontWeight: 900 }}>Heures d'Affluence</h3>
+                             <p style={{ margin: 0, fontSize: 13, color: 'var(--pos-text-muted)' }}>Moyenne sur les 30 derniers jours</p>
+                          </div>
+                          <div style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)' }}>
+                             <span>Bas</span>
+                             <div style={{ width: 12, height: 12, borderRadius: 3, background: '#EFEBE9' }} />
+                             <div style={{ width: 12, height: 12, borderRadius: 3, background: '#BCAAA4' }} />
+                             <div style={{ width: 12, height: 12, borderRadius: 3, background: '#8D6E63' }} />
+                             <div style={{ width: 12, height: 12, borderRadius: 3, background: '#5D4037' }} />
+                             <span>Haut</span>
+                          </div>
+                       </div>
+                       
+                       <div className="heatmap-grid">
+                          <div />
+                          {Array.from({ length: 24 }).map((_, i) => (
+                             <div key={i} className="heatmap-col-label">{i}h</div>
+                          ))}
+                          
+                          {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day, dIdx) => (
+                             <React.Fragment key={day}>
+                                <div className="heatmap-row-label">{day}</div>
+                                {peakHoursData.matrix[dIdx].map((val, hIdx) => (
+                                   <div 
+                                      key={hIdx} 
+                                      className={`heatmap-cell ${getIntensityClass(val, peakHoursData.maxVal)}`}
+                                      title={`${day} ${hIdx}h: ${val} ventes`}
+                                   />
+                                ))}
+                             </React.Fragment>
+                          ))}
+                       </div>
+                    </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day, dIdx) => (
-                        <div key={day} className="heatmap-grid">
-                           <div className="heatmap-row-label">{day}</div>
-                           {peakHoursData.matrix[dIdx].map((val: number, hour: number) => {
-                             const intensity = getIntensityClass(val, peakHoursData.maxVal);
-                             return <div key={hour} className={`heatmap-cell ${intensity}`} title={`${day} ${hour}h: ${val} ventes`} />;
-                           })}
-                        </div>
-                      ))}
-                      <div className="heatmap-grid" style={{ marginTop: 8 }}>
-                         <div className="heatmap-row-label" />
-                         {Array.from({ length: 24 }).map((_, hour) => (
-                           <div key={hour} style={{ fontSize: 9, fontWeight: 800, color: 'var(--pos-text-muted)', textAlign: 'center' }}>
-                             {hour}h
-                           </div>
-                         ))}
-                      </div>
-                   </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                   <div className="metric-card" style={{ flex: 1 }}>
-                      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900 }}>Ventes par Catégorie</h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 20 }}>
-                         {salesByCategory.length > 0 ? salesByCategory.map((cat, idx) => (
-                           <div key={cat.name}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 800, marginBottom: 4 }}>
-                                 <span>{cat.name}</span>
-                                 <span>{cat.val.toFixed(0)}%</span>
-                              </div>
-                              <div style={{ height: 8, background: 'var(--pos-input-bg)', borderRadius: 4, overflow: 'hidden' }}>
-                                 <div style={{ height: '100%', width: `${cat.val}%`, background: idx === 0 ? '#5D4037' : idx === 1 ? '#BC6C25' : '#8B5E3C' }} />
-                              </div>
-                           </div>
-                         )) : (
-                           <p style={{ fontSize: 12, color: 'var(--pos-text-muted)' }}>Aucune donnée de vente</p>
-                         )}
-                      </div>
-                   </div>
-                   
-                   <div className="metric-card" style={{ flex: 1, background: 'var(--pos-primary)', color: '#fff' }}>
-                      <div style={{ fontSize: 14, opacity: 0.8, fontWeight: 700 }}>OBJECTIF JOURNALIER</div>
-                      <div style={{ fontSize: 24, fontWeight: 900 }}>845.000 / 1200 DT</div>
-                      <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 12, overflow: 'hidden' }}>
-                         <div style={{ height: '100%', width: '70%', background: '#fff' }} />
-                      </div>
-                      <p style={{ margin: '12px 0 0', fontSize: 11, fontWeight: 600 }}>Vous êtes à 70% de votre objectif ! Continuez comme ça.</p>
-                   </div>
+                    <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
+                       <div className="metric-card" style={{ flex: 1, minWidth: 300 }}>
+                          <h3 style={{ margin: '0 0 20px', fontWeight: 900 }}>Top Catégories</h3>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                             {salesByCategory.length > 0 ? salesByCategory.map((cat, idx) => (
+                               <div key={cat.name}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 800, marginBottom: 4 }}>
+                                     <span>{cat.name}</span>
+                                     <span>{cat.val.toFixed(0)}%</span>
+                                  </div>
+                                  <div style={{ height: 8, background: 'var(--pos-input-bg)', borderRadius: 4, overflow: 'hidden' }}>
+                                     <div style={{ height: '100%', width: `${cat.val}%`, background: idx === 0 ? '#5D4037' : idx === 1 ? '#BC6C25' : '#8B5E3C' }} />
+                                  </div>
+                               </div>
+                             )) : (
+                               <p style={{ fontSize: 12, color: 'var(--pos-text-muted)' }}>Aucune donnée de vente</p>
+                             )}
+                          </div>
+                       </div>
+                       
+                       <div className="metric-card" style={{ flex: 1, background: 'var(--pos-primary)', color: '#fff', minWidth: 300 }}>
+                          <div style={{ fontSize: 14, opacity: 0.8, fontWeight: 700 }}>OBJECTIF JOURNALIER (VOTRE SESSION)</div>
+                          <div style={{ fontSize: 24, fontWeight: 900 }}>
+                             {(sessionSales.filter(s => s.cashierId === cashierId).reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} / 1200.000 DT
+                          </div>
+                          <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 12, overflow: 'hidden' }}>
+                             <div style={{ 
+                               height: '100%', 
+                               width: `${Math.min(100, Math.floor(((sessionSales.filter(s => s.cashierId === cashierId).reduce((acc, s) => acc + Number(s.total), 0)) / 1200) * 100))}%`, 
+                               background: '#fff' 
+                             }} />
+                          </div>
+                          <p style={{ margin: '12px 0 0', fontSize: 11, fontWeight: 600 }}>
+                             Vous êtes à {Math.min(100, Math.floor(((sessionSales.filter(s => s.cashierId === cashierId).reduce((acc, s) => acc + Number(s.total), 0)) / 1200) * 100))}% de votre objectif personnel !
+                          </p>
+                       </div>
+                    </div>
                 </div>
              </div>
           </div>
