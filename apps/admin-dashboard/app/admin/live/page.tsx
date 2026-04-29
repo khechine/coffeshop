@@ -121,59 +121,59 @@ export default function LiveDashboardPage() {
       const actionText = event.data.action === 'add' ? 'a ajouté' : 'a retiré';
       const productName = event.data.productName ? ` ${event.data.productName}` : ' un produit';
       const takeawayText = event.data.isTakeaway ? ' (à emporter)' : '';
-      const modeContext = event.type === 'table_updated' ? `(${event.data.tableName})` : '(Rachma)';
-      return <span className="text-white text-sm"><span className="font-bold text-slate-200">{event.data.baristaName || event.data.baristaId}</span> {actionText}<span className="font-bold text-white">{productName}</span>{takeawayText} <span className="text-slate-400 text-xs font-semibold">{modeContext}</span></span>;
+      const modeContext = event.type === 'table_updated' ? event.data.tableName : 'Rachma';
+      return <span className="text-slate-600 text-sm"><span className="font-bold text-slate-900">{event.data.baristaName || event.data.baristaId}</span> {actionText}<span className="font-bold text-slate-800">{productName}</span>{takeawayText} <span className="text-indigo-500/60 text-[10px] font-black uppercase tracking-widest ml-2">• {modeContext}</span></span>;
     }
     if (event.type === 'sale_completed') {
-      return <p className="text-slate-100 text-[15px]">Vente encaissée pour <span className="text-emerald-400 font-black">{Number(event.data.total).toFixed(3)} DT</span> <span className="text-slate-400 text-sm font-medium">#{event.data.fiscalNumber || event.data.id?.substring(0,6)}</span></p>;
+      return <p className="text-slate-700 text-[15px]">Vente encaissée pour <span className="text-emerald-600 font-black">{Number(event.data.total).toFixed(3)} DT</span> <span className="text-slate-500 text-sm font-medium">#{event.data.fiscalNumber || event.data.id?.substring(0,6)}</span></p>;
     }
-    return <p className="text-slate-100 text-[15px]">Activité enregistrée</p>;
+    return <p className="text-slate-700 text-[15px]">Activité enregistrée</p>;
   };
 
   return (
     <div className="p-8 px-10 max-w-6xl mx-auto min-h-screen">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 pb-6 border-b border-white/5">
+      <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
             <Activity className="text-emerald-500" />
             Live Tracker
           </h1>
           <div className="flex items-center gap-2 mt-2">
             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`} />
-            <span className="text-slate-300 text-sm font-semibold">{isConnected ? 'Connecté en direct' : 'Déconnecté / Tentative de reconnexion...'}</span>
+            <span className="text-slate-500 text-sm font-semibold">{isConnected ? 'Connecté en direct' : 'Déconnecté / Tentative de reconnexion...'}</span>
           </div>
         </div>
       </div>
 
       {/* Stats Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-emerald-500/10 border border-emerald-500/30 p-8 rounded-[32px] flex flex-col items-center justify-center shadow-lg shadow-emerald-500/5">
-          <span className="text-emerald-400 text-xs font-black tracking-widest mb-2">ENCAISSÉ (LIVE SÉSSION)</span>
-          <span className="text-white text-5xl font-black">{todayTotal.toFixed(3)} DT</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="bg-emerald-50 border border-emerald-200 p-8 rounded-[32px] flex flex-col items-center justify-center shadow-sm">
+          <span className="text-emerald-600 text-xs font-black tracking-widest mb-2">ENCAISSÉ (LIVE SÉSSION)</span>
+          <span className="text-emerald-900 text-5xl font-black">{todayTotal.toFixed(3)} DT</span>
         </div>
-        <div className="bg-amber-500/10 border border-amber-500/30 p-8 rounded-[32px] flex flex-col items-center justify-center shadow-lg shadow-amber-500/5">
-          <span className="text-amber-400 text-xs font-black tracking-widest mb-2">EN COURS (TAPS NON CLÔTURÉS)</span>
-          <span className="text-white text-5xl font-black">{Math.max(0, ongoingTotal).toFixed(3)} DT</span>
+        <div className="bg-amber-50 border border-amber-200 p-8 rounded-[32px] flex flex-col items-center justify-center shadow-sm">
+          <span className="text-amber-600 text-xs font-black tracking-widest mb-2">EN COURS (TAPS NON CLÔTURÉS)</span>
+          <span className="text-amber-900 text-5xl font-black">{Math.max(0, ongoingTotal).toFixed(3)} DT</span>
         </div>
       </div>
 
       {/* Feed */}
       <div>
-        <h2 className="text-slate-300 text-xs font-black tracking-[0.2em] mb-6 flex items-center gap-2">
+        <h2 className="text-slate-500 text-xs font-black tracking-[0.2em] mb-6 flex items-center gap-2">
            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
            FLUX D'ACTIVITÉ EN TEMPS RÉEL
         </h2>
         
         <div className="space-y-3">
           {events.length === 0 ? (
-            <div className="p-12 border border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center bg-white/[0.01]">
+            <div className="p-12 border border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center bg-slate-50/50">
               <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-              <p className="text-slate-500">En attente d'activité en magasin...</p>
+              <p className="text-slate-400">En attente d'activité en magasin...</p>
             </div>
           ) : (
             events.map((event) => (
-              <div key={event.id} className="flex items-center gap-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl hover:bg-white/[0.04] transition-colors">
+              <div key={event.id} className="flex items-center gap-4 bg-white border border-slate-100 p-4 rounded-2xl hover:bg-slate-50 transition-colors shadow-sm">
                 {renderEventIcon(event.type)}
                 <div className="flex-1">
                   {renderEventDescription(event)}

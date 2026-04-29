@@ -19,7 +19,7 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
   const [mounted, setMounted] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [openSections, setOpenSections] = useState<string[]>([]);
+  const [openSections, setOpenSections] = useState<string[]>(['VENTES', 'PILOTAGE', 'PRODUITS', 'B2B']);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -39,15 +39,8 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
     
     setRole(storedRole);
     setIsCollapsed(storedCollapsed);
-    if (storedSections) {
-      setOpenSections(JSON.parse(storedSections));
-    } else {
-      // Default open section based on pathname
-      if (pathname.startsWith('/pos') || pathname.startsWith('/admin/sales')) setOpenSections(['VENTES']);
-      else if (pathname.startsWith('/admin/products') || pathname.startsWith('/admin/stock')) setOpenSections(['PRODUITS']);
-      else if (pathname.startsWith('/marketplace') || pathname.startsWith('/vendor')) setOpenSections(['B2B']);
-      else setOpenSections(['PILOTAGE']);
-    }
+    setOpenSections(['VENTES', 'PILOTAGE', 'PRODUITS', 'B2B']);
+
     
     if (storedPerms) {
       const perms = JSON.parse(storedPerms);
@@ -99,20 +92,10 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
   const displayExpanded = !isCollapsed || isHovered;
 
   const toggleSection = (section: string) => {
-    setOpenSections(prev => {
-      // Accordion behavior: if we're opening a section, close others. 
-      // If we're closing the current one, just close it.
-      const isCurrentlyOpen = prev.includes(section);
-      const newSections = isCurrentlyOpen ? [] : [section];
-      
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('sidebar_open_sections', JSON.stringify(newSections));
-      }
-      return newSections;
-    });
+    // Disabled accordion behavior - sections always open
   };
 
-  const isSectionOpen = (section: string) => openSections.includes(section);
+  const isSectionOpen = (section: string) => true;
 
   const handleLogout = async () => {
     await logoutUser();
@@ -171,9 +154,8 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
         {hasPerm('POS') && (
           <div className="nav-group">
             {displayExpanded && (
-              <div className="nav-section-header" onClick={() => toggleSection('VENTES')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px 6px' }}>
+              <div className="nav-section-header" style={{ padding: '0 12px 6px' }}>
                 <span className="nav-section-label" style={{ padding: 0 }}>Ventes & Direct</span>
-                {isSectionOpen('VENTES') ? <ChevronDown size={14} color="rgba(255,255,255,0.3)" /> : <ChevronRight size={14} color="rgba(255,255,255,0.3)" />}
               </div>
             )}
             {(isCollapsed || isSectionOpen('VENTES')) && (
@@ -195,9 +177,8 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
         {(hasPerm('DASHBOARD') || role === 'STORE_OWNER') && (
           <div className="nav-group">
             {displayExpanded && (
-              <div className="nav-section-header" onClick={() => toggleSection('PILOTAGE')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px 6px' }}>
+              <div className="nav-section-header" style={{ padding: '0 12px 6px' }}>
                 <span className="nav-section-label" style={{ padding: 0 }}>Pilotage Business</span>
-                {isSectionOpen('PILOTAGE') ? <ChevronDown size={14} color="rgba(255,255,255,0.3)" /> : <ChevronRight size={14} color="rgba(255,255,255,0.3)" />}
               </div>
             )}
             {(isCollapsed || isSectionOpen('PILOTAGE')) && (
@@ -229,9 +210,8 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
         {(hasPerm('PRODUCTS') || hasPerm('STOCK')) && (
           <div className="nav-group">
             {displayExpanded && (
-              <div className="nav-section-header" onClick={() => toggleSection('PRODUITS')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px 6px' }}>
+              <div className="nav-section-header" style={{ padding: '0 12px 6px' }}>
                 <span className="nav-section-label" style={{ padding: 0 }}>Gestion Produits</span>
-                {isSectionOpen('PRODUITS') ? <ChevronDown size={14} color="rgba(255,255,255,0.3)" /> : <ChevronRight size={14} color="rgba(255,255,255,0.3)" />}
               </div>
             )}
             {(isCollapsed || isSectionOpen('PRODUITS')) && (
@@ -257,9 +237,8 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
         {(hasPerm('SUPPLY') || role === 'STORE_OWNER') && (
           <div className="nav-group">
             {displayExpanded && (
-              <div className="nav-section-header" onClick={() => toggleSection('B2B')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px 6px' }}>
+              <div className="nav-section-header" style={{ padding: '0 12px 6px' }}>
                 <span className="nav-section-label" style={{ padding: 0 }}>Sourcing & B2B</span>
-                {isSectionOpen('B2B') ? <ChevronDown size={14} color="rgba(255,255,255,0.3)" /> : <ChevronRight size={14} color="rgba(255,255,255,0.3)" />}
               </div>
             )}
             {(isCollapsed || isSectionOpen('B2B')) && (
