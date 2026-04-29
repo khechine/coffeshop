@@ -786,9 +786,15 @@
 /* Dashboard Analytics */
 .dashboard-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
   margin-bottom: 32px;
+}
+
+@media (max-width: 600px) {
+  .dashboard-metrics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .metric-card {
@@ -840,6 +846,20 @@
   border-radius: 24px;
   border: 1px solid var(--pos-border);
   box-shadow: var(--pos-shadow);
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.dashboard-charts-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 32px;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-charts-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 .heatmap-header {
@@ -847,12 +867,14 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  min-width: 600px; /* Ensure header doesn't squash on small scroll */
 }
 
 .heatmap-grid {
   display: grid;
-  grid-template-columns: auto repeat(24, 1fr);
+  grid-template-columns: 40px repeat(24, 1fr);
   gap: 4px;
+  min-width: 800px; /* Force minimum width for horizontal scroll visibility */
 }
 
 .heatmap-row-label {
@@ -892,4 +914,17 @@
   .heatmap-cell:nth-child(n+14) {
     display: none;
   }
+}
+
+.orders-table-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.orders-table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 650px;
 }

@@ -133,13 +133,14 @@ export default function PremiumPOSClient({
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '' });
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [isCartOpenMobile, setIsCartOpenMobile] = useState(false);
+  const [sessionSales, setSessionSales] = useState<any[]>(initialSales);
   
   // --- Derived ---
   const peakHoursData = React.useMemo(() => {
     const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
-    if (!Array.isArray(initialSales)) return { matrix, maxVal: 0 };
+    if (!Array.isArray(sessionSales)) return { matrix, maxVal: 0 };
 
-    initialSales.forEach((sale: any) => {
+    sessionSales.forEach((sale: any) => {
       if (!sale?.createdAt) return;
       const date = new Date(sale.createdAt);
       if (isNaN(date.getTime())) return;
@@ -154,13 +155,13 @@ export default function PremiumPOSClient({
     let maxVal = 0;
     matrix.forEach(row => row.forEach(val => { if(val > maxVal) maxVal = val; }));
     return { matrix, maxVal };
-  }, [initialSales]);
+  }, [sessionSales]);
 
   const salesByCategory = React.useMemo(() => {
     const counts: Record<string, number> = {};
-    if (!Array.isArray(initialSales)) return [];
+    if (!Array.isArray(sessionSales)) return [];
 
-    initialSales.forEach((sale: any) => {
+    sessionSales.forEach((sale: any) => {
       if (!Array.isArray(sale?.items)) return;
       
       sale.items.forEach((item: any) => {
@@ -174,7 +175,7 @@ export default function PremiumPOSClient({
       .map(([name, val]) => ({ name, val: totalSalesVal > 0 ? (val / totalSalesVal) * 100 : 0 }))
       .sort((a, b) => b.val - a.val)
       .slice(0, 3);
-  }, [initialSales]);
+  }, [sessionSales]);
 
   const getIntensityClass = (val: number, maxVal: number) => {
     if (val === 0) return '';
@@ -249,8 +250,7 @@ export default function PremiumPOSClient({
   }, [tableOrders]);
 
   const addToCart = (product: Product & { minOrderQty?: number }) => {
-    if (!selectedTable) return;
-    const tableId = selectedTable.id;
+    const tableId = selectedTable?.id || 'DIRECT';
     const minQty = Number(product.minOrderQty || 1);
 
     setTableOrders(prev => {
@@ -269,8 +269,7 @@ export default function PremiumPOSClient({
   };
 
   const updateQty = (id: string, delta: number) => {
-    if (!selectedTable) return;
-    const tableId = selectedTable.id;
+    const tableId = selectedTable?.id || 'DIRECT';
 
     setTableOrders(prev => {
       const tableCart = prev[tableId] || [];
@@ -294,9 +293,9 @@ export default function PremiumPOSClient({
   };
 
   const clearCart = () => {
-    if (!selectedTable) return;
+    const tableId = selectedTable?.id || 'DIRECT';
     setTableOrders(prev => {
-      const { [selectedTable.id]: _, ...rest } = prev;
+      const { [tableId]: _, ...rest } = prev;
       return rest;
     });
   };
@@ -330,6 +329,8 @@ export default function PremiumPOSClient({
         customerId: (selectedCustomer?.id && selectedCustomer.id !== 'passager') ? selectedCustomer.id : undefined,
         change: change
       });
+
+      setSessionSales(prev => [sale, ...prev]);
 
       alert("Vente enregistrée avec succès !");
       clearCart();
@@ -473,7 +474,7 @@ export default function PremiumPOSClient({
         </div>
         <div className={`pos-sidebar-icon ${view === 'DASHBOARD' ? 'active' : ''}`} onClick={() => setView('DASHBOARD')} title="Tableau de bord"><LayoutDashboard size={24} /></div>
         <div className={`pos-sidebar-icon ${view === 'TABLES' ? 'active' : ''}`} onClick={() => setView('TABLES')} title="Tables"><LayoutGrid size={24} /></div>
-        <div className={`pos-sidebar-icon ${view === 'POS' ? 'active' : ''}`} onClick={() => setView('POS')} title="Vente"><ShoppingCart size={24} /></div>
+        <div className={`pos-sidebar-icon ${view === 'POS' ? 'active' : ''}`} onClick={() => { if(!selectedTable) setSelectedTable({ id: 'DIRECT', label: 'Vente Directe' }); setView('POS'); }} title="Vente"><ShoppingCart size={24} /></div>
         <div className={`pos-sidebar-icon ${view === 'ORDERS' ? 'active' : ''}`} onClick={() => setView('ORDERS')} title="Commandes"><History size={24} /></div>
         <div className={`pos-sidebar-icon ${view === 'CUSTOMERS' ? 'active' : ''}`} onClick={() => setView('CUSTOMERS')} title="Clientèle"><Users size={24} /></div>
         <div style={{ flex: 1 }} />
@@ -595,7 +596,7 @@ export default function PremiumPOSClient({
                       <span className="metric-label">REVENU TOTAL</span>
                       <div style={{ background: 'var(--pos-accent)', padding: 8, borderRadius: 10, opacity: 0.2 }}><Banknote size={20} /></div>
                    </div>
-                   <div className="metric-value">{(initialSales.reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} DT</div>
+                   <div className="metric-value">{(sessionSales.reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} DT</div>
                    <div className="metric-trend trend-up"><ChevronUp size={16} /> 8.8% <span style={{ color: 'var(--pos-text-muted)', fontWeight: 500, marginLeft: 4 }}>vs hier</span></div>
                 </div>
                 <div className="metric-card">
@@ -603,28 +604,28 @@ export default function PremiumPOSClient({
                       <span className="metric-label">COMMANDES</span>
                       <div style={{ background: 'var(--pos-success)', padding: 8, borderRadius: 10, opacity: 0.2 }}><ClipboardList size={20} /></div>
                    </div>
-                   <div className="metric-value">{initialSales.length}</div>
+                   <div className="metric-value">{sessionSales.length}</div>
                    <div className="metric-trend trend-down"><ChevronDown size={16} /> 2.1% <span style={{ color: 'var(--pos-text-muted)', fontWeight: 500, marginLeft: 4 }}>vs hier</span></div>
                 </div>
                 <div className="metric-card">
                    <div className="metric-card-header">
-                      <span className="metric-label">PROFITS NETS</span>
+                      <span className="metric-label">PRODUITS VENDUS</span>
                       <div style={{ background: 'var(--pos-primary)', padding: 8, borderRadius: 10, opacity: 0.2 }}><Zap size={20} /></div>
                    </div>
-                   <div className="metric-value">845.000 DT</div>
+                   <div className="metric-value">{sessionSales.reduce((acc, s) => acc + (s.items?.length || 0), 0)}</div>
                    <div className="metric-trend trend-up"><ChevronUp size={16} /> 12.4% <span style={{ color: 'var(--pos-text-muted)', fontWeight: 500, marginLeft: 4 }}>vs hier</span></div>
                 </div>
                 <div className="metric-card">
                    <div className="metric-card-header">
-                      <span className="metric-label">CLIENTS</span>
+                      <span className="metric-label">CLIENTS LOYAUX</span>
                       <div style={{ background: 'var(--pos-warning)', padding: 8, borderRadius: 10, opacity: 0.2 }}><Users size={20} /></div>
                    </div>
-                   <div className="metric-value">12</div>
+                   <div className="metric-value">{new Set(sessionSales.filter(s => s.customerId).map(s => s.customerId)).size}</div>
                    <div className="metric-trend trend-up"><ChevronUp size={16} /> 5.6% <span style={{ color: 'var(--pos-text-muted)', fontWeight: 500, marginLeft: 4 }}>vs hier</span></div>
                 </div>
              </div>
 
-             <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 32 }}>
+             <div className="dashboard-charts-layout">
                 <div className="heatmap-container">
                    <div className="heatmap-header">
                       <div>
@@ -774,7 +775,6 @@ export default function PremiumPOSClient({
                  <h1 style={{ fontWeight: 900, margin: 0, color: 'var(--pos-text-main)', fontSize: 22 }}>
                    {selectedTable?.label || 'Vente Directe'}
                  </h1>
-                 <p style={{ margin: 0, fontSize: 11, color: 'var(--pos-text-muted)', fontWeight: 700 }}>{storeName.toUpperCase()}</p>
               </div>
               
               <div className="pos-search-wrapper" style={{ position: 'relative', marginLeft: 20 }}>
@@ -990,7 +990,7 @@ export default function PremiumPOSClient({
                       </select>
                    </div>
 
-                   <div style={{ flex: 1, overflowY: 'auto' }}>
+                   <div className="orders-table-scroll">
                       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                          <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 10 }}>
                             <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--pos-bg)' }}>
@@ -1332,7 +1332,7 @@ export default function PremiumPOSClient({
             <LayoutGrid size={20} />
             <span>Tables</span>
          </div>
-         <div className={`mobile-nav-item ${view === 'POS' ? 'active' : ''}`} onClick={() => setView('POS')}>
+         <div className={`mobile-nav-item ${view === 'POS' ? 'active' : ''}`} onClick={() => { if(!selectedTable) setSelectedTable({ id: 'DIRECT', label: 'Vente Directe' }); setView('POS'); }}>
             <ShoppingCart size={20} />
             <span>Vente</span>
          </div>
