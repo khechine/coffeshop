@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
-  View, 
-  Text, 
   ScrollView, 
   TouchableOpacity, 
   ActivityIndicator, 
@@ -10,11 +8,13 @@ import {
   RefreshControl,
   Platform
 } from 'react-native';
+import { View, Text } from '@/components/Themed';
 import { Stack, useRouter } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ApiService } from '../services/api';
 import { AuthService } from '../services/auth';
+import i18n from '../locales/i18n';
 
 const { width } = Dimensions.get('window');
 
@@ -66,13 +66,13 @@ export default function MetricsScreen() {
     fetchData();
   };
 
-  const fmtMoney = (v: any) => (v != null && !isNaN(Number(v)) ? Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 2 }) : '0,00');
+  const fmtMoney = (v: any) => (v != null && !isNaN(Number(v)) ? Number(v).toLocaleString(i18n.locale === 'ar' ? 'ar-TN' : 'fr-FR', { minimumFractionDigits: 2 }) : '0,00');
 
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Calcul des analyses...</Text>
+        <Text style={styles.loadingText}>{i18n.t('metrics.loading')}</Text>
       </View>
     );
   }
@@ -83,7 +83,7 @@ export default function MetricsScreen() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ 
-        title: 'Rapports & Métriques',
+        title: i18n.t('metrics.title'),
         headerTransparent: true,
         headerTintColor: '#fff',
         headerTitleStyle: { fontWeight: '900' }
@@ -98,36 +98,36 @@ export default function MetricsScreen() {
         <View style={{ height: 100 }} />
 
         {/* ── SECTOR: RESUMÉ GÉNÉRAL ─────────────────────────── */}
-        <View style={styles.mainMetricsGrid}>
-           <View style={[styles.mainMetricCard, { borderLeftColor: Colors.secondary, borderLeftWidth: 4 }]}>
-              <Text style={styles.metricLabel}>Ventes Totales</Text>
-              <Text style={[styles.metricValue, { color: '#fff' }]}>{stats.orderCount || 0}</Text>
-              <Text style={{ fontSize: 10, color: Colors.textSecondary }}>↑ tickets encaissés</Text>
-           </View>
-           <View style={[styles.mainMetricCard, { borderLeftColor: Colors.primary, borderLeftWidth: 4 }]}>
-              <Text style={styles.metricLabel}>Chiffre d'Affaires</Text>
-              <Text style={[styles.metricValue, { color: Colors.primary }]}>{fmtMoney(stats.totalSales || 0)} <Text style={styles.currency}>DT</Text></Text>
-           </View>
+         <View style={styles.mainMetricsGrid}>
+            <View style={[styles.mainMetricCard, { borderLeftColor: Colors.secondary, borderLeftWidth: 4 }]}>
+               <Text style={styles.metricLabel}>{i18n.t('metrics.totalSales')}</Text>
+               <Text style={[styles.metricValue, { color: '#fff' }]}>{stats.orderCount || 0}</Text>
+               <Text style={{ fontSize: 10, color: Colors.textSecondary }}>{i18n.t('metrics.ticketsEncashed')}</Text>
+            </View>
+            <View style={[styles.mainMetricCard, { borderLeftColor: Colors.primary, borderLeftWidth: 4 }]}>
+               <Text style={styles.metricLabel}>{i18n.t('metrics.revenue')}</Text>
+               <Text style={[styles.metricValue, { color: Colors.primary }]}>{fmtMoney(stats.totalSales || 0)} <Text style={styles.currency}>DT</Text></Text>
+            </View>
         </View>
 
-        <View style={styles.mainMetricsGrid}>
-           <View style={[styles.mainMetricCard, { borderLeftColor: Colors.warning, borderLeftWidth: 4 }]}>
-              <Text style={styles.metricLabel}>Alerte Stocks</Text>
-              <Text style={[styles.metricValue, { color: stats.lowStockCount > 0 ? Colors.danger : Colors.textSecondary }]}>{stats.lowStockCount || 0}</Text>
-              <Text style={{ fontSize: 10, color: stats.lowStockCount > 0 ? Colors.danger : Colors.primary }}>{stats.lowStockCount > 0 ? 'Articles critiques' : 'Stocks OK'}</Text>
-           </View>
-           <View style={[styles.mainMetricCard, { borderLeftColor: Colors.secondary, borderLeftWidth: 4 }]}>
-              <Text style={styles.metricLabel}>Profit Net Estimé</Text>
-              <Text style={[styles.metricValue, { color: '#fff' }]}>{fmtMoney(stats.netProfit || 0)} <Text style={styles.currency}>DT</Text></Text>
-              <Text style={{ fontSize: 10, color: Colors.danger }}>Dépenses: {fmtMoney(stats.totalExpenses || 0)} DT</Text>
-           </View>
+         <View style={styles.mainMetricsGrid}>
+            <View style={[styles.mainMetricCard, { borderLeftColor: Colors.warning, borderLeftWidth: 4 }]}>
+               <Text style={styles.metricLabel}>{i18n.t('metrics.stockAlert')}</Text>
+               <Text style={[styles.metricValue, { color: stats.lowStockCount > 0 ? Colors.danger : Colors.textSecondary }]}>{stats.lowStockCount || 0}</Text>
+               <Text style={{ fontSize: 10, color: stats.lowStockCount > 0 ? Colors.danger : Colors.primary }}>{stats.lowStockCount > 0 ? i18n.t('metrics.criticalItems') : i18n.t('metrics.stockOk')}</Text>
+            </View>
+            <View style={[styles.mainMetricCard, { borderLeftColor: Colors.secondary, borderLeftWidth: 4 }]}>
+               <Text style={styles.metricLabel}>{i18n.t('metrics.netProfit')}</Text>
+               <Text style={[styles.metricValue, { color: '#fff' }]}>{fmtMoney(stats.netProfit || 0)} <Text style={styles.currency}>DT</Text></Text>
+               <Text style={{ fontSize: 10, color: Colors.danger }}>{i18n.t('metrics.expenses', { amount: fmtMoney(stats.totalExpenses || 0) })}</Text>
+            </View>
         </View>
 
         {/* ── SECTION: PERFORMANCE STAFF ────────────────────────── */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <FontAwesome name="users" size={16} color={Colors.secondary} />
-            <Text style={styles.cardTitle}>Performance Staff</Text>
+            <Text style={styles.cardTitle}>{i18n.t('metrics.staffPerformance')}</Text>
           </View>
           {stats.topStaff?.length > 0 ? (
             stats.topStaff.map((staff: any, i: number, arr: any[]) => {
@@ -146,7 +146,7 @@ export default function MetricsScreen() {
               );
             })
           ) : (
-            <Text style={{ color: Colors.textSecondary, fontSize: 12, textAlign: 'center', padding: 10 }}>Aucune donnée de performance staff</Text>
+            <Text style={{ color: Colors.textSecondary, fontSize: 12, textAlign: 'center', padding: 10 }}>{i18n.t('metrics.noStaffData')}</Text>
           )}
         </View>
 
@@ -154,25 +154,25 @@ export default function MetricsScreen() {
         <View style={styles.card}>
            <View style={styles.cardHeader}>
              <FontAwesome name="star" size={16} color={Colors.warning} />
-             <Text style={styles.cardTitle}>Meilleurs Produits</Text>
+             <Text style={styles.cardTitle}>{i18n.t('metrics.topProducts')}</Text>
            </View>
            <View style={styles.tableHead}>
-              <Text style={[styles.th, { flex: 2 }]}>Produit</Text>
-              <Text style={[styles.th, { textAlign: 'center' }]}>Volume</Text>
-              <Text style={[styles.th, { textAlign: 'right' }]}>CA Généré</Text>
+              <Text style={[styles.th, { flex: 2 }]}>{i18n.t('metrics.product')}</Text>
+              <Text style={[styles.th, { textAlign: 'center' }]}>{i18n.t('metrics.volume')}</Text>
+              <Text style={[styles.th, { textAlign: 'right' }]}>{i18n.t('metrics.revenueGenerated')}</Text>
            </View>
            {stats.topProducts?.length > 0 ? (
              stats.topProducts.map((p: any, i: number) => (
                <View key={i} style={styles.tableRow}>
                   <View style={{ flex: 2, backgroundColor: 'transparent' }}>
-                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>{p.name}</Text>
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>{i18n.locale === 'ar' && p.nameAr ? p.nameAr : p.name}</Text>
                   </View>
                   <Text style={[styles.td, { textAlign: 'center' }]}>{p.qty} u.</Text>
                   <Text style={[styles.td, { textAlign: 'right', color: Colors.primary, fontWeight: '700' }]}>{fmtMoney(p.revenue)} DT</Text>
                </View>
              ))
            ) : (
-             <Text style={{ color: Colors.textSecondary, fontSize: 12, textAlign: 'center', padding: 20 }}>Aucune donnée de vente aujourd'hui</Text>
+             <Text style={{ color: Colors.textSecondary, fontSize: 12, textAlign: 'center', padding: 20 }}>{i18n.t('metrics.noSalesData')}</Text>
            )}
         </View>
 
@@ -180,33 +180,33 @@ export default function MetricsScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <FontAwesome name="navicon" size={16} color={Colors.secondary} />
-            <Text style={styles.cardTitle}>Performance Tables</Text>
+            <Text style={styles.cardTitle}>{i18n.t('metrics.tablePerformance')}</Text>
           </View>
           {stats.tablePerformance?.length > 0 ? (
             stats.tablePerformance.map((t: any, i: number) => (
               <View key={i} style={styles.tableRow}>
-                <Text style={[styles.td, { color: '#fff', flex: 2 }]}>Table: {t.name}</Text>
+                <Text style={[styles.td, { color: '#fff', flex: 2 }]}>{i18n.t('metrics.tableItem', { name: t.name })}</Text>
                 <Text style={[styles.td, { textAlign: 'right', color: Colors.secondary, fontWeight: '700' }]}>{fmtMoney(t.revenue)} DT</Text>
               </View>
             ))
           ) : (
-            <Text style={{ color: Colors.textSecondary, fontSize: 12, textAlign: 'center', padding: 10 }}>Aucune donnée de tables</Text>
+            <Text style={{ color: Colors.textSecondary, fontSize: 12, textAlign: 'center', padding: 10 }}>{i18n.t('metrics.noTableData')}</Text>
           )}
         </View>
 
         {/* ── SECTION: PROFIT MARGIN ──────────────────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitleSmall}>Efficacité Opérationnelle</Text>
+          <Text style={styles.cardTitleSmall}>{i18n.t('metrics.operationalEfficiency')}</Text>
           <View style={styles.marginInfo}>
               <View>
-                 <Text style={styles.marginLabel}>Marge Opérationnelle</Text>
+                 <Text style={styles.marginLabel}>{i18n.t('metrics.opMargin')}</Text>
                  <Text style={styles.marginValue}>
                     {stats.totalSales > 0 ? ((1 - stats.totalExpenses / stats.totalSales) * 100).toFixed(1) : 0}%
                  </Text>
               </View>
               <FontAwesome name="pie-chart" size={40} color={Colors.primary} style={{ opacity: 0.5 }} />
           </View>
-          <Text style={styles.marginSub}>Ratio entre CA et dépenses journalières (achats stock, frais).</Text>
+          <Text style={styles.marginSub}>{i18n.t('metrics.opRatioSub')}</Text>
         </View>
 
         <View style={{ height: 50 }} />

@@ -34,21 +34,21 @@ type Logs = Record<string, LogEntry[]>;
 
 const SOUND_PROFILES = {
   premium: {
-    name: 'Premium (Pro)',
+    name: i18n.t('rachma.soundPremium'),
     sale: 'https://assets.mixkit.co/active_storage/sfx/1077/1077-preview.mp3', // Cha-ching cash register
     loss: 'https://assets.mixkit.co/active_storage/sfx/2572/2572-preview.mp3', // Soft subtle tap
     pkg: 'https://assets.mixkit.co/active_storage/sfx/1114/1114-preview.mp3',  // Minimal UI pop
     undo: 'https://assets.mixkit.co/active_storage/sfx/2575/2575-preview.mp3', // Soft reverse
   },
   modern: {
-    name: 'Standard',
+    name: i18n.t('rachma.soundStandard'),
     sale: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
     loss: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
     pkg: 'https://assets.mixkit.co/active_storage/sfx/2567/2567-preview.mp3',
     undo: 'https://assets.mixkit.co/active_storage/sfx/2575/2575-preview.mp3',
   },
   minimal: {
-    name: 'Discret (Vibrations)',
+    name: i18n.t('rachma.soundMinimal'),
     sale: null, loss: null, pkg: null, undo: null
   }
 };
@@ -120,7 +120,7 @@ export default function RachmaScreen() {
         else if (cat.toLowerCase().includes('chicha')) icon = '💨';
         return {
           id: p.id, name: p.name, price: p.price,
-          category: cat || 'Général', 
+          category: cat || i18n.t('rachma.general'), 
           icon: p.icon || icon, 
           takeaway: p.takeaway ?? true,
           packagings: p.packagings || [],
@@ -184,11 +184,11 @@ export default function RachmaScreen() {
         const updatedUser = { ...user, name: editName, pinCode: editPin };
         await AuthService.setUser(updatedUser);
         setUser(updatedUser);
-        showAlert({ title: 'Succès', message: 'Profil mis à jour !', type: 'success' });
+        showAlert({ title: i18n.t('admin.success'), message: i18n.t('rachma.profileUpdated'), type: 'success' });
         setSettingsOpen(false);
       }
     } catch (e) {
-      showAlert({ title: 'Erreur', message: 'Impossible de mettre à jour le profil', type: 'error' });
+      showAlert({ title: i18n.t('admin.error'), message: i18n.t('rachma.profileError'), type: 'error' });
     }
   };
 
@@ -437,20 +437,20 @@ export default function RachmaScreen() {
             style={[styles.modeBtn, mode === 'sale' && styles.modeBtnActive]}
             onPress={() => setMode('sale')}
           >
-            <RNText style={[styles.modeBtnText, mode === 'sale' && styles.modeBtnTextActive]}>VENTE</RNText>
+            <Text style={[styles.modeBtnText, mode === 'sale' && styles.modeBtnTextActive]}>{i18n.t('pos.sale').toUpperCase()}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.modeBtn, mode === 'loss' && styles.modeBtnLoss]}
             onPress={() => setMode('loss')}
           >
-            <RNText style={[styles.modeBtnText, mode === 'loss' && styles.modeBtnTextActive]}>PERTE</RNText>
+            <Text style={[styles.modeBtnText, mode === 'loss' && styles.modeBtnTextActive]}>{i18n.t('pos.loss').toUpperCase()}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', gap: 10 }}>
           <TouchableOpacity style={styles.counterBox} onPress={() => setReportOpen(true)}>
-            <RNText style={styles.counterLabel}>Vendus</RNText>
-            <RNText style={styles.counterValue}>{totalSold}</RNText>
+            <Text style={styles.counterLabel}>{i18n.t('rachma.sold')}</Text>
+            <Text style={styles.counterValue}>{totalSold}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handleOpenHistory} style={styles.headerIconButton}>
@@ -475,7 +475,7 @@ export default function RachmaScreen() {
             style={[styles.catBtn, activeCategory === cat && styles.catBtnActive]}
             onPress={() => setActiveCategory(cat)}
           >
-            <RNText style={[styles.catBtnText, activeCategory === cat && styles.catBtnTextActive]}>{cat}</RNText>
+            <Text style={[styles.catBtnText, activeCategory === cat && styles.catBtnTextActive]}>{cat === 'ALL' ? i18n.t('pos.categoryAll') : cat}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -489,21 +489,21 @@ export default function RachmaScreen() {
         {filtered.length === 0 && (
           <View style={styles.emptyState}>
             <FontAwesome name="coffee" size={60} color="rgba(255,255,255,0.05)" style={{ marginBottom: 20 }} />
-            <RNText style={styles.emptyText}>Aucun produit configuré.</RNText>
+            <Text style={styles.emptyText}>{i18n.t('rachma.noProducts')}</Text>
             <TouchableOpacity 
               style={{ marginTop: 25, paddingHorizontal: 30, paddingVertical: 15, backgroundColor: Colors.primary, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 10 }}
               onPress={async () => {
                 if (!storeId) return;
                 Vibration.vibrate(50);
-                if (Platform.OS === 'web' ? window.confirm('Installer le Pack Initial Tunisie (Produits, Recettes & Emballages) ?') : true) {
+                if (Platform.OS === 'web' ? window.confirm(i18n.t('admin.tunisiaPackConfirm')) : true) {
                   try {
                     setRefreshing(true);
                     const res = await ApiService.seedTunisia(storeId);
                     if (Platform.OS === 'web') window.alert(res.message);
-                    else showAlert({ title: 'Succès', message: res.message, type: 'success' });
+                    else showAlert({ title: i18n.t('admin.success'), message: res.message, type: 'success' });
                     syncProducts();
                   } catch (error: any) {
-                    showAlert({ title: 'Erreur', message: 'Installation impossible', type: 'error' });
+                    showAlert({ title: i18n.t('admin.error'), message: i18n.t('admin.error'), type: 'error' });
                   } finally {
                     setRefreshing(false);
                   }
@@ -511,7 +511,7 @@ export default function RachmaScreen() {
               }}
             >
               <FontAwesome name="magic" size={18} color="#fff" />
-              <RNText style={{ color: '#fff', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 }}>Installer Pack Tunisie</RNText>
+              <Text style={{ color: '#fff', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 }}>{i18n.t('rachma.installPack')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -533,12 +533,12 @@ export default function RachmaScreen() {
               onLongPress={() => {
                 Vibration.vibrate(30);
                 showAlert({
-                  title: `Annuler pour ${product.name}?`,
-                  message: 'Supprimer la dernière entrée.',
+                  title: i18n.t('rachma.undoConfirmTitle', { name: product.name }),
+                  message: i18n.t('pos.deleteLastEntry'),
                   type: 'warning',
                   buttons: [
-                    { text: 'Annuler', style: 'cancel' },
-                    { text: 'Supprimer', style: 'destructive', onPress: () => handleUndo(product.id) },
+                    { text: i18n.t('pos.cancel'), style: 'cancel' },
+                    { text: i18n.t('pos.delete'), style: 'destructive', onPress: () => handleUndo(product.id) },
                   ]
                 });
               }}
@@ -553,13 +553,13 @@ export default function RachmaScreen() {
                      <RNText style={{ fontSize: 22 }}>{product.icon}</RNText>
                    )}
                    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                    <RNText style={styles.productName} numberOfLines={1}>{i18n.locale === 'ar' && product.nameAr ? product.nameAr : product.name}</RNText>
-                    <RNText style={styles.productPrice}>{Number(product.price).toFixed(3)} DT</RNText>
+                    <Text style={styles.productName} numberOfLines={1}>{i18n.locale === 'ar' && product.nameAr ? product.nameAr : product.name}</Text>
+                    <Text style={styles.productPrice}>{Number(product.price).toFixed(3)} DT</Text>
                    </View>
                 </View>
                 <View style={styles.counters}>
-                  <View style={styles.badgeSale}><RNText style={styles.badgeText}>{soldCount}</RNText></View>
-                  <View style={styles.badgeLoss}><RNText style={styles.badgeText}>{lostCount}</RNText></View>
+                  <View style={styles.badgeSale}><Text style={styles.badgeText}>{soldCount}</Text></View>
+                  <View style={styles.badgeLoss}><Text style={styles.badgeText}>{lostCount}</Text></View>
                 </View>
               </View>
 
@@ -606,7 +606,7 @@ export default function RachmaScreen() {
           <TouchableOpacity style={styles.modalBackdrop} onPress={() => setReportOpen(false)} />
           <RNView style={styles.modalSheet}>
             <RNView style={styles.modalHeader}>
-              <RNText style={styles.modalTitle}>📊 Rapport de Session</RNText>
+              <RNText style={styles.modalTitle}>📊 {i18n.t('rachma.sessionReport')}</RNText>
               <TouchableOpacity onPress={() => setReportOpen(false)}>
                 <FontAwesome name="close" size={22} color="#94a3b8" />
               </TouchableOpacity>
@@ -614,22 +614,22 @@ export default function RachmaScreen() {
 
             <ScrollView style={styles.reportItems}>
               <RNView style={styles.summaryBox}>
-                 <RNText style={styles.summaryLabel}>CHIFFRE DE LA SESSION</RNText>
+                 <RNText style={styles.summaryLabel}>{i18n.t('rachma.sessionRevenue')}</RNText>
                  <RNText style={styles.summaryTotal}>{grandTotal.toFixed(3)} DT</RNText>
                  <RNView style={styles.summaryRow}>
                     <RNView style={{ alignItems: 'center' }}>
-                       <RNText style={styles.summarySubLabel}>VENDUS</RNText>
+                       <RNText style={styles.summarySubLabel}>{i18n.t('rachma.soldReport')}</RNText>
                        <RNText style={styles.summarySubValSale}>{totalSoldSession}</RNText>
                     </RNView>
                     <RNView style={{ alignItems: 'center' }}>
-                       <RNText style={styles.summarySubLabel}>PERTES</RNText>
+                       <RNText style={styles.summarySubLabel}>{i18n.t('rachma.loss')}</RNText>
                        <RNText style={styles.summarySubValLoss}>{totalLostSession}</RNText>
                     </RNView>
                  </RNView>
               </RNView>
 
               {reportItems.length === 0 && (
-                <RNText style={styles.emptyReportText}>La grille est vide</RNText>
+                 <RNText style={styles.emptyReportText}>{i18n.t('pos.emptyCart')}</RNText>
               )}
 
               {reportItems.map(item => item && (
@@ -644,7 +644,7 @@ export default function RachmaScreen() {
 
               {packagingTotalsList.length > 0 && (
                 <RNView style={{ marginTop: 25, marginBottom: 5 }}>
-                  <RNText style={[styles.summaryLabel, { marginHorizontal: 20 }]}>CONSOMMATION EMBALLAGES</RNText>
+                   <RNText style={[styles.summaryLabel, { marginHorizontal: 20 }]}>{i18n.t('rachma.packagingConsumption')}</RNText>
                 </RNView>
               )}
               {packagingTotalsList.map(pkg => (
@@ -659,7 +659,7 @@ export default function RachmaScreen() {
 
             <RNView style={styles.modalActions}>
               <TouchableOpacity style={styles.clearBatchBtn} onPress={handleClearBatch}>
-                <RNText style={styles.clearBatchText}>SYNCHRONISER & CLÔTURER</RNText>
+                 <RNText style={styles.clearBatchText}>{i18n.t('rachma.syncClose')}</RNText>
               </TouchableOpacity>
             </RNView>
           </RNView>
@@ -676,7 +676,7 @@ export default function RachmaScreen() {
             <View style={styles.modalHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <FontAwesome name="history" size={20} color={Colors.primary} />
-                <Text style={styles.modalTitle}>Statistiques de Vente</Text>
+                 <Text style={styles.modalTitle}>{i18n.t('rachma.salesStats')}</Text>
               </View>
               <TouchableOpacity onPress={() => setHistoryOpen(false)}>
                 <FontAwesome name="times-circle" size={24} color="#94a3b8" />
@@ -686,21 +686,21 @@ export default function RachmaScreen() {
             <ScrollView style={{ flex: 1 }}>
               <View style={styles.statsGrid}>
                 <View style={styles.statCard}>
-                  <Text style={styles.statLabel}>AUJOURD'HUI</Text>
+                   <Text style={styles.statLabel}>{i18n.t('rachma.today')}</Text>
                   <Text style={styles.statValue}>{stats.today.toFixed(3)} DT</Text>
                 </View>
                 <View style={[styles.statCard, { backgroundColor: 'rgba(99,102,241,0.08)' }]}>
-                  <Text style={styles.statLabel}>CETTE SEMAINE</Text>
+                   <Text style={styles.statLabel}>{i18n.t('rachma.week')}</Text>
                   <Text style={styles.statValue}>{stats.week.toFixed(3)} DT</Text>
                 </View>
                 <View style={styles.statCard}>
-                  <Text style={styles.statLabel}>CE MOIS</Text>
+                   <Text style={styles.statLabel}>{i18n.t('rachma.month')}</Text>
                   <Text style={styles.statValue}>{stats.month.toFixed(3)} DT</Text>
                 </View>
               </View>
 
               <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-                <Text style={{ fontSize: 13, fontWeight: '800', color: '#94a3b8', marginBottom: 15, letterSpacing: 1 }}>TICKETS RÉCENTEMENT SYNCHRONISÉS</Text>
+                 <Text style={{ fontSize: 13, fontWeight: '800', color: '#94a3b8', marginBottom: 15, letterSpacing: 1 }}>{i18n.t('rachma.recentTickets')}</Text>
                 {serverHistory.slice(0, 30).map((s) => (
                   <View key={s.id} style={styles.historyRow}>
                     <View style={{ flex: 1 }}>
@@ -708,16 +708,16 @@ export default function RachmaScreen() {
                         #{s.fiscalNumber || s.id.slice(-6).toUpperCase()}
                       </Text>
                       <Text style={styles.historyDate}>
-                        {new Date(s.createdAt).toLocaleDateString('fr-FR')} {new Date(s.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(s.createdAt).toLocaleDateString(i18n.locale === 'ar' ? 'ar-TN' : 'fr-FR')} {new Date(s.createdAt).toLocaleTimeString(i18n.locale === 'ar' ? 'ar-TN' : 'fr-FR', { hour: '2-digit', minute: '2-digit' })}
                       </Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
                       <Text style={[styles.historyAmount, s.isVoid && { color: '#ef4444' }]}>
-                        {s.isVoid ? 'ANNULÉ' : `${Number(s.total).toFixed(3)} DT`}
+                         {s.isVoid ? i18n.t('history.canceled') : `${Number(s.total).toFixed(3)} DT`}
                       </Text>
                       <View style={styles.syncBadge}>
                         <FontAwesome name="check-circle" size={10} color="#10B981" />
-                        <Text style={styles.syncBadgeText}>Serveur</Text>
+                         <Text style={styles.syncBadgeText}>{i18n.t('rachma.server')}</Text>
                       </View>
                     </View>
                   </View>
@@ -744,7 +744,7 @@ export default function RachmaScreen() {
             <View style={styles.modalHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <FontAwesome name="cog" size={20} color={Colors.primary} />
-                <Text style={styles.modalTitle}>Paramètres</Text>
+                 <Text style={styles.modalTitle}>{i18n.t('settings.title')}</Text>
               </View>
               <TouchableOpacity onPress={() => setSettingsOpen(false)}>
                 <FontAwesome name="times-circle" size={24} color="#94a3b8" />
@@ -755,8 +755,8 @@ export default function RachmaScreen() {
               {/* Sound Toggle */}
               <TouchableOpacity style={styles.settingRow} onPress={toggleSound}>
                 <View style={{ backgroundColor: 'transparent' }}>
-                  <Text style={styles.settingLabel}>Retour Audio & Tactile</Text>
-                  <Text style={styles.settingSub}>Bruitages lors de la saisie</Text>
+                   <Text style={styles.settingLabel}>{i18n.t('settings.audioFeedback')}</Text>
+                   <Text style={styles.settingSub}>{i18n.t('settings.audioFeedbackSub')}</Text>
                 </View>
                 <FontAwesome 
                   name={soundEnabled ? "toggle-on" : "toggle-off"} 
@@ -795,10 +795,10 @@ export default function RachmaScreen() {
               <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: 20 }} />
 
               {/* User Info */}
-              <Text style={styles.sectionTitle}>MON PROFIL</Text>
+               <Text style={styles.sectionTitle}>{i18n.t('settings.myProfile')}</Text>
               
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Nom d'affichage</Text>
+                 <Text style={styles.inputLabel}>{i18n.t('settings.displayName')}</Text>
                 <TextInput
                   style={styles.settingsInput}
                   value={editName}
@@ -809,7 +809,7 @@ export default function RachmaScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Code PIN (4 chiffres)</Text>
+                 <Text style={styles.inputLabel}>{i18n.t('settings.pinCode')}</Text>
                 <TextInput
                   style={styles.settingsInput}
                   value={editPin}
@@ -823,12 +823,11 @@ export default function RachmaScreen() {
               </View>
 
               <TouchableOpacity style={styles.saveProfileBtn} onPress={handleUpdateProfile}>
-                <Text style={styles.saveProfileText}>ENREGISTRER</Text>
+                 <Text style={styles.saveProfileText}>{i18n.t('suppliers.save').toUpperCase()}</Text>
               </TouchableOpacity>
 
               <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: 20 }} />
-              
-              <Text style={styles.sectionTitle}>MAINTENANCE</Text>
+                            <Text style={styles.sectionTitle}>{i18n.t('settings.maintenance')}</Text>
               <TouchableOpacity 
                 style={[styles.settingRow, { backgroundColor: 'rgba(16, 185, 129, 0.05)', borderColor: 'rgba(16, 185, 129, 0.2)', borderWidth: 1, borderRadius: 20, padding: 15 }]} 
                 onPress={async () => {
@@ -859,8 +858,8 @@ export default function RachmaScreen() {
                 }}
               >
                 <View style={{ backgroundColor: 'transparent' }}>
-                  <Text style={[styles.settingLabel, { color: '#10b981' }]}>Installer Pack Tunisie</Text>
-                  <Text style={styles.settingSub}>Café, Thé, Chicha & Recettes</Text>
+                   <Text style={[styles.settingLabel, { color: '#10b981' }]}>{i18n.t('rachma.installPack')}</Text>
+                   <Text style={styles.settingSub}>{i18n.t('rachma.installPackSub')}</Text>
                 </View>
                 <FontAwesome name="magic" size={24} color="#10b981" />
               </TouchableOpacity>

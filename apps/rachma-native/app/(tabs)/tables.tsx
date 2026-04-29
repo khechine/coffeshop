@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthService } from '@/services/auth';
 import { ApiService } from '@/services/api';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import i18n from '../../locales/i18n';
 
 type TableCart = { total: number };
 type TableCarts = Record<string, TableCart>;
@@ -79,23 +80,23 @@ export default function TablesScreen() {
 
   const handlePrint = (ticket: any) => {
     if (Platform.OS === 'web') {
-      window.alert(`Lancement de l'impression pour le ticket ${ticket.id}...`);
+      window.alert(i18n.t('tables.printing', { id: ticket.id }));
     } else {
-      Alert.alert('Impression', `Impression du ticket ${ticket.id} envoyée à l'imprimante.`);
+      Alert.alert(i18n.t('pos.print'), i18n.t('tables.printSent', { id: ticket.id }));
     }
   };
 
   const handleCancel = (ticket: any) => {
     if (Platform.OS === 'web') {
-      if (window.confirm('Voulez-vous vraiment annuler ce ticket ?\nCette action annulera le ticket légalement de manière tracée.')) {
+      if (window.confirm(i18n.t('tables.cancelConfirm') + '\n' + i18n.t('tables.cancelConfirmSub'))) {
         AuthService.getSession().then((session) => {
           if (!ticket.dbId) {
-            window.alert('Ce ticket local ne peut pas être annulé sur le serveur (Format Obsolète).');
+            window.alert(i18n.t('tables.errorOldTicket'));
             return;
           }
           ApiService.post(`/sales/${ticket.dbId}/cancel`, { canceledById: session.user?.id })
           .then(async () => {
-             window.alert('✅ Ticket annulé avec succès.');
+             window.alert(i18n.t('tables.successCancel'));
              const storeId = session?.storeId || '1';
              const c = await AsyncStorage.getItem(`tickets_history_${storeId}`);
              if (c) {
@@ -106,7 +107,7 @@ export default function TablesScreen() {
                setSelectedTicket({ ...ticket, isVoid: true });
              }
           }).catch(() => {
-             window.alert("❌ Impossible d'annuler ce ticket.");
+             window.alert(i18n.t('tables.errorCancel'));
           });
         });
       }
@@ -114,22 +115,22 @@ export default function TablesScreen() {
     }
 
     Alert.alert(
-      'Annuler le ticket',
-      'Voulez-vous vraiment annuler ce ticket ? Cette action annulera le ticket serveur de manière tracée.',
+      i18n.t('tables.cancelTicket'),
+      i18n.t('tables.cancelConfirm') + ' ' + i18n.t('tables.cancelConfirmSub'),
       [
-        { text: 'Non', style: 'cancel' },
+        { text: i18n.t('tables.no'), style: 'cancel' },
         { 
-          text: 'Oui, Annuler', 
+          text: i18n.t('tables.yesCancel'), 
           style: 'destructive',
           onPress: async () => {
             try {
               const session = await AuthService.getSession();
               if (!ticket.dbId) {
-                Alert.alert('Erreur', 'Ce ticket local (anciennes versions) ne peut pas être annulé sur le serveur.');
+                Alert.alert(i18n.t('auth.errorTitle'), i18n.t('tables.errorOldTicket'));
                 return;
               }
               await ApiService.post(`/sales/${ticket.dbId}/cancel`, { canceledById: session.user?.id });
-              Alert.alert('✅ Succès', 'Ticket annulé avec succès.');
+              Alert.alert(i18n.t('pos.successCheckout'), i18n.t('tables.successCancel'));
               
               const storeId = session?.storeId || '1';
               const c = await AsyncStorage.getItem(`tickets_history_${storeId}`);
@@ -141,7 +142,7 @@ export default function TablesScreen() {
                 setSelectedTicket({ ...ticket, isVoid: true });
               }
             } catch(e) {
-              Alert.alert('Erreur', "Impossible d'annuler ce ticket.");
+              Alert.alert(i18n.t('auth.errorTitle'), i18n.t('tables.errorCancel'));
             }
           }
         }
@@ -163,15 +164,15 @@ export default function TablesScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
         <View style={{ backgroundColor: 'transparent' }}>
-          <Text style={styles.headerTitle}>Plan de Salle</Text>
-          <Text style={styles.headerSubtitle}>Veuillez sélectionner une table</Text>
+          <Text style={styles.headerTitle}>{i18n.t('tables.title')}</Text>
+          <Text style={styles.headerSubtitle}>{i18n.t('tables.subtitle')}</Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', backgroundColor: 'transparent' }}>
           <TouchableOpacity style={styles.historyBtn} onPress={handleOpenHistory}>
             <FontAwesome name="file-text-o" size={16} color="#ffffff" />
           </TouchableOpacity>
           <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{displayTables.length} TABLES</Text>
+            <Text style={styles.statusText}>{i18n.t('tables.tablesCount', { count: displayTables.length })}</Text>
           </View>
         </View>
       </View>
@@ -197,7 +198,7 @@ export default function TablesScreen() {
               {isActive ? (
                 <Text style={styles.tableTotal}>{cart.total.toFixed(3)} DT</Text>
               ) : (
-                <Text style={styles.tableFree}>Libre</Text>
+                <Text style={styles.tableFree}>{i18n.t('tables.free')}</Text>
               )}
             </TouchableOpacity>
           );
@@ -210,7 +211,7 @@ export default function TablesScreen() {
           <TouchableOpacity style={styles.modalBackdrop} onPress={() => { setHistoryOpen(false); setSelectedTicket(null); }} />
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{selectedTicket ? `Ticket ${selectedTicket.id}` : '🧾 Historique'}</Text>
+              <Text style={styles.modalTitle}>{selectedTicket ? `Ticket ${selectedTicket.id}` : i18n.t('tables.history')}</Text>
               <TouchableOpacity onPress={() => selectedTicket ? setSelectedTicket(null) : setHistoryOpen(false)}>
                 <FontAwesome name={selectedTicket ? "arrow-left" : "close"} size={22} color="#94a3b8" />
               </TouchableOpacity>
@@ -219,8 +220,8 @@ export default function TablesScreen() {
             {selectedTicket ? (
               <ScrollView style={styles.historyList}>
                 <View style={styles.ticketHeader}>
-                  <Text style={styles.ticketDate}>{new Date(selectedTicket.timestamp).toLocaleString('fr-FR')}</Text>
-                  <Text style={styles.ticketTable}>{selectedTicket.tableId ? `Table ${selectedTicket.tableId}` : 'Vente Directe'}</Text>
+                  <Text style={styles.ticketDate}>{new Date(selectedTicket.timestamp).toLocaleString(i18n.locale === 'ar' ? 'ar-TN' : 'fr-FR')}</Text>
+                  <Text style={styles.ticketTable}>{selectedTicket.tableId ? `${i18n.t('pos.table')} ${selectedTicket.tableId}` : i18n.t('tables.directSale')}</Text>
                 </View>
                 <View style={styles.ticketDivider} />
                 {selectedTicket.items.map((item: any, idx: number) => (
@@ -233,7 +234,7 @@ export default function TablesScreen() {
                 ))}
                 <View style={styles.ticketDivider} />
                 <View style={styles.ticketTotalRow}>
-                  <Text style={styles.ticketTotalLabel}>TOTAL TTC</Text>
+                  <Text style={styles.ticketTotalLabel}>{i18n.t('pos.totalTtc')}</Text>
                   <Text style={styles.ticketTotalValue}>{selectedTicket.totalTTC.toFixed(3)} DT</Text>
                 </View>
                 
@@ -249,23 +250,23 @@ export default function TablesScreen() {
                 <View style={{ flexDirection: 'row', gap: 10, marginHorizontal: 20, marginBottom: 20 }}>
                   <TouchableOpacity style={[styles.printBtn, { flex: 1, margin: 0, backgroundColor: 'rgba(239,68,68,0.15)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' }]} onPress={() => handleCancel(selectedTicket)} disabled={selectedTicket.isVoid}>
                     <FontAwesome name="ban" size={18} color={selectedTicket.isVoid ? "#94a3b8" : Colors.danger} />
-                    <Text style={[styles.printBtnText, { color: selectedTicket.isVoid ? "#94a3b8" : Colors.danger }]}>{selectedTicket.isVoid ? 'Déjà Annulé' : 'Annuler'}</Text>
+                    <Text style={[styles.printBtnText, { color: selectedTicket.isVoid ? "#94a3b8" : Colors.danger }]}>{selectedTicket.isVoid ? i18n.t('tables.alreadyCanceled') : i18n.t('pos.cancel')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.printBtn, { flex: 2, margin: 0 }]} onPress={() => handlePrint(selectedTicket)}>
                     <FontAwesome name="print" size={18} color="#ffffff" />
-                    <Text style={styles.printBtnText}>Imprimer Ticket</Text>
+                    <Text style={styles.printBtnText}>{i18n.t('tables.printTicket')}</Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
             ) : (
               <ScrollView style={styles.historyList}>
                 {ticketHistory.length === 0 && (
-                  <Text style={styles.emptyHistory}>Aucun historique disponible.</Text>
+                  <Text style={styles.emptyHistory}>{i18n.t('tables.emptyHistory')}</Text>
                 )}
                 {ticketHistory.map((t, i) => (
                   <TouchableOpacity key={i} style={styles.historyRow} onPress={() => setSelectedTicket(t)}>
                     <View style={styles.historyRowLeft}>
-                      <Text style={styles.historyRef}>{t.tableId ? `${t.tableId}` : 'Direct'}</Text>
+                      <Text style={styles.historyRef}>{t.tableId ? `${t.tableId}` : i18n.t('tables.directSale')}</Text>
                       <Text style={styles.historyTime}>
                         {new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </Text>

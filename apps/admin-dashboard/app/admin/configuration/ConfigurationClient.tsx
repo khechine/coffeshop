@@ -32,7 +32,7 @@ export default function ConfigurationClient({
   const netProfit = revenue - totalExpenses;
 
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in duration-700">
+    <div className="flex flex-col gap-8 animate-in fade-in duration-700 p-8 px-10">
       
       {/* Premium Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">

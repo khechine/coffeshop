@@ -12,6 +12,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAlert } from '@/components/AlertContext';
+import i18n from '../../locales/i18n';
+import { SocketService } from '@/services/socket';
 
 // ────────────────────────────────────────────────
 // Types
@@ -35,11 +37,15 @@ export default function PosScreen() {
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [cartOpen, setCartOpen] = useState(false);
   const [storeId, setStoreId] = useState('1');
+  const [user, setUser] = useState<any>(null);
   const router = useRouter();
   const { showAlert } = useAlert();
 
   useEffect(() => {
-    AuthService.getSession().then(s => { if (s?.storeId) setStoreId(s.storeId); });
+    AuthService.getSession().then(s => { 
+      if (s?.storeId) setStoreId(s.storeId); 
+      if (s?.user) setUser(s.user);
+    });
   }, []);
 
   // Load products
@@ -55,11 +61,19 @@ export default function PosScreen() {
           else if (cat.toLowerCase().includes('thé')) icon = '🍃';
           else if (cat.toLowerCase().includes('pâtisserie')) icon = '🥐';
           else if (cat.toLowerCase().includes('chicha')) icon = '💨';
+          else if (cat.toLowerCase().includes('sandwich')) icon = '🥪';
+          else if (cat.toLowerCase().includes('crêpe')) icon = '🥞';
+          else if (cat.toLowerCase().includes('jus')) icon = '🍹';
+          else if (cat.toLowerCase().includes('eau')) icon = '💧';
+          else if (cat.toLowerCase().includes('plat')) icon = '🍛';
+          else if (cat.toLowerCase().includes('dessert')) icon = '🍰';
+          else if (cat.toLowerCase().includes('pizza')) icon = '🍕';
           return { 
             id: p.id, 
-            name: p.name, 
+            name: p.name,
+            nameAr: p.nameAr,
             price: Number(p.price), 
-            category: cat || 'Général', 
+            category: cat || i18n.t('pos.categoryGeneral'), 
             icon: p.icon || icon,
             image: p.image 
           };
@@ -112,22 +126,51 @@ export default function PosScreen() {
   };
 
   const addToCart = (id: string) => {
+    const product = products.find(p => p.id === id);
     const updated = { ...cart, [id]: (cart[id] || 0) + 1 };
     setCart(updated); saveCart(updated); Vibration.vibrate(8);
+
+    // Emit live event
+    SocketService.emitRachmaAction({
+      storeId,
+      action: 'add',
+      productId: id,
+      productName: product?.name || 'Produit',
+      price: Number(product?.price || 0),
+      tableName: tableId || undefined,
+      baristaName: user?.name || user?.id || 'POS',
+      timestamp: new Date().toISOString()
+    });
   };
 
   const removeFromCart = (id: string) => {
+    const product = products.find(p => p.id === id);
     const updated = { ...cart };
+    const lastQty = updated[id] || 0;
     if (updated[id] > 1) updated[id]--;
     else delete updated[id];
     setCart(updated); saveCart(updated);
+
+    if (lastQty > 0) {
+      // Emit live event (undo/remove)
+      SocketService.emitRachmaAction({
+        storeId,
+        action: 'undo',
+        productId: id,
+        productName: product?.name || 'Produit',
+        price: Number(product?.price || 0),
+        tableName: tableId || undefined,
+        baristaName: user?.name || user?.id || 'POS',
+        timestamp: new Date().toISOString()
+      });
+    }
   };
 
   const clearCart = () => { setCart({}); saveCart({}); };
 
   const handleLock = () => {
     if (Platform.OS === 'web') {
-      if (window.confirm('Voulez-vous verrouiller la caisse ?')) {
+      if (window.confirm(i18n.t('pos.lockCashRegister'))) {
         AuthService.getSession().then(session => {
           if (session.user && (session.user.role === 'STORE_OWNER' || session.user.role === 'SUPERADMIN')) {
             AuthService.clearSession().then(() => router.replace('/login'));
@@ -140,13 +183,13 @@ export default function PosScreen() {
     }
 
     showAlert({
-      title: 'Fermer la session',
-      message: 'Voulez-vous verrouiller la caisse ?',
+      title: i18n.t('pos.closeSession'),
+      message: i18n.t('pos.lockCashRegister'),
       type: 'warning',
       buttons: [
-        { text: 'Annuler', style: 'cancel' },
+        { text: i18n.t('pos.cancel'), style: 'cancel' },
         { 
-          text: 'Fermer', 
+          text: i18n.t('pos.close'), 
           style: 'destructive', 
           onPress: async () => {
              const session = await AuthService.getSession();
@@ -198,20 +241,20 @@ export default function PosScreen() {
   const checkout = async () => {
     if (cartItems.length === 0) {
       showAlert({
-        title: 'Panier vide',
-        message: 'Ajoutez des produits avant de valider.',
+        title: i18n.t('pos.emptyCart'),
+        message: i18n.t('pos.addProductsFirst'),
         type: 'info'
       });
       return;
     }
     showAlert({
-      title: '💰 Confirmer la vente',
-      message: `Total : ${subtotalTTC.toFixed(3)} DT TTC\n${cartQty} articles`,
+      title: i18n.t('pos.checkoutConfirmTitle'),
+      message: i18n.t('pos.checkoutConfirmMsg', { total: subtotalTTC.toFixed(3) }) + `\n${cartQty} ${i18n.t('pos.items')}`,
       type: 'info',
       buttons: [
-        { text: 'Annuler', style: 'cancel' },
+        { text: i18n.t('pos.cancel'), style: 'cancel' },
         {
-          text: 'Valider ✓',
+          text: i18n.t('pos.validate') + ' ✓',
           onPress: async () => {
             try {
               const session = await AuthService.getSession();
@@ -234,14 +277,14 @@ export default function PosScreen() {
               clearCart();
               setCartOpen(false);
               showAlert({
-                title: '✅ Vente Encaissée',
-                message: `Ticket généré: ${apiSale.fiscalNumber}`,
+                title: i18n.t('pos.successCheckout'),
+                message: i18n.t('pos.ticketGenerated', { fiscalNumber: apiSale.fiscalNumber }),
                 type: 'success'
               });
             } catch (e) {
               showAlert({
-                title: '❌ Erreur de Synchronisation',
-                message: 'Impossible de joindre le serveur fiscal (Mode 100% Connecté requis).',
+                title: i18n.t('pos.errorSync'),
+                message: i18n.t('pos.errorSyncMsg'),
                 type: 'error'
               });
             }
@@ -254,7 +297,7 @@ export default function PosScreen() {
   const checkoutTable = async () => {
     if (cartItems.length === 0) return;
     if (Platform.OS === 'web') {
-       if (window.confirm(`💰 Confirmer la vente de la ${tableId}\nTotal : ${subtotalTTC.toFixed(3)} DT TTC`)) {
+       if (window.confirm(`${i18n.t('pos.checkoutConfirmTitle')} ${tableId}\nTotal : ${subtotalTTC.toFixed(3)} DT TTC`)) {
           try {
             const session = await AuthService.getSession();
             const payload = {
@@ -271,19 +314,19 @@ export default function PosScreen() {
             setCartOpen(false);
             router.push('/(tabs)/tables');
           } catch(e) {
-            window.alert('Erreur: Impossible de joindre le serveur fiscal.');
+            window.alert(i18n.t('pos.errorSyncMsg'));
           }
        }
        return;
     }
     showAlert({
-      title: `💸 Payer la ${tableId}`,
+      title: `${i18n.t('pos.checkoutConfirmTitle')} ${tableId}`,
       message: `Total : ${subtotalTTC.toFixed(3)} DT TTC`,
       type: 'info',
       buttons: [
-        { text: 'Annuler', style: 'cancel' },
+        { text: i18n.t('pos.cancel'), style: 'cancel' },
         {
-          text: 'Payer ✓',
+          text: i18n.t('pos.checkout') + ' ✓',
           onPress: async () => {
             try {
               const session = await AuthService.getSession();
@@ -300,15 +343,15 @@ export default function PosScreen() {
               setCart({});
               setCartOpen(false);
               showAlert({
-                title: '✅ Table Encaissée',
+                title: i18n.t('pos.successCheckout'),
                 message: `Ticket: ${apiSale.fiscalNumber}`,
                 type: 'success'
               });
               router.push('/(tabs)/tables');
             } catch (e) {
               showAlert({
-                title: '❌ Erreur de Synchronisation',
-                message: 'Impossible de joindre le serveur fiscal.',
+                title: i18n.t('pos.errorSync'),
+                message: i18n.t('pos.errorSyncMsg'),
                 type: 'error'
               });
             }
@@ -332,7 +375,7 @@ export default function PosScreen() {
              <Text style={styles.headerTitle}>{tableId}</Text>
            </TouchableOpacity>
         ) : (
-           <Text style={styles.headerTitle}>Point de Vente</Text>
+           <Text style={styles.headerTitle}>{i18n.t('pos.pointOfSale')}</Text>
         )}
         <TouchableOpacity onPress={handleLock} style={styles.lockBtn}>
           <FontAwesome name="lock" size={24} color={Colors.danger} />
@@ -348,7 +391,7 @@ export default function PosScreen() {
             onPress={() => setActiveCategory(cat)}
           >
             <RNText style={[styles.catBtnText, activeCategory === cat && styles.catBtnTextActive]}>
-              {cat}
+              {cat === 'ALL' ? i18n.t('pos.categoryAll') : cat}
             </RNText>
           </TouchableOpacity>
         ))}
@@ -374,7 +417,7 @@ export default function PosScreen() {
               ) : (
                 <RNText style={styles.productEmoji}>{item.icon}</RNText>
               )}
-              <RNText style={styles.productName} numberOfLines={2}>{item.name}</RNText>
+              <RNText style={styles.productName} numberOfLines={2}>{i18n.locale === 'ar' && (item as any).nameAr ? (item as any).nameAr : item.name}</RNText>
               <RNText style={styles.productPrice}>{item.price.toFixed(3)} DT</RNText>
               {qty > 0 && (
                 <RNView style={styles.qtyBadge}>
@@ -410,7 +453,7 @@ export default function PosScreen() {
           <RNView style={styles.cartSheet}>
             {/* Sheet header */}
             <RNView style={styles.cartHeader}>
-              <RNText style={styles.cartTitle}>{tableId ? `🛒 Addition ${tableId}` : '🛒 Panier'}</RNText>
+              <RNText style={styles.cartTitle}>{tableId ? `🛒 ${i18n.t('pos.bill')} ${tableId}` : `🛒 ${i18n.t('pos.cart')}`}</RNText>
               <TouchableOpacity onPress={() => setCartOpen(false)}>
                 <FontAwesome name="close" size={22} color="#94a3b8" />
               </TouchableOpacity>
@@ -419,12 +462,12 @@ export default function PosScreen() {
             {/* Cart items */}
             <ScrollView style={styles.cartItems}>
               {cartItems.length === 0 && (
-                <RNText style={styles.emptyCartText}>Le panier est vide</RNText>
+                <RNText style={styles.emptyCartText}>{i18n.t('pos.emptyCart')}</RNText>
               )}
               {cartItems.map(({ product, qty }) => (
                 <RNView key={product.id} style={styles.cartRow}>
                   <RNView style={styles.cartRowInfo}>
-                    <RNText style={styles.cartItemName}>{product.icon} {product.name}</RNText>
+                    <RNText style={styles.cartItemName}>{product.icon} {i18n.locale === 'ar' && (product as any).nameAr ? (product as any).nameAr : product.name}</RNText>
                     <RNText style={styles.cartItemSub}>{qty} × {product.price.toFixed(3)} DT</RNText>
                   </RNView>
                   <RNText style={styles.cartItemTotal}>{(product.price * qty).toFixed(3)}</RNText>
@@ -445,15 +488,15 @@ export default function PosScreen() {
             {cartItems.length > 0 && (
               <RNView style={styles.totalsBox}>
                 <RNView style={styles.totalRow}>
-                  <RNText style={styles.totalLabel}>HT</RNText>
+                  <RNText style={styles.totalLabel}>{i18n.t('pos.ht')}</RNText>
                   <RNText style={styles.totalValue}>{totalHT.toFixed(3)} DT</RNText>
                 </RNView>
                 <RNView style={styles.totalRow}>
-                  <RNText style={styles.totalLabel}>TVA (19%)</RNText>
+                  <RNText style={styles.totalLabel}>{i18n.t('pos.tva')}</RNText>
                   <RNText style={styles.totalValue}>{totalTax.toFixed(3)} DT</RNText>
                 </RNView>
                 <RNView style={[styles.totalRow, styles.totalRowBig]}>
-                  <RNText style={styles.totalBigLabel}>TOTAL TTC</RNText>
+                  <RNText style={styles.totalBigLabel}>{i18n.t('pos.totalTtc')}</RNText>
                   <RNText style={styles.totalBigValue}>{subtotalTTC.toFixed(3)} DT</RNText>
                 </RNView>
               </RNView>
@@ -468,17 +511,17 @@ export default function PosScreen() {
                 <>
                   <TouchableOpacity style={styles.saveTableBtn} onPress={() => { Vibration.vibrate(20); setCartOpen(false); }}>
                     <FontAwesome name="save" size={18} color="#ffffff" />
-                    <RNText style={styles.checkoutText}>Sauvegarder</RNText>
+                    <RNText style={styles.checkoutText}>{i18n.t('pos.save')}</RNText>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.checkoutTableBtn} onPress={checkoutTable}>
                     <FontAwesome name="check" size={18} color="#ffffff" />
-                    <RNText style={styles.checkoutText}>Encaisser</RNText>
+                    <RNText style={styles.checkoutText}>{i18n.t('pos.checkout')}</RNText>
                   </TouchableOpacity>
                 </>
               ) : (
                 <TouchableOpacity style={styles.checkoutBtn} onPress={checkout}>
                   <FontAwesome name="check" size={18} color="#ffffff" />
-                  <RNText style={styles.checkoutText}>Encaisser</RNText>
+                  <RNText style={styles.checkoutText}>{i18n.t('pos.checkout')}</RNText>
                 </TouchableOpacity>
               )}
             </RNView>

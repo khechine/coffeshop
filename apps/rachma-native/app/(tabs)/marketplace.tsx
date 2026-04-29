@@ -10,6 +10,7 @@ import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
+import i18n from '../../locales/i18n';
 import { Alert } from 'react-native';
 import * as Location from 'expo-location';
 import { useFocusEffect } from 'expo-router';
@@ -248,7 +249,7 @@ export default function MarketplaceScreen() {
       if (sId) setStoreId(sId);
     }
     if (!sId) {
-      Alert.alert("Erreur", "Impossible de récupérer l'identité du point de vente.");
+      Alert.alert(i18n.t('auth.errorTitle'), i18n.t('marketplace.errorIdentity'));
       return;
     }
     try {
@@ -272,7 +273,7 @@ export default function MarketplaceScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setMyOrders(myOrders.map(o => o.id === orderId ? { ...o, status: 'STOCKED' } : o));
       Alert.alert("Succès", "Commande réceptionnée et stock mis à jour.");
-    } catch (e) { Alert.alert("Erreur", "Impossible de valider la réception"); }
+    } catch (e) { Alert.alert(i18n.t('auth.errorTitle'), i18n.t('marketplace.errorValidate')); }
   };
 
   // --- Filtering ---
@@ -315,15 +316,15 @@ export default function MarketplaceScreen() {
       {/* ── HEADER ── */}
       <View style={[styles.header, { borderBottomColor: T.cardBorder }]}>
          <View style={{ backgroundColor: 'transparent' }}>
-            <Text style={styles.headerTitle}>Marketplace</Text>
-            <Text style={styles.headerSub}>Solutions B2B Premium</Text>
+            <Text style={styles.headerTitle}>{i18n.t('nav.marketplace')}</Text>
+            <Text style={styles.headerSub}>{i18n.t('marketplace.subtitle')}</Text>
          </View>
          <View style={{ flexDirection: 'row', gap: 10 }}>
              <TouchableOpacity 
                 style={[styles.cartTrigger, { backgroundColor: 'rgba(99,102,241,0.15)', borderColor: 'rgba(99,102,241,0.3)', width: 'auto', paddingHorizontal: 15 }]}
                 onPress={fetchMyOrders}
              >
-                <Text style={{ color: '#6366f1', fontSize: 11, fontWeight: '800' }}>Mes Cmds</Text>
+                <Text style={{ color: '#6366f1', fontSize: 11, fontWeight: '800' }}>{i18n.t('marketplace.myOrders')}</Text>
              </TouchableOpacity>
              <TouchableOpacity 
                 style={[styles.cartTrigger, { backgroundColor: T.inputBg, borderColor: T.inputBorder }]}
@@ -345,7 +346,7 @@ export default function MarketplaceScreen() {
             <View style={[styles.searchBar, { flex: 1, backgroundColor: T.inputBg, borderColor: T.inputBorder, marginBottom: 0 }]}>
                 <FontAwesome name="search" size={16} color={T.muted} style={{ marginRight: 12 }} />
                 <TextInput 
-                    placeholder="Rechercher produits, vendeurs..."
+                    placeholder={i18n.t('marketplace.searchPlaceholder')}
                     placeholderTextColor={T.muted}
                     style={[styles.searchInput, { color: T.text }]}
                     value={search}
@@ -362,9 +363,9 @@ export default function MarketplaceScreen() {
 
           <View style={styles.tabBar}>
               {[
-                { id: 'PRODUCTS', label: 'Produits', icon: 'th-large', count: filteredProducts.length },
-                { id: 'VENDORS', label: 'Vendeurs', icon: 'building', count: filteredVendors.length },
-                { id: 'PACKS', label: 'Packs', icon: 'bolt', count: filteredBundles.length }
+                { id: 'PRODUCTS', label: i18n.t('marketplace.products'), icon: 'th-large', count: filteredProducts.length },
+                { id: 'VENDORS', label: i18n.t('marketplace.vendors'), icon: 'building', count: filteredVendors.length },
+                { id: 'PACKS', label: i18n.t('marketplace.packs'), icon: 'bolt', count: filteredBundles.length }
               ].map(tab => (
                 <TouchableOpacity 
                     key={tab.id}
@@ -396,7 +397,7 @@ export default function MarketplaceScreen() {
                   onPress={() => setActiveCategory('all')}
                   style={[styles.catChip, activeCategory === 'all' && styles.catChipActive]}
                >
-                  <Text style={[styles.catChipText, activeCategory === 'all' && styles.catChipTextActive]}>Tout</Text>
+                  <Text style={[styles.catChipText, activeCategory === 'all' && styles.catChipTextActive]}>{i18n.t('marketplace.all')}</Text>
                </TouchableOpacity>
                {categories.map(cat => (
                  <TouchableOpacity 
@@ -416,10 +417,10 @@ export default function MarketplaceScreen() {
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingHorizontal: 5, backgroundColor: 'transparent' }}>
                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'transparent' }}>
                         <FontAwesome name="bolt" size={18} color={T.gold} />
-                        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>Packs Économiques</Text>
+                        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>{i18n.t('marketplace.featuredPacks')}</Text>
                      </View>
                      <TouchableOpacity onPress={() => setViewMode('PACKS')} style={{ backgroundColor: 'rgba(251,191,36,0.1)', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8 }}>
-                        <Text style={{ color: T.gold, fontSize: 11, fontWeight: '800' }}>TOUT VOIR</Text>
+                        <Text style={{ color: T.gold, fontSize: 11, fontWeight: '800' }}>{i18n.t('marketplace.seeAll')}</Text>
                      </TouchableOpacity>
                   </View>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 15, paddingHorizontal: 5 }}>
@@ -447,9 +448,9 @@ export default function MarketplaceScreen() {
               <TouchableOpacity style={styles.heroBanner}>
                 <Image source={{ uri: BANNER_IMAGE }} style={styles.heroImg} />
                 <LinearGradient colors={['transparent', 'rgba(10,15,30,0.9)']} style={styles.heroGradient}>
-                   <View style={styles.heroTag}><Text style={styles.heroTagText}>SÉLECTION PRO</Text></View>
-                   <Text style={styles.heroTitle}>Grains de Café Premium</Text>
-                   <Text style={styles.heroPrice}>À partir de 45.000 DT / KG</Text>
+                   <View style={styles.heroTag}><Text style={styles.heroTagText}>{i18n.t('marketplace.proSelection')}</Text></View>
+                   <Text style={styles.heroTitle}>{i18n.t('marketplace.coffeeBanner')}</Text>
+                   <Text style={styles.heroPrice}>{i18n.t('marketplace.coffeePrice')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             )}
@@ -463,16 +464,16 @@ export default function MarketplaceScreen() {
                     ) : (
                         <Text style={{ fontSize: 40 }}>{getProductIcon(p.name || p.productStandard?.name)}</Text>
                     )}
-                    {p.isFlashSale && <View style={styles.flashBadge}><Text style={styles.flashBadgeText}>FLASH</Text></View>}
-                    {p.isFeatured && <View style={styles.featBadge}><Text style={styles.featBadgeText}>ELITE</Text></View>}
+                    {p.isFlashSale && <View style={styles.flashBadge}><Text style={styles.flashBadgeText}>{i18n.t('marketplace.flash')}</Text></View>}
+                    {p.isFeatured && <View style={styles.featBadge}><Text style={styles.featBadgeText}>{i18n.t('marketplace.elite')}</Text></View>}
                   </View>
                   <View style={styles.cardInfo}>
                      <Text style={styles.cardVendor} numberOfLines={1}>{p.vendor?.companyName?.toUpperCase()}</Text>
-                     <Text style={styles.cardTitle} numberOfLines={1}>{p.name || p.productStandard?.name || 'Produit'}</Text>
+                     <Text style={styles.cardTitle} numberOfLines={1}>{p.name || p.productStandard?.name || i18n.t('marketplace.productFallback')}</Text>
                      <View style={styles.cardFooter}>
                         <View style={{ flex: 1, backgroundColor: 'transparent' }}>
                           <Text style={styles.cardPrice}>{parseFloat(p.price).toFixed(3)}</Text>
-                          <Text style={styles.cardUnit}>DT / {p.unit || 'unit'}</Text>
+                          <Text style={styles.cardUnit}>{i18n.t('marketplace.unitLabel', { unit: p.unit || 'unit' })}</Text>
                         </View>
                         <TouchableOpacity 
                            style={styles.addBtn}
@@ -483,7 +484,7 @@ export default function MarketplaceScreen() {
                      </View>
                      <View style={styles.moqRow}>
                         <FontAwesome name="cube" size={10} color={T.muted} />
-                        <Text style={styles.moqText}>Min. {p.minOrderQty}</Text>
+                        <Text style={styles.moqText}>{i18n.t('marketplace.moqLabel', { qty: p.minOrderQty })}</Text>
                      </View>
                   </View>
                 </TouchableOpacity>
@@ -503,12 +504,12 @@ export default function MarketplaceScreen() {
                       <Text style={styles.vendorRowName}>{v.companyName}</Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', gap: 5 }}>
                         <FontAwesome name="map-marker" size={12} color={T.muted} />
-                        <Text style={styles.vendorRowCity}>{v.city || 'Tunisie'}</Text>
+                        <Text style={styles.vendorRowCity}>{v.city || i18n.t('marketplace.tunisia')}</Text>
                       </View>
                    </View>
                    <View style={styles.vendorStats}>
                       <Text style={styles.statsValue}>{v._count?.vendorProducts || 0}</Text>
-                      <Text style={styles.statsLabel}>Produits</Text>
+                      <Text style={styles.statsLabel}>{i18n.t('marketplace.products')}</Text>
                    </View>
                 </TouchableOpacity>
               ))}
@@ -528,9 +529,9 @@ export default function MarketplaceScreen() {
                       <Text style={styles.packTitle}>{b.name}</Text>
                       <View style={styles.packRow}>
                          <View style={styles.packDiscount}>
-                            <Text style={styles.discountText}>ÉCO. {b.discountPercent}%</Text>
+                            <Text style={styles.discountText}>{i18n.t('marketplace.elite')} {b.discountPercent}%</Text>
                          </View>
-                         <Text style={styles.packItemsCount}>{b.items?.length} Produits inclus</Text>
+                         <Text style={styles.packItemsCount}>{i18n.t('suppliers.linkedProducts', { count: b.items?.length })}</Text>
                       </View>
                    </View>
                 </TouchableOpacity>
@@ -544,7 +545,7 @@ export default function MarketplaceScreen() {
           <TouchableOpacity style={styles.cartBar} onPress={() => setCartOpen(true)}>
              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent' }}>
                 <View style={styles.cartBarBadge}><Text style={styles.cartBarBadgeText}>{cartCount}</Text></View>
-                <Text style={styles.cartBarText}>Voir le panier</Text>
+                <Text style={styles.cartBarText}>{i18n.t('marketplace.viewCart')}</Text>
              </View>
              <Text style={styles.cartBarTotal}>{cartTotal.toFixed(3)} DT</Text>
           </TouchableOpacity>
@@ -556,7 +557,7 @@ export default function MarketplaceScreen() {
           <View style={styles.modalOverlay}>
               <View style={[styles.modalSheet, { height: '85%' }]}>
                   <View style={styles.modalHeader}>
-                      <Text style={styles.modalSheetTitle}>Détails du Pack</Text>
+                      <Text style={styles.modalSheetTitle}>{i18n.t('marketplace.packDetails')}</Text>
                       <TouchableOpacity onPress={() => setSelectedBundle(null)}><FontAwesome name="times-circle" size={24} color={T.muted} /></TouchableOpacity>
                   </View>
                   <ScrollView contentContainerStyle={{ padding: 25 }}>
@@ -564,7 +565,7 @@ export default function MarketplaceScreen() {
                       <Text style={styles.modalBundleName}>{selectedBundle?.name}</Text>
                       <Text style={styles.modalBundleDesc}>{selectedBundle?.description}</Text>
                       
-                      <Text style={styles.modalSectionTitle}>PRODUITS INCLUS</Text>
+                      <Text style={styles.modalSectionTitle}>{i18n.t('marketplace.productsIncluded')}</Text>
                       {selectedBundle?.items?.map((item: any, i: number) => (
                         <View key={i} style={styles.bundleItemRow}>
                            <Text style={styles.bundleItemName}>{item.vendorProduct?.name || item.vendorProduct?.productStandard?.name || 'Produit sans nom'}</Text>
@@ -576,7 +577,7 @@ export default function MarketplaceScreen() {
                          style={styles.modalPrimaryBtn}
                          onPress={() => { handleAddToCart(selectedBundle, true); setSelectedBundle(null); }}
                       >
-                         <Text style={styles.modalBtnText}>Acheter le Pack ({parseFloat(selectedBundle?.price || 0).toFixed(3)} DT)</Text>
+                         <Text style={styles.modalBtnText}>{i18n.t('marketplace.buyPack', { price: parseFloat(selectedBundle?.price || 0).toFixed(3) })}</Text>
                       </TouchableOpacity>
                   </ScrollView>
               </View>
@@ -588,7 +589,7 @@ export default function MarketplaceScreen() {
           <View style={styles.modalOverlay}>
               <View style={[styles.modalSheet, { height: '80%' }]}>
                   <View style={styles.modalHeader}>
-                      <Text style={styles.modalSheetTitle}>Détails du Produit</Text>
+                      <Text style={styles.modalSheetTitle}>{i18n.t('marketplace.productDetails')}</Text>
                       <TouchableOpacity onPress={() => setSelectedProduct(null)}><FontAwesome name="times-circle" size={24} color={T.muted} /></TouchableOpacity>
                   </View>
                   <ScrollView contentContainerStyle={{ padding: 25 }}>
@@ -606,11 +607,11 @@ export default function MarketplaceScreen() {
                       <Text style={styles.modalBundleDesc}>{selectedProduct?.description || selectedProduct?.productStandard?.description || 'Aucune description fournie pour ce produit et ses caractéristiques de qualité.'}</Text>
                       
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, backgroundColor: 'transparent' }}>
-                         <Text style={{ color: T.subtext, fontSize: 16 }}>Prix Unitaire</Text>
+                         <Text style={{ color: T.subtext, fontSize: 16 }}>{i18n.t('marketplace.unitPrice')}</Text>
                          <Text style={{ color: T.gold, fontSize: 18, fontWeight: '900' }}>{parseFloat(selectedProduct?.price || 0).toFixed(3)} DT / {selectedProduct?.unit || selectedProduct?.productStandard?.unit || 'unité'}</Text>
                       </View>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, backgroundColor: 'transparent' }}>
-                         <Text style={{ color: T.subtext, fontSize: 16 }}>MOQ (Quantité minimum)</Text>
+                         <Text style={{ color: T.subtext, fontSize: 16 }}>{i18n.t('marketplace.moq')}</Text>
                          <Text style={{ color: T.text, fontSize: 16, fontWeight: '700' }}>{selectedProduct?.minOrderQty || 1}</Text>
                       </View>
 
@@ -618,7 +619,7 @@ export default function MarketplaceScreen() {
                          style={styles.modalPrimaryBtn}
                          onPress={() => { handleAddToCart(selectedProduct); setSelectedProduct(null); }}
                       >
-                         <Text style={styles.modalBtnText}>Ajouter au panier</Text>
+                         <Text style={styles.modalBtnText}>{i18n.t('marketplace.addToCart')}</Text>
                       </TouchableOpacity>
                   </ScrollView>
               </View>
@@ -630,7 +631,7 @@ export default function MarketplaceScreen() {
           <View style={styles.modalOverlay}>
               <View style={[styles.modalSheet, { height: '80%' }]}>
                   <View style={styles.modalHeader}>
-                      <Text style={styles.modalSheetTitle}>Profil du Fournisseur</Text>
+                      <Text style={styles.modalSheetTitle}>{i18n.t('marketplace.vendorProfile')}</Text>
                       <TouchableOpacity onPress={() => setSelectedVendor(null)}><FontAwesome name="times-circle" size={24} color={T.muted} /></TouchableOpacity>
                   </View>
                   <ScrollView contentContainerStyle={{ padding: 25 }}>
@@ -639,17 +640,17 @@ export default function MarketplaceScreen() {
                              <Text style={{ fontSize: 40 }}>🏪</Text>
                           </View>
                           <Text style={styles.modalBundleName}>{selectedVendor?.companyName}</Text>
-                          <Text style={{ color: T.indigo, fontSize: 16, fontWeight: '700', marginTop: 5 }}>{selectedVendor?.city || 'Tunisie'}</Text>
+                          <Text style={{ color: T.indigo, fontSize: 16, fontWeight: '700', marginTop: 5 }}>{selectedVendor?.city || i18n.t('marketplace.tunisia')}</Text>
                       </View>
                       
                       <View style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 15, padding: 20, marginBottom: 20 }}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent', marginBottom: 10 }}>
-                             <Text style={{ color: T.subtext }}>Catalogue visible</Text>
+                             <Text style={{ color: T.subtext }}>{i18n.t('marketplace.catalogVisible')}</Text>
                              <Text style={{ color: T.accent, fontWeight: '800' }}>{selectedVendor?._count?.vendorProducts || 0} produits</Text>
                           </View>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent' }}>
-                             <Text style={{ color: T.subtext }}>Certification</Text>
-                             <Text style={{ color: T.accent, fontWeight: '800' }}>Partenaire Rachma</Text>
+                             <Text style={{ color: T.subtext }}>{i18n.t('marketplace.certification')}</Text>
+                             <Text style={{ color: T.accent, fontWeight: '800' }}>{i18n.t('marketplace.rachmaPartner')}</Text>
                           </View>
                       </View>
 
@@ -662,7 +663,7 @@ export default function MarketplaceScreen() {
                            setViewMode('PRODUCTS');
                          }}
                       >
-                         <Text style={styles.modalBtnText}>Voir son catalogue complet</Text>
+                         <Text style={styles.modalBtnText}>{i18n.t('marketplace.viewFullCatalog')}</Text>
                       </TouchableOpacity>
                   </ScrollView>
               </View>
@@ -674,11 +675,11 @@ export default function MarketplaceScreen() {
           <View style={styles.modalOverlay}>
               <View style={[styles.modalSheet, { height: '50%' }]}>
                   <View style={styles.modalHeader}>
-                      <Text style={styles.modalSheetTitle}>Filtres Marketplace</Text>
+                      <Text style={styles.modalSheetTitle}>{i18n.t('marketplace.filters')}</Text>
                       <TouchableOpacity onPress={() => setFiltersOpen(false)}><FontAwesome name="times-circle" size={24} color={T.muted} /></TouchableOpacity>
                   </View>
                   <View style={{ padding: 25, backgroundColor: 'transparent' }}>
-                      <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 15 }}>Rayon de recherche</Text>
+                      <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 15 }}>{i18n.t('marketplace.searchRadius')}</Text>
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, backgroundColor: 'transparent' }}>
                           {[5, 10, 20, 50, 100, 500].map(r => (
                               <TouchableOpacity 
@@ -697,10 +698,10 @@ export default function MarketplaceScreen() {
                       
                       <View style={{ marginTop: 30, backgroundColor: 'transparent' }}>
                           <Text style={{ color: T.subtext, fontSize: 13 }}>
-                             📍 {location ? `Position active (${location.lat.toFixed(2)}, ${location.lng.toFixed(2)})` : 'Position non détectée'}
+                             📍 {location ? i18n.t('marketplace.activePos', { lat: location.lat.toFixed(2), lng: location.lng.toFixed(2) }) : 'Position non détectée'}
                           </Text>
                           <TouchableOpacity onPress={() => fetchLocation()} style={{ marginTop: 10 }}>
-                              <Text style={{ color: T.indigo, fontWeight: '700' }}>Actualiser ma position</Text>
+                              <Text style={{ color: T.indigo, fontWeight: '700' }}>{i18n.t('marketplace.updatePosition')}</Text>
                           </TouchableOpacity>
                       </View>
                   </View>
@@ -713,7 +714,7 @@ export default function MarketplaceScreen() {
           <View style={styles.modalOverlay}>
               <View style={[styles.modalSheet, { height: '80%' }]}>
                   <View style={styles.modalHeader}>
-                      <Text style={styles.modalSheetTitle}>Votre Panier 🛒</Text>
+                      <Text style={styles.modalSheetTitle}>{i18n.t('marketplace.yourCart')}</Text>
                       <TouchableOpacity onPress={() => setCartOpen(false)}><FontAwesome name="times" size={24} color={T.muted} /></TouchableOpacity>
                   </View>
                   <ScrollView contentContainerStyle={{ padding: 20 }}>
@@ -742,11 +743,11 @@ export default function MarketplaceScreen() {
                   </ScrollView>
                   <View style={styles.cartFooter}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, backgroundColor: 'transparent' }}>
-                      <Text style={styles.totalLbl}>Total à payer</Text>
+                      <Text style={styles.totalLbl}>{i18n.t('marketplace.totalToPay')}</Text>
                          <Text style={styles.totalVal}>{cartTotal.toFixed(3)} DT</Text>
                       </View>
                       <TouchableOpacity style={styles.checkoutBtn} onPress={handleCheckout}>
-                         <Text style={styles.checkoutText}>Confirmer la commande</Text>
+                         <Text style={styles.checkoutText}>{i18n.t('marketplace.confirmOrder')}</Text>
                       </TouchableOpacity>
                   </View>
               </View>
@@ -759,7 +760,7 @@ export default function MarketplaceScreen() {
               <View style={[styles.modalSheet, { backgroundColor: T.bg, padding: 0, height: '92%' }]}>
                   <View style={[styles.modalHeader, { borderBottomColor: T.cardBorder, paddingTop: 20 }]}>
                       <View style={{ backgroundColor: 'transparent' }}>
-                          <Text style={[styles.modalTitle, { color: T.text }]}>Mes Commandes B2B</Text>
+                          <Text style={[styles.modalTitle, { color: T.text }]}>{i18n.t('marketplace.myB2BOrders')}</Text>
                           <Text style={{ color: T.subtext, fontSize: 11, fontWeight: '700', marginTop: 2 }}>{myOrders.length} commande(s) au total</Text>
                       </View>
                       <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: 'transparent' }}>
@@ -779,10 +780,10 @@ export default function MarketplaceScreen() {
                   <View style={{ padding: 15, backgroundColor: 'transparent' }}>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                           {[
-                            { id: 'ALL',       label: 'Toutes',          color: '#94a3b8' },
-                            { id: 'ACTIVE',    label: 'En cours',        color: '#f59e0b' },
-                            { id: 'DELIVERED', label: 'À réceptionner',  color: '#10b981' },
-                            { id: 'STOCKED',   label: 'Finalisées',      color: '#6366f1' },
+                            { id: 'ALL',       label: i18n.t('marketplace.allOrders'),          color: '#94a3b8' },
+                            { id: 'ACTIVE',    label: i18n.t('marketplace.activeOrders'),        color: '#f59e0b' },
+                            { id: 'DELIVERED', label: i18n.t('marketplace.toReceive'),  color: '#10b981' },
+                            { id: 'STOCKED',   label: i18n.t('marketplace.finalizedOrders'),      color: '#6366f1' },
                           ].map(f => (
                               <TouchableOpacity 
                                   key={f.id}
@@ -816,7 +817,7 @@ export default function MarketplaceScreen() {
                           });
 
                           if (filtered.length === 0) {
-                              return <Text style={{ color: T.subtext, textAlign: 'center', marginTop: 40, fontStyle: 'italic' }}>Aucune commande trouvée.</Text>;
+                              return <Text style={{ color: T.subtext, textAlign: 'center', marginTop: 40, fontStyle: 'italic' }}>{i18n.t('marketplace.noOrders')}</Text>;
                           }
 
                           return filtered.map(o => (
@@ -840,7 +841,7 @@ export default function MarketplaceScreen() {
                                       <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.03)', alignItems: 'center', justifyContent: 'center' }}>
                                           <FontAwesome name="building" size={14} color={T.subtext} />
                                       </View>
-                                      <Text style={{ color: T.text, fontSize: 13, fontWeight: '700' }}>{o.supplier?.name || o.vendor?.companyName || 'Fournisseur'}</Text>
+                                      <Text style={{ color: T.text, fontSize: 13, fontWeight: '700' }}>{o.supplier?.name || o.vendor?.companyName || i18n.t('marketplace.vendorFallback')}</Text>
                                   </View>
 
                                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'transparent', paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.03)' }}>
@@ -858,7 +859,7 @@ export default function MarketplaceScreen() {
                                               onPress={() => validerReception(o.id)}
                                           >
                                               <FontAwesome name="check-circle" size={14} color="#fff" />
-                                              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>VALIDER</Text>
+                                              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>{i18n.t('marketplace.validate')}</Text>
                                           </TouchableOpacity>
                                       )}
                                       <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' }}>
@@ -879,7 +880,7 @@ export default function MarketplaceScreen() {
               <View style={[styles.modalSheet, { height: '85%' }]}>
                   <View style={styles.modalHeader}>
                       <View>
-                          <Text style={styles.modalSheetTitle}>Détails Commande</Text>
+                          <Text style={styles.modalSheetTitle}>{i18n.t('marketplace.orderDetails')}</Text>
                           <Text style={{ color: T.subtext, fontSize: 12, fontWeight: '700' }}>#{viewingOrder?.id.toUpperCase()}</Text>
                       </View>
                       <TouchableOpacity onPress={() => setViewingOrder(null)}>
@@ -889,19 +890,19 @@ export default function MarketplaceScreen() {
 
                   <ScrollView contentContainerStyle={{ padding: 25 }}>
                       <View style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: 20, borderRadius: 20, marginBottom: 25, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
-                          <Text style={{ color: T.subtext, fontSize: 10, fontWeight: '800', textTransform: 'uppercase', marginBottom: 10 }}>FOURNISSEUR</Text>
+                          <Text style={{ color: T.subtext, fontSize: 10, fontWeight: '800', textTransform: 'uppercase', marginBottom: 10 }}>{i18n.t('marketplace.supplierLabel')}</Text>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                               <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(99,102,241,0.1)', alignItems: 'center', justifyContent: 'center' }}>
                                   <FontAwesome name="building" size={18} color="#6366f1" />
                               </View>
                               <View>
                                   <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>{viewingOrder?.supplier?.name || viewingOrder?.vendor?.companyName}</Text>
-                                  <Text style={{ color: T.subtext, fontSize: 12, fontWeight: '700' }}>Marché B2B</Text>
+                                  <Text style={{ color: T.subtext, fontSize: 12, fontWeight: '700' }}>{i18n.t('marketplace.b2bMarketLabel')}</Text>
                               </View>
                           </View>
                       </View>
 
-                      <Text style={styles.modalSectionTitle}>ARTICLES COMMANDÉS</Text>
+                      <Text style={styles.modalSectionTitle}>{i18n.t('marketplace.orderedItems')}</Text>
                       {viewingOrder?.items?.map((item: any, idx: number) => (
                           <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
                               <View style={{ flex: 1 }}>
@@ -914,17 +915,17 @@ export default function MarketplaceScreen() {
 
                       <View style={{ marginTop: 30, padding: 20, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20 }}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                              <Text style={{ color: T.subtext, fontWeight: '700' }}>Total Articles</Text>
+                              <Text style={{ color: T.subtext, fontWeight: '700' }}>{i18n.t('marketplace.totalItems')}</Text>
                               <Text style={{ color: '#fff', fontWeight: '800' }}>{Number(viewingOrder?.total || 0).toFixed(3)} DT</Text>
                           </View>
                           {viewingOrder?.settlement && (
                               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
-                                  <Text style={{ color: '#ef4444', fontWeight: '700' }}>Frais Marketplace</Text>
+                                  <Text style={{ color: '#ef4444', fontWeight: '700' }}>{i18n.t('marketplace.marketplaceFees')}</Text>
                                   <Text style={{ color: '#ef4444', fontWeight: '800' }}>-{Number(viewingOrder.settlement.commissionAmount).toFixed(3)} DT</Text>
                               </View>
                           )}
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 15, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' }}>
-                              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>Net à payer</Text>
+                              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>{i18n.t('marketplace.netToPay')}</Text>
                               <Text style={{ color: T.accent, fontSize: 22, fontWeight: '900', textAlign: 'right' }}>{Number(viewingOrder?.total || 0).toFixed(3)} DT</Text>
                           </View>
                       </View>

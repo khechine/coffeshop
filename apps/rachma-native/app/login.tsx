@@ -8,6 +8,7 @@ import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
 import { useAlert } from '@/components/AlertContext';
 import { useEffect } from 'react';
+import i18n from '../locales/i18n';
 
 export default function LoginScreen() {
   const [loginMode, setLoginMode] = useState<'email' | 'pairing'>('email');
@@ -34,7 +35,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (loginMode === 'email') {
       if (!email.trim() || !password.trim()) {
-        showAlert({ title: 'Erreur', message: 'Veuillez remplir tous les champs.', type: 'error' });
+        showAlert({ title: i18n.t('auth.errorTitle'), message: i18n.t('auth.errorFields'), type: 'error' });
         return;
       }
       setLoading(true);
@@ -51,16 +52,16 @@ export default function LoginScreen() {
              router.replace('/(tabs)');
           }
         } else {
-          showAlert({ title: 'Connexion échouée', message: result.message || 'Identifiants invalides.', type: 'error' });
+          showAlert({ title: i18n.t('auth.loginFailed'), message: result.message || i18n.t('auth.invalidCredentials'), type: 'error' });
         }
       } catch (error: any) {
-        showAlert({ title: 'Erreur', message: error.message || 'Impossible de se connecter au serveur.', type: 'error' });
+        showAlert({ title: i18n.t('auth.errorTitle'), message: error.message || i18n.t('auth.serverError'), type: 'error' });
       } finally {
         setLoading(false);
       }
     } else {
       if (!storeIdInput.trim() || !activationCode.trim()) {
-        showAlert({ title: 'Erreur', message: 'Veuillez remplir tous les champs de couplage.', type: 'error' });
+        showAlert({ title: i18n.t('auth.errorTitle'), message: i18n.t('auth.errorPairingFields'), type: 'error' });
         return;
       }
       setLoading(true);
@@ -73,10 +74,10 @@ export default function LoginScreen() {
           await AuthService.clearUser(); // explicitly clear any previous user state so it prompts for PIN
           router.replace('/unlock');
         } else {
-          showAlert({ title: 'Appairage échoué', message: result.error || "Code d'activation invalide.", type: 'error' });
+          showAlert({ title: i18n.t('auth.pairingFailed'), message: result.error || i18n.t('auth.invalidActivationCode'), type: 'error' });
         }
       } catch (error: any) {
-        showAlert({ title: 'Erreur', message: error.message || "Vérifiez le code et l'ID de la boutique.", type: 'error' });
+        showAlert({ title: i18n.t('auth.errorTitle'), message: error.message || i18n.t('auth.checkCodeAndStoreId'), type: 'error' });
       } finally {
         setLoading(false);
       }
@@ -103,7 +104,7 @@ export default function LoginScreen() {
             <Text style={styles.logoText}>RP</Text>
           </View>
           <Text style={styles.brandName}>Rachma Pro</Text>
-          <Text style={styles.tagline}>Gestion Intelligente B2B</Text>
+          <Text style={styles.tagline}>{i18n.t('auth.tagline')}</Text>
         </View>
 
         {/* Mode Toggle */}
@@ -112,13 +113,13 @@ export default function LoginScreen() {
             style={[styles.modeToggleBtn, loginMode === 'email' && styles.modeToggleBtnActive]}
             onPress={() => setLoginMode('email')}
           >
-            <Text style={[styles.modeToggleText, loginMode === 'email' && styles.modeToggleTextActive]}>Manager</Text>
+            <Text style={[styles.modeToggleText, loginMode === 'email' && styles.modeToggleTextActive]}>{i18n.t('auth.manager')}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.modeToggleBtn, loginMode === 'pairing' && styles.modeToggleBtnActive]}
             onPress={() => setLoginMode('pairing')}
           >
-            <Text style={[styles.modeToggleText, loginMode === 'pairing' && styles.modeToggleTextActive]}>Terminal</Text>
+            <Text style={[styles.modeToggleText, loginMode === 'pairing' && styles.modeToggleTextActive]}>{i18n.t('auth.terminal')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -128,7 +129,7 @@ export default function LoginScreen() {
               <View style={[styles.inputContainer, styles.glassEffect]}>
                 <FontAwesome name="envelope-o" size={18} color="#94a3b8" style={styles.inputIcon} />
                 <TextInput
-                  placeholder="Email professionnel"
+                  placeholder={i18n.t('auth.emailPlaceholder')}
                   placeholderTextColor="#94a3b8"
                   style={styles.input}
                   value={email}
@@ -141,7 +142,7 @@ export default function LoginScreen() {
               <View style={[styles.inputContainer, styles.glassEffect]}>
                 <FontAwesome name="lock" size={20} color="#94a3b8" style={styles.inputIcon} />
                 <TextInput
-                  placeholder="Mot de passe"
+                  placeholder={i18n.t('auth.passwordPlaceholder')}
                   placeholderTextColor="#94a3b8"
                   style={styles.input}
                   value={password}
@@ -157,7 +158,7 @@ export default function LoginScreen() {
               </View>
 
               <TouchableOpacity style={styles.forgotBtn}>
-                <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
+                <Text style={styles.forgotText}>{i18n.t('auth.forgotPassword')}</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -166,7 +167,7 @@ export default function LoginScreen() {
                 <View style={[styles.inputContainer, styles.glassEffect, { flex: 1, marginBottom: 0 }]}>
                     <FontAwesome name="building-o" size={18} color="#94a3b8" style={styles.inputIcon} />
                     <TextInput
-                        placeholder="ID de la boutique"
+                        placeholder={i18n.t('auth.storeIdPlaceholder')}
                         placeholderTextColor="#94a3b8"
                         style={styles.input}
                         value={storeIdInput}
@@ -185,7 +186,7 @@ export default function LoginScreen() {
               <View style={[styles.inputContainer, styles.glassEffect]}>
                 <FontAwesome name="key" size={20} color="#94a3b8" style={styles.inputIcon} />
                 <TextInput
-                  placeholder="Code d'activation (ex: 123456)"
+                  placeholder={i18n.t('auth.activationCodePlaceholder')}
                   placeholderTextColor="#94a3b8"
                   style={styles.input}
                   value={activationCode}
@@ -196,7 +197,7 @@ export default function LoginScreen() {
               </View>
 
               <TouchableOpacity style={styles.forgotBtn}>
-                <Text style={styles.forgotText}>Où trouver le code ?</Text>
+                <Text style={styles.forgotText}>{i18n.t('auth.whereIsCode')}</Text>
               </TouchableOpacity>
             </>
           )}
@@ -206,7 +207,7 @@ export default function LoginScreen() {
               ? <ActivityIndicator color="#ffffff" />
               : <>
                   <Text style={styles.loginBtnText}>
-                    {loginMode === 'email' ? 'Se Connecter' : 'Appairer'}
+                    {loginMode === 'email' ? i18n.t('auth.login') : i18n.t('auth.pairing')}
                   </Text>
                   <FontAwesome name="arrow-right" size={16} color="#ffffff" />
                 </>
@@ -215,9 +216,9 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Pas encore de compte ?</Text>
+          <Text style={styles.footerText}>{i18n.t('auth.noAccount')}</Text>
           <TouchableOpacity onPress={() => router.push('/register')}>
-            <Text style={styles.signupText}> Créer un compte</Text>
+            <Text style={styles.signupText}>{i18n.t('auth.createAccount')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -228,9 +229,9 @@ export default function LoginScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <FontAwesome name="th-large" size={24} color={Colors.primary} />
-              <Text style={styles.modalTitle}>Personnalisez votre interface</Text>
+              <Text style={styles.modalTitle}>{i18n.t('auth.customizeInterface')}</Text>
             </View>
-            <Text style={styles.modalSub}>Choisissez le mode de fonctionnement principal pour cet appareil.</Text>
+            <Text style={styles.modalSub}>{i18n.t('auth.chooseAppMode')}</Text>
 
             <TouchableOpacity 
               style={styles.modeOption} 
@@ -240,8 +241,8 @@ export default function LoginScreen() {
                 <FontAwesome name="briefcase" size={20} color="#10b981" />
               </View>
               <View style={styles.modeInfo}>
-                <Text style={styles.modeName}>Mode Rachma Uniquement</Text>
-                <Text style={styles.modeDescription}>Gestion, Stocks et Marché B2B. Interface épurée.</Text>
+                <Text style={styles.modeName}>{i18n.t('auth.modeRachma')}</Text>
+                <Text style={styles.modeDescription}>{i18n.t('auth.modeRachmaDesc')}</Text>
               </View>
               <FontAwesome name="chevron-right" size={14} color="#475569" />
             </TouchableOpacity>
@@ -254,8 +255,8 @@ export default function LoginScreen() {
                 <FontAwesome name="desktop" size={20} color="#6366f1" />
               </View>
               <View style={styles.modeInfo}>
-                <Text style={styles.modeName}>Mode Complet (Table + Caisse)</Text>
-                <Text style={styles.modeDescription}>Toutes les fonctionnalités, y compris la prise de commande.</Text>
+                <Text style={styles.modeName}>{i18n.t('auth.modeFull')}</Text>
+                <Text style={styles.modeDescription}>{i18n.t('auth.modeFullDesc')}</Text>
               </View>
               <FontAwesome name="chevron-right" size={14} color="#475569" />
             </TouchableOpacity>

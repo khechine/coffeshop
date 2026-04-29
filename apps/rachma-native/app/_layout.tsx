@@ -27,6 +27,12 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    'Cairo-Bold': require('../assets/fonts/Cairo-Bold.ttf'),
+    'Cairo-Regular': require('../assets/fonts/Cairo-Regular.ttf'),
+    'Almarai-Regular': require('../assets/fonts/Almarai-Regular.ttf'),
+    'Almarai-Bold': require('../assets/fonts/Almarai-Bold.ttf'),
+    'Almarai-Light': require('../assets/fonts/Almarai-Light.ttf'),
+    'Almarai-ExtraBold': require('../assets/fonts/Almarai-ExtraBold.ttf'),
     ...FontAwesome.font,
   });
 

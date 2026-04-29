@@ -5,6 +5,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Colors } from '@/constants/Colors';
+import i18n from '../locales/i18n';
 
 const { width, height } = Dimensions.get('window');
 const innerDimension = width * 0.7;
@@ -27,9 +28,9 @@ export default function ScannerScreen() {
       <View style={styles.container}>
         <View style={styles.permissionBox}>
           <FontAwesome name="camera" size={50} color={Colors.primary} style={{ marginBottom: 20 }} />
-          <Text style={styles.permissionText}>L'accès à la caméra est nécessaire pour scanner.</Text>
+          <Text style={styles.permissionText}>{i18n.t('scanner.permissionNeeded')}</Text>
           <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
-            <Text style={styles.permissionBtnText}>Autoriser la caméra</Text>
+            <Text style={styles.permissionBtnText}>{i18n.t('scanner.authorizeCamera')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -50,7 +51,7 @@ export default function ScannerScreen() {
     }
 
     // Default: Identify if it's a product or store
-    alert(`Scanné: ${data}`);
+    alert(`${i18n.t('scanner.scanned')}: ${data}`);
     
     // Reset scanned state after a short delay
     setTimeout(() => setScanned(false), 2000);
@@ -72,7 +73,7 @@ export default function ScannerScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
               <FontAwesome name="close" size={24} color="#ffffff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{mode === 'AUTH_STORE' ? 'Scanner Boutique' : 'Scanner un article'}</Text>
+            <Text style={styles.headerTitle}>{mode === 'AUTH_STORE' ? i18n.t('scanner.scanStore') : i18n.t('scanner.scanArticle')}</Text>
             <TouchableOpacity onPress={() => setTorch(!torch)} style={styles.iconBtn}>
               <FontAwesome name="flash" size={24} color={torch ? Colors.primary : "#ffffff"} />
             </TouchableOpacity>
@@ -86,14 +87,14 @@ export default function ScannerScreen() {
                 <View style={styles.cornerBottomLeft} />
                 <View style={styles.cornerBottomRight} />
               </View>
-              <Text style={styles.hintText}>Placez le code dans le cadre</Text>
+              <Text style={styles.hintText}>{i18n.t('scanner.placeCode')}</Text>
           </View>
 
           {/* Footer */}
           <View style={styles.footer}>
             <View style={styles.infoBox}>
               <FontAwesome name="info-circle" size={16} color="#94a3b8" />
-              <Text style={styles.infoText}>Format supportés: QR, EAN, Code128</Text>
+              <Text style={styles.infoText}>{i18n.t('scanner.supportedFormats')}</Text>
             </View>
           </View>
         </View>

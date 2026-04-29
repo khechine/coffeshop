@@ -31,7 +31,7 @@ export default async function MarketplacePage() {
   }
 
   return (
-    <div className="page-content" style={{ padding: 0 }}>
+    <div className="page-content" style={{ padding: '32px 40px' }}>
       <MarketplaceClient initialData={data} />
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, Alert, Platform } from 'react-native';
+import i18n from '../../locales/i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/Colors';
@@ -112,7 +113,7 @@ export default function StocksScreen() {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert("Erreur", "Permission caméra refusée.");
+      Alert.alert(i18n.t('auth.errorTitle'), i18n.t('stocks.cameraPermissionDenied'));
       return;
     }
 
@@ -128,7 +129,7 @@ export default function StocksScreen() {
   };
 
   const handleSaveCategory = async () => {
-    if (!formName) return Alert.alert("Erreur", "Le nom est requis.");
+    if (!formName) return Alert.alert(i18n.t('auth.errorTitle'), i18n.t('stocks.nameRequired'));
     try {
       const payload = {
         name: formName,
@@ -147,26 +148,26 @@ export default function StocksScreen() {
       resetForm();
       onRefresh();
     } catch (error) {
-      Alert.alert("Erreur", "Impossible de sauvegarder la catégorie.");
+      Alert.alert(i18n.t('auth.errorTitle'), i18n.t('stocks.errorSaveItem'));
     }
   };
 
   const handleDeleteCategory = (id: string) => {
-    Alert.alert("Confirmation", "Supprimer cette catégorie et tous ses articles ?", [
-      { text: "Annuler", style: "cancel" },
-      { text: "Supprimer", style: "destructive", onPress: async () => {
+    Alert.alert(i18n.t('stocks.confirmationTitle'), i18n.t('stocks.deleteCategoryConfirm'), [
+      { text: i18n.t('common.cancel'), style: "cancel" },
+      { text: i18n.t('stocks.delete'), style: "destructive", onPress: async () => {
         try {
           await ApiService.delete(`/management/categories/${id}`);
           onRefresh();
         } catch (error: any) {
-          Alert.alert("Erreur", error.message || "Suppression impossible.");
+          Alert.alert(i18n.t('auth.errorTitle'), error.message || i18n.t('stocks.errorDelete'));
         }
       }}
     ]);
   };
 
   const handleSaveItem = async () => {
-    if (!formName) return Alert.alert("Erreur", "Le nom est requis.");
+    if (!formName) return Alert.alert(i18n.t('auth.errorTitle'), i18n.t('stocks.nameRequired'));
     const isProduct = activeTab === 'PRODUCTS';
     const endpoint = isProduct ? '/management/products' : '/management/stock';
     
@@ -205,20 +206,20 @@ export default function StocksScreen() {
       resetForm();
       onRefresh();
     } catch (error) {
-      Alert.alert("Erreur", "Sauvegarde article impossible.");
+      Alert.alert(i18n.t('auth.errorTitle'), i18n.t('stocks.errorSaveItem'));
     }
   };
 
   const handleDeleteItem = (id: string) => {
     const endpoint = activeTab === 'PRODUCTS' ? '/management/products' : '/management/stock';
-    Alert.alert("Confirmation", "Supprimer cet article ?", [
-      { text: "Annuler", style: "cancel" },
-      { text: "Supprimer", style: "destructive", onPress: async () => {
+    Alert.alert(i18n.t('stocks.confirmationTitle'), i18n.t('stocks.deleteConfirm'), [
+      { text: i18n.t('common.cancel'), style: "cancel" },
+      { text: i18n.t('stocks.delete'), style: "destructive", onPress: async () => {
         try {
           await ApiService.delete(`${endpoint}/${id}`);
           onRefresh();
         } catch (error: any) {
-          Alert.alert("Erreur", error.message || "Suppression impossible.");
+          Alert.alert(i18n.t('auth.errorTitle'), error.message || i18n.t('stocks.errorDelete'));
         }
       }}
     ]);
@@ -270,10 +271,10 @@ export default function StocksScreen() {
     <View style={[styles.container, { paddingTop: Math.max(insets.top, 20) }]}>
       <View style={styles.tabContainer}>
         <TouchableOpacity style={[styles.tab, activeTab === 'PRODUCTS' && styles.activeTab]} onPress={() => { setActiveTab('PRODUCTS'); setSelectedCategory(null); setSearch(''); }}>
-          <Text style={[styles.tabText, activeTab === 'PRODUCTS' && styles.activeTabText]}>Catalogue</Text>
+          <Text style={[styles.tabText, activeTab === 'PRODUCTS' && styles.activeTabText]}>{i18n.t('stocks.catalog')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.tab, activeTab === 'MATERIALS' && styles.activeTab]} onPress={() => { setActiveTab('MATERIALS'); setSelectedCategory(null); setSearch(''); }}>
-          <Text style={[styles.tabText, activeTab === 'MATERIALS' && styles.activeTabText]}>Matière Première</Text>
+          <Text style={[styles.tabText, activeTab === 'MATERIALS' && styles.activeTabText]}>{i18n.t('stocks.materials')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -286,12 +287,12 @@ export default function StocksScreen() {
                </TouchableOpacity>
                <View style={{ marginLeft: 15, flex: 1, backgroundColor: 'transparent' }}>
                   <Text style={styles.drillDownTitle}>{selectedCategory?.icon} {selectedCategory?.name.toUpperCase()}</Text>
-                  <Text style={styles.drillDownSub}>Gestion du Catalogue</Text>
+                  <Text style={styles.drillDownSub}>{i18n.t('stocks.catalogManagement')}</Text>
                </View>
              </View>
 
             <ScrollView contentContainerStyle={styles.scrollBody}>
-              <Text style={styles.mgmtSectionTitle}>PRODUITS DANS CETTE CATÉGORIE</Text>
+              <Text style={styles.mgmtSectionTitle}>{i18n.t('stocks.productsInCategory')}</Text>
               {products
                 .filter(s => selectedCategory?.id === 'UNCATEGORIZED' ? !s.categoryId : s.categoryId === selectedCategory?.id)
                 .map((item, idx) => (
@@ -309,7 +310,7 @@ export default function StocksScreen() {
                         setFormIcon(item.icon || '☕');
                         setFormRecipe((item.recipeItems || []).map((r: any) => ({
                             stockItemId: r.stockItemId,
-                            name: r.stockItem?.name || 'Ingrédient',
+                            name: r.stockItem?.name || i18n.t('stocks.ingredient'),
                             quantity: String(r.quantity),
                             unit: r.stockItem?.unit?.name || r.stockItem?.unit || 'UN'
                         })));
@@ -337,7 +338,7 @@ export default function StocksScreen() {
                 onPress={() => { resetForm(); setIsItemModalVisible(true); }}
               >
                 <FontAwesome name="plus" size={16} color="#ffffff" style={{ marginRight: 8 }} />
-                <Text style={styles.addItemText}>Ajouter un Produit</Text>
+                <Text style={styles.addItemText}>{i18n.t('stocks.addProduct')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -346,7 +347,7 @@ export default function StocksScreen() {
             <View style={styles.searchBar}>
               <FontAwesome name="search" size={16} color="#94a3b8" style={{ marginRight: 10 }} />
               <TextInput 
-                placeholder="Chercher un produit..." 
+                placeholder={i18n.t('stocks.searchProduct')}
                 placeholderTextColor="#94a3b8"
                 style={styles.searchInput}
                 value={search}
@@ -356,7 +357,7 @@ export default function StocksScreen() {
 
             {search.length > 0 ? (
               <>
-                <Text style={styles.mgmtSectionTitle}>RÉSULTATS DE RECHERCHE</Text>
+                <Text style={styles.mgmtSectionTitle}>{i18n.t('stocks.searchResults')}</Text>
                 {searchedItems.map((item, idx) => (
                   <TouchableOpacity 
                     key={idx} 
@@ -372,7 +373,7 @@ export default function StocksScreen() {
                         setFormIcon(item.icon || '☕');
                         setFormRecipe((item.recipeItems || []).map((r: any) => ({
                             stockItemId: r.stockItemId,
-                            name: r.stockItem?.name || 'Ingrédient',
+                            name: r.stockItem?.name || i18n.t('stocks.ingredient'),
                             quantity: String(r.quantity),
                             unit: r.stockItem?.unit?.name || r.stockItem?.unit || 'UN'
                         })));
@@ -395,20 +396,20 @@ export default function StocksScreen() {
               </>
             ) : (
               <>
-                <Text style={styles.sectionTitle}>Mes Catégories</Text>
+                <Text style={styles.sectionTitle}>{i18n.t('stocks.myCategories')}</Text>
                 <View style={styles.categoryList}>
                   {displayCategories.length === 0 && search.length === 0 && (
                     <View style={{ padding: 40, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 32, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
                       <FontAwesome name="magic" size={40} color="rgba(16, 185, 129, 0.2)" style={{ marginBottom: 15 }} />
                       <Text style={{ color: '#94a3b8', textAlign: 'center', fontSize: 13, lineHeight: 20, marginBottom: 20 }}>
-                        Commencez rapidement en installant les produits les plus populaires en Tunisie.
+                        {i18n.t('stocks.startQuickSub')}
                       </Text>
                       <TouchableOpacity 
                         style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#10b981', borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 8 }}
                         onPress={async () => {
                            if (!storeId) return;
-                           Alert.alert('Pack Initial Tunisie', 'Installer les produits, recettes et emballages populaires ?', [
-                              { text: 'Annuler', style: 'cancel' },
+                           Alert.alert(i18n.t('stocks.tunisiaPack'), i18n.t('stocks.installTunisiaPackSub'), [
+                              { text: i18n.t('common.cancel'), style: 'cancel' },
                               { text: 'Installer', onPress: async () => {
                                  try {
                                     setRefreshing(true);
@@ -422,7 +423,7 @@ export default function StocksScreen() {
                         }}
                       >
                         <FontAwesome name="magic" size={16} color="#fff" />
-                        <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>PACK INITIAL TUNISIE</Text>
+                        <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>{i18n.t('stocks.installTunisiaPack')}</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -433,7 +434,7 @@ export default function StocksScreen() {
                       </View>
                       <View style={styles.catInfo}>
                         <Text style={styles.catTitle}>{cat.name.toUpperCase()}</Text>
-                        <Text style={styles.catSubtitle}>{cat.itemCount} PRODUITS</Text>
+                        <Text style={styles.catSubtitle}>{cat.itemCount} {i18n.t('stocks.productsCount')}</Text>
                       </View>
                       <View style={styles.catActions}>
                           <TouchableOpacity 
@@ -463,16 +464,16 @@ export default function StocksScreen() {
                     </TouchableOpacity>
                   ))}
                   {uncategorizedItems.length > 0 && (
-                    <TouchableOpacity style={[styles.categoryCard, styles.glassCard]} onPress={() => setSelectedCategory({ id: 'UNCATEGORIZED', name: 'Non classés', icon: '📁' })}>
+                    <TouchableOpacity style={[styles.categoryCard, styles.glassCard]} onPress={() => setSelectedCategory({ id: 'UNCATEGORIZED', name: i18n.t('stocks.uncategorized'), icon: '📁' })}>
                       <View style={[styles.catIconContainer, { backgroundColor: 'rgba(148, 163, 184, 0.1)' }]}><Text style={styles.catEmoji}>📁</Text></View>
-                      <View style={styles.catInfo}><Text style={styles.catTitle}>NON CLASSÉS</Text><Text style={styles.catSubtitle}>{uncategorizedItems.length} PRODUITS</Text></View>
+                      <View style={styles.catInfo}><Text style={styles.catTitle}>{i18n.t('stocks.uncategorized').toUpperCase()}</Text><Text style={styles.catSubtitle}>{uncategorizedItems.length} {i18n.t('stocks.productsCount')}</Text></View>
                       <FontAwesome name="chevron-right" size={14} color="#475569" style={{ marginRight: 15 }} />
                     </TouchableOpacity>
                   )}
                 </View>
                 <TouchableOpacity style={styles.addItemBtn} onPress={() => { resetForm(); setIsCategoryModalVisible(true); }}>
                   <FontAwesome name="plus-circle" size={20} color="#ffffff" style={{ marginRight: 10 }} />
-                  <Text style={styles.addItemText}>Nouvelle Catégorie</Text>
+                  <Text style={styles.addItemText}>{i18n.t('stocks.newCategory')}</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -483,7 +484,7 @@ export default function StocksScreen() {
           <View style={styles.searchBar}>
             <FontAwesome name="search" size={16} color="#94a3b8" style={{ marginRight: 10 }} />
             <TextInput 
-              placeholder="Chercher une matière première..." 
+              placeholder={i18n.t('stocks.searchMaterial')}
               placeholderTextColor="#94a3b8"
               style={styles.searchInput}
               value={search}
@@ -491,33 +492,33 @@ export default function StocksScreen() {
             />
           </View>
 
-          <Text style={styles.sectionTitle}>Stock des Matières Premières</Text>
+          <Text style={styles.sectionTitle}>{i18n.t('stocks.materialsStock')}</Text>
           {searchedItems.length === 0 && search.length === 0 && (
             <View style={{ padding: 40, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 32, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
               <FontAwesome name="cube" size={40} color="rgba(16, 185, 129, 0.2)" style={{ marginBottom: 15 }} />
               <Text style={{ color: '#94a3b8', textAlign: 'center', fontSize: 13, lineHeight: 20, marginBottom: 20 }}>
-                Configurez vos matières premières (café, lait, gobelets) ou utilisez le pack standard.
+                {i18n.t('stocks.configureMaterialsSub')}
               </Text>
               <TouchableOpacity 
                 style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#10b981', borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 8 }}
                 onPress={async () => {
                     if (!storeId) return;
-                    Alert.alert('Pack Initial Tunisie', 'Installer les matières premières, recettes et emballages populaires ?', [
-                      { text: 'Annuler', style: 'cancel' },
-                      { text: 'Installer', onPress: async () => {
+                    Alert.alert(i18n.t('stocks.tunisiaPack'), i18n.t('stocks.installTunisiaPackSub'), [
+                      { text: i18n.t('common.cancel'), style: 'cancel' },
+                      { text: i18n.t('stocks.install'), onPress: async () => {
                           try {
                             setRefreshing(true);
                             await ApiService.seedTunisia(storeId);
                             onRefresh();
                           } catch (e) {
-                            Alert.alert('Erreur', 'Installation impossible');
+                            Alert.alert(i18n.t('auth.errorTitle'), i18n.t('stocks.errorInstall'));
                           }
                       }}
                     ]);
                 }}
               >
                 <FontAwesome name="magic" size={16} color="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>PACK INITIAL TUNISIE</Text>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>{i18n.t('stocks.installTunisiaPack')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -551,7 +552,7 @@ export default function StocksScreen() {
             onPress={() => { resetForm(); setIsItemModalVisible(true); }}
           >
             <FontAwesome name="plus" size={16} color="#ffffff" style={{ marginRight: 8 }} />
-            <Text style={styles.addItemText}>Ajouter une Matière Première</Text>
+            <Text style={styles.addItemText}>{i18n.t('stocks.addMaterial')}</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
@@ -561,14 +562,14 @@ export default function StocksScreen() {
         <View style={styles.modalOverlay}>
             <View style={[styles.modalSheet, { height: 'auto' }]}>
                 <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>{editingCategory ? 'Editer' : 'Nouvelle'} Catégorie</Text>
+                    <Text style={styles.modalTitle}>{i18n.t(editingCategory ? 'stocks.edit' : 'stocks.new')} {i18n.t('stocks.categoryName')}</Text>
                     <TouchableOpacity onPress={() => setIsCategoryModalVisible(false)}><FontAwesome name="times" size={20} color="#fff" /></TouchableOpacity>
                 </View>
                 <View style={{ padding: 25 }}>
-                    <Text style={styles.inputLabel}>Nom de la catégorie</Text>
-                    <TextInput style={styles.modalInput} value={formName} onChangeText={setFormName} placeholder="Nom..." placeholderTextColor="#475569" />
+                    <Text style={styles.inputLabel}>{i18n.t('stocks.categoryName')}</Text>
+                    <TextInput style={styles.modalInput} value={formName} onChangeText={setFormName} placeholder={i18n.t('stocks.categoryName') + "..."} placeholderTextColor="#475569" />
                     
-                    <Text style={styles.inputLabel}>Icône / Emoji</Text>
+                    <Text style={styles.inputLabel}>{i18n.t('stocks.iconEmoji')}</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.iconSelector}>
                         {ICON_LIST.map(ic => (
                             <TouchableOpacity 
@@ -582,7 +583,7 @@ export default function StocksScreen() {
                     </ScrollView>
 
                     <TouchableOpacity style={styles.saveBtn} onPress={handleSaveCategory}>
-                        <Text style={styles.saveBtnText}>Enregistrer</Text>
+                        <Text style={styles.saveBtnText}>{i18n.t('stocks.save')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -595,16 +596,16 @@ export default function StocksScreen() {
         <View style={styles.modalOverlay}>
             <View style={[styles.modalSheet, { height: '80%' }]}>
                 <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>{editingItem ? 'Editer' : 'Nouvel'} Article</Text>
+                    <Text style={styles.modalTitle}>{i18n.t(editingItem ? 'stocks.edit' : 'stocks.new')} {i18n.t('stocks.itemName')}</Text>
                     <TouchableOpacity onPress={() => setIsItemModalVisible(false)}><FontAwesome name="times" size={20} color="#fff" /></TouchableOpacity>
                 </View>
                 <ScrollView style={{ padding: 20 }}>
-                    <Text style={styles.inputLabel}>Nom de l'article</Text>
-                    <TextInput style={styles.modalInput} value={formName} onChangeText={setFormName} placeholder="Nom..." placeholderTextColor="#475569" />
+                    <Text style={styles.inputLabel}>{i18n.t('stocks.itemName')}</Text>
+                    <TextInput style={styles.modalInput} value={formName} onChangeText={setFormName} placeholder={i18n.t('stocks.itemName') + "..."} placeholderTextColor="#475569" />
                     
                     {activeTab === 'PRODUCTS' && (
                         <>
-                            <Text style={styles.inputLabel}>Icône / Emoji</Text>
+                            <Text style={styles.inputLabel}>{i18n.t('stocks.iconEmoji')}</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.iconSelector}>
                                 {ICON_LIST.map(ic => (
                                     <TouchableOpacity 
@@ -617,7 +618,7 @@ export default function StocksScreen() {
                                 ))}
                             </ScrollView>
 
-                            <Text style={styles.inputLabel}>Photo de l'article</Text>
+                            <Text style={styles.inputLabel}>{i18n.t('stocks.itemPhoto')}</Text>
                             <View style={styles.imagePickerContainer}>
                                 {formImage ? (
                                     <View style={styles.imagePreviewWrapper}>
@@ -637,11 +638,11 @@ export default function StocksScreen() {
                                 <View style={styles.imagePickerActions}>
                                     <TouchableOpacity style={styles.pickerActionBtn} onPress={takePhoto}>
                                         <FontAwesome name="camera" size={16} color="#fff" />
-                                        <Text style={styles.pickerActionText}>Prendre</Text>
+                                        <Text style={styles.pickerActionText}>{i18n.t('stocks.takePhoto')}</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity style={[styles.pickerActionBtn, { backgroundColor: 'rgba(255,255,255,0.05)' }]} onPress={pickImage}>
                                         <FontAwesome name="image" size={16} color="#94a3b8" />
-                                        <Text style={[styles.pickerActionText, { color: '#94a3b8' }]}>Galerie</Text>
+                                        <Text style={[styles.pickerActionText, { color: '#94a3b8' }]}>{i18n.t('stocks.gallery')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -650,11 +651,11 @@ export default function StocksScreen() {
                     
                     <View style={{ flexDirection: 'row', gap: 15, backgroundColor: 'transparent' }}>
                         <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                            <Text style={styles.inputLabel}>Quantité Stock</Text>
+                            <Text style={styles.inputLabel}>{i18n.t('stocks.stockQty')}</Text>
                             <TextInput style={styles.modalInput} value={formQty} onChangeText={setFormQty} keyboardType="numeric" placeholder="0" placeholderTextColor="#475569" />
                         </View>
                         <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                            <Text style={styles.inputLabel}>Unité</Text>
+                            <Text style={styles.inputLabel}>{i18n.t('stocks.unit')}</Text>
                             <TouchableOpacity 
                                 style={styles.selectField}
                                 onPress={() => setShowUnitSelect(true)}
@@ -667,7 +668,7 @@ export default function StocksScreen() {
 
                     <View style={{ flexDirection: 'row', gap: 15, backgroundColor: 'transparent' }}>
                         <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                            <Text style={styles.inputLabel}>{activeTab === 'PRODUCTS' ? 'Prix de Vente (DT)' : 'Coût / Achat (DT)'}</Text>
+                            <Text style={styles.inputLabel}>{i18n.t(activeTab === 'PRODUCTS' ? 'stocks.sellPrice' : 'stocks.buyPrice')}</Text>
                             <TextInput 
                                 style={[styles.modalInput, activeTab === 'PRODUCTS' ? { color: '#10b981', fontWeight: 'bold' } : {}]} 
                                 value={activeTab === 'PRODUCTS' ? formPrice : formCost} 
@@ -679,7 +680,7 @@ export default function StocksScreen() {
                         </View>
                         {activeTab === 'PRODUCTS' && (
                             <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                                <Text style={styles.inputLabel}>TVA %</Text>
+                                <Text style={styles.inputLabel}>{i18n.t('stocks.vatPercent')}</Text>
                                 <TextInput style={styles.modalInput} value={formTVA} onChangeText={setFormTVA} keyboardType="numeric" placeholder="0" placeholderTextColor="#475569" />
                             </View>
                         )}
@@ -687,8 +688,8 @@ export default function StocksScreen() {
 
                     {activeTab === 'PRODUCTS' && (
                         <View style={{ marginTop: 10, padding: 15, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
-                            <Text style={[styles.inputLabel, { color: Colors.primary }]}>RECOUVREMENT (RECETTE)</Text>
-                            <Text style={{ color: '#64748b', fontSize: 11, marginBottom: 10 }}>Ingrédients déduits lors de la vente.</Text>
+                            <Text style={[styles.inputLabel, { color: Colors.primary }]}>{i18n.t('stocks.recoveryRecipe')}</Text>
+                            <Text style={{ color: '#64748b', fontSize: 11, marginBottom: 10 }}>{i18n.t('stocks.recoveryRecipeSub')}</Text>
                             
                             {formRecipe.length > 0 ? formRecipe.map((ing, ri) => (
                                 <View key={ri} style={styles.recipeRow}>
@@ -701,14 +702,14 @@ export default function StocksScreen() {
                                     </TouchableOpacity>
                                 </View>
                             )) : (
-                                <Text style={{ color: '#475569', fontSize: 13, fontStyle: 'italic', marginBottom: 15, textAlign: 'center' }}>Aucun ingrédient.</Text>
+                                <Text style={{ color: '#475569', fontSize: 13, fontStyle: 'italic', marginBottom: 15, textAlign: 'center' }}>{i18n.t('stocks.noIngredients')}</Text>
                             )}
                             
                             <TouchableOpacity 
                               style={{ padding: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, alignItems: 'center', marginTop: 5 }}
                               onPress={() => setAddingIngredient(true)}
                             >
-                                <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '700' }}>+ Ajouter un ingrédient</Text>
+                                <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '700' }}>{i18n.t('stocks.addIngredient')}</Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -719,7 +720,7 @@ export default function StocksScreen() {
                             <TouchableOpacity style={styles.modalBackdrop} onPress={() => setAddingIngredient(false)} />
                             <View style={[styles.modalSheet, { height: '60%' }]}>
                                 <View style={styles.modalHeader}>
-                                    <Text style={styles.modalTitle}>Choisir un ingrédient</Text>
+                                    <Text style={styles.modalTitle}>{i18n.t('stocks.chooseIngredient')}</Text>
                                     <TouchableOpacity onPress={() => setAddingIngredient(false)}><FontAwesome name="times" size={20} color="#fff" /></TouchableOpacity>
                                 </View>
                                 <ScrollView style={{ padding: 20 }}>
@@ -735,22 +736,22 @@ export default function StocksScreen() {
                                             }}
                                         >
                                             <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>{si.name}</Text>
-                                            <Text style={{ color: '#94a3b8', fontSize: 12 }}>Stock actuel: {si.quantity} {si.unit?.name || si.unit || 'UN'}</Text>
+                                            <Text style={{ color: '#94a3b8', fontSize: 12 }}>{i18n.t('stocks.currentStockLabel', { qty: si.quantity, unit: si.unit?.name || si.unit || 'UN' })}</Text>
                                         </TouchableOpacity>
                                     ))}
-                                    {stockItems.length === 0 && <Text style={{ color: '#94a3b8', textAlign: 'center' }}>Aucune matière première trouvée dans vos stocks.</Text>}
+                                    {stockItems.length === 0 && <Text style={{ color: '#94a3b8', textAlign: 'center' }}>{i18n.t('stocks.noMaterialsFound')}</Text>}
                                 </ScrollView>
                             </View>
                         </View>
                     </Modal>
 
                     <TouchableOpacity style={styles.saveBtn} onPress={handleSaveItem}>
-                        <Text style={styles.saveBtnText}>Enregistrer</Text>
+                        <Text style={styles.saveBtnText}>{i18n.t('stocks.save')}</Text>
                     </TouchableOpacity>
                     
                     {editingItem && (
                         <TouchableOpacity style={{ marginTop: 15, alignItems: 'center', backgroundColor: 'transparent' }} onPress={() => handleDeleteItem(editingItem.id)}>
-                            <Text style={{ color: Colors.danger, fontWeight: '600' }}>Supprimer l'article</Text>
+                            <Text style={{ color: Colors.danger, fontWeight: '600' }}>{i18n.t('stocks.deleteItem')}</Text>
                         </TouchableOpacity>
                     )}
                 </ScrollView>
@@ -764,7 +765,7 @@ export default function StocksScreen() {
             <TouchableOpacity style={styles.modalBackdrop} onPress={() => setShowUnitSelect(false)} />
             <View style={[styles.modalSheet, { height: 'auto', borderTopRightRadius: 30, borderTopLeftRadius: 30 }]}>
                 <View style={[styles.modalHeader, { paddingBottom: 10 }]}>
-                    <Text style={styles.modalTitle}>Choisir l'unité</Text>
+                    <Text style={styles.modalTitle}>{i18n.t('stocks.chooseUnit')}</Text>
                     <TouchableOpacity onPress={() => setShowUnitSelect(false)}><FontAwesome name="times" size={20} color="#fff" /></TouchableOpacity>
                 </View>
                 <View style={{ paddingBottom: 30 }}>
@@ -796,7 +797,7 @@ export default function StocksScreen() {
             <TouchableOpacity style={styles.modalBackdrop} onPress={() => setIngredientQtyModalVisible(false)} />
             <View style={[styles.modalSheet, { height: 'auto', paddingBottom: 40 }]}>
                 <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Quantité par portion</Text>
+                    <Text style={styles.modalTitle}>{i18n.t('stocks.qtyPerPortion')}</Text>
                     <TouchableOpacity onPress={() => { setIngredientQtyModalVisible(false); setAddingIngredient(true); }}><FontAwesome name="times" size={20} color="#fff" /></TouchableOpacity>
                 </View>
                 <ScrollView 
@@ -804,7 +805,11 @@ export default function StocksScreen() {
                   keyboardShouldPersistTaps="handled"
                 >
                     <Text style={{ color: '#fff', fontSize: 16, marginBottom: 15 }}>
-                        Combien de <Text style={{ color: Colors.primary, fontWeight: 'bold' }}>{selectedIngredientForQty?.name}</Text> ({selectedIngredientForQty?.unit?.name || selectedIngredientForQty?.unit || 'UN'}) est utilisé pour une portion de {formName} ?
+                        {i18n.t('stocks.qtyPerPortionPrompt', { 
+                            name: selectedIngredientForQty?.name, 
+                            unit: selectedIngredientForQty?.unit?.name || selectedIngredientForQty?.unit || 'UN',
+                            product: formName 
+                        })}
                     </Text>
                     <TextInput 
                         style={styles.modalInput} 
@@ -830,7 +835,7 @@ export default function StocksScreen() {
                             }
                         }}
                     >
-                        <Text style={styles.saveBtnText}>Ajouter l'ingrédient</Text>
+                        <Text style={styles.saveBtnText}>{i18n.t('stocks.addIngredient')}</Text>
                     </TouchableOpacity>
                 </ScrollView>
             </View>

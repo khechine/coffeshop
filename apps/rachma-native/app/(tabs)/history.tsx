@@ -5,6 +5,7 @@ import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import i18n from '../../locales/i18n';
 
 export default function HistoryScreen() {
   const [loading, setLoading] = useState(true);
@@ -54,20 +55,20 @@ export default function HistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Ventes & Rapports</Text>
+      <Text style={styles.title}>{i18n.t('history.salesAndReports')}</Text>
 
       <View style={styles.tabContainer}>
         <TouchableOpacity 
           style={[styles.tab, activeTab === 'SALES' && styles.activeTab]}
           onPress={() => setActiveTab('SALES')}
         >
-          <Text style={[styles.tabText, activeTab === 'SALES' && styles.activeTabText]}>Historique</Text>
+          <Text style={[styles.tabText, activeTab === 'SALES' && styles.activeTabText]}>{i18n.t('history.historyTab')}</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.tab, activeTab === 'REPORTS' && styles.activeTab]}
           onPress={() => setActiveTab('REPORTS')}
         >
-          <Text style={[styles.tabText, activeTab === 'REPORTS' && styles.activeTabText]}>Rapports Z</Text>
+          <Text style={[styles.tabText, activeTab === 'REPORTS' && styles.activeTabText]}>{i18n.t('history.zReportsTab')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -82,22 +83,22 @@ export default function HistoryScreen() {
             <View style={styles.cardInfo}>
                 <View style={styles.dateBox}>
                    <Text style={styles.day}>{new Date(item.date).getDate()}</Text>
-                   <Text style={styles.month}>{new Date(item.date).toLocaleString('default', { month: 'short' }).toUpperCase()}</Text>
+                   <Text style={styles.month}>{new Date(item.date).toLocaleString(i18n.locale, { month: 'short' }).toUpperCase()}</Text>
                 </View>
                 <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                    <Text style={styles.cardTitle}>Ventes du {new Date(item.date).toLocaleDateString()}</Text>
-                    <Text style={styles.cardSub}>Validé par le système</Text>
+                    <Text style={styles.cardTitle}>{i18n.t('history.salesOf', { date: new Date(item.date).toLocaleDateString(i18n.locale) })}</Text>
+                    <Text style={styles.cardSub}>{i18n.t('history.validatedBySystem')}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end', backgroundColor: 'transparent' }}>
                     <Text style={styles.cardAmount}>{Number(item.total || 0).toFixed(3)} DT</Text>
-                    <Text style={styles.cardStatus}>TERMINÉ</Text>
+                    <Text style={styles.cardStatus}>{i18n.t('history.completed')}</Text>
                 </View>
             </View>
           </View>
         )) : (
           <View style={styles.emptyState}>
              <FontAwesome name="history" size={64} color="rgba(255,255,255,0.05)" />
-             <Text style={styles.emptyText}>Aucune donnée historique trouvée.</Text>
+             <Text style={styles.emptyText}>{i18n.t('history.emptyHistory')}</Text>
           </View>
         )}
       </ScrollView>

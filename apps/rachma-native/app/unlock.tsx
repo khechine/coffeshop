@@ -7,6 +7,7 @@ import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
 import { useAlert } from '@/components/AlertContext';
 import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming, withSpring } from 'react-native-reanimated';
+import i18n from '../locales/i18n';
 
 export default function UnlockScreen() {
   const [pin, setPin] = useState('');
@@ -50,8 +51,8 @@ export default function UnlockScreen() {
     const session = await AuthService.getSession();
     if (!session.storeId) {
       showAlert({ 
-        title: 'Erreur', 
-        message: 'Terminal non assigné à une boutique.',
+        title: i18n.t('auth.errorTitle'), 
+        message: i18n.t('unlock.errorNotAssigned'),
         type: 'error',
         buttons: [{ text: 'OK', onPress: () => router.replace('/login') }]
       });
@@ -87,7 +88,7 @@ export default function UnlockScreen() {
 
   const handleUnpair = async () => {
     if (Platform.OS === 'web') {
-      if (window.confirm("Ce terminal ne sera plus rattaché à la boutique. Il faudra le scanner à nouveau pour l'activer.\n\nConfirmer ?")) {
+      if (window.confirm(i18n.t('unlock.unpairConfirmMsg') + "\n\n" + i18n.t('pos.checkoutConfirmTitle'))) {
         await AuthService.clearSession();
         router.replace('/login');
       }
@@ -95,13 +96,13 @@ export default function UnlockScreen() {
     }
 
     showAlert({
-      title: 'Déconnecter ce terminal',
-      message: "Ce terminal ne sera plus rattaché à la boutique. Il faudra le scanner à nouveau pour l'activer.",
+      title: i18n.t('unlock.unpairConfirmTitle'),
+      message: i18n.t('unlock.unpairConfirmMsg'),
       type: 'warning',
       buttons: [
-        { text: 'Annuler', style: 'cancel' },
+        { text: i18n.t('profile.cancel'), style: 'cancel' },
         { 
-          text: 'Déconnecter', 
+          text: i18n.t('unlock.unpairConfirmBtn'), 
           style: 'destructive',
           onPress: async () => {
             await AuthService.clearSession();
@@ -115,7 +116,7 @@ export default function UnlockScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.brandTitle}>RACHMA LITE</Text>
-      <Text style={styles.promptText}>Accès Personnel</Text>
+      <Text style={styles.promptText}>{i18n.t('unlock.prompt')}</Text>
 
       {/* PIN Dots */}
       <Animated.View style={[styles.dotsContainer, shakeStyle]}>
@@ -144,7 +145,7 @@ export default function UnlockScreen() {
       </View>
 
       <TouchableOpacity style={styles.unpairBtn} onPress={handleUnpair}>
-        <Text style={styles.unpairText}>RÉINITIALISER LE TERMINAL</Text>
+        <Text style={styles.unpairText}>{i18n.t('unlock.unpairBtn')}</Text>
       </TouchableOpacity>
     </View>
   );

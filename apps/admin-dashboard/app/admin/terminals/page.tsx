@@ -13,7 +13,7 @@ export default async function TerminalsPage() {
   }));
 
   return (
-    <div className="admin-container" style={{ padding: '0 20px' }}>
+    <div className="admin-container" style={{ padding: '32px 40px' }}>
       <TerminalsClient terminals={terminals} storeId={store?.id} />
     </div>
 

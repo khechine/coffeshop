@@ -5,6 +5,7 @@ import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import i18n from '../../locales/i18n';
 
 export default function SuppliersScreen() {
   const [loading, setLoading] = useState(true);
@@ -47,7 +48,7 @@ export default function SuppliersScreen() {
   };
 
   const handleSave = async () => {
-    if (!formName) return Alert.alert("Erreur", "Le nom est requis.");
+    if (!formName) return Alert.alert(i18n.t('admin.error'), i18n.t('pos.nameRequired'));
     try {
       const payload = {
         name: formName,
@@ -66,19 +67,19 @@ export default function SuppliersScreen() {
       resetForm();
       onRefresh();
     } catch (error) {
-      Alert.alert("Erreur", "Sauvegarde impossible.");
+      Alert.alert(i18n.t('admin.error'), i18n.t('admin.error'));
     }
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert("Confirmation", "Supprimer ce fournisseur ?", [
-      { text: "Annuler", style: "cancel" },
-      { text: "Supprimer", style: "destructive", onPress: async () => {
+    Alert.alert(i18n.t('pos.confirm'), i18n.t('suppliers.confirmDelete'), [
+      { text: i18n.t('pos.cancel'), style: "cancel" },
+      { text: i18n.t('pos.delete'), style: "destructive", onPress: async () => {
         try {
           await ApiService.delete(`/management/suppliers/${id}`);
           onRefresh();
         } catch (error) {
-          Alert.alert("Erreur", "Suppression impossible.");
+          Alert.alert(i18n.t('admin.error'), i18n.t('admin.error'));
         }
       }}
     ]);
@@ -104,7 +105,7 @@ export default function SuppliersScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-          <Text style={styles.title}>Mes Fournisseurs</Text>
+          <Text style={styles.title}>{i18n.t('suppliers.title')}</Text>
           <TouchableOpacity style={styles.addBtn} onPress={() => { resetForm(); setIsModalVisible(true); }}>
               <FontAwesome name="plus" size={16} color="#fff" />
           </TouchableOpacity>
@@ -113,7 +114,7 @@ export default function SuppliersScreen() {
       <View style={styles.searchBar}>
         <FontAwesome name="search" size={16} color="#94a3b8" style={{ marginRight: 10 }} />
         <TextInput 
-          placeholder="Chercher un fournisseur..." 
+          placeholder={i18n.t('suppliers.searchPlaceholder')} 
           placeholderTextColor="#94a3b8"
           style={styles.searchInput}
           value={search}
@@ -145,7 +146,7 @@ export default function SuppliersScreen() {
                 </View>
                 <View style={{ flex: 1, backgroundColor: 'transparent' }}>
                     <Text style={styles.supplierName}>{s.name}</Text>
-                    <Text style={styles.supplierContact}>{s.contact || 'Aucun contact'}</Text>
+                    <Text style={styles.supplierContact}>{s.contact || i18n.t('suppliers.noContact')}</Text>
                 </View>
                 <TouchableOpacity onPress={() => s.phone && Linking.openURL(`tel:${s.phone}`)}>
                     <View style={styles.phoneCircle}>
@@ -155,19 +156,19 @@ export default function SuppliersScreen() {
             </View>
             <View style={styles.cardFooter}>
                 <View style={styles.tag}>
-                   <Text style={styles.tagText}>{s._count?.stockItems || 0} produits liés</Text>
+                   <Text style={styles.tagText}>{i18n.t('suppliers.linkedProducts', { count: s._count?.stockItems || 0 })}</Text>
                 </View>
                 <View style={styles.tag}>
-                   <Text style={styles.tagText}>{s._count?.orders || 0} commandes</Text>
+                   <Text style={styles.tagText}>{i18n.t('suppliers.ordersCount', { count: s._count?.orders || 0 })}</Text>
                 </View>
             </View>
           </TouchableOpacity>
         )) : (
           <View style={styles.emptyState}>
              <FontAwesome name="handshake-o" size={64} color="rgba(255,255,255,0.05)" />
-             <Text style={styles.emptyText}>Aucun fournisseur enregistré.</Text>
+             <Text style={styles.emptyText}>{i18n.t('suppliers.emptyState')}</Text>
              <TouchableOpacity style={styles.emptyAddBtn} onPress={() => setIsModalVisible(true)}>
-                 <Text style={styles.emptyAddText}>Ajouter mon premier fournisseur</Text>
+                 <Text style={styles.emptyAddText}>{i18n.t('suppliers.addFirst')}</Text>
              </TouchableOpacity>
           </View>
         )}
@@ -179,28 +180,28 @@ export default function SuppliersScreen() {
           <TouchableOpacity style={{ flex: 1 }} onPress={() => setIsModalVisible(false)} />
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{editingSupplier ? 'Editer' : 'Nouveau'} Fournisseur</Text>
+              <Text style={styles.modalTitle}>{editingSupplier ? i18n.t('suppliers.edit') : i18n.t('suppliers.new')} {i18n.t('suppliers.suppliersSingle') || 'Fournisseur'}</Text>
               <TouchableOpacity onPress={() => setIsModalVisible(false)}>
                 <FontAwesome name="times-circle" size={28} color="#94a3b8" />
               </TouchableOpacity>
             </View>
             <ScrollView contentContainerStyle={styles.modalBody}>
-                <Text style={styles.inputLabel}>NOM DE L'ENTREPRISE</Text>
-                <TextInput style={styles.modalInput} value={formName} onChangeText={setFormName} placeholder="Ex: Centrale Laitière, Grains d'Or..." placeholderTextColor="#475569" />
+                <Text style={styles.inputLabel}>{i18n.t('suppliers.companyName')}</Text>
+                <TextInput style={styles.modalInput} value={formName} onChangeText={setFormName} placeholder={i18n.t('suppliers.companyPlaceholder')} placeholderTextColor="#475569" />
                 
-                <Text style={styles.inputLabel}>PERSONNE DE CONTACT</Text>
-                <TextInput style={styles.modalInput} value={formContact} onChangeText={setFormContact} placeholder="Nom du responsable..." placeholderTextColor="#475569" />
+                <Text style={styles.inputLabel}>{i18n.t('suppliers.contactPerson')}</Text>
+                <TextInput style={styles.modalInput} value={formContact} onChangeText={setFormContact} placeholder={i18n.t('suppliers.contactPlaceholder')} placeholderTextColor="#475569" />
                 
-                <Text style={styles.inputLabel}>TÉLÉPHONE</Text>
+                <Text style={styles.inputLabel}>{i18n.t('suppliers.phone')}</Text>
                 <TextInput style={styles.modalInput} value={formPhone} onChangeText={setFormPhone} keyboardType="phone-pad" placeholder="+216 ..." placeholderTextColor="#475569" />
 
                 <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-                    <Text style={styles.saveBtnText}>Enregistrer</Text>
+                    <Text style={styles.saveBtnText}>{i18n.t('suppliers.save')}</Text>
                 </TouchableOpacity>
 
                 {editingSupplier && (
                     <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(editingSupplier.id)}>
-                        <Text style={styles.deleteBtnText}>Supprimer ce fournisseur</Text>
+                        <Text style={styles.deleteBtnText}>{i18n.t('suppliers.delete')}</Text>
                     </TouchableOpacity>
                 )}
             </ScrollView>

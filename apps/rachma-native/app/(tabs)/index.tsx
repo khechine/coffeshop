@@ -7,6 +7,7 @@ import { AuthService } from '@/services/auth';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
+import i18n from '../../locales/i18n';
 
 export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
@@ -33,9 +34,9 @@ export default function DashboardScreen() {
       if (Platform.OS === 'web') return;
 
       const onBackPress = () => {
-        Alert.alert('Quitter l\'application', 'Voulez-vous vraiment quitter Rachma ?', [
-          { text: 'Annuler', style: 'cancel', onPress: () => {} },
-          { text: 'Quitter', style: 'destructive', onPress: () => BackHandler.exitApp() },
+        Alert.alert(i18n.t('dashboard.exitTitle'), i18n.t('dashboard.exitConfirm'), [
+          { text: i18n.t('pos.cancel'), style: 'cancel', onPress: () => {} },
+          { text: i18n.t('dashboard.exit'), style: 'destructive', onPress: () => BackHandler.exitApp() },
         ]);
         return true; // prevent default
       };
@@ -71,7 +72,7 @@ export default function DashboardScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Chargement des données...</Text>
+        <Text style={styles.loadingText}>{i18n.t('dashboard.loading')}</Text>
       </View>
     );
   }
@@ -93,8 +94,8 @@ export default function DashboardScreen() {
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.welcomeTitle}>Bienvenue, {user?.name || 'Manager'}</Text>
-            <Text style={styles.subtitle}>Votre Progression</Text>
+            <Text style={styles.welcomeTitle}>{i18n.t('dashboard.welcome', { name: user?.name || i18n.t('dashboard.manager') })}</Text>
+            <Text style={styles.subtitle}>{i18n.t('dashboard.progression')}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', gap: 10 }}>
             <TouchableOpacity style={styles.iconCircleHeader} onPress={() => router.push('/metrics')}>
@@ -113,8 +114,8 @@ export default function DashboardScreen() {
               <FontAwesome name="warning" size={14} color="#fff" />
             </View>
             <View style={{ flex: 1, marginLeft: 12, backgroundColor: 'transparent' }}>
-              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Alerte Stock Bas</Text>
-              <Text style={{ color: '#94a3b8', fontSize: 12 }}>{stats.lowStockCount} article(s) nécessitent votre attention.</Text>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>{i18n.t('dashboard.lowStockAlert')}</Text>
+              <Text style={{ color: '#94a3b8', fontSize: 12 }}>{i18n.t('dashboard.stockAttention', { count: stats.lowStockCount })}</Text>
             </View>
             <FontAwesome name="chevron-right" size={12} color="#475569" />
           </TouchableOpacity>
@@ -125,8 +126,8 @@ export default function DashboardScreen() {
           {/* Aujourd'hui - Large Card */}
           <LinearGradient colors={['#7c3aed', '#6d28d9']} style={styles.todayCard}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent' }}>
-              <Text style={styles.screenCardTitle}>Aujourd'hui</Text>
-              <Text style={styles.screenCardDate}>{new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</Text>
+              <Text style={styles.screenCardTitle}>{i18n.t('dashboard.today')}</Text>
+              <Text style={styles.screenCardDate}>{new Date().toLocaleDateString(i18n.locale === 'ar' ? 'ar-TN' : 'fr-FR', { day: 'numeric', month: 'short' })}</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 18, backgroundColor: 'transparent', justifyContent: 'space-between' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent' }}>
@@ -137,7 +138,7 @@ export default function DashboardScreen() {
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent' }}>
                 <View style={{ marginRight: 8, alignItems: 'flex-end', backgroundColor: 'transparent' }}>
-                  <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '700' }}>TICKETS</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '700' }}>{i18n.t('dashboard.tickets').toUpperCase()}</Text>
                   <Text style={styles.todayCount}>{fmtInt(stats.orderCount)}</Text>
                 </View>
                 <FontAwesome name="shopping-bag" size={20} color="rgba(255,255,255,0.8)" />
@@ -149,55 +150,55 @@ export default function DashboardScreen() {
             {/* Hier */}
             <LinearGradient colors={['#475569', '#334155']} style={styles.screenSmallCard}>
                <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent' }}>
-                 <Text style={styles.screenSmallLabel}>Hier</Text>
+                 <Text style={styles.screenSmallLabel}>{i18n.t('dashboard.yesterday')}</Text>
                  <Text style={styles.screenSmallDate}>{(new Date().getDate() - 1)}/{new Date().getMonth() + 1}</Text>
                </View>
                <View style={styles.screenSmallRow}>
                   <Text style={styles.screenSmallValue}>{fmtMoney(stats.yesterdaySales || 0)} <Text style={styles.screenSmallCurrency}>DT</Text></Text>
                </View>
                <View style={styles.screenSmallRow}>
-                  <Text style={styles.screenSmallCount}>{fmtInt(stats.yesterdayOrderCount || 0)} <Text style={{fontSize:9, opacity:0.6}}>tickets</Text></Text>
+                  <Text style={styles.screenSmallCount}>{fmtInt(stats.yesterdayOrderCount || 0)} <Text style={{fontSize:9, opacity:0.6}}>{i18n.t('dashboard.tickets')}</Text></Text>
                </View>
             </LinearGradient>
 
             {/* Cette Semaine */}
             <LinearGradient colors={['#0891b2', '#0e7490']} style={styles.screenSmallCard}>
                <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent' }}>
-                 <Text style={styles.screenSmallLabel}>Semaine</Text>
-                 <Text style={styles.screenSmallDate}>depuis le 17</Text>
+                 <Text style={styles.screenSmallLabel}>{i18n.t('dashboard.week')}</Text>
+                 <Text style={styles.screenSmallDate}></Text>
                </View>
                <View style={styles.screenSmallRow}>
                   <Text style={styles.screenSmallValue}>{fmtMoney(stats.weeklySales || 0)} <Text style={styles.screenSmallCurrency}>DT</Text></Text>
                </View>
                <View style={styles.screenSmallRow}>
-                  <Text style={styles.screenSmallCount}>{fmtInt(stats.weeklyOrderCount || 0)} <Text style={{fontSize:9, opacity:0.6}}>tickets</Text></Text>
+                  <Text style={styles.screenSmallCount}>{fmtInt(stats.weeklyOrderCount || 0)} <Text style={{fontSize:9, opacity:0.6}}>{i18n.t('dashboard.tickets')}</Text></Text>
                </View>
             </LinearGradient>
 
             {/* Ce Mois */}
             <LinearGradient colors={['#0d9488', '#0f766e']} style={styles.screenSmallCard}>
                <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent' }}>
-                 <Text style={styles.screenSmallLabel}>Ce Mois</Text>
-                 <Text style={styles.screenSmallDate}>{new Date().toLocaleDateString('fr-FR', { month: 'long' })}</Text>
+                 <Text style={styles.screenSmallLabel}>{i18n.t('dashboard.month')}</Text>
+                 <Text style={styles.screenSmallDate}>{new Date().toLocaleDateString(i18n.locale === 'ar' ? 'ar-TN' : 'fr-FR', { month: 'long' })}</Text>
                </View>
                <View style={styles.screenSmallRow}>
                   <Text style={styles.screenSmallValue}>{fmtMoney(stats.monthlySales || 0)} <Text style={styles.screenSmallCurrency}>DT</Text></Text>
                </View>
                <View style={styles.screenSmallRow}>
-                  <Text style={styles.screenSmallCount}>{fmtInt(stats.monthlyOrderCount || 0)} <Text style={{fontSize:9, opacity:0.6}}>tickets</Text></Text>
+                  <Text style={styles.screenSmallCount}>{fmtInt(stats.monthlyOrderCount || 0)} <Text style={{fontSize:9, opacity:0.6}}>{i18n.t('dashboard.tickets')}</Text></Text>
                </View>
             </LinearGradient>
 
             {/* Total Cumulé */}
             <LinearGradient colors={['#ea580c', '#c2410c']} style={styles.screenSmallCard}>
                <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: 'transparent' }}>
-                 <Text style={styles.screenSmallLabel}>Total Cumulé</Text>
+                 <Text style={styles.screenSmallLabel}>{i18n.t('dashboard.totalAllTime')}</Text>
                </View>
                <View style={styles.screenSmallRow}>
                   <Text style={styles.screenSmallValue}>{fmtMoney(stats.allTimeSales || 0)} <Text style={styles.screenSmallCurrency}>DT</Text></Text>
                </View>
                <View style={styles.screenSmallRow}>
-                  <Text style={styles.screenSmallCount}>{fmtInt(stats.allTimeOrderCount || 0)} <Text style={{fontSize:9, opacity:0.6}}>tickets</Text></Text>
+                  <Text style={styles.screenSmallCount}>{fmtInt(stats.allTimeOrderCount || 0)} <Text style={{fontSize:9, opacity:0.6}}>{i18n.t('dashboard.tickets')}</Text></Text>
                </View>
             </LinearGradient>
           </View>
@@ -205,9 +206,9 @@ export default function DashboardScreen() {
 
         {/* ── SECTION: CENTRE DE GESTION ───────────────────────── */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-          <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Centre de Gestion</Text>
+          <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>{i18n.t('dashboard.managementCenter')}</Text>
           <View style={{ paddingHorizontal: 10, paddingVertical: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '800' }}>{isOwner ? 'ACCÈS TOTAL' : 'ACCÈS LIMITÉ'}</Text>
+            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '800' }}>{isOwner ? i18n.t('dashboard.fullAccess') : i18n.t('dashboard.limitedAccess')}</Text>
           </View>
         </View>
 
@@ -219,8 +220,8 @@ export default function DashboardScreen() {
             <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
               <FontAwesome name="archive" size={20} color={Colors.secondary} />
             </View>
-            <Text style={styles.mgmtCardTitle}>PRODUITS</Text>
-            <Text style={styles.mgmtCardSub}>Catalogue & Prix</Text>
+            <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.products')}</Text>
+            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.productsSub')}</Text>
           </TouchableOpacity>
  
           <TouchableOpacity 
@@ -230,8 +231,8 @@ export default function DashboardScreen() {
             <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
               <FontAwesome name="bar-chart" size={20} color={Colors.primary} />
             </View>
-            <Text style={styles.mgmtCardTitle}>STOCKS</Text>
-            <Text style={styles.mgmtCardSub}>Inventaire & Recettes</Text>
+            <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.stocks')}</Text>
+            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.stocksSub')}</Text>
           </TouchableOpacity>
  
           <TouchableOpacity 
@@ -241,8 +242,8 @@ export default function DashboardScreen() {
             <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
               <FontAwesome name="shopping-basket" size={20} color={Colors.warning} />
             </View>
-            <Text style={styles.mgmtCardTitle}>B2B MARCHÉ</Text>
-            <Text style={styles.mgmtCardSub}>Commandes Fournisseurs</Text>
+            <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.b2bMarket')}</Text>
+            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.b2bMarketSub')}</Text>
           </TouchableOpacity>
  
           <TouchableOpacity 
@@ -252,8 +253,8 @@ export default function DashboardScreen() {
             <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
               <FontAwesome name="handshake-o" size={18} color={Colors.danger} />
             </View>
-            <Text style={styles.mgmtCardTitle}>PARTENAIRES</Text>
-            <Text style={styles.mgmtCardSub}>Mes Fournisseurs</Text>
+            <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.partners')}</Text>
+            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.partnersSub')}</Text>
           </TouchableOpacity>
  
           <TouchableOpacity 
@@ -263,10 +264,21 @@ export default function DashboardScreen() {
             <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
               <FontAwesome name="history" size={20} color="#a855f7" />
             </View>
-            <Text style={styles.mgmtCardTitle}>VENTES</Text>
-            <Text style={styles.mgmtCardSub}>Historique & Clôtures</Text>
+            <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.sales')}</Text>
+            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.salesSub')}</Text>
           </TouchableOpacity>
  
+          <TouchableOpacity 
+            style={[styles.mgmtCard, styles.glassCard, { borderLeftColor: Colors.primary, borderLeftWidth: 3 }]}
+            onPress={() => router.push('/rachma')}
+          >
+            <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+              <FontAwesome name="bolt" size={20} color={Colors.primary} />
+            </View>
+            <Text style={styles.mgmtCardTitle}>{i18n.t('nav.live')}</Text>
+            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.liveSub') || 'Activité en direct'}</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity 
             style={[styles.mgmtCard, styles.glassCard]}
             onPress={() => router.push('/scanner')}
@@ -274,8 +286,8 @@ export default function DashboardScreen() {
             <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(148, 163, 184, 0.1)' }]}>
               <FontAwesome name="qrcode" size={20} color="#94a3b8" />
             </View>
-            <Text style={styles.mgmtCardTitle}>SCANNER</Text>
-            <Text style={styles.mgmtCardSub}>Inventaire Rapide</Text>
+            <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.scanner')}</Text>
+            <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.scannerSub')}</Text>
           </TouchableOpacity>
 
           {isOwner && (
@@ -287,8 +299,8 @@ export default function DashboardScreen() {
                 <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(56, 189, 248, 0.1)' }]}>
                   <FontAwesome name="line-chart" size={20} color="#38bdf8" />
                 </View>
-                <Text style={styles.mgmtCardTitle}>MÉTRIQUES</Text>
-                <Text style={styles.mgmtCardSub}>Analyses & Rapports</Text>
+                <Text style={styles.mgmtCardTitle}>{i18n.t('nav.metrics').toUpperCase()}</Text>
+                <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.metricsSub')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -298,8 +310,8 @@ export default function DashboardScreen() {
                 <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
                   <FontAwesome name="desktop" size={20} color={Colors.primary} />
                 </View>
-                <Text style={styles.mgmtCardTitle}>CAISSES</Text>
-                <Text style={styles.mgmtCardSub}>Terminaux & Codes</Text>
+                <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.terminals')}</Text>
+                <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.terminalsSub')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -309,33 +321,33 @@ export default function DashboardScreen() {
                 <View style={[styles.mgmtIconCircle, { backgroundColor: 'rgba(236, 72, 153, 0.1)' }]}>
                   <FontAwesome name="users" size={20} color="#ec4899" />
                 </View>
-                <Text style={styles.mgmtCardTitle}>ÉQUIPE</Text>
-                <Text style={styles.mgmtCardSub}>Staff & Rôles</Text>
+                <Text style={styles.mgmtCardTitle}>{i18n.t('dashboard.team')}</Text>
+                <Text style={styles.mgmtCardSub}>{i18n.t('dashboard.teamSub')}</Text>
               </TouchableOpacity>
             </>
           )}
         </View>
         {/* ── SECTION: CHARTS (REFINED) ────────────────────────── */}
         <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Volume des tickets (7 jours)</Text>
+          <Text style={styles.chartTitle}>{i18n.t('dashboard.ticketVolume')}</Text>
           <View style={styles.chartArea}>
              <View style={styles.chartBars}>
                 {(stats.weeklyOrderHistory || [0, 0, 0, 0, 0, 0, 0]).map((val: number, i: number) => (
                   <View key={i} style={styles.barCol}>
                     <View style={[styles.bar, { height: Math.max(8, val * 25), backgroundColor: '#10b981', opacity: 0.8 }]} />
-                    <Text style={styles.barLabel}>{'Lun,Mar,Mer,Jeu,Ven,Sam,Dim'.split(',')[i]}</Text>
+                    <Text style={styles.barLabel}>{i18n.t('dashboard.daysShort').split(',')[i]}</Text>
                   </View>
                 ))}
              </View>
              <View style={styles.chartLegend}>
                 <View style={{ backgroundColor: '#10b981', width: 6, height: 6, borderRadius: 3, marginRight: 6 }} />
-                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '600' }}>Nombre de tickets</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '600' }}>{i18n.t('dashboard.ticketCount')}</Text>
              </View>
           </View>
         </View>
 
         <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Chiffre d'affaires (7 jours)</Text>
+          <Text style={styles.chartTitle}>{i18n.t('dashboard.revenueVolume')}</Text>
           <View style={styles.chartArea}>
              <View style={styles.chartBars}>
                 {(stats.weeklySalesHistory || [0, 0, 0, 0, 0, 0, 0]).map((val: any, i: number) => {
@@ -344,7 +356,7 @@ export default function DashboardScreen() {
                   return (
                     <View key={i} style={styles.barCol}>
                       <View style={[styles.bar, { height: Math.max(8, (numVal / maxVal) * 100), backgroundColor: '#6366f1', opacity: 0.8 }]} />
-                      <Text style={styles.barLabel}>{'L,M,M,J,V,S,D'.split(',')[i]}</Text>
+                      <Text style={styles.barLabel}>{i18n.t('dashboard.daysVeryShort').split(',')[i]}</Text>
                     </View>
                   );
                 })}
@@ -355,7 +367,7 @@ export default function DashboardScreen() {
         {/* ── SECTION: ANALYTIQUES AVANCÉES (OWNER) ───────────── */}
         {isOwner && (
           <View style={{ marginTop: 10, marginBottom: 20 }}>
-            <Text style={styles.sectionTitle}>Analyse Détaillée</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('dashboard.detailedAnalysis')}</Text>
             
             {/* Profit Net Banner */}
             <View style={[styles.profitBanner, {
@@ -364,13 +376,13 @@ export default function DashboardScreen() {
               marginTop: 10,
             }]}>
               <View style={{ backgroundColor: 'transparent' }}>
-                <Text style={styles.profitLabel}>Profit Net Estimé</Text>
+                <Text style={styles.profitLabel}>{i18n.t('dashboard.netProfit')}</Text>
                 <Text style={[styles.profitValue, { color: stats.netProfit >= 0 ? Colors.primary : Colors.danger }]}>
                   {fmtMoney(stats.netProfit ?? stats.totalSales - stats.totalExpenses)} DT
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: 'transparent' }}>
                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: stats.netProfit >= 0 ? Colors.primary : Colors.danger, marginRight: 6 }} />
-                   <Text style={[styles.profitSub, { color: '#94a3b8' }]}>Marge: {stats.totalSales > 0 ? ((1 - stats.totalExpenses/stats.totalSales)*100).toFixed(0) : 0}%</Text>
+                   <Text style={[styles.profitSub, { color: '#94a3b8' }]}>{i18n.t('dashboard.margin')}: {stats.totalSales > 0 ? ((1 - stats.totalExpenses/stats.totalSales)*100).toFixed(0) : 0}%</Text>
                 </View>
               </View>
               <FontAwesome
@@ -386,7 +398,7 @@ export default function DashboardScreen() {
                 {stats.topStaff?.length > 0 && (
                   <View style={[styles.analyticsCard, styles.glassCard]}>
                     <View style={styles.analyticsHeader}>
-                      <Text style={styles.analyticsTitle}>Performance Staff</Text>
+                      <Text style={styles.analyticsTitle}>{i18n.t('dashboard.staffPerformance')}</Text>
                     </View>
                     {stats.topStaff?.length > 0 ? (
                       stats.topStaff.slice(0, 3).map((s: any, i: number) => (
@@ -402,7 +414,7 @@ export default function DashboardScreen() {
                         </View>
                       ))
                     ) : (
-                      <Text style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: 20 }}>Pas encore de ventes staff</Text>
+                      <Text style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: 20 }}>{i18n.t('dashboard.noStaffSales')}</Text>
                     )}
                   </View>
                 )}
@@ -410,23 +422,23 @@ export default function DashboardScreen() {
                 {(stats.topProducts?.length > 0 || true) && (
                   <View style={[styles.analyticsCard, styles.glassCard]}>
                     <View style={styles.analyticsHeader}>
-                      <Text style={styles.analyticsTitle}>Meilleurs Produits</Text>
+                      <Text style={styles.analyticsTitle}>{i18n.t('dashboard.bestProducts')}</Text>
                     </View>
                     {stats.topProducts?.length > 0 ? (
                       stats.topProducts.slice(0, 3).map((p: any, i: number) => (
                         <View key={i} style={[styles.rankRow, i === 2 && { borderBottomWidth: 0 }]}>
                           <Text style={styles.rankNum}>{i + 1}</Text>
                           <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                            <Text style={styles.rankName}>{p.name}</Text>
-                            <Text style={styles.rankSub}>{fmtMoney(p.revenue)} DT CA</Text>
+                            <Text style={styles.rankName}>{i18n.locale === 'ar' && p.nameAr ? p.nameAr : p.name}</Text>
+                            <Text style={styles.rankSub}>{fmtMoney(p.revenue)} {i18n.t('dashboard.revenueLabel')}</Text>
                           </View>
                           <View style={styles.rankBadge}>
-                            <Text style={styles.rankBadgeText}>{p.qty} ventes</Text>
+                            <Text style={styles.rankBadgeText}>{i18n.t('dashboard.salesCount', { count: p.qty })}</Text>
                           </View>
                         </View>
                       ))
                     ) : (
-                      <Text style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: 20 }}>Aucune donnée aujourd'hui</Text>
+                      <Text style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: 20 }}>{i18n.t('dashboard.noDataToday')}</Text>
                     )}
                   </View>
                 )}
@@ -447,7 +459,7 @@ export default function DashboardScreen() {
           <TouchableOpacity style={{ flex: 1 }} onPress={() => setActiveMgmt(null)} />
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Gestion {activeMgmt}</Text>
+              <Text style={styles.modalTitle}>{i18n.t('dashboard.mgmtTitle', { name: activeMgmt })}</Text>
               <TouchableOpacity onPress={() => setActiveMgmt(null)}>
                 <FontAwesome name="times-circle" size={28} color="#94a3b8" />
               </TouchableOpacity>
@@ -456,10 +468,10 @@ export default function DashboardScreen() {
               <View style={styles.crudPlaceholder}>
                 <FontAwesome name="gears" size={48} color="rgba(255,255,255,0.05)" />
                 <Text style={{ color: '#94a3b8', marginTop: 15, textAlign: 'center' }}>
-                  L\'interface {activeMgmt} est en cours de synchronisation...
+                  {i18n.t('dashboard.mgmtSync', { name: activeMgmt })}
                 </Text>
                 <TouchableOpacity style={styles.addItemBtnFull}>
-                    <Text style={{ color: '#fff', fontWeight: '800' }}>Cloud Manager</Text>
+                    <Text style={{ color: '#fff', fontWeight: '800' }}>{i18n.t('dashboard.cloudManager')}</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>

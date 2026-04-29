@@ -6,6 +6,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
+import i18n from '../locales/i18n';
 
 export default function TeamManagementScreen() {
   const insets = useSafeAreaInsets();
@@ -61,11 +62,11 @@ export default function TeamManagementScreen() {
 
   const handleSave = async () => {
     if (!name || !pinCode) {
-      Alert.alert("Erreur", "Le nom et le code PIN sont obligatoires.");
+      Alert.alert(i18n.t('auth.errorTitle'), i18n.t('team.errorFields'));
       return;
     }
     if (pinCode.length < 4) {
-      Alert.alert("Erreur", "Le code PIN doit faire au moins 4 caractères.");
+      Alert.alert(i18n.t('auth.errorTitle'), i18n.t('team.errorPinLength'));
       return;
     }
 
@@ -78,7 +79,7 @@ export default function TeamManagementScreen() {
       setModalVisible(false);
       loadTeam();
     } catch (e) {
-      Alert.alert("Erreur", "Impossible d'enregistrer l'employé.");
+      Alert.alert(i18n.t('auth.errorTitle'), i18n.t('team.errorSave'));
     }
   };
 
@@ -87,18 +88,18 @@ export default function TeamManagementScreen() {
       await ApiService.put(`/management/employees/${id}`, { isActive: !currentStatus });
       loadTeam();
     } catch (e) {
-      Alert.alert("Erreur", "Impossible de changer le statut.");
+      Alert.alert(i18n.t('auth.errorTitle'), i18n.t('team.errorStatus'));
     }
   };
 
   const handleDelete = (id: string, name: string) => {
     Alert.alert(
-      'Révoquer l\'accès',
-      `Voulez-vous vraiment désactiver le compte de ${name} ?`,
+      i18n.t('team.revokeTitle'),
+      i18n.t('team.revokeConfirm', { name }),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: i18n.t('profile.cancel'), style: 'cancel' },
         { 
-          text: 'Supprimer', 
+          text: i18n.t('pos.close'), 
           style: 'destructive', 
           onPress: async () => {
             await ApiService.delete(`/management/employees/${id}`);
@@ -124,12 +125,12 @@ export default function TeamManagementScreen() {
               <Text style={styles.cardTitle}>{item.name}</Text>
               {!isActive && (
                 <View style={styles.inactiveBadge}>
-                  <Text style={styles.inactiveBadgeText}>INACTIF</Text>
+                  <Text style={styles.inactiveBadgeText}>{i18n.t('team.inactive')}</Text>
                 </View>
               )}
             </View>
             <Text style={styles.cardSub}>
-              {item.role === 'STORE_OWNER' ? 'Manager' : 'Caissier(e)'} • PIN: ****
+              {item.role === 'STORE_OWNER' ? i18n.t('team.manager') : i18n.t('team.cashier')} • PIN: ****
             </Text>
           </View>
         </View>
@@ -154,7 +155,7 @@ export default function TeamManagementScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <FontAwesome name="arrow-left" size={20} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Gestion Équipe</Text>
+        <Text style={styles.headerTitle}>{i18n.t('team.title')}</Text>
         <TouchableOpacity style={styles.addBtn} onPress={() => openForm()}>
           <FontAwesome name="plus" size={20} color="#fff" />
         </TouchableOpacity>
@@ -169,7 +170,7 @@ export default function TeamManagementScreen() {
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Aucun employé trouvé. Ajoutez des membres à votre équipe !</Text>
+            <Text style={styles.emptyText}>{i18n.t('team.emptyTeam')}</Text>
           }
         />
       )}
@@ -179,25 +180,25 @@ export default function TeamManagementScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{editId ? 'Modifier un employé' : 'Nouvel employé'}</Text>
+              <Text style={styles.modalTitle}>{editId ? i18n.t('team.editMember') : i18n.t('team.newMember')}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <FontAwesome name="close" size={24} color="#94a3b8" />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.label}>Nom de l'Employé</Text>
+            <Text style={styles.label}>{i18n.t('team.nameLabel')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="ex: Ahmed"
+              placeholder={i18n.t('team.namePlaceholder')}
               placeholderTextColor="#64748b"
               value={name}
               onChangeText={setName}
             />
 
-            <Text style={styles.label}>Code PIN (Secret)</Text>
+            <Text style={styles.label}>{i18n.t('team.pinLabel')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Min 4 chiffres, ex: 1234"
+              placeholder={i18n.t('team.pinPlaceholder')}
               placeholderTextColor="#64748b"
               keyboardType="number-pad"
               secureTextEntry={true}
@@ -206,24 +207,24 @@ export default function TeamManagementScreen() {
               maxLength={8}
             />
 
-            <Text style={styles.label}>Rôle</Text>
+            <Text style={styles.label}>{i18n.t('team.roleLabel')}</Text>
             <View style={styles.roleContainer}>
               <TouchableOpacity 
                 style={[styles.roleBtn, role === 'CASHIER' && styles.roleBtnActive]} 
                 onPress={() => setRole('CASHIER')}
               >
-                <Text style={[styles.roleText, role === 'CASHIER' && styles.roleTextActive]}>Caissier</Text>
+                <Text style={[styles.roleText, role === 'CASHIER' && styles.roleTextActive]}>{i18n.t('team.cashier')}</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.roleBtn, role === 'STORE_OWNER' && styles.roleBtnActiveOwner]} 
                 onPress={() => setRole('STORE_OWNER')}
               >
-                <Text style={[styles.roleText, role === 'STORE_OWNER' && styles.roleTextActive]}>Manager</Text>
+                <Text style={[styles.roleText, role === 'STORE_OWNER' && styles.roleTextActive]}>{i18n.t('team.manager')}</Text>
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-              <Text style={styles.saveBtnText}>Enregistrer ✔</Text>
+              <Text style={styles.saveBtnText}>{i18n.t('team.save')}</Text>
             </TouchableOpacity>
           </View>
         </View>

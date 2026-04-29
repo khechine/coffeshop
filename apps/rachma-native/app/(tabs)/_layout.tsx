@@ -62,12 +62,12 @@ export default function TabLayout() {
 
   const handleLogout = () => {
     Alert.alert(
-      'Déconnexion',
-      'Voulez-vous vraiment vous déconnecter ?',
+      i18n.t('admin.signout'),
+      i18n.t('admin.signoutConfirm'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: i18n.t('pos.cancel'), style: 'cancel' },
         {
-          text: 'Déconnecter',
+          text: i18n.t('admin.signout'),
           style: 'destructive',
           onPress: async () => {
             await AuthService.clearSession();
@@ -83,9 +83,9 @@ export default function TabLayout() {
     setAppMode(mode);
     setShowSettings(false);
     Alert.alert(
-      'Mode modifié',
-      'L\'interface a été mise à jour. Redémarrez si certains onglets ne se rafraîchissent pas.',
-      [{ text: 'OK' }]
+      i18n.t('admin.modeChanged'),
+      i18n.t('admin.modeChangedMsg'),
+      [{ text: i18n.t('pos.close') }]
     );
   };
 
@@ -119,20 +119,20 @@ export default function TabLayout() {
     const handleSeedTunisia = async () => {
       if (!storeId) return;
       Alert.alert(
-        'Pack Initial Tunisie',
-        'Installer le Pack Initial Tunisie (Produits, Recettes & Emballages) ?',
+        i18n.t('admin.tunisiaPack'),
+        i18n.t('admin.tunisiaPackConfirm'),
         [
-          { text: 'Annuler', style: 'cancel' },
+          { text: i18n.t('pos.cancel'), style: 'cancel' },
           {
-            text: 'Installer',
+            text: i18n.t('admin.install'),
             onPress: async () => {
               try {
                 setIsSeeding(true);
                 const res = await ApiService.seedTunisia(storeId);
-                Alert.alert('Succès', res.message);
+                Alert.alert(i18n.t('admin.success'), res.message);
                 setShowSettings(false);
               } catch (error: any) {
-                Alert.alert('Erreur', error.message || 'Échec de l\'installation');
+                Alert.alert(i18n.t('admin.error'), error.message || i18n.t('admin.error'));
               } finally {
                 setIsSeeding(false);
               }
@@ -147,9 +147,9 @@ export default function TabLayout() {
         <View style={{ backgroundColor: 'transparent' }}>
           <View style={styles.modalHeader}>
             <FontAwesome name="user-circle" size={24} color={Colors.primary} />
-            <Text style={styles.modalTitle}>Administration</Text>
+            <Text style={styles.modalTitle}>{i18n.t('admin.administration')}</Text>
           </View>
-          <Text style={styles.modalSub}>Gestion de la boutique et du personnel.</Text>
+          <Text style={styles.modalSub}>{i18n.t('admin.adminSub')}</Text>
           
           <View style={{ gap: 10 }}>
             <TouchableOpacity 
@@ -158,35 +158,35 @@ export default function TabLayout() {
               disabled={isSeeding}
             >
               <FontAwesome name="magic" size={18} color="#10b981" />
-              <Text style={[styles.adminLinkText, { color: '#10b981' }]}>{isSeeding ? 'Installation...' : 'Pack Initial Tunisie'}</Text>
+              <Text style={[styles.adminLinkText, { color: '#10b981' }]}>{isSeeding ? i18n.t('admin.seeding') : i18n.t('admin.tunisiaPack')}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.adminLink} onPress={() => { setShowSettings(false); router.push('/team'); }}>
               <FontAwesome name="users" size={18} color="#94a3b8" />
-              <Text style={styles.adminLinkText}>Gestion Personnel</Text>
+              <Text style={styles.adminLinkText}>{i18n.t('admin.staffMgmt')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.adminLink} onPress={() => { setShowSettings(false); router.push('/table-config'); }}>
               <FontAwesome name="th" size={18} color="#94a3b8" />
-              <Text style={styles.adminLinkText}>Configuration Tables</Text>
+              <Text style={styles.adminLinkText}>{i18n.t('admin.tableConfig')}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={[styles.adminLink, { borderColor: 'rgba(99, 102, 241, 0.3)', backgroundColor: 'rgba(99, 102, 241, 0.05)' }]} onPress={() => { setShowSettings(false); router.push('/live'); }}>
               <FontAwesome name="feed" size={18} color="#6366f1" />
-              <Text style={[styles.adminLinkText, { color: '#6366f1' }]}>Live Dashboard (Owner)</Text>
+              <Text style={[styles.adminLinkText, { color: '#6366f1' }]}>{i18n.t('admin.liveDashboardOwner')}</Text>
             </TouchableOpacity>
           </View>
         </View>
       );
     }
 
-    // Default: App Mode
     return (
       <View style={{ backgroundColor: 'transparent' }}>
+        <View style={styles.divider} />
         <View style={styles.modalHeader}>
-          <FontAwesome name="cog" size={24} color={Colors.primary} />
-          <Text style={styles.modalTitle}>Mode Application</Text>
+          <FontAwesome name="image" size={20} color={Colors.primary} />
+          <Text style={[styles.modalTitle, { fontSize: 18 }]}>{i18n.t('admin.premiumWallpapers')}</Text>
         </View>
-        <Text style={styles.modalSub}>Choisissez le focus de l'interface.</Text>
+        <Text style={styles.modalSub}>{i18n.t('admin.selectStyle')}</Text>
 
         <TouchableOpacity 
           style={[styles.modeOption, appMode === 'RACHMA' && styles.modeOptionActive]} 
@@ -196,8 +196,8 @@ export default function TabLayout() {
             <FontAwesome name="briefcase" size={20} color="#10b981" />
           </View>
           <View style={styles.modeInfo}>
-            <Text style={styles.modeName}>Focus Rachma (Caisse)</Text>
-            <Text style={styles.modeDescription}>Interface simplifiée pour les ventes rapides.</Text>
+            <Text style={styles.modeName}>{i18n.t('admin.focusRachma')}</Text>
+            <Text style={styles.modeDescription}>{i18n.t('admin.focusRachmaSub')}</Text>
           </View>
           {appMode === 'RACHMA' && <FontAwesome name="check-circle" size={20} color="#10b981" />}
         </TouchableOpacity>
@@ -206,24 +206,14 @@ export default function TabLayout() {
           style={[styles.modeOption, appMode === 'FULL' && styles.modeOptionActive]} 
           onPress={() => toggleAppMode('FULL')}
         >
-          <View style={[styles.modeIconBox, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
-            <FontAwesome name="desktop" size={20} color="#6366f1" />
+          <View style={[styles.modeIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+            <FontAwesome name="dashboard" size={20} color="#3b82f6" />
           </View>
           <View style={styles.modeInfo}>
-            <Text style={styles.modeName}>Mode Gestion Complète</Text>
-            <Text style={styles.modeDescription}>Tableau de bord, B2B & Caisse temps-réel.</Text>
+            <Text style={styles.modeName}>{i18n.t('admin.focusDashboard')}</Text>
+            <Text style={styles.modeDescription}>{i18n.t('admin.focusDashboardSub')}</Text>
           </View>
         </TouchableOpacity>
-
-        {isOwnerRole && (
-          <TouchableOpacity 
-            style={[styles.adminLink, { borderColor: 'rgba(99, 102, 241, 0.3)', backgroundColor: 'rgba(99, 102, 241, 0.05)', marginTop: 15 }]} 
-            onPress={() => { setShowSettings(false); router.push('/live'); }}
-          >
-            <FontAwesome name="feed" size={18} color="#6366f1" />
-            <Text style={[styles.adminLinkText, { color: '#6366f1' }]}>{i18n.t('nav.live')} (Owner)</Text>
-          </TouchableOpacity>
-        )}
 
         <View style={{ marginTop: 25 }}>
           <Text style={styles.modalSub}>{i18n.t('profile.language')}</Text>
@@ -241,6 +231,15 @@ export default function TabLayout() {
               <Text style={[styles.modeName, { textAlign: 'center', width: '100%' }]}>{i18n.t('profile.language_ar')}</Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 15 }}>
+          <TouchableOpacity style={[styles.styleBtn, styles.styleBtnActive]} onPress={() => Alert.alert('Premium', i18n.t('admin.styleClassicSelected'))}>
+             <Text style={styles.styleBtnText}>{i18n.t('admin.classicRachma')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.styleBtn} onPress={() => Alert.alert('Premium', i18n.t('admin.styleStandardSelected'))}>
+             <Text style={styles.styleBtnText}>{i18n.t('admin.standardRachma')}</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -304,74 +303,67 @@ export default function TabLayout() {
         headerShown: true,
       }}>
       <Tabs.Screen
-        name="rachma"
+        name="index"
         options={{
-          title: 'RACHMA',
-          tabBarIcon: ({ color }) => <TabBarIcon name="bolt" color={color} />,
-          tabBarLabel: 'Rachma',
-          headerShown: false,
-          href: hasRachmaAccess ? '/(tabs)/rachma' : null,
+          title: i18n.t('nav.home'),
+          tabBarLabel: i18n.t('nav.home'),
+          tabBarIcon: ({ color }) => <TabBarIcon name="dashboard" color={color} />,
         }}
+        redirect={!isOwnerRole && !permissions.includes('DASHBOARD')}
       />
       <Tabs.Screen
         name="pos"
         options={{
           title: i18n.t('nav.pointOfSale'),
-          tabBarIcon: ({ color }) => <TabBarIcon name="calculator" color={color} />,
-          headerShown: false,
-          href: hasPosAccess ? '/(tabs)/pos' : null,
+          tabBarLabel: i18n.t('nav.pointOfSale'),
+          tabBarIcon: ({ color }) => <TabBarIcon name="shopping-basket" color={color} />,
         }}
+        redirect={!hasPosAccess}
       />
       <Tabs.Screen
         name="tables"
         options={{
-          title: 'Tables',
+          title: i18n.t('nav.tables'),
+          tabBarLabel: i18n.t('nav.tables'),
           tabBarIcon: ({ color }) => <TabBarIcon name="cutlery" color={color} />,
-          headerShown: false,
-          href: hasTablesAccess ? '/(tabs)/tables' : null,
         }}
+        redirect={!hasTablesAccess}
       />
       <Tabs.Screen
-        name="index"
+        name="rachma"
         options={{
-          title: 'Dashboard',
-          tabBarLabel: 'Finance',
-          tabBarIcon: ({ color }) => <TabBarIcon name="line-chart" color={color} />,
-          headerShown: false,
-          href: hasManagementAccess ? '/(tabs)' : null,
+          title: i18n.t('nav.live'),
+          tabBarLabel: i18n.t('nav.live'),
+          tabBarIcon: ({ color }) => <TabBarIcon name="bolt" color={color} />,
         }}
-      />
-      <Tabs.Screen
-        name="stocks"
-        options={{
-          title: 'Gestion Pro',
-          tabBarLabel: 'Gestion',
-          tabBarIcon: ({ color }) => <TabBarIcon name="briefcase" color={color} />,
-          href: hasManagementAccess ? '/(tabs)/stocks' : null,
-        }}
-      />
-      <Tabs.Screen
-        name="marketplace"
-        options={{
-          title: 'B2B',
-          tabBarLabel: 'Marché',
-          tabBarIcon: ({ color }) => <TabBarIcon name="shopping-cart" color={color} />,
-          href: hasMarketplaceAccess ? '/(tabs)/marketplace' : null,
-        }}
-      />
-      <Tabs.Screen
-        name="suppliers"
-        options={{
-          title: 'Fournisseurs',
-          href: null,
-        }}
+        redirect={!hasRachmaAccess}
       />
       <Tabs.Screen
         name="history"
         options={{
           title: i18n.t('nav.history'),
-          href: null,
+          tabBarLabel: i18n.t('nav.history'),
+          tabBarIcon: ({ color }) => <TabBarIcon name="history" color={color} />,
         }}
+        redirect={!isOwnerRole && !permissions.includes('HISTORY')}
+      />
+      <Tabs.Screen
+        name="stocks"
+        options={{
+          title: i18n.t('nav.stocks'),
+          tabBarLabel: i18n.t('nav.stocks'),
+          tabBarIcon: ({ color }) => <TabBarIcon name="cubes" color={color} />,
+        }}
+        redirect={!hasManagementAccess || isRachmaOnly}
+      />
+      <Tabs.Screen
+        name="marketplace"
+        options={{
+          title: i18n.t('nav.marketplace'),
+          tabBarLabel: i18n.t('nav.marketplace'),
+          tabBarIcon: ({ color }) => <TabBarIcon name="shopping-bag" color={color} />,
+        }}
+        redirect={!hasMarketplaceAccess}
       />
     </Tabs>
 
@@ -381,7 +373,7 @@ export default function TabLayout() {
             {renderSettingsContent()}
 
             <TouchableOpacity style={styles.closeBtn} onPress={() => setShowSettings(false)}>
-                <Text style={styles.closeBtnText}>Fermer</Text>
+                <Text style={styles.closeBtnText}>{i18n.t('pos.close')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -516,5 +508,37 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    marginVertical: 20,
+  },
+  modalLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+  },
+  styleBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  styleBtnActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: Colors.primary,
+  },
+  styleBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

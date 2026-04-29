@@ -7,6 +7,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
 import { useAlert } from '@/components/AlertContext';
+import i18n from '../locales/i18n';
 
 export default function RegisterScreen() {
   const [role, setRole] = useState<'STORE_OWNER' | 'VENDOR'>('STORE_OWNER');
@@ -22,7 +23,7 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!name.trim() || !email.trim() || !password.trim() || !companyName.trim()) {
-      showAlert({ title: 'Erreur', message: 'Veuillez remplir tous les champs.', type: 'error' });
+      showAlert({ title: i18n.t('register.errorTitle'), message: i18n.t('register.errorFields'), type: 'error' });
       return;
     }
 
@@ -41,17 +42,17 @@ export default function RegisterScreen() {
         await AuthService.setUser({ ...result.user, authMode: 'PASSWORD' });
         
         showAlert({ 
-            title: 'Succès', 
-            message: 'Compte créé avec succès !', 
+            title: i18n.t('register.successTitle'), 
+            message: i18n.t('register.successMsg'), 
             type: 'success' 
         });
         
-        router.replace('/(tabs)');
+          router.replace('/(tabs)');
       } else {
-        showAlert({ title: 'Erreur', message: result.message || 'Échec de la création du compte.', type: 'error' });
+        showAlert({ title: i18n.t('register.errorTitle'), message: result.message || i18n.t('register.errorCreate'), type: 'error' });
       }
     } catch (error: any) {
-      showAlert({ title: 'Erreur', message: error.message || 'Impossible de se connecter au serveur.', type: 'error' });
+      showAlert({ title: i18n.t('register.errorTitle'), message: error.message || i18n.t('auth.serverError'), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -70,8 +71,8 @@ export default function RegisterScreen() {
           <View style={styles.logoCircle}>
             <Text style={styles.logoText}>RP</Text>
           </View>
-          <Text style={styles.brandName}>Créer un Compte</Text>
-          <Text style={styles.tagline}>Rejoignez l'écosystème Rachma</Text>
+          <Text style={styles.brandName}>{i18n.t('register.title')}</Text>
+          <Text style={styles.tagline}>{i18n.t('register.tagline')}</Text>
         </View>
 
         {/* Role Toggle */}
@@ -80,13 +81,13 @@ export default function RegisterScreen() {
             style={[styles.modeToggleBtn, role === 'STORE_OWNER' && styles.modeToggleBtnActive]}
             onPress={() => setRole('STORE_OWNER')}
           >
-            <Text style={[styles.modeToggleText, role === 'STORE_OWNER' && styles.modeToggleTextActive]}>Ma Boutique</Text>
+            <Text style={[styles.modeToggleText, role === 'STORE_OWNER' && styles.modeToggleTextActive]}>{i18n.t('register.storeOwner')}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.modeToggleBtn, role === 'VENDOR' && styles.modeToggleBtnActive]}
             onPress={() => setRole('VENDOR')}
           >
-            <Text style={[styles.modeToggleText, role === 'VENDOR' && styles.modeToggleTextActive]}>Fournisseur</Text>
+            <Text style={[styles.modeToggleText, role === 'VENDOR' && styles.modeToggleTextActive]}>{i18n.t('register.vendor')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -94,7 +95,7 @@ export default function RegisterScreen() {
           <View style={[styles.inputContainer, styles.glassEffect]}>
             <FontAwesome name="user-o" size={18} color="#94a3b8" style={styles.inputIcon} />
             <TextInput
-              placeholder="Nom Complet"
+              placeholder={i18n.t('register.fullName')}
               placeholderTextColor="#94a3b8"
               style={styles.input}
               value={name}
@@ -105,7 +106,7 @@ export default function RegisterScreen() {
           <View style={[styles.inputContainer, styles.glassEffect]}>
             <FontAwesome name="envelope-o" size={18} color="#94a3b8" style={styles.inputIcon} />
             <TextInput
-              placeholder="Email professionnel"
+              placeholder={i18n.t('register.emailPlaceholder')}
               placeholderTextColor="#94a3b8"
               style={styles.input}
               value={email}
@@ -118,7 +119,7 @@ export default function RegisterScreen() {
           <View style={[styles.inputContainer, styles.glassEffect]}>
             <FontAwesome name="lock" size={20} color="#94a3b8" style={styles.inputIcon} />
             <TextInput
-              placeholder="Mot de passe"
+              placeholder={i18n.t('register.passwordPlaceholder')}
               placeholderTextColor="#94a3b8"
               style={styles.input}
               value={password}
@@ -136,7 +137,7 @@ export default function RegisterScreen() {
           <View style={[styles.inputContainer, styles.glassEffect]}>
             <FontAwesome name={role === 'STORE_OWNER' ? "coffee" : "truck"} size={18} color="#94a3b8" style={styles.inputIcon} />
             <TextInput
-              placeholder={role === 'STORE_OWNER' ? "Nom de votre établissement" : "Nom de votre entreprise"}
+              placeholder={role === 'STORE_OWNER' ? i18n.t('register.establishmentName') : i18n.t('register.companyName')}
               placeholderTextColor="#94a3b8"
               style={styles.input}
               value={companyName}
@@ -152,7 +153,7 @@ export default function RegisterScreen() {
             {loading
               ? <ActivityIndicator color="#ffffff" />
               : <>
-                  <Text style={styles.registerBtnText}>S'inscrire</Text>
+                  <Text style={styles.registerBtnText}>{i18n.t('register.signup')}</Text>
                   <FontAwesome name="check" size={16} color="#ffffff" />
                 </>
             }
@@ -160,9 +161,9 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Déjà un compte ?</Text>
+          <Text style={styles.footerText}>{i18n.t('register.hasAccount')}</Text>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.loginLink}> Se connecter</Text>
+            <Text style={styles.loginLink}>{i18n.t('register.loginLink')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

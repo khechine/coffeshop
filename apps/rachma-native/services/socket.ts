@@ -43,7 +43,7 @@ class SocketServiceClass {
     this.currentStoreId = null;
   }
 
-  emitRachmaAction(data: { storeId: string; action: string; productId: string; baristaName: string; timestamp: string; productName?: string; isTakeaway?: boolean; price?: number }) {
+  emitRachmaAction(data: { storeId: string; action: string; productId: string; baristaName: string; timestamp: string; productName?: string; isTakeaway?: boolean; price?: number; tableName?: string }) {
     if (this.socket && this.socket.connected) {
       this.socket.emit('rachma_action', data);
     }

@@ -6,6 +6,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Colors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
 import { AuthService } from '@/services/auth';
+import i18n from '../locales/i18n';
 
 export default function TerminalsManagementScreen() {
   const insets = useSafeAreaInsets();
@@ -47,41 +48,41 @@ export default function TerminalsManagementScreen() {
     if (!storeId) return;
 
     if (Platform.OS === 'web') {
-      const name = window.prompt("Nom de la caisse (ex: Caisse Terrasse)");
+      const name = window.prompt(i18n.t('terminals.nameLabel'));
       if (!name) return;
       try {
         const res = await ApiService.post('/management/terminals', { storeId, nickname: name });
         if (res.activationCode) {
-          window.alert(`Nouveau Code de Parrainage: ${res.activationCode}\n\nSaisissez ce code sur votre nouvelle tablette.`);
+          window.alert(`${i18n.t('terminals.activationCodeTitle')}: ${res.activationCode}\n\n${i18n.t('terminals.activationCodeMsg', { code: res.activationCode })}`);
           loadTerminals();
         }
       } catch (e) {
-        window.alert("Erreur lors de la création du terminal.");
+        window.alert(i18n.t('terminals.errorCreate'));
       }
       return;
     }
 
     Alert.prompt(
-      'Nouvelle Caisse',
-      'Nommez cette caisse (ex: Caisse Bar)',
+      i18n.t('terminals.newTerminal'),
+      i18n.t('terminals.namePlaceholder'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: i18n.t('profile.cancel'), style: 'cancel' },
         { 
-          text: 'Créer', 
+          text: i18n.t('terminals.create'), 
           onPress: async (nickname) => {
             if (!nickname) return;
             try {
               const res = await ApiService.post('/management/terminals', { storeId, nickname });
               if (res.activationCode) {
                 Alert.alert(
-                  'Code de Parrainage',
-                  `CODE: ${res.activationCode}\n\nSaisissez ce code sur votre nouvelle tablette pour l'appairer. Ce code est à usage unique.`,
+                  i18n.t('terminals.activationCodeTitle'),
+                  i18n.t('terminals.activationCodeMsg', { code: res.activationCode }),
                   [{ text: 'OK' }]
                 );
                 loadTerminals();
               }
             } catch (e) {
-              Alert.alert("Erreur", "Impossible de créer le terminal.");
+              Alert.alert(i18n.t('auth.errorTitle'), i18n.t('terminals.errorCreate'));
             }
           } 
         }
@@ -102,11 +103,11 @@ export default function TerminalsManagementScreen() {
     }
 
     Alert.alert(
-      'Révoquer Caisse',
-      confirmMessage,
+      i18n.t('terminals.revokeTitle'),
+      i18n.t('terminals.revokeConfirm'),
       [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Révoquer', style: 'destructive', onPress: async () => {
+        { text: i18n.t('profile.cancel'), style: 'cancel' },
+        { text: i18n.t('tables.yesCancel'), style: 'destructive', onPress: async () => {
             await ApiService.delete(`/management/terminals/${id}`);
             loadTerminals();
           }
@@ -123,7 +124,7 @@ export default function TerminalsManagementScreen() {
           <View>
             <Text style={styles.cardTitle}>{item.nickname}</Text>
             <Text style={styles.cardSub}>
-              {item.status === 'ACTIVE' ? 'Activée' : item.status === 'REVOKED' ? 'Révoquée' : 'En attente d\'appairage'} 
+              {item.status === 'ACTIVE' ? i18n.t('terminals.statusActive') : item.status === 'REVOKED' ? i18n.t('terminals.statusRevoked') : i18n.t('terminals.statusPending')} 
               {item.activationCode ? ` • Code: ${item.activationCode}` : ''}
             </Text>
           </View>
@@ -141,7 +142,7 @@ export default function TerminalsManagementScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <FontAwesome name="arrow-left" size={20} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Gestion Caisses</Text>
+        <Text style={styles.headerTitle}>{i18n.t('terminals.title')}</Text>
         <TouchableOpacity style={styles.addBtn} onPress={handleCreateTerminal}>
           <FontAwesome name="plus" size={20} color="#fff" />
         </TouchableOpacity>
@@ -156,7 +157,7 @@ export default function TerminalsManagementScreen() {
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Aucune caisse trouvée. Associez votre première tablette !</Text>
+            <Text style={styles.emptyText}>{i18n.t('terminals.emptyTerminals')}</Text>
           }
         />
       )}
