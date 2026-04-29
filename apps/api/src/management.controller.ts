@@ -279,9 +279,20 @@ export class ManagementController {
   async getTables(@Param('storeId') storeId: string): Promise<any> {
     return prisma.storeTable.findMany({
       where: { storeId },
+      include: { zone: true },
       orderBy: { label: 'asc' },
     });
   }
+
+  @Get('zones/:storeId')
+  async getZones(@Param('storeId') storeId: string): Promise<any> {
+    return prisma.storeZone.findMany({
+      where: { storeId },
+      include: { tables: true },
+      orderBy: { name: 'asc' },
+    });
+  }
+
 
 
   // ═══════════════════════════════════════════════════════════

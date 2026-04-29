@@ -18,6 +18,9 @@ export default function TablesScreen() {
   const [isRestricted, setIsRestricted] = useState(false);
   const [tableCarts, setTableCarts] = useState<TableCarts>({});
   const [refreshing, setRefreshing] = useState(false);
+  const [zones, setZones] = useState<any[]>([]);
+  const [allTables, setAllTables] = useState<any[]>([]);
+  const [activeZoneId, setActiveZoneId] = useState<string | null>(null);
   
   const [historyOpen, setHistoryOpen] = useState(false);
   const [ticketHistory, setTicketHistory] = useState<any[]>([]);
@@ -28,6 +31,22 @@ export default function TablesScreen() {
   const loadData = useCallback(async () => {
     try {
       const session = await AuthService.getSession();
+      const storeId = session?.storeId || '1';
+
+      // 1. Fetch Backend Data
+      const [tData, zData] = await Promise.all([
+        ApiService.get(`/management/tables/${storeId}`).catch(() => []),
+        ApiService.get(`/management/zones/${storeId}`).catch(() => []),
+      ]);
+
+      setAllTables(tData);
+      setZones(zData);
+      
+      if (zData.length > 0 && !activeZoneId) {
+        setActiveZoneId(zData[0].id);
+      }
+
+      // 2. Auth & Restrictions
       if (session?.user) {
         const assigned = session.user.assignedTables || [];
         if (assigned.length > 0) {
@@ -38,7 +57,7 @@ export default function TablesScreen() {
         }
       }
 
-      const storeId = session?.storeId || '1';
+      // 3. Carts
       const cartsData = await AsyncStorage.getItem(`rachma_table_carts_${storeId}`);
       if (cartsData) {
         setTableCarts(JSON.parse(cartsData));
@@ -50,7 +69,7 @@ export default function TablesScreen() {
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [activeZoneId]);
 
   const loadHistory = async () => {
     try {
@@ -150,13 +169,15 @@ export default function TablesScreen() {
     );
   };
 
-  let displayTables = [];
+  // Filter Tables based on Restrictions and Zones
+  let displayTables = allTables;
   if (isRestricted) {
-    displayTables = assignedTables;
-  } else {
-    for (let i = 1; i <= 50; i++) {
-      displayTables.push(i.toString());
-    }
+    displayTables = allTables.filter(t => assignedTables.includes(t.label) || assignedTables.includes(t.id));
+  } else if (activeZoneId) {
+    displayTables = allTables.filter(t => t.zoneId === activeZoneId);
+  } else if (zones.length > 0) {
+    // If we have zones but none selected (shouldn't happen with useEffect), show first zone
+    displayTables = allTables.filter(t => t.zoneId === zones[0].id);
   }
 
   return (
@@ -177,24 +198,42 @@ export default function TablesScreen() {
         </View>
       </View>
 
+      {/* Zones Selector */}
+      {zones.length > 0 && !isRestricted && (
+        <View style={styles.zonesBar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.zonesScrollContent}>
+            {zones.map(z => (
+              <TouchableOpacity 
+                key={z.id} 
+                style={[styles.zoneTab, activeZoneId === z.id && styles.zoneTabActive]}
+                onPress={() => setActiveZoneId(z.id)}
+              >
+                <Text style={[styles.zoneTabText, activeZoneId === z.id && styles.zoneTabTextActive]}>{z.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       <ScrollView
         style={styles.gridContainer}
         contentContainerStyle={styles.gridContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={Colors.primary} />}
       >
-        {displayTables.map((tableNum) => {
-          const tableId = `T${tableNum}`;
-          const cart = tableCarts[tableId];
+        {displayTables.map((table) => {
+          const tableId = table.id;
+          const label = table.label;
+          const cart = tableCarts[label] || tableCarts[tableId];
           const isActive = cart && cart.total > 0;
 
           return (
             <TouchableOpacity 
               key={tableId} 
               style={[styles.tableCard, isActive && styles.tableCardActive]}
-              onPress={() => handleTablePress(tableId)}
+              onPress={() => handleTablePress(label)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.tableNum, isActive && styles.tableNumActive]}>{tableNum}</Text>
+              <Text style={[styles.tableNum, isActive && styles.tableNumActive]}>{label}</Text>
               {isActive ? (
                 <Text style={styles.tableTotal}>{cart.total.toFixed(3)} DT</Text>
               ) : (
@@ -203,7 +242,15 @@ export default function TablesScreen() {
             </TouchableOpacity>
           );
         })}
+
+        {displayTables.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <FontAwesome name="th-large" size={48} color="rgba(255,255,255,0.1)" />
+            <Text style={styles.emptyText}>{i18n.t('tables.emptyZone') || 'Aucune table dans cette zone'}</Text>
+          </View>
+        )}
       </ScrollView>
+
 
       {/* History Modal */}
       <Modal visible={historyOpen} animationType="slide" transparent>
@@ -345,6 +392,39 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1,
   },
+  zonesBar: {
+    backgroundColor: 'rgba(16, 20, 35, 0.95)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  zonesScrollContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  zoneTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  zoneTabActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: Colors.primary,
+  },
+  zoneTabText: {
+    color: '#64748b',
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  zoneTabTextActive: {
+    color: Colors.primary,
+  },
+
   gridContainer: {
     flex: 1,
   },
@@ -391,6 +471,21 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     marginTop: 5,
   },
+  emptyContainer: {
+    width: '100%',
+    padding: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  emptyText: {
+    color: '#475569',
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 15,
+    textAlign: 'center',
+  },
+
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
   modalSheet: {

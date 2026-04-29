@@ -2702,9 +2702,43 @@ export async function logStaffSessionAction(userId: string, storeId: string, act
 }
 
 // ══════════════════════════════════════════════════════════════
-//  TABLE MANAGEMENT
+//  ZONE & TABLE MANAGEMENT
 // ══════════════════════════════════════════════════════════════
-export async function createTableAction(data: { label: string; capacity: number }) {
+
+export async function createZoneAction(name: string) {
+  const store = await getStore();
+  if (!store) return;
+  const zone = await prisma.storeZone.create({
+    data: { name, storeId: store.id }
+  });
+  revalidatePath('/admin/tables');
+  return zone;
+}
+
+export async function updateZoneAction(id: string, name: string) {
+  await prisma.storeZone.update({ where: { id }, data: { name } });
+  revalidatePath('/admin/tables');
+}
+
+export async function deleteZoneAction(id: string) {
+  await prisma.storeTable.updateMany({
+    where: { zoneId: id },
+    data: { zoneId: null }
+  });
+  await prisma.storeZone.delete({ where: { id } });
+  revalidatePath('/admin/tables');
+}
+
+export async function createTableAction(data: { 
+  label: string; 
+  capacity: number; 
+  zoneId?: string | null;
+  posX?: number;
+  posY?: number;
+  shape?: string;
+  width?: number;
+  height?: number;
+}) {
   const store = await getStore();
   if (!store) return;
   await prisma.storeTable.create({
@@ -2717,13 +2751,31 @@ export async function createTableAction(data: { label: string; capacity: number 
   revalidatePath('/pos');
 }
 
-export async function updateTableAction(id: string, data: { label: string; capacity: number }) {
+export async function updateTableAction(id: string, data: { 
+  label?: string; 
+  capacity?: number;
+  zoneId?: string | null;
+  posX?: number;
+  posY?: number;
+  shape?: string;
+  width?: number;
+  height?: number;
+}) {
   await prisma.storeTable.update({
     where: { id },
     data
   });
   revalidatePath('/admin/tables');
   revalidatePath('/pos');
+}
+
+export async function updateTablePositionAction(id: string, posX: number, posY: number) {
+  await prisma.storeTable.update({
+    where: { id },
+    data: { posX, posY }
+  });
+  // No revalidatePath here for performance if called frequently during drag, 
+  // but usually we call it onDragEnd.
 }
 
 export async function deleteTableAction(id: string) {

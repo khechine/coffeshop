@@ -14,18 +14,27 @@ export default async function TablesManagement() {
     orderBy: { createdAt: 'asc' }
   });
 
+  const zones = await prisma.storeZone.findMany({
+    where: { storeId: store.id },
+    orderBy: { createdAt: 'asc' }
+  });
+
   return (
     <div className="page-content">
       <div className="page-header">
         <div>
-          <h1>Plan de Salle</h1>
-          <p>Configurez les tables de votre établissement pour la prise de commande.</p>
+          <h1>Infrastructure de Salle</h1>
+          <p>Organisez votre établissement en zones et disposez vos tables comme un pro.</p>
         </div>
       </div>
 
-      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(2,1fr)', marginBottom: '24px' }}>
+      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: '24px' }}>
         <div className="kpi-card blue">
           <div className="kpi-icon blue"><LayoutDashboard size={22} /></div>
+          <div><div className="kpi-label">Zones Actives</div><div className="kpi-value">{zones.length}</div></div>
+        </div>
+        <div className="kpi-card purple">
+          <div className="kpi-icon blue"><Plus size={22} /></div>
           <div><div className="kpi-label">Nombre de Tables</div><div className="kpi-value">{tables.length}</div></div>
         </div>
         <div className="kpi-card green">
@@ -34,7 +43,8 @@ export default async function TablesManagement() {
         </div>
       </div>
 
-      <TablesClient initialTables={tables} />
+      <TablesClient initialTables={tables} initialZones={zones} />
     </div>
   );
 }
+
