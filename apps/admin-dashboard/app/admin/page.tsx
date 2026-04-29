@@ -120,16 +120,28 @@ export default async function AdminDashboardPage() {
           border: 'none',
           padding: '28px',
           borderRadius: '24px',
-          boxShadow: '0 20px 40px rgba(79, 70, 229, 0.25)'
+          boxShadow: '0 20px 40px rgba(79, 70, 229, 0.25)',
+          position: 'relative',
+          overflow: 'hidden'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div style={{ background: 'rgba(255,255,255,0.2)', width: '48px', height: '48px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <TrendingUp size={24} color="#fff" />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TrendingUp size={20} color="#fff" />
             </div>
-            <span style={{ fontSize: '11px', fontWeight: 800, background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '100px', textTransform: 'uppercase' }}>Aujourd'hui</span>
+            <span style={{ 
+              fontSize: '10px', 
+              fontWeight: 800, 
+              background: 'rgba(255,255,255,0.1)', 
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              padding: '3px 10px', 
+              borderRadius: '20px', 
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>Aujourd'hui</span>
           </div>
           <div style={{ marginTop: '24px' }}>
-            <div className="kpi-label" style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '4px' }}>Chiffre d'Affaires</div>
+            <div className="kpi-label" style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '4px', fontSize: '13px', fontWeight: 600 }}>Chiffre d'Affaires</div>
             <div className="kpi-value" style={{ color: '#fff', fontSize: '32px', fontWeight: 900 }}>{revenue.toFixed(3)} <span style={{ fontSize: '16px', opacity: 0.8 }}>DT</span></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
               <div style={{ padding: '2px 8px', background: 'rgba(16, 185, 129, 0.2)', borderRadius: '6px', fontSize: '12px', fontWeight: 700, color: '#34D399' }}>+12%</div>
@@ -143,19 +155,30 @@ export default async function AdminDashboardPage() {
           background: '#fff', 
           padding: '28px',
           borderRadius: '24px',
-          border: '1px solid #F1F5F9'
+          border: '1px solid #F1F5F9',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div style={{ background: '#F0F9FF', width: '48px', height: '48px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ShoppingCart size={24} color="#0EA5E9" />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ background: '#F0F9FF', width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ShoppingCart size={20} color="#0EA5E9" />
             </div>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Volume</span>
+            <span style={{ 
+              fontSize: '10px', 
+              fontWeight: 800, 
+              color: '#64748B', 
+              background: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              padding: '3px 10px', 
+              borderRadius: '20px', 
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>Volume</span>
           </div>
           <div style={{ marginTop: '24px' }}>
-            <div className="kpi-label" style={{ marginBottom: '4px' }}>Tickets Encaissés</div>
-            <div className="kpi-value" style={{ fontSize: '32px', fontWeight: 900 }}>{salesCount} <span style={{ fontSize: '16px', color: '#94A3B8' }}>cmd.</span></div>
+            <div className="kpi-label" style={{ marginBottom: '4px', fontSize: '13px', fontWeight: 600, color: '#64748B' }}>Tickets Encaissés</div>
+            <div className="kpi-value" style={{ fontSize: '32px', fontWeight: 900, color: '#1E293B' }}>{salesCount} <span style={{ fontSize: '16px', color: '#94A3B8' }}>cmd.</span></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
-              <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>Moyenne: {(revenue/salesCount || 0).toFixed(3)} DT</span>
+              <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 600 }}>Moyenne: {(revenue/salesCount || 0).toFixed(3)} DT</span>
             </div>
           </div>
         </div>
@@ -165,17 +188,28 @@ export default async function AdminDashboardPage() {
           background: '#fff', 
           padding: '28px',
           borderRadius: '24px',
-          border: '1px solid #F1F5F9'
+          border: '1px solid #F1F5F9',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div style={{ background: '#F5F3FF', width: '48px', height: '48px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <User size={24} color="#8B5CF6" />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ background: '#F5F3FF', width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <User size={20} color="#8B5CF6" />
             </div>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Équipe</span>
+            <span style={{ 
+              fontSize: '10px', 
+              fontWeight: 800, 
+              color: '#64748B', 
+              background: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              padding: '3px 10px', 
+              borderRadius: '20px', 
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>Équipe</span>
           </div>
           <div style={{ marginTop: '24px' }}>
-            <div className="kpi-label" style={{ marginBottom: '4px' }}>Top Vendeur</div>
-            <div className="kpi-value" style={{ fontSize: '24px', fontWeight: 900 }}>{bestBaristaName}</div>
+            <div className="kpi-label" style={{ marginBottom: '4px', fontSize: '13px', fontWeight: 600, color: '#64748B' }}>Top Vendeur</div>
+            <div className="kpi-value" style={{ fontSize: '24px', fontWeight: 900, color: '#1E293B' }}>{bestBaristaName}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
               <span style={{ fontSize: '14px', color: '#10B981', fontWeight: 800 }}>{bestBaristaRev.toFixed(3)} DT</span>
               <span style={{ fontSize: '12px', color: '#94A3B8' }}>réalisés</span>
@@ -189,21 +223,34 @@ export default async function AdminDashboardPage() {
           color: '#fff',
           border: 'none',
           padding: '28px',
-          borderRadius: '24px'
+          borderRadius: '24px',
+          boxShadow: netProfit >= 0 ? '0 20px 40px rgba(16, 185, 129, 0.15)' : '0 20px 40px rgba(239, 68, 68, 0.15)',
+          position: 'relative'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div style={{ background: 'rgba(255,255,255,0.2)', width: '48px', height: '48px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Wallet size={24} color="#fff" />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Wallet size={20} color="#fff" />
             </div>
-            <span style={{ fontSize: '11px', fontWeight: 800, background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '100px', textTransform: 'uppercase' }}>Estimation</span>
+            <span style={{ 
+              fontSize: '10px', 
+              fontWeight: 800, 
+              background: 'rgba(255,255,255,0.1)', 
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              padding: '3px 10px', 
+              borderRadius: '20px', 
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>Estimation</span>
           </div>
           <div style={{ marginTop: '24px' }}>
-            <div className="kpi-label" style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '4px' }}>Profit Net (Journalier)</div>
+            <div className="kpi-label" style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '4px', fontSize: '13px', fontWeight: 600 }}>Profit Net (Journalier)</div>
             <div className="kpi-value" style={{ color: '#fff', fontSize: '32px', fontWeight: 900 }}>{netProfit.toFixed(3)} <span style={{ fontSize: '16px', opacity: 0.8 }}>DT</span></div>
             <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '12px' }}>Dépenses: {totalExpenses.toFixed(3)} DT</div>
           </div>
         </div>
       </div>
+
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '30px', marginTop: '40px' }}>
         {/* PRODUCT ANALYTICS */}
