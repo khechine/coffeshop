@@ -128,6 +128,7 @@ model Store {
   expenses       Expense[]
   subscription   Subscription?
   tables         StoreTable[]
+  zones          StoreZone[]
   terminals      PosTerminal[]
   categories     Category[]
   customers      Customer[]
@@ -139,12 +140,31 @@ model Store {
   activityPole   ActivityPole? @relation(fields: [activityPoleId], references: [id])
 }
 
+model StoreZone {
+  id        String   @id @default(cuid())
+  name      String
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  tables    StoreTable[]
+  createdAt DateTime @default(now())
+}
+
 model StoreTable {
   id        String   @id @default(cuid())
   label     String
   capacity  Int      @default(2)
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id])
+
+  zoneId    String?
+  zone      StoreZone? @relation(fields: [zoneId], references: [id])
+
+  posX      Float?   @default(0)
+  posY      Float?   @default(0)
+  shape     String?  @default("CIRCLE") // CIRCLE, SQUARE
+  width     Int?     @default(60)
+  height    Int?     @default(60)
+
   createdAt DateTime @default(now())
 }
 

@@ -412,141 +412,14 @@ export default function PremiumPOSClient({
     );
   }
 
-  if (view === 'TABLES') {
-    return (
-      <div className="pos-premium-container" data-theme={isDarkMode ? 'dark' : 'light'} style={{ background: 'var(--pos-sidebar)', transition: 'all 0.3s ease' }}>
-          <aside className="pos-sidebar">
-            <div className="pos-sidebar-icon active"><LayoutGrid size={24} /></div>
-            <div className="pos-sidebar-icon" onClick={() => setView('ORDERS')}><History size={24} /></div>
-            <div className="pos-sidebar-icon" onClick={() => setView('CUSTOMERS')}><Users size={24} /></div>
-            <div style={{ flex: 1 }} />
-            <div className="pos-sidebar-icon" onClick={toggleTheme}>
-              {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
-            </div>
-            <div className="pos-sidebar-icon" style={{ color: '#EF4444' }} onClick={handleLogout}><LogOut size={24} /></div>
-          </aside>
-
-          {/* Mobile Bottom Nav for Tables View */}
-          <nav className="pos-mobile-nav">
-             <div className="mobile-nav-item active">
-                <LayoutGrid />
-                <span>Tables</span>
-             </div>
-             <div className="mobile-nav-item" onClick={() => setView('ORDERS')}>
-                <History />
-                <span>Commandes</span>
-             </div>
-             <div className="mobile-nav-item" onClick={() => setView('CUSTOMERS')}>
-                <Users />
-                <span>Clients</span>
-             </div>
-             <div className="mobile-nav-item" onClick={handleLogout} style={{ color: '#EF4444' }}>
-                <LogOut />
-                <span>Quitter</span>
-             </div>
-          </nav>
-
-          {/* Mobile Bottom Nav for Tables View */}
-          <nav className="pos-mobile-nav">
-             <div className="mobile-nav-item active">
-                <LayoutGrid />
-                <span>Tables</span>
-             </div>
-             <div className="mobile-nav-item" onClick={() => setView('ORDERS')}>
-                <History />
-                <span>Commandes</span>
-             </div>
-             <div className="mobile-nav-item" onClick={() => setView('CUSTOMERS')}>
-                <Users />
-                <span>Clients</span>
-             </div>
-             <div className="mobile-nav-item" onClick={handleLogout} style={{ color: '#EF4444' }}>
-                <LogOut />
-                <span>Quitter</span>
-             </div>
-          </nav>
-
-         <main className="pos-main-content-scroll" style={{ flex: 1, padding: 40, overflowY: 'auto' }}>
-            <div className="tables-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40, flexWrap: 'wrap', gap: 20 }}>
-               <div>
-                  <h1 style={{ color: '#fff', fontSize: 32, fontWeight: 900, margin: 0 }}>Plan de Salle</h1>
-                  <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0 }}>Sélectionnez une table</p>
-               </div>
-               <button className="btn-premium btn-premium-primary vente-directe-btn" style={{ padding: '20px 40px', fontSize: 18 }} onClick={() => { setSelectedTable({ id: 'DIRECT', label: 'Vente Directe' }); setView('POS'); }}>
-                  <ShoppingBag size={24} /> VENTE DIRECTE
-               </button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 24 }}>
-                {initialTables.map((t: any) => {
-                  const tableCart = tableOrders[t.id] || [];
-                  const hasOrder = tableCart.length > 0;
-                  const tableTotal = tableCart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-
-                  return (
-                    <div key={t.id} className={`customer-selector ${hasOrder ? 'has-active-order' : ''}`} 
-                      style={{ 
-                        height: 180, 
-                        flexDirection: 'column', 
-                        background: hasOrder ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.05)', 
-                        borderColor: hasOrder ? 'var(--pos-primary)' : 'rgba(255,255,255,0.1)', 
-                        borderWidth: hasOrder ? 2 : 1,
-                        justifyContent: 'center', 
-                        gap: 12, 
-                        cursor: 'pointer',
-                        position: 'relative',
-                        boxShadow: hasOrder ? '0 10px 25px -5px rgba(99, 102, 241, 0.4)' : 'none'
-                      }}
-                      onClick={() => { setSelectedTable(t); setView('POS'); }}>
-                       
-                       {hasOrder && (
-                         <div style={{ 
-                           position: 'absolute', top: 12, right: 12, 
-                           background: 'var(--pos-primary)', color: '#fff', 
-                           padding: '4px 10px', borderRadius: 10, 
-                           fontSize: 12, fontWeight: 900,
-                           boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
-                         }}>
-                            {tableTotal.toFixed(3)} DT
-                         </div>
-                       )}
-
-                       <div style={{ 
-                         width: 70, height: 70, borderRadius: '50%', 
-                         background: hasOrder ? 'var(--pos-primary)' : 'rgba(255,255,255,0.1)', 
-                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                         transition: 'all 0.3s'
-                       }}>
-                          <Users size={32} color="#fff" />
-                       </div>
-                       <div style={{ color: '#fff', fontWeight: 900, fontSize: 22 }}>{t.label}</div>
-                       <div style={{ color: hasOrder ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.4)', fontSize: 13 }}>
-                          {hasOrder ? `${tableCart.length} articles` : `Table ${t.capacity} pers.`}
-                       </div>
-                    </div>
-                  );
-                })}
-               {initialTables.length === 0 && (
-                 <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 80, color: 'rgba(255,255,255,0.2)' }}>
-                    <AlertCircle size={64} style={{ margin: '0 auto 20px' }} />
-                    <h2>Aucune table configurée</h2>
-                    <p>Utilisez le bouton "Vente Directe" pour continuer.</p>
-                 </div>
-               )}
-            </div>
-         </main>
-      </div>
-    );
-  }
-
   return (
     <div className="pos-premium-container" data-theme={isDarkMode ? 'dark' : 'light'} style={{ transition: 'all 0.3s ease' }}>
-      {/* Module Navigation (Sidebar Fine) */}
+      {/* Module Navigation (Sidebar) */}
       <aside className="pos-sidebar">
         <div className="pos-sidebar-icon" onClick={() => router.push('/')} title="Dashboard" style={{ marginBottom: 20 }}>
           <LayoutDashboard size={28} />
         </div>
-        <div className="pos-sidebar-icon" onClick={() => setView('TABLES')} title="Tables"><LayoutGrid size={24} /></div>
+        <div className={`pos-sidebar-icon ${view === 'TABLES' ? 'active' : ''}`} onClick={() => setView('TABLES')} title="Tables"><LayoutGrid size={24} /></div>
         <div className={`pos-sidebar-icon ${view === 'POS' ? 'active' : ''}`} onClick={() => setView('POS')} title="Vente"><ShoppingCart size={24} /></div>
         <div className={`pos-sidebar-icon ${view === 'ORDERS' ? 'active' : ''}`} onClick={() => setView('ORDERS')} title="Commandes"><History size={24} /></div>
         <div className={`pos-sidebar-icon ${view === 'CUSTOMERS' ? 'active' : ''}`} onClick={() => setView('CUSTOMERS')} title="Clientèle"><Users size={24} /></div>
@@ -565,111 +438,161 @@ export default function PremiumPOSClient({
         </div>
       </aside>
 
-      {/* Mobile Bottom Nav for POS View */}
-      <nav className="pos-mobile-nav">
-         <div className={`mobile-nav-item ${(view as any) === 'TABLES' ? 'active' : ''}`} onClick={() => setView('TABLES')}>
-            <LayoutGrid />
-            <span>Tables</span>
-         </div>
-         <div className={`mobile-nav-item ${(view as any) === 'POS' ? 'active' : ''}`} onClick={() => setView('POS')}>
-            <ShoppingCart />
-            <span>Vente</span>
-         </div>
-         <div className={`mobile-nav-item ${(view as any) === 'ORDERS' ? 'active' : ''}`} onClick={() => setView('ORDERS')}>
-            <History />
-            <span>Journal</span>
-         </div>
-         <div className={`mobile-nav-item ${(view as any) === 'CUSTOMERS' ? 'active' : ''}`} onClick={() => setView('CUSTOMERS')}>
-            <Users />
-            <span>Clients</span>
-         </div>
-      </nav>
-
       {/* Main Content Wrapper (Responsive Stack) */}
       <div className="pos-main-wrapper">
-        {/* NEW: Vertical Category Hybrid Navigation */}
+        {/* Categories Column */}
         {view === 'POS' && (
-        <div className="pos-categories-column">
-           {currentParentCategoryId ? (
-             <>
-               <button 
-                 className={`category-vertical-pill`}
-                 onClick={() => {
-                   setCurrentParentCategoryId(null);
-                   setCategory('Tous');
-                 }}
-               >
-                 <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                   <ArrowLeft size={20} />
-                 </div>
-                 <span>Retour</span>
-               </button>
-               {initialCategories.filter(c => c.parentId === currentParentCategoryId).map((cat: any) => {
-                  const CatIcon = ICONS[cat.icon || 'Tag'] || Tag;
-                  const catColor = cat.color || '#6366F1';
-                  const isActive = category === cat.name;
-                  return (
-                    <button 
-                      key={cat.id} 
-                      className={`category-vertical-pill ${isActive ? 'active' : ''}`}
-                      onClick={() => setCategory(cat.name)}
-                      style={isActive ? { backgroundColor: catColor, color: '#fff', borderColor: catColor } : { color: catColor, borderColor: catColor + '40' }}
-                    >
-                      <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <CatIcon size={20} />
-                      </div>
-                      <span>{cat.name}</span>
-                    </button>
-                  );
-               })}
-             </>
-           ) : (
-             <>
-               <button 
-                 className={`category-vertical-pill ${category === 'Tous' ? 'active' : ''}`}
-                 onClick={() => setCategory('Tous')}
-               >
-                 <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                   <LayoutDashboard size={20} />
-                 </div>
-                 <span>Tous</span>
-               </button>
-               {initialCategories.filter(c => !c.parentId).map((cat: any) => {
-                  const hasChildren = initialCategories.some(c => c.parentId === cat.id);
-                  const CatIcon = ICONS[cat.icon || 'Tag'] || Tag;
-                  const catColor = cat.color || '#6366F1';
-                  const isActive = category === cat.name && !hasChildren;
-                  
-                  return (
-                    <button 
-                      key={cat.id} 
-                      className={`category-vertical-pill ${isActive ? 'active' : ''}`}
-                      onClick={() => {
-                        if (hasChildren) {
-                          setCurrentParentCategoryId(cat.id);
-                          setCategory(cat.name);
-                        } else {
-                          setCategory(cat.name);
-                        }
-                      }}
-                      style={isActive ? { backgroundColor: catColor, color: '#fff', borderColor: catColor, boxShadow: `0 8px 20px ${catColor}40` } : { color: catColor, borderColor: catColor + '30', background: 'var(--pos-glass-bg)', backdropFilter: 'blur(10px)' }}
-                    >
-                      <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <CatIcon size={22} />
-                      </div>
-                      <span style={{ flex: 1, textAlign: 'left', fontWeight: 900, fontSize: 14 }}>{cat.name}</span>
-                      {hasChildren && <ChevronRight size={16} opacity={0.5} />}
-                    </button>
-                  );
-                })}
-             </>
-           )}
-        </div>
-      )}
+          <div className="pos-categories-column">
+             {currentParentCategoryId ? (
+               <>
+                 <button 
+                   className={`category-vertical-pill`}
+                   onClick={() => {
+                     setCurrentParentCategoryId(null);
+                     setCategory('Tous');
+                   }}
+                 >
+                   <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     <ArrowLeft size={20} />
+                   </div>
+                   <span>Retour</span>
+                 </button>
+                 {initialCategories.filter(c => c.parentId === currentParentCategoryId).map((cat: any) => {
+                    const CatIcon = ICONS[cat.icon || 'Tag'] || Tag;
+                    const catColor = cat.color || '#6366F1';
+                    const isActive = category === cat.name;
+                    return (
+                      <button 
+                        key={cat.id} 
+                        className={`category-vertical-pill ${isActive ? 'active' : ''}`}
+                        onClick={() => setCategory(cat.name)}
+                        style={isActive ? { backgroundColor: catColor, color: '#fff', borderColor: catColor } : { color: catColor, borderColor: catColor + '40' }}
+                      >
+                        <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <CatIcon size={20} />
+                        </div>
+                        <span>{cat.name}</span>
+                      </button>
+                    );
+                 })}
+               </>
+             ) : (
+               <>
+                 <button 
+                   className={`category-vertical-pill ${category === 'Tous' ? 'active' : ''}`}
+                   onClick={() => setCategory('Tous')}
+                 >
+                   <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     <LayoutDashboard size={20} />
+                   </div>
+                   <span>Tous</span>
+                 </button>
+                 {initialCategories.filter(c => !c.parentId).map((cat: any) => {
+                    const hasChildren = initialCategories.some(c => c.parentId === cat.id);
+                    const CatIcon = ICONS[cat.icon || 'Tag'] || Tag;
+                    const catColor = cat.color || '#6366F1';
+                    const isActive = category === cat.name && !hasChildren;
+                    
+                    return (
+                      <button 
+                        key={cat.id} 
+                        className={`category-vertical-pill ${isActive ? 'active' : ''}`}
+                        onClick={() => {
+                          if (hasChildren) {
+                            setCurrentParentCategoryId(cat.id);
+                            setCategory(cat.name);
+                          } else {
+                            setCategory(cat.name);
+                          }
+                        }}
+                        style={isActive ? { backgroundColor: catColor, color: '#fff', borderColor: catColor, boxShadow: `0 8px 20px ${catColor}40` } : { color: catColor, borderColor: catColor + '30', background: 'var(--pos-glass-bg)', backdropFilter: 'blur(10px)' }}
+                      >
+                        <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <CatIcon size={22} />
+                        </div>
+                        <span style={{ flex: 1, textAlign: 'left', fontWeight: 900, fontSize: 14 }}>{cat.name}</span>
+                        {hasChildren && <ChevronRight size={16} opacity={0.5} />}
+                      </button>
+                    );
+                 })}
+               </>
+             )}
+          </div>
+        )}
 
       {/* Main Experience Area */}
       <div className="pos-product-section">
-        {view === 'POS' ? (
+        {view === 'TABLES' ? (
+          <main className="pos-main-content-scroll" style={{ flex: 1, padding: 40, overflowY: 'auto' }}>
+             <div className="tables-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40, flexWrap: 'wrap', gap: 20 }}>
+                <div>
+                   <h1 style={{ color: 'var(--pos-text-main)', fontSize: 32, fontWeight: 900, margin: 0 }}>Plan de Salle</h1>
+                   <p style={{ color: 'var(--pos-text-muted)', margin: 0 }}>Sélectionnez une table pour commencer le service</p>
+                </div>
+                <button className="btn-premium btn-premium-primary vente-directe-btn" style={{ padding: '20px 40px', fontSize: 18 }} onClick={() => { setSelectedTable({ id: 'DIRECT', label: 'Vente Directe' }); setView('POS'); }}>
+                   <ShoppingBag size={24} /> VENTE DIRECTE
+                </button>
+             </div>
+
+             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 24 }}>
+                 {initialTables.map((t: any) => {
+                   const tableCart = tableOrders[t.id] || [];
+                   const hasOrder = tableCart.length > 0;
+                   const tableTotal = tableCart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
+                   return (
+                     <div key={t.id} className={`customer-selector ${hasOrder ? 'has-active-order' : ''}`} 
+                       style={{ 
+                         height: 180, 
+                         flexDirection: 'column', 
+                         background: hasOrder ? 'var(--pos-accent)' : 'var(--pos-input-bg)', 
+                         borderColor: hasOrder ? 'var(--pos-primary)' : 'var(--pos-border)', 
+                         borderWidth: hasOrder ? 2 : 1,
+                         justifyContent: 'center', 
+                         gap: 12, 
+                         cursor: 'pointer',
+                         position: 'relative',
+                         boxShadow: hasOrder ? '0 10px 25px -5px rgba(99, 102, 241, 0.4)' : 'none'
+                       }}
+                       onClick={() => { setSelectedTable(t); setView('POS'); }}>
+                        
+                        {hasOrder && (
+                          <div style={{ 
+                            position: 'absolute', top: 12, right: 12, 
+                            background: 'var(--pos-primary)', color: '#fff', 
+                            padding: '4px 10px', borderRadius: 10, 
+                            fontSize: 12, fontWeight: 900,
+                            boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
+                          }}>
+                             {tableTotal.toFixed(3)} DT
+                          </div>
+                        )}
+
+                        <div style={{ 
+                          width: 70, height: 70, borderRadius: '50%', 
+                          background: hasOrder ? 'var(--pos-primary)' : 'var(--pos-border)', 
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          transition: 'all 0.3s'
+                        }}>
+                           <Users size={32} color={hasOrder ? '#fff' : 'var(--pos-text-muted)'} />
+                        </div>
+                        <div style={{ color: 'var(--pos-text-main)', fontWeight: 900, fontSize: 22 }}>{t.label}</div>
+                        <div style={{ color: 'var(--pos-text-muted)', fontSize: 13, fontWeight: 700 }}>
+                           {hasOrder ? `${tableCart.length} articles` : `Table ${t.capacity} pers.`}
+                        </div>
+                     </div>
+                   );
+                 })}
+                {initialTables.length === 0 && (
+                   <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 80, color: 'var(--pos-text-muted)' }}>
+                      <AlertCircle size={64} style={{ margin: '0 auto 20px' }} />
+                      <h2 style={{ fontWeight: 900 }}>Aucune table configurée</h2>
+                      <p>Utilisez le bouton "Vente Directe" pour continuer.</p>
+                   </div>
+                )}
+             </div>
+          </main>
+        ) : view === 'POS' ? (
         <>
           <header className="pos-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
@@ -705,22 +628,7 @@ export default function PremiumPOSClient({
                  {currentCart.length > 0 && <span className="cart-badge-dot">{currentCart.length}</span>}
               </button>
 
-              <div className="pos-header-mode-indicator" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-                 <div style={{ 
-                   padding: '8px 24px', 
-                   background: 'rgba(99, 102, 241, 0.05)', 
-                   border: '1px solid rgba(99, 102, 241, 0.2)', 
-                   borderRadius: '50px',
-                   display: 'flex',
-                   alignItems: 'center',
-                   gap: '10px'
-                 }}>
-                   <ShieldCheck size={18} color="var(--pos-primary)" />
-                   <span style={{ fontSize: '13px', fontWeight: 900, color: 'var(--pos-text-main)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Mode Premium Active
-                   </span>
-                 </div>
-              </div>
+
 
               {/* Extra spacer to balance the header flex if needed */}
               <div style={{ width: 100 }} />
@@ -1243,6 +1151,29 @@ export default function PremiumPOSClient({
            </div>
         </div>
       )}
+      {/* Mobile Bottom Nav */}
+      <nav className="pos-mobile-nav">
+         <div className={`mobile-nav-item ${view === 'TABLES' ? 'active' : ''}`} onClick={() => setView('TABLES')}>
+            <LayoutGrid size={20} />
+            <span>Tables</span>
+         </div>
+         <div className={`mobile-nav-item ${view === 'POS' ? 'active' : ''}`} onClick={() => setView('POS')}>
+            <ShoppingCart size={20} />
+            <span>Vente</span>
+         </div>
+         <div className={`mobile-nav-item ${view === 'ORDERS' ? 'active' : ''}`} onClick={() => setView('ORDERS')}>
+            <History size={20} />
+            <span>Journal</span>
+         </div>
+         <div className={`mobile-nav-item ${view === 'CUSTOMERS' ? 'active' : ''}`} onClick={() => setView('CUSTOMERS')}>
+            <Users size={20} />
+            <span>Clients</span>
+         </div>
+         <div className="mobile-nav-item" onClick={handleLogout} style={{ color: '#EF4444' }}>
+            <LogOut size={20} />
+            <span>Quitter</span>
+         </div>
+      </nav>
 
       <style jsx>{`
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; }

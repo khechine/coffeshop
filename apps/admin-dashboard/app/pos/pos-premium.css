@@ -3,47 +3,44 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  /* Common */
-  --pos-primary: #6366F1;
-  --pos-primary-hover: #4F46E5;
+  /* Common - Coffee Shop Palette */
+  --pos-primary: #8B5E3C;      /* Deep Coffee */
+  --pos-primary-hover: #704A30;
   --pos-success: #10B981;
   --pos-danger: #EF4444;
   --pos-warning: #F59E0B;
-  --pos-accent: #8B5CF6;
+  --pos-accent: #BC6C25;       /* Caramel */
   
-  /* Light Theme Colors */
-  --pos-bg: #F8FAFC;
-  --pos-sidebar: #1E1B4B;
+  /* Light Theme Colors (Mocha & Cream) */
+  --pos-bg: #FDFBF7;           /* Creamy White */
+  --pos-sidebar: #FFFFFF;      /* Clean White Sidebar */
   --pos-header-bg: #FFFFFF;
   --pos-card-bg: #FFFFFF;
-  --pos-card-hover: #F1F5F9;
-  --pos-border: #E2E8F0;
-  --pos-text-main: #1E293B;
-  --pos-text-muted: #64748B;
-  --pos-input-bg: #F1F5F9;
+  --pos-card-hover: #F8F5F0;
+  --pos-border: #E8E5E0;
+  --pos-text-main: #2D241E;    /* Dark Roast Text */
+  --pos-text-muted: #8D8178;   /* Latte Muted Text */
+  --pos-input-bg: #F5F2ED;
   --pos-modal-bg: #FFFFFF;
-  --pos-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --pos-shadow: 0 4px 20px -5px rgba(139, 94, 60, 0.1), 0 2px 10px -2px rgba(139, 94, 60, 0.05);
+  --pos-glass-bg: rgba(255, 255, 255, 0.85);
+  --pos-glass-border: rgba(139, 94, 60, 0.1);
 }
 
 [data-theme='dark'] {
-  --pos-bg: #0F172A;
-  --pos-sidebar: #020617;
-  --pos-header-bg: #1E293B;
-  --pos-card-bg: #1E293B;
-  --pos-card-hover: #334155;
-  --pos-border: #334155;
-  --pos-text-main: #F8FAFC;
-  --pos-text-muted: #94A3B8;
-  --pos-input-bg: #334155;
-  --pos-modal-bg: #1E293B;
-  --pos-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.15);
-  --pos-glass-bg: rgba(30, 41, 59, 0.7);
-  --pos-glass-border: rgba(255, 255, 255, 0.1);
-}
-
-:root {
-  --pos-glass-bg: rgba(255, 255, 255, 0.7);
-  --pos-glass-border: rgba(255, 255, 255, 0.4);
+  --pos-bg: #1A1411;           /* Espresso Dark */
+  --pos-sidebar: #120C09;
+  --pos-header-bg: #1A1411;
+  --pos-card-bg: #241C18;
+  --pos-card-hover: #2D241E;
+  --pos-border: #3D322C;
+  --pos-text-main: #FDFBF7;
+  --pos-text-muted: #A89B92;
+  --pos-input-bg: #2D241E;
+  --pos-modal-bg: #1A1411;
+  --pos-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --pos-glass-bg: rgba(26, 20, 17, 0.8);
+  --pos-glass-border: rgba(255, 255, 255, 0.05);
 }
 
 .pos-premium-container {
@@ -84,18 +81,18 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--pos-text-muted);
 }
 
 .pos-sidebar-icon:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background-color: var(--pos-card-hover);
+  color: var(--pos-primary);
 }
 
 .pos-sidebar-icon.active {
   background-color: var(--pos-primary);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px rgba(139, 94, 60, 0.25);
 }
 
 .pos-main-content {
@@ -127,6 +124,7 @@
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(139, 94, 60, 0.02);
 }
 
 @media (max-width: 768px) {
@@ -356,13 +354,14 @@
   display: none;
   height: calc(70px + env(safe-area-inset-bottom, 0));
   background: var(--pos-sidebar);
-  border-top: 1px solid rgba(255,255,255,0.1);
+  border-top: 1px solid var(--pos-border);
   padding: 0 20px;
   padding-bottom: env(safe-area-inset-bottom, 0);
   justify-content: space-around;
   align-items: center;
   flex-shrink: 0;
   z-index: 100;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
 }
 
 @media (max-width: 768px) {
@@ -380,7 +379,7 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  color: rgba(255,255,255,0.5);
+  color: var(--pos-text-muted);
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
@@ -749,6 +748,16 @@
 
 .pos-main-content-scroll {
   padding: 40px;
+}
+
+@keyframes table-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(99, 102, 241, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+
+.has-active-order {
+  animation: table-pulse 2s infinite;
 }
 
 @media (max-width: 768px) {
