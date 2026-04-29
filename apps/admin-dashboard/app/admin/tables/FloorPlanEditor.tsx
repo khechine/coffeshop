@@ -328,6 +328,7 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
             <div
               key={table.id}
               onMouseDown={(e) => handleMouseDown(e, table.id)}
+              onClick={(e) => e.stopPropagation()}
               className={`absolute cursor-move flex flex-col items-center justify-center transition-shadow group ${
                 selectedTableId === table.id ? 'ring-4 ring-indigo-500 ring-offset-4 dark:ring-offset-slate-950 z-10 shadow-2xl scale-105' : 'shadow-md hover:shadow-xl'
               }`}
