@@ -33,6 +33,10 @@ export default function RootLayout() {
     'Almarai-Bold': require('../assets/fonts/Almarai-Bold.ttf'),
     'Almarai-Light': require('../assets/fonts/Almarai-Light.ttf'),
     'Almarai-ExtraBold': require('../assets/fonts/Almarai-ExtraBold.ttf'),
+    'Roboto-Regular': require('../assets/fonts/Roboto-Regular.ttf'),
+    'Roboto-Bold': require('../assets/fonts/Roboto-Bold.ttf'),
+    'Roboto-Light': require('../assets/fonts/Roboto-Light.ttf'),
+    'Roboto-Black': require('../assets/fonts/Roboto-Black.ttf'),
     ...FontAwesome.font,
   });
 

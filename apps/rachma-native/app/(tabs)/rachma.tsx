@@ -17,6 +17,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import { useAlert } from '@/components/AlertContext';
 import i18n from '../../locales/i18n';
+import { soundService, SOUND_PROFILES } from '@/services/sound';
 
 // ────────────────────────────────────────────────
 // Types
@@ -32,26 +33,7 @@ type Product = {
 type LogEntry = string; // 'sale' | 'loss' | 'sale:PKG_ID'
 type Logs = Record<string, LogEntry[]>;
 
-const SOUND_PROFILES = {
-  premium: {
-    name: i18n.t('rachma.soundPremium'),
-    sale: 'https://assets.mixkit.co/active_storage/sfx/1077/1077-preview.mp3', // Cha-ching cash register
-    loss: 'https://assets.mixkit.co/active_storage/sfx/2572/2572-preview.mp3', // Soft subtle tap
-    pkg: 'https://assets.mixkit.co/active_storage/sfx/1114/1114-preview.mp3',  // Minimal UI pop
-    undo: 'https://assets.mixkit.co/active_storage/sfx/2575/2575-preview.mp3', // Soft reverse
-  },
-  modern: {
-    name: i18n.t('rachma.soundStandard'),
-    sale: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
-    loss: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
-    pkg: 'https://assets.mixkit.co/active_storage/sfx/2567/2567-preview.mp3',
-    undo: 'https://assets.mixkit.co/active_storage/sfx/2575/2575-preview.mp3',
-  },
-  minimal: {
-    name: i18n.t('rachma.soundMinimal'),
-    sale: null, loss: null, pkg: null, undo: null
-  }
-};
+// Removed local SOUND_PROFILES in favor of SoundService
 
 const SLOT_COUNT = 20;
 
@@ -91,11 +73,9 @@ export default function RachmaScreen() {
         setEditPin(s.user.pinCode || '');
       }
     });
-    AsyncStorage.getItem('rachma_sound_enabled').then(v => {
-      if (v !== null) setSoundEnabled(v === 'true');
-    });
-    AsyncStorage.getItem('rachma_sound_profile').then(v => {
-      if (v !== null && v in SOUND_PROFILES) setSoundProfile(v as any);
+    soundService.init().then(() => {
+      setSoundEnabled(soundService.isEnabled());
+      setSoundProfile(soundService.getProfile());
     });
   }, [storeId]);
 
@@ -147,29 +127,9 @@ export default function RachmaScreen() {
 
   // ── Feedback logic ──
   const playFeedback = useCallback(async (type: 'sale' | 'loss' | 'pkg' | 'undo') => {
-    if (!soundEnabled) return;
-
-    // 1. Haptics (Immediate)
-    Haptics.impactAsync(
-      type === 'sale' ? Haptics.ImpactFeedbackStyle.Medium :
-      type === 'loss' ? Haptics.ImpactFeedbackStyle.Heavy :
-      Haptics.ImpactFeedbackStyle.Light
-    );
-    
-    // 2. Audio (Async)
-    try {
-      const url = SOUND_PROFILES[soundProfile][type];
-      if (url) {
-        const { sound } = await Audio.Sound.createAsync({ uri: url }, { shouldPlay: true });
-        // Auto-unload from memory after play
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
-        });
-      }
-    } catch (e) {
-      console.warn('Audio play failed:', e);
-    }
-  }, [soundEnabled, soundProfile]);
+    const soundType = type === 'sale' ? 'success' : type === 'loss' ? 'error' : 'tap';
+    soundService.play(soundType);
+  }, []);
 
   // ── Profile Logic ──
   const handleUpdateProfile = async () => {
@@ -191,6 +151,21 @@ export default function RachmaScreen() {
       showAlert({ title: i18n.t('admin.error'), message: i18n.t('rachma.profileError'), type: 'error' });
     }
   };
+
+  // ── Incoming events ──
+  useEffect(() => {
+    const handleRemoteAction = (data: any) => {
+      // If it's not from me, play order sound
+      if (data.baristaName !== user?.name && data.baristaName !== user?.id) {
+        soundService.play('order');
+      }
+    };
+
+    SocketService.on('rachma_action', handleRemoteAction);
+    return () => {
+      SocketService.off('rachma_action', handleRemoteAction);
+    };
+  }, [user]);
 
   const toggleSound = async () => {
     const val = !soundEnabled;
@@ -1098,4 +1073,49 @@ const styles = StyleSheet.create({
   },
   soundOptionText: { color: '#94a3b8', fontSize: 11, fontWeight: '700' },
   soundOptionTextActive: { color: Colors.primary },
+
+  // Sound Profile Chips
+  profileChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  profileChipActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: '#10b981',
+  },
+  profileChipText: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  profileChipTextActive: {
+    color: '#fff',
+  },
+  toggleBtn: {
+    padding: 8,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  toggleBtnActive: {
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
+  },
+  settingsSection: {
+    marginBottom: 25,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
 });

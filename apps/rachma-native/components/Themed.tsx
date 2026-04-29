@@ -40,16 +40,22 @@ export function Text(props: TextProps) {
   // Auto-scaling and font for Arabic
   const flattenedStyle = StyleSheet.flatten(style) || {};
   const baseFontSize = flattenedStyle.fontSize || 14;
-  const isBold = flattenedStyle.fontWeight === 'bold' || flattenedStyle.fontWeight === '900' || flattenedStyle.fontWeight === '800';
-  
-  const arabicStyle = isArabic ? {
+  const isBold = flattenedStyle.fontWeight === 'bold' || flattenedStyle.fontWeight === '900' || flattenedStyle.fontWeight === '800' || flattenedStyle.fontWeight === '700';
+  const isLight = flattenedStyle.fontWeight === '300' || flattenedStyle.fontWeight === 'light';
+  const isBlack = flattenedStyle.fontWeight === '900' || flattenedStyle.fontWeight === 'black';
+
+  const dynamicStyle = isArabic ? {
     fontFamily: isBold ? 'Almarai-Bold' : 'Almarai-Regular',
-    fontSize: baseFontSize * 1.1, // Almarai is slightly larger than Cairo, 1.1x is enough
+    fontSize: baseFontSize * 1.1, 
     lineHeight: (flattenedStyle.lineHeight || baseFontSize * 1.2) * 1.1,
     textAlign: flattenedStyle.textAlign || 'right',
-  } : {};
+  } : {
+    fontFamily: isBlack ? 'Roboto-Black' : isBold ? 'Roboto-Bold' : isLight ? 'Roboto-Light' : 'Roboto-Regular',
+    textAlign: flattenedStyle.textAlign || 'left',
+    fontWeight: undefined, // Let the fontFamily handle the weight
+  };
 
-  return <DefaultText style={[{ color }, style, arabicStyle]} {...otherProps} />;
+  return <DefaultText style={[{ color }, style, dynamicStyle]} {...otherProps} />;
 }
 
 export function View(props: ViewProps) {

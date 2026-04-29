@@ -14,6 +14,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAlert } from '@/components/AlertContext';
 import i18n from '../../locales/i18n';
 import { SocketService } from '@/services/socket';
+import { soundService } from '@/services/sound';
 
 // ────────────────────────────────────────────────
 // Types
@@ -129,6 +130,7 @@ export default function PosScreen() {
     const product = products.find(p => p.id === id);
     const updated = { ...cart, [id]: (cart[id] || 0) + 1 };
     setCart(updated); saveCart(updated); Vibration.vibrate(8);
+    soundService.play('tap');
 
     // Emit live event
     SocketService.emitRachmaAction({
@@ -150,6 +152,7 @@ export default function PosScreen() {
     if (updated[id] > 1) updated[id]--;
     else delete updated[id];
     setCart(updated); saveCart(updated);
+    soundService.play('tap');
 
     if (lastQty > 0) {
       // Emit live event (undo/remove)
@@ -275,6 +278,7 @@ export default function PosScreen() {
               if (!apiSale || !apiSale.id) throw new Error('API Reject');
               await saveTicketToHistory(apiSale, null);
               clearCart();
+              soundService.play('success');
               setCartOpen(false);
               showAlert({
                 title: i18n.t('pos.successCheckout'),
@@ -311,6 +315,7 @@ export default function PosScreen() {
             delete parsed[tableId!];
             await AsyncStorage.setItem(`rachma_table_carts_${storeId}`, JSON.stringify(parsed));
             setCart({});
+            soundService.play('success');
             setCartOpen(false);
             router.push('/(tabs)/tables');
           } catch(e) {
@@ -341,6 +346,7 @@ export default function PosScreen() {
               delete parsed[tableId!];
               await AsyncStorage.setItem(`rachma_table_carts_${storeId}`, JSON.stringify(parsed));
               setCart({});
+              soundService.play('success');
               setCartOpen(false);
               showAlert({
                 title: i18n.t('pos.successCheckout'),
