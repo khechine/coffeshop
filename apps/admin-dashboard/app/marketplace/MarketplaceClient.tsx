@@ -47,13 +47,104 @@ const RatingStars = ({ ratings }: { ratings: any }) => {
     </div>
   );
 
+  const avg = Number(ratings.overallAvg || 0);
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
       <div style={{ display: 'flex', alignItems: 'center', color: '#F59E0B' }}>
-        <Star size={10} fill="#F59E0B" />
-        <span style={{ fontSize: 11, fontWeight: 900, marginLeft: 2 }}>{ratings.overallAvg.toFixed(1)}</span>
+        {[1, 2, 3, 4, 5].map((s) => (
+          <Star 
+            key={s} 
+            size={10} 
+            fill={s <= Math.round(avg) ? "#F59E0B" : "none"} 
+            stroke={s <= Math.round(avg) ? "#F59E0B" : "#CBD5E1"} 
+          />
+        ))}
+        <span style={{ fontSize: 11, fontWeight: 900, marginLeft: 4, color: '#1E293B' }}>{avg.toFixed(1)}</span>
       </div>
       <span style={{ fontSize: 10, color: '#94A3B8', fontWeight: 700 }}>({ratings.totalReviews})</span>
+    </div>
+  );
+};
+
+const BannerCarousel = () => {
+  const [active, setActive] = useState(0);
+  const banners = [
+    {
+      image: 'file:///Users/mehdikhechine/.gemini/antigravity/brain/01ed67a0-490d-4d32-8a60-b560324aa5c0/marketplace_banner_1_1777589662016.png',
+      title: 'Équipez Votre Café comme un Pro',
+      subtitle: 'Découvrez notre sélection de machines à espresso et accessoires haut de gamme.',
+      color: '#1E1B4B'
+    },
+    {
+      image: 'file:///Users/mehdikhechine/.gemini/antigravity/brain/01ed67a0-490d-4d32-8a60-b560324aa5c0/marketplace_banner_2_1777589680045.png',
+      title: 'Le Meilleur du Grossiste Alimentaire',
+      subtitle: 'Ingrédients frais, pâtisseries artisanales et café gourmet pour votre établissement.',
+      color: '#064E3B'
+    },
+    {
+      image: 'file:///Users/mehdikhechine/.gemini/antigravity/brain/01ed67a0-490d-4d32-8a60-b560324aa5c0/marketplace_banner_3_1777589721871.png',
+      title: 'Art de la Table & Cuisine',
+      subtitle: 'Tout ce dont vous avez besoin pour une expérience culinaire exceptionnelle.',
+      color: '#78350F'
+    }
+  ];
+
+  React.useEffect(() => {
+    const timer = setInterval(() => setActive(prev => (prev + 1) % banners.length), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="mkt-banner-carousel">
+      {banners.map((b, idx) => (
+        <div 
+          key={idx} 
+          className={`banner-slide ${idx === active ? 'active' : ''}`}
+          style={{ background: `linear-gradient(to right, ${b.color}CC, transparent), url(${b.image}) center/cover` }}
+        >
+          <div className="banner-content">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+               <span style={{ background: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: 100, fontSize: 12, fontWeight: 900, backdropFilter: 'blur(5px)' }}>OFFRE EXCLUSIVE</span>
+            </div>
+            <h2>{b.title}</h2>
+            <p>{b.subtitle}</p>
+            <button className="btn-premium btn-premium-primary" style={{ padding: '16px 40px', fontSize: 16 }}>
+              Découvrir <ArrowRight size={20} style={{ marginLeft: 8 }} />
+            </button>
+          </div>
+        </div>
+      ))}
+      <div className="banner-nav">
+        {banners.map((_, idx) => (
+          <button 
+            key={idx} 
+            className={`banner-dot ${idx === active ? 'active' : ''}`}
+            onClick={() => setActive(idx)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const TopCategoriesGrid = ({ categories, setActiveCategory }: any) => {
+  return (
+    <div style={{ marginBottom: 40 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+         <h3 style={{ fontSize: 20, fontWeight: 900, color: '#1E1B4B' }}>Catégories Populaires</h3>
+         <button className="text-indigo-600 font-black text-sm flex items-center gap-2 hover:gap-3 transition-all">Voir tout <ChevronRight size={16} /></button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 20 }}>
+        {categories.slice(0, 6).map((c: any) => (
+          <div key={c.id} className="mkt-category-item" onClick={() => setActiveCategory(c.id)}>
+            <div className="icon-circle">
+              {c.icon || '📦'}
+            </div>
+            <h4>{c.name}</h4>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -360,8 +451,25 @@ export default function MarketplaceClient({ initialData, storeCoords }: { initia
         <main className="mkt-content-area">
           <div style={{ maxWidth: 'var(--container-max-w)', margin: '0 auto' }}>
           
-          {viewMode === 'products' ? (
+          {selectedVendor ? (
+            <VendorStoreView 
+              vendor={selectedVendor} 
+              products={products} 
+              onClose={() => setSelectedVendor(null)} 
+              addToCart={addToCart} 
+            />
+          ) : viewMode === 'products' ? (
             <>
+              <BannerCarousel />
+              <TopCategoriesGrid categories={categories} setActiveCategory={setActiveCategory} />
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                 <h2 style={{ fontSize: 24, fontWeight: 950, color: '#1E1B4B' }}>Nouveautés & Meilleurs Prix</h2>
+                 <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ fontSize: 13, color: '#64748B', fontWeight: 700 }}>{filteredProducts.length} produits trouvés</div>
+                 </div>
+              </div>
+
               <div className="product-grid-mkt">
                 {filteredProducts.map((p: any) => (
                   <div key={p.id} className="premium-card">
@@ -375,7 +483,7 @@ export default function MarketplaceClient({ initialData, storeCoords }: { initia
                       {p.isFlashSale && <span className="badge-base badge-flash">FLASH</span>}
                       {p.isFeatured && <span className="badge-base badge-featured" style={{ top: 40 }}>BEST</span>}
                       <div className="add-to-cart-overlay">
-                        <button onClick={() => addToCart(p)} style={{ width: '100%', background: '#1E1B4B', color: '#fff', border: 'none', padding: '12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
+                        <button onClick={(e) => { e.stopPropagation(); addToCart(p); }} style={{ width: '100%', background: '#1E1B4B', color: '#fff', border: 'none', padding: '12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
                           <Plus size={16} /> Ajouter au panier
                         </button>
                       </div>
@@ -589,7 +697,6 @@ export default function MarketplaceClient({ initialData, storeCoords }: { initia
         {/* Modals & Drawers */}
         {selectedProduct && <ProductDetailsModal product={selectedProduct} onClose={() => { setSelectedProduct(null); setSelectedPosId(null); }} addToCart={addToCart} categories={categories} selectedPosId={selectedPosId} setSelectedPosId={setSelectedPosId} />}
         {selectedBundle && <BundleDetailsModal bundle={selectedBundle} onClose={() => setSelectedBundle(null)} addToCart={addToCart} />}
-        {selectedVendor && <VendorDetailsDrawer vendor={selectedVendor} products={products} onClose={() => setSelectedVendor(null)} addToCart={addToCart} />}
         {isCartOpen && <CartDrawer cart={cart} removeFromCart={removeFromCart} updateQuantity={updateQuantity} cartTotal={cartTotal} isOrdering={isOrdering} handleCheckout={handleCheckout} orderStatus={orderStatus} onClose={() => setIsCartOpen(false)} />}
         {ratingOrder && <RatingModal order={ratingOrder} onClose={() => setRatingOrder(null)} onSuccess={() => {
            import('../actions').then(m => m.getStoreMarketplaceOrders().then(setMyOrders));
@@ -618,6 +725,104 @@ export default function MarketplaceClient({ initialData, storeCoords }: { initia
             </div>
           </>
         )}
+    </div>
+  );
+}
+
+function VendorStoreView({ vendor, products, onClose, addToCart }: any) {
+  const vendorProducts = products.filter((p: any) => p.vendorId === vendor.id);
+  const customization = vendor.customization || {};
+  const [activeTab, setActiveTab] = useState('products');
+  const [vendorSearch, setVendorSearch] = useState('');
+
+  const filteredVendorProducts = vendorProducts.filter((p: any) => 
+    p.name.toLowerCase().includes(vendorSearch.toLowerCase())
+  );
+
+  const bannerUrl = customization.bannerUrl 
+    ? (customization.bannerUrl.startsWith('/') ? 'https://www.elkassa.com' + customization.bannerUrl : customization.bannerUrl)
+    : 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=1200';
+
+  const logoUrl = customization.logoUrl 
+    ? (customization.logoUrl.startsWith('/') ? 'https://www.elkassa.com' + customization.logoUrl : customization.logoUrl)
+    : null;
+
+  return (
+    <div className="fixed inset-0 bg-white z-[100] overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="vendor-store-header relative">
+        <img src={bannerUrl} className="w-full h-[300px] object-cover" alt="Banner" />
+        <button 
+          onClick={onClose}
+          className="absolute top-6 left-6 bg-white/90 backdrop-blur-md border border-slate-200 text-slate-900 px-6 py-3 rounded-2xl font-black text-sm shadow-xl flex items-center gap-3 hover:bg-white transition-all z-10"
+        >
+          <ArrowRight size={18} style={{ transform: 'rotate(180deg)' }} /> Retour au Marketplace
+        </button>
+
+        <div className="px-8 -mt-20 relative z-20">
+          <div className="bg-white rounded-[40px] p-8 shadow-xl border border-slate-100 flex items-end justify-between gap-6">
+            <div className="flex gap-6 items-end">
+                <div className="w-24 h-24 bg-white rounded-2xl border-4 border-white shadow-lg overflow-hidden flex items-center justify-center">
+                {logoUrl ? (
+                    <img src={logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                ) : (
+                    <Building2 size={48} color={customization.primaryColor || '#4f46e5'} />
+                )}
+                </div>
+                <div className="mb-2">
+                    <div className="flex items-center gap-3 mb-1">
+                        <h1 className="text-2xl font-black text-slate-900">{vendor.companyName}</h1>
+                        {vendor.isPremium && <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">Premium</span>}
+                    </div>
+                    <div className="flex items-center gap-6 text-sm font-bold text-slate-500">
+                        <div className="flex items-center gap-1"><MapPin size={14} /> {vendor.city}</div>
+                        <div><strong>{vendorProducts.length}</strong> Produits</div>
+                    </div>
+                </div>
+            </div>
+            <div className="flex gap-3 mb-2">
+               <button className="bg-slate-900 text-white px-8 py-3 rounded-2xl font-black text-sm hover:scale-105 transition-all">Suivre</button>
+               <button className="bg-slate-100 text-slate-900 p-4 rounded-2xl"><Mail size={20} /></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px' }}>
+        <div className="flex items-center justify-between mb-8">
+            <div className="flex gap-2">
+                {['products', 'about', 'reviews'].map(tab => (
+                    <button key={tab} className={`px-6 py-3 rounded-2xl font-black text-sm capitalize transition-all ${activeTab === tab ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`} onClick={() => setActiveTab(tab)}>{tab}</button>
+                ))}
+            </div>
+            <input 
+              type="text" 
+              placeholder="Rechercher..." 
+              className="bg-slate-50 border-none rounded-2xl py-3 px-6 text-sm font-bold w-64 outline-none" 
+              value={vendorSearch}
+              onChange={(e) => setVendorSearch(e.target.value)} 
+            />
+        </div>
+
+        {activeTab === 'products' ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {filteredVendorProducts.map((p: any) => (
+              <div key={p.id} className="bg-white rounded-3xl p-4 border border-slate-100 hover:shadow-xl transition-all">
+                <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'} className="w-full h-40 object-cover rounded-2xl mb-4" alt={p.name} />
+                <h4 className="font-bold text-slate-900 mb-1">{p.name}</h4>
+                <div className="flex justify-between items-center">
+                    <span className="font-black text-indigo-600">{Number(p.price).toFixed(3)} DT</span>
+                    <button onClick={() => addToCart(p)} className="bg-slate-900 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs font-black">+</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-[40px] p-12 border border-slate-100">
+             <h2 className="text-2xl font-black text-slate-900 mb-6">À propos de {vendor.companyName}</h2>
+             <p className="text-slate-500 leading-relaxed font-medium mb-8">{vendor.description || "Ce vendeur n'a pas encore ajouté de description."}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -745,157 +950,60 @@ function EmptyState() {
   );
 }
 
-function VendorDetailsDrawer({ vendor, products, onClose, addToCart }: any) {
-  const vendorProducts = products.filter((p: any) => p.vendorId === vendor.id);
-  const customization = vendor.customization || {};
-  
-  return (
-    <>
-      <div className="drawer-overlay" onClick={onClose} />
-      <div className="drawer-content">
-        {/* Premium Banner */}
-        <div style={{ 
-          height: 200, 
-          background: customization.bannerUrl ? `url(${customization.bannerUrl.startsWith('/') ? 'http://localhost:3001' + customization.bannerUrl : customization.bannerUrl}) center/cover` : `linear-gradient(135deg, ${customization.primaryColor || '#6366F1'} 0%, ${customization.secondaryColor || '#1E293B'} 100%)`,
-          position: 'relative'
-        }}>
-          <button onClick={onClose} style={{ position: 'absolute', top: 20, right: 20, background: 'rgba(0,0,0,0.2)', color: 'white', border: 'none', width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
-            <X size={20} />
-          </button>
-          
-          <div style={{ position: 'absolute', bottom: -40, left: 40, width: 100, height: 100, borderRadius: 24, background: 'white', border: '4px solid white', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            {customization.logoUrl ? (
-              <img src={customization.logoUrl.startsWith('/') ? 'http://localhost:3001' + customization.logoUrl : customization.logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-            ) : (
-              <Building2 size={40} color={customization.primaryColor || '#6366F1'} />
-            )}
-          </div>
-        </div>
-
-        <div className="p-8 pt-16">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                <h2 style={{ fontSize: 28, fontWeight: 900, color: '#1E293B', margin: 0 }}>{vendor.companyName}</h2>
-                {vendor.isPremium && <div style={{ background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: 'white', fontSize: 10, fontWeight: 900, padding: '4px 10px', borderRadius: 8, textTransform: 'uppercase', letterSpacing: 1 }}>Premium</div>}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748B', fontSize: 13, fontWeight: 600 }}>
-                    <MapPin size={14} /> {vendor.city || 'Tunisie'}
-                 </div>
-              </div>
-            </div>
-          </div>
-
-          {customization.welcomeMessage && (
-            <div style={{ background: '#F8FAFC', padding: 20, borderRadius: 20, borderLeft: `4px solid ${customization.primaryColor || '#6366F1'}`, marginBottom: 32 }}>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#475569', fontStyle: 'italic' }}>
-                "{customization.welcomeMessage}"
-              </p>
-            </div>
-          )}
-
-          <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#1E1B4B', textTransform: 'uppercase', marginBottom: '16px' }}>Catalogue du vendeur</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {vendorProducts.map((p: any) => (
-              <div key={p.id} style={{ display: 'flex', gap: 16, alignItems: 'center', padding: 12, background: '#F8FAFC', borderRadius: 16 }}>
-                <img 
-                  src={p.image} 
-                  style={{ width: 50, height: 50, borderRadius: 10, objectFit: 'cover' }} 
-                  onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=100'; }}
-                />
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800 }}>{p.name}</div>
-                    <div style={{ fontSize: 14, fontWeight: 900, color: customization.primaryColor || '#4F46E5' }}>{Number(p.price).toFixed(3)} DT</div>
-                </div>
-                <button 
-                  onClick={() => addToCart(p)}
-                  style={{ background: customization.primaryColor || '#1E1B4B', color: '#fff', border: 'none', width: 32, height: 32, borderRadius: 8, cursor: 'pointer' }}
-                >
-                  <Plus size={16} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 function CartDrawer({ cart, removeFromCart, updateQuantity, cartTotal, isOrdering, handleCheckout, orderStatus, onClose }: any) {
   return (
     <>
       <div className="drawer-overlay" onClick={onClose} />
-      <div className="drawer-content" style={{ maxWidth: '380px' }}>
+      <div className="drawer-content" style={{ maxWidth: '450px' }}>
         <div style={{ padding: '24px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <ShoppingCart size={20} />
-            <span style={{ fontWeight: 800, color: '#1E1B4B', fontSize: '16px' }}>Votre Panier</span>
-          </div>
-          <button onClick={onClose} style={{ background: '#F1F5F9', border: 'none', color: '#1E293B', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={18} /></button>
+          <h2 style={{ fontSize: '20px', fontWeight: 950, color: '#1E1B4B', margin: 0 }}>VOTRE PANIER</h2>
+          <button onClick={onClose} style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: 32, height: 32 }}><X size={18} /></button>
         </div>
-        
-        <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+        <div className="mkt-cart-items-container" style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {cart.length === 0 ? (
             <div style={{ textAlign: 'center', color: '#94A3B8', paddingTop: '100px' }}>
               <ShoppingCart size={48} style={{ opacity: 0.1, marginBottom: '20px' }} />
               <p style={{ fontSize: '14px', fontWeight: 600 }}>Le panier est vide</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {cart.map((item: any) => (
-                <div key={item.id} style={{ display: 'flex', gap: '16px', position: 'relative', alignItems: 'center' }}>
-                  <img 
-                    src={item.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'} 
-                    style={{ width: '60px', height: '60px', borderRadius: '12px', objectFit: 'cover' }} 
-                    alt={item.name} 
-                    onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=100'; }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#1E1B4B', marginBottom: '2px' }}>{item.name}</div>
-                      {item.isBundle && <span style={{ background: '#EEF2FF', color: '#4F46E5', fontSize: '9px', fontWeight: 900, padding: '2px 6px', borderRadius: '4px' }}>PACK</span>}
+            cart.map((item: any) => (
+              <div key={item.id} style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                <img src={item.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'} style={{ width: 60, height: 60, borderRadius: 16, objectFit: 'cover' }} alt={item.name} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#1E1B4B' }}>{item.name}</div>
+                  <div style={{ fontSize: 12, color: '#94A3B8', fontWeight: 600 }}>{item.vendor?.companyName}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#F1F5F9', padding: '4px 8px', borderRadius: 10 }}>
+                      <button onClick={() => updateQuantity(item.id, -1)} style={{ cursor: 'pointer', border: 'none', background: 'none', fontWeight: 900 }}>-</button>
+                      <span style={{ fontSize: 13, fontWeight: 900 }}>{item.quantity}</span>
+                      <button onClick={() => updateQuantity(item.id, 1)} style={{ cursor: 'pointer', border: 'none', background: 'none', fontWeight: 900 }}>+</button>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600, marginBottom: '8px' }}>{item.vendor.companyName}</div>
-                    
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#F1F5F9', padding: '6px', borderRadius: '10px' }}>
-                        <button onClick={() => updateQuantity(item.id, -1)} style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: '#fff', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>-</button>
-                        <span style={{ fontSize: '14px', fontWeight: 900, minWidth: '20px', textAlign: 'center' }}>{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, 1)} style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: '#fff', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>+</button>
-                      </div>
-                      <div style={{ fontSize: '15px', fontWeight: 950, color: '#4F46E5' }}>{(Number(item.price) * item.quantity).toFixed(3)} DT</div>
-                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 900, color: '#4F46E5' }}>{(Number(item.price) * item.quantity).toFixed(3)} DT</div>
                   </div>
-                  <button onClick={() => removeFromCart(item.id)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: '12px', fontWeight: 800 }}>Supprimer</button>
                 </div>
-              ))}
-            </div>
+                <button onClick={() => removeFromCart(item.id)} className="text-rose-500 hover:scale-110 transition-all" style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X size={16} /></button>
+              </div>
+            ))
           )}
         </div>
-
-        <div style={{ padding: '32px 24px', background: '#F8FAFC', borderTop: '1px solid #F1F5F9' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <span style={{ fontWeight: 600, color: '#64748B', fontSize: '14px' }}>Total HT</span>
-            <span style={{ fontWeight: 800, color: '#1E1B4B', fontSize: '16px' }}>{cartTotal.toFixed(3)} DT</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
-            <span style={{ fontWeight: 900, color: '#1E1B4B', fontSize: '18px' }}>Total TTC</span>
-            <span style={{ fontSize: '24px', fontWeight: 950, color: '#1E1B4B' }}>{cartTotal.toFixed(3)} DT</span>
+        <div className="p-8 bg-slate-50 border-t border-slate-100">
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
+             <span style={{ fontSize: 18, fontWeight: 900, color: '#1E1B4B' }}>Total TTC</span>
+             <span style={{ fontSize: 28, fontWeight: 950, color: '#1E1B4B' }}>{cartTotal.toFixed(3)} DT</span>
           </div>
           <button 
             onClick={handleCheckout}
             disabled={isOrdering || cart.length === 0}
-            style={{ width: '100%', padding: '18px', borderRadius: '12px', background: orderStatus === 'SUCCESS' ? '#10B981' : '#1E1B4B', color: '#fff', border: 'none', fontWeight: 900, fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'all 0.3s' }}
+            className={`w-full py-5 rounded-[24px] font-black text-sm flex items-center justify-center gap-3 shadow-xl transition-all ${orderStatus === 'SUCCESS' ? 'bg-emerald-500' : 'bg-slate-900'} text-white hover:scale-[1.02] active:scale-[0.98]`}
           >
-            {isOrdering ? 'Traitement...' : orderStatus === 'SUCCESS' ? <><CheckCircle size={20} /> Réussi !</> : <><Send size={18} /> Commander</>}
+            {isOrdering ? 'Traitement...' : orderStatus === 'SUCCESS' ? 'Commandé !' : <><Send size={18} /> Valider la Commande</>}
           </button>
         </div>
       </div>
     </>
   );
 }
+
 function ProductDetailsModal({ product, onClose, addToCart, categories, selectedPosId, setSelectedPosId }: any) {
   return (
     <div className="product-modal-backdrop" onClick={onClose}>
@@ -911,16 +1019,6 @@ function ProductDetailsModal({ product, onClose, addToCart, categories, selected
                 onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800'; }}
               />
             </div>
-            <div className="carousel-slide">
-              <img 
-                src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800' 
-                alt="Detail View" 
-              />
-            </div>
-          </div>
-          <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#1E1B4B' }} />
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#CBD5E1' }} />
           </div>
         </div>
 
@@ -944,12 +1042,10 @@ function ProductDetailsModal({ product, onClose, addToCart, categories, selected
               <div style={{ width: 36, height: 36, borderRadius: 10, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
                 <Store size={20} color="#6366F1" />
               </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Points de vente & Stocks</div>
-              </div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Points de vente & Stocks</div>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-2" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {(product.posStocks || []).map((s: any) => {
                 const qty = Number(s.quantity);
                 const isLow = qty <= Number(product.stockThreshold || 5);
@@ -960,25 +1056,24 @@ function ProductDetailsModal({ product, onClose, addToCart, categories, selected
                     className={`w-full flex justify-between items-center p-3 rounded-xl border-2 transition-all ${
                       selectedPosId === s.vendorPosId 
                         ? 'bg-violet-50 border-violet-600' 
-                        : 'bg-white border-transparent hover:border-slate-100'
+                        : 'bg-white border-slate-100 hover:border-slate-200'
                     }`}
                   >
                     <div className="text-left">
                       <div className="text-sm font-black text-slate-900">{s.vendorPos?.name}</div>
-                      <div className="text-[10px] text-slate-500 font-bold">{s.vendorPos?.address}, {s.vendorPos?.city}</div>
+                      <div className="text-[10px] text-slate-500 font-bold">{s.vendorPos?.city}</div>
                     </div>
                     <div className="text-right">
                       <div className={`text-xs font-black ${qty === 0 ? 'text-rose-500' : isLow ? 'text-amber-500' : 'text-emerald-500'}`}>
                         {qty === 0 ? 'Rupture' : `${qty} en stock`}
                       </div>
-                      {selectedPosId === s.vendorPosId && <CheckCircle size={14} className="text-violet-600 mt-1 inline" />}
                     </div>
                   </button>
                 );
               })}
               {(!product.posStocks || product.posStocks.length === 0) && (
                 <div className="text-xs text-slate-400 font-bold italic py-2">
-                   Stock géré par le dépôt central.
+                   Vente directe uniquement.
                 </div>
               )}
             </div>
@@ -986,7 +1081,8 @@ function ProductDetailsModal({ product, onClose, addToCart, categories, selected
 
           <button 
             onClick={() => { addToCart(product); onClose(); }}
-            style={{ width: '100%', padding: '20px', borderRadius: 20, background: '#1E1B4B', color: '#fff', border: 'none', fontWeight: 900, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, boxShadow: '0 10px 20px rgba(30, 27, 75, 0.2)' }}
+            className="btn-premium btn-premium-primary"
+            style={{ width: '100%', padding: '20px', borderRadius: 20, fontWeight: 900, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}
           >
             <Plus size={20} /> Ajouter au Panier
           </button>
@@ -995,7 +1091,6 @@ function ProductDetailsModal({ product, onClose, addToCart, categories, selected
     </div>
   );
 }
-
 
 function RatingModal({ order, onClose, onSuccess }: { order: any, onClose: () => void, onSuccess: () => void }) {
   const [scores, setScores] = useState({ speed: 5, quality: 5, reliability: 5, delivery: 5 });
