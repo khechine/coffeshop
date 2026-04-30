@@ -39,7 +39,7 @@ export default function VendorSettingsClient({
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('http://localhost:3001/api/upload', {
+      const res = await fetch('http://localhost:3001/management/upload', {
         method: 'POST',
         body: formData,
       });
@@ -120,6 +120,47 @@ export default function VendorSettingsClient({
       }
     };
   }, []);
+
+  const detectGoogleMapsUrl = async (value: string) => {
+    // 1. Regex for coordinates in URL (@lat,lng or q=lat,lng)
+    const coordRegex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+    const qCoordRegex = /q=(-?\d+\.\d+),(-?\d+\.\d+)/;
+    
+    let lat, lng;
+    const match = value.match(coordRegex);
+    const qMatch = value.match(qCoordRegex);
+
+    if (match) {
+      lat = parseFloat(match[1]);
+      lng = parseFloat(match[2]);
+    } else if (qMatch) {
+      lat = parseFloat(qMatch[1]);
+      lng = parseFloat(qMatch[2]);
+    }
+
+    if (lat && lng) {
+      // Update coordinates
+      setProfileForm(f => ({ ...f, lat, lng }));
+      if (mapRef.current) mapRef.current.setView([lat, lng], 16);
+      if (markerRef.current) markerRef.current.setLatLng([lat, lng]);
+
+      // Reverse geocode for clean address
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        const data = await res.json();
+        if (data.display_name) {
+          const parts = data.display_name.split(',');
+          // Simplify address (e.g., "Rades, Ben Arous")
+          const cleanAddress = parts.slice(0, 3).join(',').trim();
+          setProfileForm(f => ({ ...f, address: cleanAddress, city: parts[parts.length - 3]?.trim() || f.city }));
+        }
+      } catch (e) {
+        console.error('Reverse geocoding error', e);
+      }
+      return true;
+    }
+    return false;
+  };
 
   const handleSaveProfile = () => {
     startTransition(async () => {
@@ -253,7 +294,11 @@ export default function VendorSettingsClient({
                   <div className="flex items-center gap-6">
                     <div className="w-24 h-24 rounded-[24px] bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
                       {customForm.logoUrl ? (
-                        <img src={customForm.logoUrl} className="w-full h-full object-contain" />
+                        <img 
+                          src={customForm.logoUrl} 
+                          className="w-full h-full object-contain" 
+                          onError={(e: any) => e.target.src = 'https://ui-avatars.com/api/?name=Vendor&background=6366f1&color=fff'}
+                        />
                       ) : (
                         <Upload size={24} className="text-slate-300" />
                       )}
@@ -278,7 +323,11 @@ export default function VendorSettingsClient({
                   <label className={labelClass}>Bannière de Fiche</label>
                   <div className="w-full h-24 rounded-[24px] bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden relative group">
                     {customForm.bannerUrl ? (
-                      <img src={customForm.bannerUrl} className="w-full h-full object-cover" />
+                      <img 
+                        src={customForm.bannerUrl} 
+                        className="w-full h-full object-cover" 
+                        onError={(e: any) => e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200'}
+                      />
                     ) : (
                       <Upload size={24} className="text-slate-300" />
                     )}
@@ -386,8 +435,20 @@ export default function VendorSettingsClient({
                 <input className={inputClass} value={profileForm.city} onChange={e => setProfileForm(f => ({ ...f, city: e.target.value }))} />
               </div>
               <div className="md:col-span-2">
-                <label className={labelClass}>Siège Social (Adresse complète)</label>
-                <input className={inputClass} value={profileForm.address} onChange={e => setProfileForm(f => ({ ...f, address: e.target.value }))} />
+                <label className={labelClass}>Siège Social (Adresse complète ou Lien Google Maps)</label>
+                <input 
+                  className={inputClass} 
+                  placeholder="Collez une adresse ou un lien Google Maps ici..."
+                  value={profileForm.address} 
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    setProfileForm(f => ({ ...f, address: val }));
+                    if (val.includes('google.com/maps') || val.includes('goo.gl/maps')) {
+                      await detectGoogleMapsUrl(val);
+                    }
+                  }} 
+                />
+                <p className="text-[10px] text-slate-400 font-bold uppercase mt-2">Astuce : Collez le lien Google Maps pour remplir automatiquement la position</p>
               </div>
             </div>
 

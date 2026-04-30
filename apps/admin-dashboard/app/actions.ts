@@ -1963,6 +1963,7 @@ export async function getVendorPortalData() {
       },
       activityPoles: true,
       mktSectors: true,
+      wallet: true,
       bundles: {
         include: {
           items: {
