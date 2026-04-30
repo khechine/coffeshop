@@ -45,7 +45,8 @@ export default function VendorSettingsClient({
       });
       const data = await res.json();
       if (data.url) {
-        setCustomForm(f => ({ ...f, [type === 'logo' ? 'logoUrl' : 'bannerUrl']: data.url }));
+        const fullUrl = data.url.startsWith('/') ? `http://localhost:3001${data.url}` : data.url;
+        setCustomForm(f => ({ ...f, [type === 'logo' ? 'logoUrl' : 'bannerUrl']: fullUrl }));
       }
     } catch (e) {
       alert('Erreur upload');
@@ -295,7 +296,7 @@ export default function VendorSettingsClient({
                     <div className="w-24 h-24 rounded-[24px] bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
                       {customForm.logoUrl ? (
                         <img 
-                          src={customForm.logoUrl} 
+                          src={customForm.logoUrl.startsWith('/') ? `http://localhost:3001${customForm.logoUrl}` : customForm.logoUrl} 
                           className="w-full h-full object-contain" 
                           onError={(e: any) => e.target.src = 'https://ui-avatars.com/api/?name=Vendor&background=6366f1&color=fff'}
                         />
@@ -324,7 +325,7 @@ export default function VendorSettingsClient({
                   <div className="w-full h-24 rounded-[24px] bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden relative group">
                     {customForm.bannerUrl ? (
                       <img 
-                        src={customForm.bannerUrl} 
+                        src={customForm.bannerUrl.startsWith('/') ? `http://localhost:3001${customForm.bannerUrl}` : customForm.bannerUrl} 
                         className="w-full h-full object-cover" 
                         onError={(e: any) => e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200'}
                       />

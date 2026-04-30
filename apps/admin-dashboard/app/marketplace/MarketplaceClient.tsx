@@ -756,7 +756,7 @@ function VendorDetailsDrawer({ vendor, products, onClose, addToCart }: any) {
         {/* Premium Banner */}
         <div style={{ 
           height: 200, 
-          background: customization.bannerUrl ? `url(${customization.bannerUrl}) center/cover` : `linear-gradient(135deg, ${customization.primaryColor || '#6366F1'} 0%, ${customization.secondaryColor || '#1E293B'} 100%)`,
+          background: customization.bannerUrl ? `url(${customization.bannerUrl.startsWith('/') ? 'http://localhost:3001' + customization.bannerUrl : customization.bannerUrl}) center/cover` : `linear-gradient(135deg, ${customization.primaryColor || '#6366F1'} 0%, ${customization.secondaryColor || '#1E293B'} 100%)`,
           position: 'relative'
         }}>
           <button onClick={onClose} style={{ position: 'absolute', top: 20, right: 20, background: 'rgba(0,0,0,0.2)', color: 'white', border: 'none', width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
@@ -765,7 +765,7 @@ function VendorDetailsDrawer({ vendor, products, onClose, addToCart }: any) {
           
           <div style={{ position: 'absolute', bottom: -40, left: 40, width: 100, height: 100, borderRadius: 24, background: 'white', border: '4px solid white', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
             {customization.logoUrl ? (
-              <img src={customization.logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              <img src={customization.logoUrl.startsWith('/') ? 'http://localhost:3001' + customization.logoUrl : customization.logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             ) : (
               <Building2 size={40} color={customization.primaryColor || '#6366F1'} />
             )}
