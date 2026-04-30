@@ -1,0 +1,38 @@
+import React from 'react';
+import { getVendorPortalData } from '../../../actions';
+import { redirect } from 'next/navigation';
+import VendorCrmClient from './VendorCrmClient';
+
+export const dynamic = 'force-dynamic';
+
+export default async function VendorCrmPage() {
+  const portalData = await getVendorPortalData();
+
+  if (!portalData || !portalData.isPremium) {
+    redirect('/vendor/portal');
+  }
+
+  // Serialize complex objects before passing to client component
+  const serializedCustomers = portalData.customers?.map((c: any) => ({
+    ...c,
+    totalSpent: Number(c.totalSpent || 0),
+    createdAt: c.createdAt?.toISOString(),
+    store: { ...c.store }
+  })) || [];
+
+  const serializedCampaigns = portalData.campaigns?.map((c: any) => ({
+    ...c,
+    createdAt: c.createdAt?.toISOString()
+  })) || [];
+
+  return (
+    <div className="w-full max-w-4xl mx-auto p-4 md:p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-slate-900 tracking-tight">CRM & Marketing B2B</h1>
+        <p className="text-slate-500 font-medium mt-1">Gérez vos relations avec les points de vente (Coffeeshops) et lancez des campagnes ciblées.</p>
+      </div>
+      
+      <VendorCrmClient initialCustomers={serializedCustomers} initialCampaigns={serializedCampaigns} />
+    </div>
+  );
+}

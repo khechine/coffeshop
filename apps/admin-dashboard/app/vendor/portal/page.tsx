@@ -69,6 +69,36 @@ export default async function VendorDashboardPage() {
             <ChevronRight size={20} className="text-slate-300" />
           </div>
         </Link>
+
+        {portalData.isPremium && (
+          <>
+            <Link href="/vendor/portal/pos" className="bg-gradient-to-br from-indigo-50 to-white rounded-2xl p-5 shadow-sm border border-indigo-100 hover:shadow-md transition-all group">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                  <MapPin size={24} className="text-indigo-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-slate-900">Mes Points de Vente</h3>
+                  <p className="text-slate-500 text-sm">Gérer mes {portalData.posList?.length || 0} branches</p>
+                </div>
+                <ChevronRight size={20} className="text-slate-300" />
+              </div>
+            </Link>
+
+            <Link href="/vendor/portal/crm" className="bg-gradient-to-br from-rose-50 to-white rounded-2xl p-5 shadow-sm border border-rose-100 hover:shadow-md transition-all group">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-rose-100 rounded-xl flex items-center justify-center group-hover:bg-rose-200 transition-colors">
+                  <TrendingUp size={24} className="text-rose-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-slate-900">CRM & Marketing</h3>
+                  <p className="text-slate-500 text-sm">Gérer {portalData.customers?.length || 0} clients</p>
+                </div>
+                <ChevronRight size={20} className="text-slate-300" />
+              </div>
+            </Link>
+          </>
+        )}
       </div>
 
       {/* Revenue Card - Travel Style */}

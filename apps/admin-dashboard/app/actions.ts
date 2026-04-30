@@ -1691,6 +1691,93 @@ export async function updateVendorStatus(id: string, status: string) {
   revalidatePath('/superadmin/vendors');
 }
 
+// ==========================================
+// VENDOR FRANCHISE / POS MANAGEMENT
+// ==========================================
+
+export async function createVendorPosAction(data: {
+  name: string;
+  address?: string;
+  city?: string;
+  phone?: string;
+  lat?: number;
+  lng?: number;
+}) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({
+    where: { userId }
+  });
+
+  if (!vendor) throw new Error('Profil vendeur introuvable');
+  if (!vendor.isPremium) throw new Error('Cette fonctionnalité nécessite le pack Franchise B2B');
+
+  await (prisma as any).vendorPos.create({
+    data: {
+      ...data,
+      vendorId: vendor.id
+    }
+  });
+
+  revalidatePath('/vendor/portal');
+}
+
+export async function updateVendorPosAction(id: string, data: any) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  const pos = await (prisma as any).vendorPos.findUnique({
+    where: { id },
+    include: { vendor: true }
+  });
+
+  if (!pos || pos.vendor.userId !== userId) throw new Error('Accès refusé');
+
+  await (prisma as any).vendorPos.update({
+    where: { id },
+    data
+  });
+
+  revalidatePath('/vendor/portal');
+}
+
+export async function updateVendorCustomizationAction(data: {
+  logoUrl?: string;
+  bannerUrl?: string;
+  primaryColor?: string;
+}) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({
+    where: { userId }
+  });
+
+  if (!vendor) throw new Error('Profil vendeur introuvable');
+  if (!vendor.isPremium) throw new Error('Cette fonctionnalité nécessite le pack Franchise B2B');
+
+  const existing = await (prisma as any).vendorCustomization.findUnique({
+    where: { vendorId: vendor.id }
+  });
+
+  if (existing) {
+    await (prisma as any).vendorCustomization.update({
+      where: { vendorId: vendor.id },
+      data
+    });
+  } else {
+    await (prisma as any).vendorCustomization.create({
+      data: {
+        vendorId: vendor.id,
+        ...data
+      }
+    });
+  }
+
+  revalidatePath('/vendor/portal');
+}
+
 export async function getVendorPortalData() {
   const userId = cookies().get('userId')?.value;
   if (!userId) return null;
@@ -1731,7 +1818,13 @@ export async function getVendorPortalData() {
       orders: {
         include: { items: true, store: true },
         orderBy: { createdAt: 'desc' }
-      }
+      },
+      posList: true,
+      customization: true,
+      customers: {
+        include: { store: true }
+      },
+      campaigns: true
     }
   });
 

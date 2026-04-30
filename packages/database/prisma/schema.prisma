@@ -148,6 +148,9 @@ model Store {
   // Anti-leakage tracking
   vendorInteractions     VendorInteraction[]     @relation("StoreInteractions")
   vendorRelationships    StoreVendorRelationship[] @relation("StoreRelationships")
+
+  // Franchise & Premium
+  vendorCustomers        VendorCustomer[]
 }
 
 model StoreZone {
@@ -362,6 +365,9 @@ model VendorProduct {
   updatedAt       DateTime @updatedAt
   
   bundleItems     MktBundleItem[]
+  
+  // Franchise POS Stocks
+  posStocks       VendorPosStock[]
   
   @@unique([productStandardId, vendorId])
   @@index([vendorId])
@@ -805,6 +811,13 @@ model VendorProfile {
   lastBillingAlertAt  DateTime?
 
   ratings        VendorRating[]
+
+  // Franchise & Premium Pack
+  isPremium      Boolean @default(false)
+  posList        VendorPos[]
+  customization  VendorCustomization?
+  customers      VendorCustomer[]
+  campaigns      VendorCampaign[]
 }
 
 model CourierProfile {
@@ -874,6 +887,11 @@ model SupplierOrder {
   items         SupplierOrderItem[]
   settlement    MarketplaceSettlement?
   rating        VendorRating?
+  
+  // Franchise POS routing
+  vendorPosId   String?
+  vendorPos     VendorPos? @relation(fields: [vendorPosId], references: [id])
+
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 }
@@ -994,22 +1012,93 @@ model CashSession {
 }
 
 model VendorRating {
-  id              String   @id @default(cuid())
-  storeId         String
-  store           Store    @relation(fields: [storeId], references: [id])
-  vendorId        String
-  vendor          VendorProfile @relation(fields: [vendorId], references: [id])
-  orderId         String?  @unique
-  order           SupplierOrder? @relation(fields: [orderId], references: [id])
-  
-  ratingSpeed     Int      @default(5) // 1-5
-  ratingQuality   Int      @default(5) // 1-5
-  ratingReliability Int    @default(5) // 1-5
-  ratingDelivery  Int      @default(5) // 1-5
-  comment         String?
-  
-  createdAt       DateTime @default(now())
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  order     SupplierOrder @relation(fields: [orderId], references: [id])
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  vendorId  String
+  vendor    VendorProfile @relation(fields: [vendorId], references: [id])
+
+  speedScore       Int // 1-5
+  qualityScore     Int // 1-5
+  reliabilityScore Int // 1-5
+  deliveryScore    Int // 1-5
+  comment          String?
+
+  createdAt DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
   @@unique([storeId, vendorId, orderId])
+}
+
+// ============================================
+// VENDOR FRANCHISE & PREMIUM PACK
+// ============================================
+
+model VendorPos {
+  id          String   @id @default(cuid())
+  vendorId    String
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id])
+  name        String
+  address     String?
+  city        String?
+  phone       String?
+  lat         Float?
+  lng         Float?
+  isActive    Boolean @default(true)
+  
+  orders      SupplierOrder[]
+  stockItems  VendorPosStock[]
+  
+  createdAt   DateTime @default(now())
+}
+
+model VendorPosStock {
+  id              String   @id @default(cuid())
+  vendorPosId     String
+  vendorPos       VendorPos @relation(fields: [vendorPosId], references: [id])
+  vendorProductId String
+  vendorProduct   VendorProduct @relation(fields: [vendorProductId], references: [id])
+  quantity        Decimal @default(0)
+  
+  @@unique([vendorPosId, vendorProductId])
+}
+
+model VendorCustomization {
+  id           String   @id @default(cuid())
+  vendorId     String   @unique
+  vendor       VendorProfile @relation(fields: [vendorId], references: [id])
+  logoUrl      String?
+  bannerUrl    String?
+  primaryColor String?  @default("#6366F1")
+  themeConfig  Json?    
+}
+
+model VendorCustomer {
+  id          String   @id @default(cuid())
+  vendorId    String
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id])
+  storeId     String   
+  store       Store    @relation(fields: [storeId], references: [id])
+  
+  category    String?  @default("REGULAR") // VIP, REGULAR, CHURN_RISK
+  tags        String[]
+  totalSpent  Decimal  @default(0)
+  orderCount  Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([vendorId, storeId])
+}
+
+model VendorCampaign {
+  id             String   @id @default(cuid())
+  vendorId       String
+  vendor         VendorProfile @relation(fields: [vendorId], references: [id])
+  title          String
+  content        String
+  targetCategory String?  
+  status         String   @default("DRAFT") // DRAFT, SENT
+  createdAt      DateTime @default(now())
 }
