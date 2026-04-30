@@ -342,6 +342,7 @@ model VendorProduct {
   price           Decimal
   minOrderQty     Decimal  @default(1)
   stockStatus     StockStatus @default(IN_STOCK)
+  stockThreshold  Decimal  @default(5)
   
   // Offre
   isFeatured      Boolean  @default(false)
@@ -368,6 +369,9 @@ model VendorProduct {
   
   // Franchise POS Stocks
   posStocks       VendorPosStock[]
+  
+  // Catégories Internes (Collections)
+  collections     VendorCollection[]
   
   @@unique([productStandardId, vendorId])
   @@index([vendorId])
@@ -818,6 +822,7 @@ model VendorProfile {
   customization  VendorCustomization?
   customers      VendorCustomer[]
   campaigns      VendorCampaign[]
+  collections    VendorCollection[]
 }
 
 model CourierProfile {
@@ -1025,6 +1030,10 @@ model VendorRating {
   reliabilityScore Int // 1-5
   deliveryScore    Int // 1-5
   comment          String?
+  
+  // Multiboutique granular scoring
+  vendorPosId      String?
+  vendorPos        VendorPos? @relation(fields: [vendorPosId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -1050,6 +1059,7 @@ model VendorPos {
   
   orders      SupplierOrder[]
   stockItems  VendorPosStock[]
+  ratings     VendorRating[]
   
   createdAt   DateTime @default(now())
 }
@@ -1101,4 +1111,14 @@ model VendorCampaign {
   targetCategory String?  
   status         String   @default("DRAFT") // DRAFT, SENT
   createdAt      DateTime @default(now())
+}
+
+model VendorCollection {
+  id        String   @id @default(cuid())
+  name      String
+  vendorId  String
+  vendor    VendorProfile @relation(fields: [vendorId], references: [id])
+  products  VendorProduct[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -182,6 +182,21 @@ export default function ReferentielsClient({
           {/* Quick add chips */}
         </Section>
 
+        {/* MARKETPLACE CATEGORIES LINK */}
+        <div 
+          onClick={() => window.location.href = '/superadmin/marketplace/categories'}
+          style={{ 
+            background: 'linear-gradient(135deg,#F59E0B,#D97706)', 
+            borderRadius: '20px', padding: '24px', color: '#fff', 
+            cursor: 'pointer', display: 'flex', flexDirection: 'column', 
+            justifyContent: 'center', alignItems: 'center', gap: '12px' 
+          }}
+        >
+          <Tag size={40} />
+          <div style={{ fontWeight: 900, fontSize: '18px' }}>Gestion des Catégories</div>
+          <div style={{ fontSize: '12px', opacity: 0.8, textAlign: 'center' }}>Gérer la taxonomie et les propositions des vendeurs</div>
+        </div>
+
       </div>
     </div>
   );

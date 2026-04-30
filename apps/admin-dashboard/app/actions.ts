@@ -1089,16 +1089,28 @@ export async function getMarketplaceData(userLat?: number, userLng?: number) {
     (prisma as any).mktCategory.findMany({ include: { subcategories: true } }),
     (prisma as any).vendorProduct.findMany({
       where: { isFeatured: true },
-      include: { vendor: true, productStandard: true },
+      include: { 
+        vendor: true, 
+        productStandard: true,
+        posStocks: { include: { vendorPos: true } }
+      },
       orderBy: { createdAt: 'desc' }
     }),
     (prisma as any).vendorProduct.findMany({
       where: { isFlashSale: true },
-      include: { vendor: true, productStandard: true },
+      include: { 
+        vendor: true, 
+        productStandard: true,
+        posStocks: { include: { vendorPos: true } }
+      },
       orderBy: { createdAt: 'desc' }
     }),
     (prisma as any).vendorProduct.findMany({
-      include: { vendor: true, productStandard: true },
+      include: { 
+        vendor: true, 
+        productStandard: true,
+        posStocks: { include: { vendorPos: true } }
+      },
       orderBy: { createdAt: 'desc' }
     }),
     (prisma as any).mktBundle.findMany({
@@ -1146,6 +1158,7 @@ export async function getMarketplaceData(userLat?: number, userLng?: number) {
       deliveryAreas: p.deliveryAreas,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
+      posStocks: p.posStocks || [],
       vendor: vendorData ? {
         ...vendorData,
         ratings: vendorRatingsMap.get(vendorData.id) || null
@@ -1209,48 +1222,7 @@ export async function getMarketplaceData(userLat?: number, userLng?: number) {
   };
 }
 
-export async function rateVendorAction(data: {
-  orderId: string;
-  vendorId: string;
-  ratingSpeed: number;
-  ratingQuality: number;
-  ratingReliability: number;
-  ratingDelivery: number;
-  comment?: string;
-}) {
-  const user = await getUser();
-  if (!user || !user.storeId) throw new Error("Non autorisé");
 
-  await (prisma as any).vendorRating.upsert({
-    where: { 
-      storeId_vendorId_orderId: {
-        storeId: user.storeId,
-        vendorId: data.vendorId,
-        orderId: data.orderId
-      }
-    },
-    create: {
-      storeId: user.storeId,
-      vendorId: data.vendorId,
-      orderId: data.orderId,
-      ratingSpeed: data.ratingSpeed,
-      ratingQuality: data.ratingQuality,
-      ratingReliability: data.ratingReliability,
-      ratingDelivery: data.ratingDelivery,
-      comment: data.comment
-    },
-    update: {
-      ratingSpeed: data.ratingSpeed,
-      ratingQuality: data.ratingQuality,
-      ratingReliability: data.ratingReliability,
-      ratingDelivery: data.ratingDelivery,
-      comment: data.comment
-    }
-  });
-
-  revalidatePath('/admin/stock');
-  revalidatePath('/marketplace');
-}
 
 export async function getMarketplaceBenchmarkData(vendorId: string) {
   const allProducts = await (prisma as any).vendorProduct.findMany({
@@ -1488,6 +1460,52 @@ export async function migrateSubcategoryAction(subcategoryId: string, newCategor
   revalidatePath('/marketplace');
 }
 
+export async function refuseAndMergeSubcategoryAction(subcategoryId: string, targetSubcategoryId: string) {
+  const cookieStore = cookies();
+  const userId = cookieStore.get('userId')?.value;
+
+  if (!userId) {
+    throw new Error('Session expirée. Veuillez vous reconnecter.');
+  }
+
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  // 1. Get the category of the target subcategory to ensure consistency
+  const targetSub = await (prisma as any).mktSubcategory.findUnique({
+    where: { id: targetSubcategoryId }
+  });
+
+  if (!targetSub) throw new Error('Sous-catégorie cible introuvable');
+
+  // 2. Update all ProductStandards linked to this subcategory
+  await (prisma as any).productStandard.updateMany({
+    where: { subcategoryId },
+    data: { 
+      subcategoryId: targetSubcategoryId,
+      categoryId: targetSub.categoryId
+    }
+  });
+
+  // 3. Update all VendorProducts linked to this subcategory
+  await (prisma as any).vendorProduct.updateMany({
+    where: { subcategoryId },
+    data: { 
+      subcategoryId: targetSubcategoryId,
+      categoryId: targetSub.categoryId
+    }
+  });
+
+  // 4. Delete the rejected subcategory
+  await (prisma as any).mktSubcategory.delete({
+    where: { id: subcategoryId }
+  });
+
+  revalidatePath('/superadmin/marketplace/categories');
+  revalidatePath('/marketplace');
+  revalidatePath('/vendor/portal/catalog');
+}
+
 export async function deleteMarketplaceCategoryAction(id: string) {
   const cookieStore = cookies();
   const userId = cookieStore.get('userId')?.value;
@@ -1542,7 +1560,7 @@ export async function createMarketplaceCategoryAction(data: { name: string; icon
   revalidatePath('/marketplace');
 }
 
-export async function placeMarketplaceOrder(data: { vendorId: string; total: number; items: { productId?: string; bundleId?: string; quantity: number; price: number; name: string }[] }) {
+export async function placeMarketplaceOrder(data: { vendorId: string; total: number; vendorPosId?: string; items: { productId?: string; bundleId?: string; quantity: number; price: number; name: string }[] }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
 
@@ -1579,6 +1597,7 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
       total: data.total,
       status: 'PENDING',
       courierId: availableCourier?.id || null,
+      vendorPosId: data.vendorPosId || null,
       items: {
         create: data.items.map(i => ({
           name: i.name,
@@ -1784,6 +1803,135 @@ export async function updateVendorPosStockAction(posId: string, productId: strin
   revalidatePath('/vendor/portal/pos');
 }
 
+export async function createVendorCollectionAction(name: string) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Session expirée');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({
+    where: { userId }
+  });
+
+  if (!vendor) throw new Error('Vendeur introuvable');
+
+  await (prisma as any).vendorCollection.create({
+    data: {
+      name,
+      vendorId: vendor.id
+    }
+  });
+
+  revalidatePath('/vendor/portal/catalog');
+}
+
+export async function deleteVendorCollectionAction(id: string) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Session expirée');
+
+  await (prisma as any).vendorCollection.delete({
+    where: { id }
+  });
+
+  revalidatePath('/vendor/portal/catalog');
+}
+
+export async function updateVendorProductCollectionsAction(productId: string, collectionIds: string[]) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Session expirée');
+
+  await (prisma as any).vendorProduct.update({
+    where: { id: productId },
+    data: {
+      collections: {
+        set: collectionIds.map(id => ({ id }))
+      }
+    }
+  });
+
+  revalidatePath('/vendor/portal/catalog');
+}
+
+export async function updateStockThresholdAction(productId: string, threshold: number) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Session expirée');
+
+  await (prisma as any).vendorProduct.update({
+    where: { id: productId },
+    data: { stockThreshold: threshold }
+  });
+
+  revalidatePath('/vendor/portal/catalog');
+}
+
+export async function getVendorOrdersWithAlertsAction() {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({
+    where: { userId }
+  });
+
+  if (!vendor) return { orders: [], alerts: [] };
+
+  // Fetch orders with relations
+  const orders = await (prisma as any).supplierOrder.findMany({
+    where: { vendorId: vendor.id },
+    include: {
+      items: true,
+      store: true,
+      vendorPos: true
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  // Calculate Alerts
+  const alerts: any[] = [];
+  const now = new Date();
+
+  // 1. SLA Alerts (Pending orders > 15 mins)
+  orders.forEach((o: any) => {
+    if (o.status === 'PENDING') {
+      const diffMins = (now.getTime() - new Date(o.createdAt).getTime()) / 60000;
+      if (diffMins > 15) {
+        alerts.push({
+          type: 'SLA_DELAY',
+          severity: diffMins > 30 ? 'CRITICAL' : 'WARNING',
+          message: `Commande #${o.id.slice(-6)} en retard (${Math.round(diffMins)} min)`,
+          orderId: o.id,
+          posName: o.vendorPos?.name || 'Magasin non défini'
+        });
+      }
+    }
+  });
+
+  // 2. Stock Alerts
+  const posStocks = await (prisma as any).vendorPosStock.findMany({
+    where: { vendorPos: { vendorId: vendor.id } },
+    include: {
+      vendorProduct: true,
+      vendorPos: true
+    }
+  });
+
+  posStocks.forEach((s: any) => {
+    const qty = Number(s.quantity);
+    const threshold = Number(s.vendorProduct.stockThreshold || 5);
+    if (qty <= threshold) {
+      alerts.push({
+        type: 'LOW_STOCK',
+        severity: qty === 0 ? 'CRITICAL' : 'WARNING',
+        message: `Stock bas: ${s.vendorProduct.name} (${qty} restants) à ${s.vendorPos.name}`,
+        productId: s.vendorProductId,
+        posId: s.vendorPosId
+      });
+    }
+  });
+
+  return {
+    orders: JSON.parse(JSON.stringify(orders)),
+    alerts
+  };
+}
+
 export async function updateVendorCustomizationAction(data: {
   logoUrl?: string;
   bannerUrl?: string;
@@ -1842,7 +1990,10 @@ export async function getVendorPortalData() {
     where: { id: vendorProfile.id },
     include: {
       vendorProducts: {
-        include: { productStandard: true }
+        include: { 
+          productStandard: true,
+          collections: true
+        }
       },
       activityPoles: true,
       mktSectors: true,
@@ -1872,7 +2023,12 @@ export async function getVendorPortalData() {
       customers: {
         include: { store: true }
       },
-      campaigns: true
+      campaigns: true,
+      collections: {
+        include: {
+          products: true
+        }
+      }
     }
   });
 
@@ -1950,6 +2106,7 @@ export async function getVendorPortalData() {
         description: p.description || p.productStandard?.description,
         tags: p.tags || p.productStandard?.tags || [],
         deliveryAreas: p.deliveryAreas || [],
+        collections: p.collections || [],
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
       };
@@ -3932,3 +4089,57 @@ export async function getMarketplaceBundles() {
     }))
   }));
 }
+
+export async function rateVendorAction(data: {
+  orderId: string;
+  speedScore: number;
+  qualityScore: number;
+  reliabilityScore: number;
+  deliveryScore: number;
+  comment?: string;
+}) {
+  const store = await getStore();
+  if (!store) throw new Error('Non authentifié');
+
+  const order = await prisma.supplierOrder.findUnique({
+    where: { id: data.orderId },
+    select: { vendorId: true, vendorPosId: true }
+  });
+
+  if (!order || !order.vendorId) throw new Error('Commande introuvable');
+
+  const rating = await (prisma as any).vendorRating.create({
+    data: {
+      orderId: data.orderId,
+      storeId: store.id,
+      vendorId: order.vendorId,
+      vendorPosId: order.vendorPosId,
+      speedScore: data.speedScore,
+      qualityScore: data.qualityScore,
+      reliabilityScore: data.reliabilityScore,
+      deliveryScore: data.deliveryScore,
+      comment: data.comment
+    }
+  });
+
+  revalidatePath('/marketplace');
+  return rating;
+}
+
+export async function getStoreMarketplaceOrders() {
+  const store = await getStore();
+  if (!store) return [];
+
+  return (prisma as any).supplierOrder.findMany({
+    where: { storeId: store.id, vendorId: { not: null } },
+    include: { 
+      vendor: true, 
+      vendorPos: true,
+      rating: true,
+      items: true 
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+}
+
+

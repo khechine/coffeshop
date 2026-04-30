@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Package, Truck, LayoutDashboard, Settings, LogOut, ShoppingBag, Sun, Moon, ChevronLeft, BarChart3, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import VendorAlertBar from './VendorAlertBar';
 
 export default function VendorPortalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -117,6 +118,7 @@ export default function VendorPortalLayout({ children }: { children: React.React
         {/* Main Content Area */}
         <main className="flex-1 md:ml-[280px] min-w-0 transition-all duration-300">
           <div className="p-6 md:p-8 max-w-6xl mx-auto">
+            <VendorAlertBar />
             {children}
           </div>
         </main>

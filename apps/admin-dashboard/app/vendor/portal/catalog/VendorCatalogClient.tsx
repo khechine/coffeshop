@@ -127,7 +127,7 @@ function CategorySelector({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function VendorCatalogClient({
-  initialProducts, initialBundles = [], categoryTree, globalUnits, benchmarkData = [], vendorId, mktSectors = [],
+  initialProducts, initialBundles = [], categoryTree, globalUnits, benchmarkData = [], vendorId, mktSectors = [], collections = [],
 }: {
   initialProducts: any[];
   initialBundles?: any[];
@@ -136,8 +136,9 @@ export default function VendorCatalogClient({
   benchmarkData?: BenchmarkRow[];
   vendorId: string;
   mktSectors?: any[];
+  collections?: any[];
 }) {
-  const [activeTab, setActiveTab]           = useState<'catalog' | 'benchmark' | 'bundles'>('catalog');
+  const [activeTab, setActiveTab]           = useState<'catalog' | 'benchmark' | 'bundles' | 'collections'>('catalog');
   const [modalOpen, setModalOpen]           = useState(false);
   const [bundleModalOpen, setBundleModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -147,6 +148,7 @@ export default function VendorCatalogClient({
   const [isPending, startTransition]        = useTransition();
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterBrand, setFilterBrand]       = useState<string>('all');
+  const [filterCollection, setFilterCollection] = useState<string>('all');
 
   // CSV state
   const [csvStep, setCsvStep]   = useState<'upload' | 'preview' | 'importing' | 'done'>('upload');
@@ -202,6 +204,7 @@ export default function VendorCatalogClient({
   const [form, setForm] = useState<any>({
     name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', showUrlInput: false,
     isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQty: '1',
+    collectionIds: []
   });
 
   const handleEdit = (p: any) => {
@@ -214,13 +217,18 @@ export default function VendorCatalogClient({
       flashStart: p.flashStart ? new Date(p.flashStart).toISOString().slice(0, 16) : '',
       flashEnd:   p.flashEnd   ? new Date(p.flashEnd).toISOString().slice(0, 16) : '',
       minOrderQty: p.minOrderQty ? p.minOrderQty.toString() : '1',
+      collectionIds: (p.collections || []).map((c: any) => c.id)
     });
     setModalOpen(true);
   };
 
   const handleCreateNew = () => {
     setEditingId(null);
-    setForm({ name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', showUrlInput: false, isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQty: '1' });
+    setForm({ 
+      name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', 
+      showUrlInput: false, isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', 
+      minOrderQty: '1', collectionIds: [] 
+    });
     setModalOpen(true);
   };
 
@@ -332,6 +340,13 @@ export default function VendorCatalogClient({
       };
       if (editingId) await updateMarketplaceProductAction(editingId, payload);
       else           await createMarketplaceProductAction(payload);
+      
+      // Update collections separately if needed or integrate in action
+      if (editingId) {
+        const { updateVendorProductCollectionsAction } = await import('../../../actions');
+        await updateVendorProductCollectionsAction(editingId, form.collectionIds);
+      }
+      
       setModalOpen(false);
       showToast(editingId ? 'Produit mis à jour ✓' : 'Produit publié ✓');
     });
@@ -429,6 +444,9 @@ export default function VendorCatalogClient({
           <button onClick={() => setActiveTab('benchmark')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'benchmark' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
             <BarChart3 size={16} /> Benchmark
           </button>
+          <button onClick={() => setActiveTab('collections')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'collections' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            <Tag size={16} /> Mes Rayons
+          </button>
         </div>
         {activeTab === 'catalog' && (
           <div className="flex gap-2 w-full md:w-auto">
@@ -443,10 +461,48 @@ export default function VendorCatalogClient({
             </button>
           </div>
         )}
+        {activeTab === 'catalog' && collections.length > 0 && (
+          <div className="flex flex-wrap gap-2 w-full md:w-auto mt-2 md:mt-0">
+             <button 
+              onClick={() => setFilterCollection('all')}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${filterCollection === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+             >
+               Tous les produits
+             </button>
+             {collections.map((col: any) => (
+               <button 
+                key={col.id}
+                onClick={() => setFilterCollection(col.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${filterCollection === col.id ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+               >
+                 {col.name}
+               </button>
+             ))}
+          </div>
+        )}
         {activeTab === 'bundles' && (
           <div className="flex gap-2 w-full md:w-auto">
             <button onClick={() => { setBundleForm({name:'', description:'', price:'', image:'', items:[]}); setBundleModalOpen(true); }} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 transition-all shadow-md">
               <Sparkles size={16} /> Créer un Pack
+            </button>
+          </div>
+        )}
+        {activeTab === 'collections' && (
+          <div className="flex gap-2 w-full md:w-auto">
+            <button 
+              onClick={() => {
+                const name = prompt('Nom du nouveau rayon (ex: Sélection Spéciale) :');
+                if (name) {
+                  startTransition(async () => {
+                    const { createVendorCollectionAction } = await import('../../../actions');
+                    await createVendorCollectionAction(name);
+                    window.location.reload();
+                  });
+                }
+              }}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 transition-all shadow-md"
+            >
+              <Plus size={16} /> Créer un Rayon
             </button>
           </div>
         )}
@@ -455,7 +511,12 @@ export default function VendorCatalogClient({
       {/* ── CATALOG TAB ── */}
       {activeTab === 'catalog' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {initialProducts.map(p => (
+          {initialProducts.filter(p => {
+            if (filterCollection !== 'all') {
+              return (p.collections || []).some((c: any) => c.id === filterCollection);
+            }
+            return true;
+          }).map(p => (
             <div key={p.id} className="bg-white rounded-2xl border border-slate-100 overflow-hidden flex flex-col transition-all duration-200 hover:shadow-md group">
               <div className="h-40 bg-slate-100 relative overflow-hidden">
                 <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} className="w-full h-full object-cover" />
@@ -683,6 +744,97 @@ export default function VendorCatalogClient({
         );
       })()}
 
+      {/* ── COLLECTIONS TAB ── */}
+      {activeTab === 'collections' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {collections.map((col: any) => (
+            <div key={col.id} className="bg-white rounded-[40px] border border-slate-100 p-8 flex flex-col hover:shadow-xl transition-all group">
+              <div className="flex justify-between items-start mb-6">
+                <div className="w-14 h-14 bg-violet-50 text-violet-600 rounded-2xl flex items-center justify-center shadow-inner">
+                  <Tag size={28} />
+                </div>
+                <button 
+                  onClick={async () => {
+                    if (confirm('Supprimer ce rayon ?')) {
+                      const { deleteVendorCollectionAction } = await import('../../../actions');
+                      await deleteVendorCollectionAction(col.id);
+                      window.location.reload();
+                    }
+                  }}
+                  className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+              
+              <h3 className="text-2xl font-black text-slate-900 mb-2">{col.name}</h3>
+              <p className="text-slate-500 text-sm font-medium mb-8">{(col.products || []).length} produits dans ce rayon</p>
+
+              <div className="space-y-3 mb-8 flex-1">
+                {(col.products || []).slice(0, 5).map((p: any) => (
+                  <div key={p.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-white shrink-0">
+                      <img src={p.image || ''} className="w-full h-full object-cover" />
+                    </div>
+                    <span className="text-xs font-black text-slate-700 truncate">{p.name || 'Produit'}</span>
+                  </div>
+                ))}
+                {(col.products || []).length > 5 && (
+                  <div className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest py-2">
+                    + {(col.products || []).length - 5} autres produits
+                  </div>
+                )}
+                {(col.products || []).length === 0 && (
+                  <div className="py-8 text-center text-slate-400 font-bold text-xs italic">
+                    Rayon vide
+                  </div>
+                )}
+              </div>
+
+              <button 
+                onClick={() => {
+                  const pId = prompt('ID du produit à ajouter :');
+                  if (pId) {
+                    startTransition(async () => {
+                      const { updateVendorProductCollectionsAction } = await import('../../../actions');
+                      const currentIds = (col.products || []).map((p: any) => p.id);
+                      await updateVendorProductCollectionsAction(pId, [...currentIds, col.id]);
+                      window.location.reload();
+                    });
+                  }
+                }}
+                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+              >
+                Gérer les produits
+              </button>
+            </div>
+          ))}
+          
+          {collections.length === 0 && (
+            <div className="col-span-full py-20 text-center bg-slate-50 rounded-[40px] border-2 border-dashed border-slate-200">
+               <Tag size={48} className="mx-auto text-slate-300 mb-4" />
+               <div className="text-lg font-black text-slate-900 mb-2">Aucun rayon interne</div>
+               <p className="text-slate-500 text-sm mb-6">Organisez vos produits pour votre propre gestion ou pour des affichages spécifiques.</p>
+               <button 
+                onClick={() => {
+                  const name = prompt('Nom du nouveau rayon :');
+                  if (name) {
+                    startTransition(async () => {
+                      const { createVendorCollectionAction } = await import('../../../actions');
+                      await createVendorCollectionAction(name);
+                      window.location.reload();
+                    });
+                  }
+                }}
+                className="px-6 py-3 rounded-2xl bg-violet-600 text-white font-black text-sm shadow-xl shadow-violet-600/20"
+               >
+                 Créer mon premier rayon
+               </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── MODAL PRODUIT ── */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? 'Modifier le Produit' : 'Nouveau Produit Marketplace'} width={620}>
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -731,6 +883,32 @@ export default function VendorCatalogClient({
             <datalist id="brand-list">
               {Array.from(new Set(initialProducts.map((p: any) => p.brand).filter(Boolean))).map((b: any) => <option key={b} value={b} />)}
             </datalist>
+          </div>
+
+          <div>
+            <label className={labelClass}>Appartenance aux rayons (interne)</label>
+            <div className="flex flex-wrap gap-2">
+              {collections.map((col: any) => (
+                <button
+                  key={col.id}
+                  type="button"
+                  onClick={() => {
+                    const ids = form.collectionIds.includes(col.id)
+                      ? form.collectionIds.filter((id: string) => id !== col.id)
+                      : [...form.collectionIds, col.id];
+                    setForm({ ...form, collectionIds: ids });
+                  }}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all border-2 ${
+                    form.collectionIds.includes(col.id)
+                      ? 'bg-violet-600 border-violet-600 text-white shadow-lg shadow-violet-600/20'
+                      : 'bg-white border-slate-100 text-slate-500 hover:border-violet-200'
+                  }`}
+                >
+                  {col.name}
+                </button>
+              ))}
+              {collections.length === 0 && <span className="text-xs text-slate-400 italic">Aucun rayon créé</span>}
+            </div>
           </div>
 
           <div>

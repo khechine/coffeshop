@@ -2,8 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Star, Zap, ChevronRight, Package, Store, MapPin, CheckCircle, Clock, Send, Plus, Search, Filter, ArrowRight, X, Phone, Mail, Info, Globe, Building2, LayoutGrid, Users } from 'lucide-react';
-import { placeMarketplaceOrder, getMarketplaceBundles } from '../actions';
+import { ShoppingCart, ShoppingBag, Star, Zap, ChevronRight, Package, Store, MapPin, CheckCircle, Clock, Send, Plus, Search, Filter, ArrowRight, X, Phone, Mail, Info, Globe, Building2, LayoutGrid, Users } from 'lucide-react';
+import { placeMarketplaceOrder, getMarketplaceBundles, rateVendorAction } from '../actions';
 import './marketplace.css';
 
 interface MarketplaceProduct {
@@ -38,7 +38,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-import { rateVendorAction } from '../actions';
+
 
 const RatingStars = ({ ratings }: { ratings: any }) => {
   if (!ratings || ratings.totalReviews === 0) return (
@@ -59,8 +59,10 @@ const RatingStars = ({ ratings }: { ratings: any }) => {
 };
 
 export default function MarketplaceClient({ initialData, storeCoords }: { initialData: any, storeCoords?: { lat: number, lng: number } }) {
-  const [viewMode, setViewMode] = useState<'products' | 'vendors' | 'bundles'>('products');
+  const [viewMode, setViewMode] = useState<'products' | 'vendors' | 'bundles' | 'orders'>('products');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [myOrders, setMyOrders] = useState<any[]>([]);
+  const [ratingOrder, setRatingOrder] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<any[]>([]);
   const [isOrdering, setIsOrdering] = useState(false);
@@ -72,7 +74,8 @@ export default function MarketplaceClient({ initialData, storeCoords }: { initia
   // Advanced filters
   const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [selectedCity, setSelectedCity] = useState<string>('all');
-  const [selectedProduct, setSelectedProduct] = useState<MarketplaceProduct | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedPosId, setSelectedPosId] = useState<string | null>(null);
   const [selectedBundle, setSelectedBundle] = useState<any>(null);
   const [userCoords, setUserCoords] = useState(storeCoords);
   const [maxDistance, setMaxDistance] = useState<number>(100); // 100km default
@@ -210,6 +213,7 @@ export default function MarketplaceClient({ initialData, storeCoords }: { initia
         await placeMarketplaceOrder({
           vendorId,
           total,
+          vendorPosId: selectedPosId || undefined,
           items: items.map(i => ({ 
             productId: i.isBundle ? undefined : i.id, 
             bundleId: i.isBundle ? i.id : undefined,
@@ -258,6 +262,12 @@ export default function MarketplaceClient({ initialData, storeCoords }: { initia
               </button>
               <button className={`view-tab ${viewMode === 'bundles' ? 'active' : ''}`} onClick={() => setViewMode('bundles')}>
                 <Zap size={16} /> <span className="hide-mobile">Packs</span>
+              </button>
+              <button className={`view-tab ${viewMode === 'orders' ? 'active' : ''}`} onClick={() => {
+                setViewMode('orders');
+                import('../actions').then(m => m.getStoreMarketplaceOrders().then(setMyOrders));
+              }}>
+                <ShoppingBag size={16} /> <span className="hide-mobile">Mes Commandes</span>
               </button>
             </div>
 
@@ -434,6 +444,45 @@ export default function MarketplaceClient({ initialData, storeCoords }: { initia
               </div>
               {filteredVendors.length === 0 && <EmptyState />}
             </>
+          ) : viewMode === 'orders' ? (
+            <div className="space-y-6">
+               <h2 className="text-2xl font-black text-slate-900 mb-8">Historique des Commandes</h2>
+               {myOrders.map((order: any) => (
+                 <div key={order.id} className="bg-white rounded-[32px] p-6 border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="flex gap-4 items-center">
+                       <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400">
+                          <ShoppingBag size={20} />
+                       </div>
+                       <div>
+                          <div className="font-black text-slate-900">#{order.id.slice(-6)}</div>
+                          <div className="text-xs text-slate-500 font-bold">{order.vendor?.companyName} • {order.vendorPos?.name || 'Vente directe'}</div>
+                       </div>
+                    </div>
+                    <div className="flex items-center gap-8">
+                       <div className="text-right">
+                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</div>
+                          <div className="font-black text-slate-900">{Number(order.total).toFixed(3)} DT</div>
+                       </div>
+                       {order.status === 'DELIVERED' && !order.rating ? (
+                         <button 
+                           onClick={() => setRatingOrder(order)}
+                           className="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-sm font-black shadow-lg shadow-indigo-600/20 hover:scale-105 transition-all"
+                         >
+                           Noter la livraison
+                         </button>
+                       ) : order.rating ? (
+                         <div className="flex items-center gap-1 bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl text-xs font-black">
+                            <Star size={14} fill="currentColor" /> Noté
+                         </div>
+                       ) : (
+                         <div className="text-xs font-black text-slate-400 bg-slate-50 px-4 py-2 rounded-xl uppercase tracking-wider border border-slate-100">
+                            {order.status}
+                         </div>
+                       )}
+                    </div>
+                 </div>
+               ))}
+            </div>
           ) : (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '32px' }}>
@@ -538,10 +587,14 @@ export default function MarketplaceClient({ initialData, storeCoords }: { initia
       </div>
 
         {/* Modals & Drawers */}
-        {selectedProduct && <ProductDetailsModal product={selectedProduct} onClose={() => setSelectedProduct(null)} addToCart={addToCart} categories={categories} />}
+        {selectedProduct && <ProductDetailsModal product={selectedProduct} onClose={() => { setSelectedProduct(null); setSelectedPosId(null); }} addToCart={addToCart} categories={categories} selectedPosId={selectedPosId} setSelectedPosId={setSelectedPosId} />}
         {selectedBundle && <BundleDetailsModal bundle={selectedBundle} onClose={() => setSelectedBundle(null)} addToCart={addToCart} />}
         {selectedVendor && <VendorDetailsDrawer vendor={selectedVendor} products={products} onClose={() => setSelectedVendor(null)} addToCart={addToCart} />}
         {isCartOpen && <CartDrawer cart={cart} removeFromCart={removeFromCart} updateQuantity={updateQuantity} cartTotal={cartTotal} isOrdering={isOrdering} handleCheckout={handleCheckout} orderStatus={orderStatus} onClose={() => setIsCartOpen(false)} />}
+        {ratingOrder && <RatingModal order={ratingOrder} onClose={() => setRatingOrder(null)} onSuccess={() => {
+           import('../actions').then(m => m.getStoreMarketplaceOrders().then(setMyOrders));
+           setRatingOrder(null);
+        }} />}
         {isFiltersOpen && (
           <>
             <div className="drawer-overlay" onClick={() => setIsFiltersOpen(false)} />
@@ -765,7 +818,7 @@ function CartDrawer({ cart, removeFromCart, updateQuantity, cartTotal, isOrderin
     </>
   );
 }
-function ProductDetailsModal({ product, onClose, addToCart, categories }: any) {
+function ProductDetailsModal({ product, onClose, addToCart, categories, selectedPosId, setSelectedPosId }: any) {
   return (
     <div className="product-modal-backdrop" onClick={onClose}>
       <div className="product-modal-content" onClick={e => e.stopPropagation()}>
@@ -809,18 +862,48 @@ function ProductDetailsModal({ product, onClose, addToCart, categories }: any) {
           </div>
 
           <div style={{ background: '#F8FAFC', padding: 20, borderRadius: 20, border: '1px solid #F1F5F9', marginBottom: 32 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                <Package size={20} color="#6366F1" />
+                <Store size={20} color="#6366F1" />
               </div>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Commande Minimum</div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: '#1E293B' }}>{product.minOrderQty} {product.unit}</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Points de vente & Stocks</div>
               </div>
             </div>
-            <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.5, margin: 0 }}>
-              Ce produit professionnel est disponible pour livraison immédiate. Qualité certifiée.
-            </p>
+            
+            <div className="space-y-2">
+              {(product.posStocks || []).map((s: any) => {
+                const qty = Number(s.quantity);
+                const isLow = qty <= Number(product.stockThreshold || 5);
+                return (
+                  <button 
+                    key={s.id}
+                    onClick={() => setSelectedPosId(s.vendorPosId)}
+                    className={`w-full flex justify-between items-center p-3 rounded-xl border-2 transition-all ${
+                      selectedPosId === s.vendorPosId 
+                        ? 'bg-violet-50 border-violet-600' 
+                        : 'bg-white border-transparent hover:border-slate-100'
+                    }`}
+                  >
+                    <div className="text-left">
+                      <div className="text-sm font-black text-slate-900">{s.vendorPos?.name}</div>
+                      <div className="text-[10px] text-slate-500 font-bold">{s.vendorPos?.address}, {s.vendorPos?.city}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-xs font-black ${qty === 0 ? 'text-rose-500' : isLow ? 'text-amber-500' : 'text-emerald-500'}`}>
+                        {qty === 0 ? 'Rupture' : `${qty} en stock`}
+                      </div>
+                      {selectedPosId === s.vendorPosId && <CheckCircle size={14} className="text-violet-600 mt-1 inline" />}
+                    </div>
+                  </button>
+                );
+              })}
+              {(!product.posStocks || product.posStocks.length === 0) && (
+                <div className="text-xs text-slate-400 font-bold italic py-2">
+                   Stock géré par le dépôt central.
+                </div>
+              )}
+            </div>
           </div>
 
           <button 
@@ -880,5 +963,84 @@ function VendorDetailsDrawer({ vendor, products, onClose, addToCart }: any) {
         </div>
       </div>
     </>
+  );
+}
+function RatingModal({ order, onClose, onSuccess }: { order: any, onClose: () => void, onSuccess: () => void }) {
+  const [scores, setScores] = useState({ speed: 5, quality: 5, reliability: 5, delivery: 5 });
+  const [comment, setComment] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      await rateVendorAction({
+        orderId: order.id,
+        speedScore: scores.speed,
+        qualityScore: scores.quality,
+        reliabilityScore: scores.reliability,
+        deliveryScore: scores.delivery,
+        comment
+      });
+      onSuccess();
+    } catch (e) {
+      alert('Erreur lors de la notation');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const categories = [
+    { key: 'speed', label: 'Vitesse', icon: Clock },
+    { key: 'quality', label: 'Qualité', icon: Star },
+    { key: 'reliability', label: 'Fiabilité', icon: CheckCircle },
+    { key: 'delivery', label: 'Livraison', icon: Package }
+  ];
+
+  return (
+    <div className="product-modal-backdrop" onClick={onClose}>
+      <div className="product-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+        <div className="p-8">
+           <h2 className="text-2xl font-black text-slate-900 mb-2">Noter votre commande</h2>
+           <p className="text-sm text-slate-500 font-bold mb-8">Votre retour aide {order.vendor?.companyName} à s'améliorer.</p>
+
+           <div className="space-y-6 mb-8">
+              {categories.map(cat => (
+                <div key={cat.key} className="flex justify-between items-center">
+                   <div className="flex items-center gap-3">
+                      <cat.icon size={18} className="text-slate-400" />
+                      <span className="text-sm font-black text-slate-700">{cat.label}</span>
+                   </div>
+                   <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <button 
+                          key={star} 
+                          onClick={() => setScores({ ...scores, [cat.key]: star })}
+                          className={`p-1 transition-all ${scores[cat.key as keyof typeof scores] >= star ? 'text-amber-500' : 'text-slate-200'}`}
+                        >
+                           <Star size={20} fill={scores[cat.key as keyof typeof scores] >= star ? 'currentColor' : 'none'} />
+                        </button>
+                      ))}
+                   </div>
+                </div>
+              ))}
+           </div>
+
+           <textarea 
+             placeholder="Un commentaire ? (Optionnel)"
+             className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm font-medium mb-8 focus:ring-2 focus:ring-indigo-600 outline-none min-h-[100px]"
+             value={comment}
+             onChange={e => setComment(e.target.value)}
+           />
+
+           <button 
+             onClick={handleSubmit}
+             disabled={isSubmitting}
+             className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black shadow-xl shadow-slate-900/10 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+           >
+             {isSubmitting ? 'Envoi...' : 'Confirmer la note'}
+           </button>
+        </div>
+      </div>
+    </div>
   );
 }

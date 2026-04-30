@@ -33,6 +33,7 @@ export default async function VendorCatalogPage() {
         benchmarkData={JSON.parse(JSON.stringify(benchmarkData))}
         vendorId={portalData?.id || ''}
         mktSectors={JSON.parse(JSON.stringify(portalData?.mktSectors || []))}
+        collections={JSON.parse(JSON.stringify(portalData?.collections || []))}
       />
     </div>
   );
