@@ -1695,6 +1695,25 @@ export async function updateVendorStatus(id: string, status: string) {
 // VENDOR FRANCHISE / POS MANAGEMENT
 // ==========================================
 
+export async function toggleVendorPremiumAction(vendorId: string, isPremium: boolean) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  const admin = await (prisma as any).user.findUnique({
+    where: { id: userId }
+  });
+
+  if (!admin || admin.role !== 'SUPERADMIN') throw new Error('Accès refusé');
+
+  await (prisma as any).vendorProfile.update({
+    where: { id: vendorId },
+    data: { isPremium }
+  });
+
+  revalidatePath(`/superadmin/vendors/${vendorId}`);
+  revalidatePath('/superadmin/vendors');
+}
+
 export async function createVendorPosAction(data: {
   name: string;
   address?: string;

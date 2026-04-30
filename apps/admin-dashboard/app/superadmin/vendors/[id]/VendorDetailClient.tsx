@@ -149,27 +149,44 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
                  </button>
                </>
              ) : (
-               <button 
-                onClick={() => {
-                  if (vendor.status === 'ACTIVE') handleReject(vendor.id);
-                  else handleApprove(vendor.id);
-                }}
-                disabled={isPending}
-                className={`px-8 py-3 rounded-2xl font-black text-sm border-2 transition-all ${
-                  vendor.status === 'ACTIVE' 
-                    ? 'border-rose-100 dark:border-rose-500/20 text-rose-500 hover:bg-rose-50' 
-                    : 'bg-emerald-600 text-white hover:bg-emerald-500'
-                }`}
-               >
-                 {vendor.status === 'ACTIVE' ? 'Suspendre ce vendeur' : 'Ré-activer le compte'}
-               </button>
-             )}
-               <button 
-                onClick={() => setShowWalletModal(true)}
-                className="px-6 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 font-black text-sm hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all"
-               >
-                 Reversement / Retrait
-               </button>
+                 <button 
+                  onClick={() => {
+                    if (vendor.status === 'ACTIVE') handleReject(vendor.id);
+                    else handleApprove(vendor.id);
+                  }}
+                  disabled={isPending}
+                  className={`px-8 py-3 rounded-2xl font-black text-sm border-2 transition-all ${
+                    vendor.status === 'ACTIVE' 
+                      ? 'border-rose-100 dark:border-rose-500/20 text-rose-500 hover:bg-rose-50' 
+                      : 'bg-emerald-600 text-white hover:bg-emerald-500'
+                  }`}
+                 >
+                   {vendor.status === 'ACTIVE' ? 'Suspendre ce vendeur' : 'Ré-activer le compte'}
+                 </button>
+               )}
+                 <button 
+                  onClick={() => setShowWalletModal(true)}
+                  className="px-6 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 font-black text-sm hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all"
+                 >
+                   Reversement / Retrait
+                 </button>
+                 <button
+                   onClick={() => {
+                     startTransition(async () => {
+                       const { toggleVendorPremiumAction } = await import('../../../actions');
+                       await toggleVendorPremiumAction(vendor.id, !vendor.isPremium);
+                     });
+                   }}
+                   disabled={isPending}
+                   className={`px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 transition-all border ${
+                     vendor.isPremium 
+                       ? 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200' 
+                       : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                   }`}
+                 >
+                   <CheckCircle2 size={16} />
+                   {vendor.isPremium ? 'Pack Franchise Actif' : 'Activer Pack Franchise'}
+                 </button>
           </div>
         </div>
       </div>
