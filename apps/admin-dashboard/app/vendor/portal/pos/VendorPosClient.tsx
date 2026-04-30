@@ -54,8 +54,8 @@ export default function VendorPosClient({ initialPosList, products }: VendorPosC
   const openStockModal = (pos: any) => {
     setActiveStockPos(pos);
     const initialInputs: Record<string, number> = {};
-    if (pos.inventory) {
-      pos.inventory.forEach((inv: any) => {
+    if (pos.stockItems) {
+      pos.stockItems.forEach((inv: any) => {
         initialInputs[inv.vendorProductId] = Number(inv.quantity);
       });
     }

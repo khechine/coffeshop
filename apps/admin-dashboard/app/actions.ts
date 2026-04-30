@@ -1863,7 +1863,7 @@ export async function getVendorPortalData() {
       },
       posList: {
         include: {
-          inventory: {
+          stockItems: {
             include: { vendorProduct: true }
           }
         }
