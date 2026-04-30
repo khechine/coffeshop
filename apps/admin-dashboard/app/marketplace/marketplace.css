@@ -572,3 +572,218 @@
   color: #1e1b4b;
   margin: 0;
 }
+
+/* Standalone Header */
+.mkt-standalone-header {
+  height: 80px;
+  background: #fff;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+.mkt-logo {
+  font-size: 24px;
+  font-weight: 950;
+  color: #1E1B4B;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.mkt-logo span {
+  color: #4F46E5;
+}
+
+/* Sections */
+.mkt-section {
+  margin-bottom: 60px;
+}
+
+.mkt-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #F1F5F9;
+  padding-bottom: 12px;
+}
+
+.mkt-section-title {
+  font-size: 24px;
+  font-weight: 950;
+  color: #1E1B4B;
+  position: relative;
+}
+
+.mkt-section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -14px;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: #4F46E5;
+}
+
+/* Ads Banner */
+.mkt-ads-banner {
+  width: 100%;
+  height: 180px;
+  border-radius: 24px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 60px;
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mkt-ads-banner:hover {
+  transform: scale(1.02);
+}
+
+.ads-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 60px;
+  color: #fff;
+  z-index: 2;
+}
+
+.ads-content h3 {
+  font-size: 32px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.ads-content p {
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+/* Tab Navigation */
+.mkt-tab-nav {
+  display: flex;
+  gap: 32px;
+}
+
+.mkt-tab-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 800;
+  color: #94A3B8;
+  cursor: pointer;
+  padding-bottom: 12px;
+  position: relative;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mkt-tab-btn:hover {
+  color: #1E1B4B;
+}
+
+.mkt-tab-btn.active {
+  color: #4F46E5;
+}
+
+.mkt-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #4F46E5;
+}
+
+/* Countdown */
+.mkt-countdown {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.countdown-box {
+  background: #1E1B4B;
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 18px;
+}
+
+.countdown-sep {
+  font-weight: 900;
+  color: #1E1B4B;
+}
+
+/* Layout density adjustment */
+.product-grid-mkt.high-density {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+@media (min-width: 1440px) {
+  .product-grid-mkt.high-density {
+    grid-template-columns: repeat(5, 1fr) !important;
+  }
+}
+
+/* Enhanced Banner Carousel for multi-positions */
+.mkt-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.mkt-side-banners {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.side-banner {
+  flex: 1;
+  border-radius: 24px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.side-banner:hover {
+  transform: translateY(-5px);
+}
+
+@media (max-width: 1024px) {
+  .mkt-hero-grid {
+    grid-template-columns: 1fr;
+  }
+  .mkt-side-banners {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .mkt-side-banners {
+    display: none;
+  }
+}

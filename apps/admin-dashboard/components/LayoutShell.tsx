@@ -97,7 +97,7 @@ export default function LayoutShell({
   }, [pathname]);
 
   // If the path relates to auth, pos, vendor portal, or superadmin, render without the store dashboard shell
-  if (pathname === '/' || pathname.startsWith('/auth') || pathname.startsWith('/pos') || pathname.startsWith('/register') || pathname.startsWith('/login') || pathname.startsWith('/vendor/portal') || pathname.startsWith('/superadmin') || pathname.startsWith('/courier')) {
+  if (pathname === '/' || pathname.startsWith('/auth') || pathname.startsWith('/pos') || pathname.startsWith('/register') || pathname.startsWith('/login') || pathname.startsWith('/vendor/portal') || pathname.startsWith('/superadmin') || pathname.startsWith('/courier') || pathname.startsWith('/marketplace')) {
     return <>{children}</>;
   }
 

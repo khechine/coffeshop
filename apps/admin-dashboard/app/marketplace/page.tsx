@@ -34,11 +34,9 @@ export default async function MarketplacePage() {
   }
 
   return (
-    <div className="page-content" style={{ padding: '32px 40px' }}>
-      <MarketplaceClient 
-        initialData={data} 
-        storeCoords={store?.lat && store?.lng ? { lat: Number(store.lat), lng: Number(store.lng) } : undefined} 
-      />
-    </div>
+    <MarketplaceClient 
+      initialData={data} 
+      storeCoords={store?.lat && store?.lng ? { lat: Number(store.lat), lng: Number(store.lng) } : undefined} 
+    />
   );
 }
