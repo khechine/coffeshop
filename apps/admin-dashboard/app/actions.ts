@@ -4115,17 +4115,20 @@ export async function updateVendorCustomizationAction(data: {
   welcomeMessage?: string;
 }) {
   const userId = cookies().get('userId')?.value;
-  const user = await (prisma as any).user.findUnique({
-    where: { id: userId || '' }
+  if (!userId) throw new Error('Non authentifié');
+
+  // User table has no vendorProfileId column — look up via VendorProfile.userId
+  const vendorProfile = await (prisma as any).vendorProfile.findFirst({
+    where: { userId }
   });
-  if (!user || !user.vendorProfileId) throw new Error('Non autorisé');
+  if (!vendorProfile) throw new Error('Non autorisé — profil vendeur introuvable');
 
   const customization = await (prisma as any).vendorCustomization.upsert({
-    where: { vendorId: user.vendorProfileId },
+    where: { vendorId: vendorProfile.id },
     update: data,
     create: {
       ...data,
-      vendorId: user.vendorProfileId
+      vendorId: vendorProfile.id
     }
   });
 
