@@ -1116,10 +1116,6 @@ export async function getMarketplaceData(userLat?: number, userLng?: number) {
     return list.filter(item => activeVendorIds!.has(item.vendorId));
   };
 
-  const featured = filterByWallet(featuredRaw);
-  const flashSales = filterByWallet(flashSalesRaw);
-  const products = filterByWallet(productsRaw);
-  const bundles = filterByWallet(bundlesRaw);
 
   const mapProduct = (p: any) => {
     const vendorData = p.vendor ? {
@@ -1181,10 +1177,10 @@ export async function getMarketplaceData(userLat?: number, userLng?: number) {
     };
   };
 
-  let featured = featuredRaw.map(mapProduct);
-  let flashSales = flashSalesRaw.map(mapProduct);
-  let products = productsRaw.map(mapProduct);
-  let bundles = bundlesRaw.map(mapBundle);
+  let featured = filterByWallet(featuredRaw).map(mapProduct);
+  let flashSales = filterByWallet(flashSalesRaw).map(mapProduct);
+  let products = filterByWallet(productsRaw).map(mapProduct);
+  let bundles = filterByWallet(bundlesRaw).map(mapBundle);
 
   // Sorting by distance if user coords are provided
   if (userLat && userLng) {
