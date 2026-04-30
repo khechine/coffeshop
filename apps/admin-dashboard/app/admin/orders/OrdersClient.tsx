@@ -92,7 +92,7 @@ export default function OrdersClient({ initialOrders }: { initialOrders: any[] }
                     )}
                     {order.rating && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#F59E0B', fontWeight: 800, fontSize: '13px', justifyContent: 'flex-end' }}>
-                        <Star size={14} fill="#F59E0B" /> {((order.rating.ratingSpeed + order.rating.ratingQuality + order.rating.ratingReliability + order.rating.ratingDelivery) / 4).toFixed(1)}
+                        <Star size={14} fill="#F59E0B" /> {((order.rating.speedScore + order.rating.qualityScore + order.rating.reliabilityScore + order.rating.deliveryScore) / 4).toFixed(1)}
                       </div>
                     )}
                   </td>

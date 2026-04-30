@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useEffect, useRef } from 'react';
-import { Building2, Save, CheckCircle2, Briefcase, MapPin, Crosshair } from 'lucide-react';
+import { Building2, Save, CheckCircle2, Briefcase, MapPin, Crosshair, Package } from 'lucide-react';
 import { updateVendorSectorsAction, updateVendorProfileAction } from '../../../actions';
 
 import 'leaflet/dist/leaflet.css';
@@ -196,6 +196,81 @@ export default function VendorSettingsClient({
           </div>
 
 
+
+          {/* ── PERSONNALISATION MARKETPLACE (PREMIUM) ── */}
+          {portalData.isPremium && (
+            <div className="bg-gradient-to-br from-amber-50 to-white dark:from-amber-500/5 dark:to-slate-900/40 border border-amber-200 dark:border-amber-500/20 p-8 md:p-10 rounded-[40px] backdrop-blur-md shadow-sm relative overflow-hidden group">
+              <div className="absolute -top-24 -right-24 w-64 h-64 bg-amber-500/5 blur-[100px] pointer-events-none" />
+              
+              <div className="flex items-center gap-6 mb-10 relative z-10">
+                <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-[24px] flex items-center justify-center shadow-xl shadow-amber-500/20">
+                  <Package size={28} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white">Identité Visuelle</h2>
+                  <p className="text-slate-500 text-sm font-medium">Personnalisez votre boutique sur la Marketplace B2B</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 relative z-10">
+                <div className="space-y-4">
+                  <label className={labelClass}>Lien du Logo (Format carré)</label>
+                  <input 
+                    className={inputClass} 
+                    placeholder="https://.../logo.png"
+                    value={portalData.customization?.logoUrl || ''} 
+                    onChange={async (e) => {
+                      const { updateVendorCustomizationAction } = await import('../../../actions');
+                      await updateVendorCustomizationAction({ logoUrl: e.target.value });
+                    }} 
+                  />
+                  {portalData.customization?.logoUrl && (
+                    <div className="w-20 h-20 rounded-2xl overflow-hidden border border-slate-200">
+                      <img src={portalData.customization.logoUrl} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <label className={labelClass}>Lien de la Bannière (1200x300)</label>
+                  <input 
+                    className={inputClass} 
+                    placeholder="https://.../banner.jpg"
+                    value={portalData.customization?.bannerUrl || ''} 
+                    onChange={async (e) => {
+                      const { updateVendorCustomizationAction } = await import('../../../actions');
+                      await updateVendorCustomizationAction({ bannerUrl: e.target.value });
+                    }} 
+                  />
+                  {portalData.customization?.bannerUrl && (
+                    <div className="w-full h-12 rounded-xl overflow-hidden border border-slate-200">
+                      <img src={portalData.customization.bannerUrl} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="md:col-span-2">
+                   <label className={labelClass}>Couleur Principale de la Boutique</label>
+                   <div className="flex items-center gap-4">
+                      <input 
+                        type="color" 
+                        className="w-12 h-12 p-1 rounded-xl cursor-pointer border-none bg-transparent"
+                        value={portalData.customization?.primaryColor || '#4F46E5'} 
+                        onChange={async (e) => {
+                          const { updateVendorCustomizationAction } = await import('../../../actions');
+                          await updateVendorCustomizationAction({ primaryColor: e.target.value });
+                        }}
+                      />
+                      <span className="font-mono text-sm font-black text-slate-500">{portalData.customization?.primaryColor || '#4F46E5'}</span>
+                   </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-amber-100/50 dark:bg-amber-500/10 rounded-2xl border border-amber-200/50 text-[10px] text-amber-700 dark:text-amber-400 font-bold uppercase tracking-widest text-center">
+                 Ces modifications seront visibles sur votre fiche marketplace publique
+              </div>
+            </div>
+          )}
 
           {/* ── INFOS ENTREPRISE ── */}
           <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 p-8 md:p-10 rounded-[40px] backdrop-blur-md shadow-sm dark:shadow-none">

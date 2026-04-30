@@ -1053,13 +1053,13 @@ export async function getMarketplaceData(userLat?: number, userLng?: number) {
   }
 
   // Fetch average ratings for all vendors
-  const ratingData = await (prisma as any).vendorRating.groupBy({
+  const ratings = await (prisma as any).vendorRating.groupBy({
     by: ['vendorId'],
     _avg: {
-      ratingSpeed: true,
-      ratingQuality: true,
-      ratingReliability: true,
-      ratingDelivery: true
+      speedScore: true,
+      qualityScore: true,
+      reliabilityScore: true,
+      deliveryScore: true
     },
     _count: {
       _all: true
@@ -1067,19 +1067,19 @@ export async function getMarketplaceData(userLat?: number, userLng?: number) {
   });
 
   const vendorRatingsMap = new Map<string, any>(
-    ratingData.map((r: any) => [
+    ratings.map((r: any) => [
       r.vendorId, 
       {
-        avgSpeed: r._avg.ratingSpeed || 0,
-        avgQuality: r._avg.ratingQuality || 0,
-        avgReliability: r._avg.ratingReliability || 0,
-        avgDelivery: r._avg.ratingDelivery || 0,
+        avgSpeed: r._avg.speedScore || 0,
+        avgQuality: r._avg.qualityScore || 0,
+        avgReliability: r._avg.reliabilityScore || 0,
+        avgDelivery: r._avg.deliveryScore || 0,
         totalReviews: r._count._all,
         overallAvg: (
-          (r._avg.ratingSpeed || 0) + 
-          (r._avg.ratingQuality || 0) + 
-          (r._avg.ratingReliability || 0) + 
-          (r._avg.ratingDelivery || 0)
+          (r._avg.speedScore || 0) + 
+          (r._avg.qualityScore || 0) + 
+          (r._avg.reliabilityScore || 0) + 
+          (r._avg.deliveryScore || 0)
         ) / 4
       }
     ])
@@ -1761,6 +1761,29 @@ export async function updateVendorPosAction(id: string, data: any) {
   revalidatePath('/vendor/portal');
 }
 
+export async function updateVendorPosStockAction(posId: string, productId: string, quantity: number) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  await (prisma as any).vendorPosStock.upsert({
+    where: {
+      vendorPosId_vendorProductId: {
+        vendorPosId: posId,
+        vendorProductId: productId
+      }
+    },
+    update: { quantity },
+    create: {
+      vendorPosId: posId,
+      vendorProductId: productId,
+      quantity
+    }
+  });
+
+  revalidatePath('/vendor/portal');
+  revalidatePath('/vendor/portal/pos');
+}
+
 export async function updateVendorCustomizationAction(data: {
   logoUrl?: string;
   bannerUrl?: string;
@@ -1838,7 +1861,13 @@ export async function getVendorPortalData() {
         include: { items: true, store: true },
         orderBy: { createdAt: 'desc' }
       },
-      posList: true,
+      posList: {
+        include: {
+          inventory: {
+            include: { vendorProduct: true }
+          }
+        }
+      },
       customization: true,
       customers: {
         include: { store: true }
