@@ -7,20 +7,26 @@ import {
   Search, Filter, History, Activity, ArrowUpRight, ArrowDownLeft,
   ChevronRight, RefreshCcw, Download, Trash2, ShieldCheck
 } from 'lucide-react';
-import { processDepositRequestAction } from '../../actions';
+import { processDepositRequestAction, depositToWalletAction } from '../../actions';
 
 interface AdminWalletClientProps {
   initialRequests: any[];
   initialTransactions: any[];
+  vendors?: any[];
 }
 
-export default function AdminWalletClient({ initialRequests, initialTransactions = [] }: AdminWalletClientProps) {
+export default function AdminWalletClient({ initialRequests, initialTransactions = [], vendors = [] }: AdminWalletClientProps) {
   const [requests, setRequests] = useState(initialRequests || []);
   const [transactions, setTransactions] = useState(initialTransactions || []);
   const [isPending, startTransition] = useTransition();
   const [selectedProof, setSelectedProof] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
-  const [activeTab, setActiveTab] = useState<'PENDING' | 'HISTORY' | 'AUDIT'>('PENDING');
+  const [activeTab, setActiveTab] = useState<'PENDING' | 'HISTORY' | 'AUDIT' | 'CREDIT'>('PENDING');
+
+  // Manual Credit States
+  const [creditVendorId, setCreditVendorId] = useState('');
+  const [creditAmount, setCreditAmount] = useState('');
+  const [creditNotes, setCreditNotes] = useState('Bonus manuel B2B');
   
   // Filtering States
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,6 +42,23 @@ export default function AdminWalletClient({ initialRequests, initialTransactions
       try {
         await processDepositRequestAction(requestId, status, adminNotes);
         // Refresh local state or just show alert and reload (reload is cleaner for historical consistency)
+        window.location.reload();
+      } catch (err: any) {
+        alert(err.message);
+      }
+    });
+  };
+
+  const handleManualCredit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!creditVendorId || !creditAmount || isNaN(Number(creditAmount)) || Number(creditAmount) <= 0) {
+      alert('Veuillez sélectionner un vendeur et un montant valide.');
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        await depositToWalletAction(creditVendorId, Number(creditAmount), creditNotes);
         window.location.reload();
       } catch (err: any) {
         alert(err.message);
@@ -97,6 +120,7 @@ export default function AdminWalletClient({ initialRequests, initialTransactions
          <div className="flex bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
             {[
               { id: 'PENDING', label: 'Approbations', icon: Clock, badge: pendingRequests.length },
+              { id: 'CREDIT', label: 'Créditer', icon: Wallet },
               { id: 'HISTORY', label: 'Historique Dépôts', icon: History },
               { id: 'AUDIT', label: 'Audit Log Global', icon: Activity },
             ].map(tab => (
@@ -307,7 +331,73 @@ export default function AdminWalletClient({ initialRequests, initialTransactions
                    })}
                 </tbody>
              </table>
-             {auditLogs.length === 0 && <EmptyState title="Aucune donnée" subtitle="Le journal d'audit est vide pour ces critères." icon={Activity} />}
+              {auditLogs.length === 0 && <EmptyState title="Aucune donnée" subtitle="Le journal d'audit est vide pour ces critères." icon={Activity} />}
+           </div>
+        )}
+
+        {/* Tab: MANUAL CREDIT */}
+        {activeTab === 'CREDIT' && (
+          <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-200 dark:border-slate-800 p-8 shadow-sm max-w-2xl mx-auto">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-600">
+                <Wallet size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">Créditer un Vendeur</h3>
+                <p className="text-slate-500 text-sm font-medium">Ajouter manuellement des fonds au portefeuille d'un vendeur</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleManualCredit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Vendeur</label>
+                <select 
+                  value={creditVendorId}
+                  onChange={(e) => setCreditVendorId(e.target.value)}
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none appearance-none"
+                  required
+                >
+                  <option value="" disabled>Sélectionner un vendeur...</option>
+                  {vendors.map(v => (
+                    <option key={v.id} value={v.id}>{v.companyName} ({v.user?.email})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Montant (DT)</label>
+                <input 
+                  type="number" 
+                  step="0.001"
+                  min="0.001"
+                  value={creditAmount}
+                  onChange={(e) => setCreditAmount(e.target.value)}
+                  placeholder="Ex: 100.000"
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Description</label>
+                <input 
+                  type="text" 
+                  value={creditNotes}
+                  onChange={(e) => setCreditNotes(e.target.value)}
+                  placeholder="Motif du crédit..."
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                  required
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={isPending}
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm tracking-widest uppercase shadow-xl shadow-indigo-600/20 transition-all disabled:opacity-50"
+              >
+                {isPending ? 'Traitement...' : 'Créditer le Portefeuille'}
+              </button>
+            </form>
           </div>
         )}
 

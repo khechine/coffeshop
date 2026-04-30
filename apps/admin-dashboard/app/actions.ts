@@ -1646,7 +1646,7 @@ export async function registerVendorAction(data: any) {
     }
   });
 
-  await prisma.vendorProfile.create({
+  const vendorProfile = await prisma.vendorProfile.create({
     data: {
       userId: user.id,
       companyName: companyName,
@@ -1657,6 +1657,22 @@ export async function registerVendorAction(data: any) {
       status: 'PENDING'
     }
   });
+
+  if ((prisma as any).vendorWallet) {
+    await (prisma as any).vendorWallet.create({
+      data: {
+        vendorId: vendorProfile.id,
+        balance: 100,
+        transactions: {
+          create: [{
+            amount: 100,
+            type: 'BONUS',
+            description: 'Bonus de bienvenue B2B'
+          }]
+        }
+      }
+    });
+  }
 
   return { success: true };
 }

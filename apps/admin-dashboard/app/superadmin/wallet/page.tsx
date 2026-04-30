@@ -1,13 +1,14 @@
 import React from 'react';
-import { getAllWalletRequestsAction, getGlobalWalletTransactionsAction } from '../../actions';
+import { getAllWalletRequestsAction, getGlobalWalletTransactionsAction, getAllVendors } from '../../actions';
 import AdminWalletClient from './AdminWalletClient';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminWalletPage() {
-  const [requestsRaw, transactionsRaw] = await Promise.all([
+  const [requestsRaw, transactionsRaw, vendorsRaw] = await Promise.all([
     getAllWalletRequestsAction(),
-    getGlobalWalletTransactionsAction()
+    getGlobalWalletTransactionsAction(),
+    getAllVendors()
   ]);
 
   // Serialize Prisma Decimals for Client Components
@@ -23,7 +24,7 @@ export default async function AdminWalletPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8">
-      <AdminWalletClient initialRequests={requests} initialTransactions={transactions} />
+      <AdminWalletClient initialRequests={requests} initialTransactions={transactions} vendors={vendorsRaw} />
     </div>
   );
 }
