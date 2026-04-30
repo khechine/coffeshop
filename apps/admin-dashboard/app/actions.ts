@@ -1991,11 +1991,7 @@ export async function getVendorPortalData() {
         include: { store: true }
       },
       campaigns: true,
-      collections: {
-        include: {
-          products: true
-        }
-      }
+      collections: true,
     }
   });
 
