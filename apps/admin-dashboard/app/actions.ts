@@ -1090,7 +1090,7 @@ export async function getMarketplaceData(userLat?: number, userLng?: number) {
     (prisma as any).vendorProduct.findMany({
       where: { isFeatured: true },
       include: { 
-        vendor: true, 
+        vendor: { include: { customization: true } }, 
         productStandard: true,
         posStocks: { include: { vendorPos: true } }
       },
@@ -1932,41 +1932,7 @@ export async function getVendorOrdersWithAlertsAction() {
   };
 }
 
-export async function updateVendorCustomizationAction(data: {
-  logoUrl?: string;
-  bannerUrl?: string;
-  primaryColor?: string;
-}) {
-  const userId = cookies().get('userId')?.value;
-  if (!userId) throw new Error('Non authentifié');
 
-  const vendor = await (prisma as any).vendorProfile.findFirst({
-    where: { userId }
-  });
-
-  if (!vendor) throw new Error('Profil vendeur introuvable');
-  if (!vendor.isPremium) throw new Error('Cette fonctionnalité nécessite le pack Franchise B2B');
-
-  const existing = await (prisma as any).vendorCustomization.findUnique({
-    where: { vendorId: vendor.id }
-  });
-
-  if (existing) {
-    await (prisma as any).vendorCustomization.update({
-      where: { vendorId: vendor.id },
-      data
-    });
-  } else {
-    await (prisma as any).vendorCustomization.create({
-      data: {
-        vendorId: vendor.id,
-        ...data
-      }
-    });
-  }
-
-  revalidatePath('/vendor/portal');
-}
 
 export async function getVendorPortalData() {
   const userId = cookies().get('userId')?.value;
@@ -4141,5 +4107,34 @@ export async function getStoreMarketplaceOrders() {
     orderBy: { createdAt: 'desc' }
   });
 }
+
+export async function updateVendorCustomizationAction(data: {
+  logoUrl?: string;
+  bannerUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  accentColor?: string;
+  fontFamily?: string;
+  welcomeMessage?: string;
+}) {
+  const userId = cookies().get('userId')?.value;
+  const user = await (prisma as any).user.findUnique({
+    where: { id: userId || '' }
+  });
+  if (!user || !user.vendorProfileId) throw new Error('Non autorisé');
+
+  const customization = await (prisma as any).vendorCustomization.upsert({
+    where: { vendorId: user.vendorProfileId },
+    update: data,
+    create: {
+      ...data,
+      vendorId: user.vendorProfileId
+    }
+  });
+
+  revalidatePath('/marketplace');
+  return customization;
+}
+
 
 

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useTransition, useEffect, useRef } from 'react';
-import { Building2, Save, CheckCircle2, Briefcase, MapPin, Crosshair, Package } from 'lucide-react';
-import { updateVendorSectorsAction, updateVendorProfileAction } from '../../../actions';
+import { Building2, Save, CheckCircle2, Briefcase, MapPin, Crosshair, Package, Upload, X, Palette, Type, MessageSquare } from 'lucide-react';
+import { updateVendorSectorsAction, updateVendorProfileAction, updateVendorCustomizationAction } from '../../../actions';
 
 import 'leaflet/dist/leaflet.css';
 
@@ -17,6 +17,40 @@ export default function VendorSettingsClient({
 }) {
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ show: boolean; message: string } | null>(null);
+
+  const [customForm, setCustomForm] = useState({
+    logoUrl: portalData.customization?.logoUrl || '',
+    bannerUrl: portalData.customization?.bannerUrl || '',
+    primaryColor: portalData.customization?.primaryColor || '#6366F1',
+    secondaryColor: portalData.customization?.secondaryColor || '#1E293B',
+    accentColor: portalData.customization?.accentColor || '#F43F5E',
+    fontFamily: portalData.customization?.fontFamily || 'Inter',
+    welcomeMessage: portalData.customization?.welcomeMessage || '',
+  });
+
+  const handleSaveCustomization = () => {
+    startTransition(async () => {
+      await updateVendorCustomizationAction(customForm);
+      showToast('Design mis à jour !');
+    });
+  };
+
+  const handleUpload = async (file: File, type: 'logo' | 'banner') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('http://localhost:3001/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.url) {
+        setCustomForm(f => ({ ...f, [type === 'logo' ? 'logoUrl' : 'bannerUrl']: data.url }));
+      }
+    } catch (e) {
+      alert('Erreur upload');
+    }
+  };
 
   // ── Profile & Map state ───────────────────────────────────
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -199,76 +233,126 @@ export default function VendorSettingsClient({
 
           {/* ── PERSONNALISATION MARKETPLACE (PREMIUM) ── */}
           {portalData.isPremium && (
-            <div className="bg-gradient-to-br from-amber-50 to-white dark:from-amber-500/5 dark:to-slate-900/40 border border-amber-200 dark:border-amber-500/20 p-8 md:p-10 rounded-[40px] backdrop-blur-md shadow-sm relative overflow-hidden group">
-              <div className="absolute -top-24 -right-24 w-64 h-64 bg-amber-500/5 blur-[100px] pointer-events-none" />
+            <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 p-8 md:p-10 rounded-[40px] backdrop-blur-md shadow-sm relative overflow-hidden">
+              <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/5 blur-[100px] pointer-events-none" />
               
               <div className="flex items-center gap-6 mb-10 relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-[24px] flex items-center justify-center shadow-xl shadow-amber-500/20">
-                  <Package size={28} className="text-white" />
+                <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[24px] flex items-center justify-center shadow-xl shadow-indigo-500/20">
+                  <Palette size={28} className="text-white" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white">Identité Visuelle</h2>
-                  <p className="text-slate-500 text-sm font-medium">Personnalisez votre boutique sur la Marketplace B2B</p>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white">Design & Branding</h2>
+                  <p className="text-slate-500 text-sm font-medium">Configurez votre identité visuelle premium</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 relative z-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10 mb-10">
+                {/* Logo Upload */}
                 <div className="space-y-4">
-                  <label className={labelClass}>Lien du Logo (Format carré)</label>
-                  <input 
-                    className={inputClass} 
-                    placeholder="https://.../logo.png"
-                    value={portalData.customization?.logoUrl || ''} 
-                    onChange={async (e) => {
-                      const { updateVendorCustomizationAction } = await import('../../../actions');
-                      await updateVendorCustomizationAction({ logoUrl: e.target.value });
-                    }} 
-                  />
-                  {portalData.customization?.logoUrl && (
-                    <div className="w-20 h-20 rounded-2xl overflow-hidden border border-slate-200">
-                      <img src={portalData.customization.logoUrl} className="w-full h-full object-cover" />
+                  <label className={labelClass}>Logo Officiel</label>
+                  <div className="flex items-center gap-6">
+                    <div className="w-24 h-24 rounded-[24px] bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                      {customForm.logoUrl ? (
+                        <img src={customForm.logoUrl} className="w-full h-full object-contain" />
+                      ) : (
+                        <Upload size={24} className="text-slate-300" />
+                      )}
                     </div>
-                  )}
+                    <div className="flex-1">
+                      <input 
+                        type="file" 
+                        id="logo-upload" 
+                        className="hidden" 
+                        onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'logo')}
+                      />
+                      <label htmlFor="logo-upload" className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black cursor-pointer hover:bg-slate-800 transition-all">
+                        <Upload size={14} /> Changer le logo
+                      </label>
+                      <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-wider">PNG, JPG ou SVG (Max 2MB)</p>
+                    </div>
+                  </div>
                 </div>
 
+                {/* Banner Upload */}
                 <div className="space-y-4">
-                  <label className={labelClass}>Lien de la Bannière (1200x300)</label>
-                  <input 
-                    className={inputClass} 
-                    placeholder="https://.../banner.jpg"
-                    value={portalData.customization?.bannerUrl || ''} 
-                    onChange={async (e) => {
-                      const { updateVendorCustomizationAction } = await import('../../../actions');
-                      await updateVendorCustomizationAction({ bannerUrl: e.target.value });
-                    }} 
-                  />
-                  {portalData.customization?.bannerUrl && (
-                    <div className="w-full h-12 rounded-xl overflow-hidden border border-slate-200">
-                      <img src={portalData.customization.bannerUrl} className="w-full h-full object-cover" />
-                    </div>
-                  )}
+                  <label className={labelClass}>Bannière de Fiche</label>
+                  <div className="w-full h-24 rounded-[24px] bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden relative group">
+                    {customForm.bannerUrl ? (
+                      <img src={customForm.bannerUrl} className="w-full h-full object-cover" />
+                    ) : (
+                      <Upload size={24} className="text-slate-300" />
+                    )}
+                    <input 
+                      type="file" 
+                      id="banner-upload" 
+                      className="hidden" 
+                      onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'banner')}
+                    />
+                    <label htmlFor="banner-upload" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white cursor-pointer transition-all font-black text-xs uppercase tracking-widest gap-2">
+                       <Upload size={16} /> Modifier la bannière
+                    </label>
+                  </div>
+                </div>
+
+                {/* Colors */}
+                <div className="space-y-6">
+                   <label className={labelClass}>Palette de Couleurs</label>
+                   <div className="flex gap-4">
+                      <div className="flex-1">
+                        <div className="text-[10px] font-black text-slate-400 mb-2">PRIMAIRE</div>
+                        <div className="flex items-center gap-3 p-2 bg-slate-50 rounded-2xl border border-slate-100">
+                           <input type="color" value={customForm.primaryColor} onChange={e => setCustomForm(f => ({ ...f, primaryColor: e.target.value }))} className="w-8 h-8 rounded-lg border-none bg-transparent cursor-pointer" />
+                           <span className="font-mono text-[10px] font-black">{customForm.primaryColor}</span>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-[10px] font-black text-slate-400 mb-2">ACCENT</div>
+                        <div className="flex items-center gap-3 p-2 bg-slate-50 rounded-2xl border border-slate-100">
+                           <input type="color" value={customForm.accentColor} onChange={e => setCustomForm(f => ({ ...f, accentColor: e.target.value }))} className="w-8 h-8 rounded-lg border-none bg-transparent cursor-pointer" />
+                           <span className="font-mono text-[10px] font-black">{customForm.accentColor}</span>
+                        </div>
+                      </div>
+                   </div>
+                </div>
+
+                {/* Font & Message */}
+                <div className="space-y-6">
+                   <div>
+                     <label className={labelClass}>Police de caractères</label>
+                     <select 
+                       className={inputClass}
+                       value={customForm.fontFamily}
+                       onChange={e => setCustomForm(f => ({ ...f, fontFamily: e.target.value }))}
+                     >
+                       <option value="Inter">Inter (Moderne)</option>
+                       <option value="Roboto">Roboto (Classique)</option>
+                       <option value="Outfit">Outfit (Élégant)</option>
+                       <option value="Cairo">Cairo (Arabe/Moderne)</option>
+                     </select>
+                   </div>
                 </div>
 
                 <div className="md:col-span-2">
-                   <label className={labelClass}>Couleur Principale de la Boutique</label>
-                   <div className="flex items-center gap-4">
-                      <input 
-                        type="color" 
-                        className="w-12 h-12 p-1 rounded-xl cursor-pointer border-none bg-transparent"
-                        value={portalData.customization?.primaryColor || '#4F46E5'} 
-                        onChange={async (e) => {
-                          const { updateVendorCustomizationAction } = await import('../../../actions');
-                          await updateVendorCustomizationAction({ primaryColor: e.target.value });
-                        }}
+                   <label className={labelClass}>Message de Bienvenue (Slogan)</label>
+                   <div className="relative">
+                      <MessageSquare className="absolute left-4 top-4 text-slate-300" size={18} />
+                      <textarea 
+                        className={`${inputClass} pl-12 min-h-[100px] resize-none`}
+                        placeholder="Ex: Le meilleur du café en Tunisie livré chez vous..."
+                        value={customForm.welcomeMessage}
+                        onChange={e => setCustomForm(f => ({ ...f, welcomeMessage: e.target.value }))}
                       />
-                      <span className="font-mono text-sm font-black text-slate-500">{portalData.customization?.primaryColor || '#4F46E5'}</span>
                    </div>
                 </div>
               </div>
 
-              <div className="p-4 bg-amber-100/50 dark:bg-amber-500/10 rounded-2xl border border-amber-200/50 text-[10px] text-amber-700 dark:text-amber-400 font-bold uppercase tracking-widest text-center">
-                 Ces modifications seront visibles sur votre fiche marketplace publique
-              </div>
+              <button 
+                onClick={handleSaveCustomization}
+                disabled={isPending}
+                className="w-full flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50 uppercase tracking-widest relative z-10"
+              >
+                {isPending ? 'Enregistrement...' : <><Save size={18} /> Appliquer le nouveau design</>}
+              </button>
             </div>
           )}
 

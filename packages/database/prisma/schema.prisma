@@ -1079,10 +1079,14 @@ model VendorCustomization {
   id           String   @id @default(cuid())
   vendorId     String   @unique
   vendor       VendorProfile @relation(fields: [vendorId], references: [id])
-  logoUrl      String?
-  bannerUrl    String?
-  primaryColor String?  @default("#6366F1")
-  themeConfig  Json?    
+  logoUrl        String?
+  bannerUrl      String?
+  primaryColor   String?  @default("#6366F1")
+  secondaryColor String?  @default("#1E293B")
+  accentColor    String?  @default("#F43F5E")
+  fontFamily     String?  @default("Inter")
+  welcomeMessage String?
+  themeConfig    Json?    
 }
 
 model VendorCustomer {

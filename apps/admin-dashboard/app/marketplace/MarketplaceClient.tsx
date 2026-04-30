@@ -745,6 +745,84 @@ function EmptyState() {
   );
 }
 
+function VendorDetailsDrawer({ vendor, products, onClose, addToCart }: any) {
+  const vendorProducts = products.filter((p: any) => p.vendorId === vendor.id);
+  const customization = vendor.customization || {};
+  
+  return (
+    <>
+      <div className="drawer-overlay" onClick={onClose} />
+      <div className="drawer-content">
+        {/* Premium Banner */}
+        <div style={{ 
+          height: 200, 
+          background: customization.bannerUrl ? `url(${customization.bannerUrl}) center/cover` : `linear-gradient(135deg, ${customization.primaryColor || '#6366F1'} 0%, ${customization.secondaryColor || '#1E293B'} 100%)`,
+          position: 'relative'
+        }}>
+          <button onClick={onClose} style={{ position: 'absolute', top: 20, right: 20, background: 'rgba(0,0,0,0.2)', color: 'white', border: 'none', width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
+            <X size={20} />
+          </button>
+          
+          <div style={{ position: 'absolute', bottom: -40, left: 40, width: 100, height: 100, borderRadius: 24, background: 'white', border: '4px solid white', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            {customization.logoUrl ? (
+              <img src={customization.logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            ) : (
+              <Building2 size={40} color={customization.primaryColor || '#6366F1'} />
+            )}
+          </div>
+        </div>
+
+        <div className="p-8 pt-16">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                <h2 style={{ fontSize: 28, fontWeight: 900, color: '#1E293B', margin: 0 }}>{vendor.companyName}</h2>
+                {vendor.isPremium && <div style={{ background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: 'white', fontSize: 10, fontWeight: 900, padding: '4px 10px', borderRadius: 8, textTransform: 'uppercase', letterSpacing: 1 }}>Premium</div>}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748B', fontSize: 13, fontWeight: 600 }}>
+                    <MapPin size={14} /> {vendor.city || 'Tunisie'}
+                 </div>
+              </div>
+            </div>
+          </div>
+
+          {customization.welcomeMessage && (
+            <div style={{ background: '#F8FAFC', padding: 20, borderRadius: 20, borderLeft: `4px solid ${customization.primaryColor || '#6366F1'}`, marginBottom: 32 }}>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#475569', fontStyle: 'italic' }}>
+                "{customization.welcomeMessage}"
+              </p>
+            </div>
+          )}
+
+          <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#1E1B4B', textTransform: 'uppercase', marginBottom: '16px' }}>Catalogue du vendeur</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {vendorProducts.map((p: any) => (
+              <div key={p.id} style={{ display: 'flex', gap: 16, alignItems: 'center', padding: 12, background: '#F8FAFC', borderRadius: 16 }}>
+                <img 
+                  src={p.image} 
+                  style={{ width: 50, height: 50, borderRadius: 10, objectFit: 'cover' }} 
+                  onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=100'; }}
+                />
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800 }}>{p.name}</div>
+                    <div style={{ fontSize: 14, fontWeight: 900, color: customization.primaryColor || '#4F46E5' }}>{Number(p.price).toFixed(3)} DT</div>
+                </div>
+                <button 
+                  onClick={() => addToCart(p)}
+                  style={{ background: customization.primaryColor || '#1E1B4B', color: '#fff', border: 'none', width: 32, height: 32, borderRadius: 8, cursor: 'pointer' }}
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function CartDrawer({ cart, removeFromCart, updateQuantity, cartTotal, isOrdering, handleCheckout, orderStatus, onClose }: any) {
   return (
     <>
@@ -918,53 +996,7 @@ function ProductDetailsModal({ product, onClose, addToCart, categories, selected
   );
 }
 
-function VendorDetailsDrawer({ vendor, products, onClose, addToCart }: any) {
-  return (
-    <>
-      <div className="drawer-overlay" onClick={onClose} />
-      <div className="drawer-content" style={{ maxWidth: 500 }}>
-        <div style={{ padding: '32px', borderBottom: '1px solid #F1F5F9', background: '#1E1B4B', color: '#fff', position: 'relative' }}>
-          <button 
-            onClick={onClose}
-            style={{ position: 'absolute', top: '24px', right: '24px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}
-          >
-            <X size={20} />
-          </button>
-          <div style={{ width: '70px', height: '70px', background: 'rgba(255,255,255,0.1)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', marginBottom: '20px' }}>🏢</div>
-          <h2 style={{ fontSize: '24px', fontWeight: 900, marginBottom: '4px' }}>{vendor.companyName}</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', opacity: 0.8 }}>
-            <MapPin size={14} /> {vendor.city}
-          </div>
-        </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
-             <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#1E1B4B', textTransform: 'uppercase', marginBottom: '16px' }}>Catalogue du vendeur</h3>
-             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {products.filter((p: any) => p.vendorId === vendor.id).map((p: any) => (
-                  <div key={p.id} style={{ display: 'flex', gap: 16, alignItems: 'center', padding: 12, background: '#F8FAFC', borderRadius: 16 }}>
-                    <img 
-                      src={p.image} 
-                      style={{ width: 50, height: 50, borderRadius: 10, objectFit: 'cover' }} 
-                      onError={(e: any) => { e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=100'; }}
-                    />
-                    <div style={{ flex: 1 }}>
-                       <div style={{ fontSize: 13, fontWeight: 800 }}>{p.name}</div>
-                       <div style={{ fontSize: 14, fontWeight: 900, color: '#4F46E5' }}>{Number(p.price).toFixed(3)} DT</div>
-                    </div>
-                    <button 
-                      onClick={() => addToCart(p)}
-                      style={{ background: '#1E1B4B', color: '#fff', border: 'none', width: 32, height: 32, borderRadius: 8, cursor: 'pointer' }}
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                ))}
-             </div>
-        </div>
-      </div>
-    </>
-  );
-}
 function RatingModal({ order, onClose, onSuccess }: { order: any, onClose: () => void, onSuccess: () => void }) {
   const [scores, setScores] = useState({ speed: 5, quality: 5, reliability: 5, delivery: 5 });
   const [comment, setComment] = useState('');
