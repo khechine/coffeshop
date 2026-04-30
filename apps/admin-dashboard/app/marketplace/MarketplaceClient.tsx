@@ -27,7 +27,38 @@ interface MarketplaceProduct {
   categoryId: string;
 }
 
-export default function MarketplaceClient({ initialData }: { initialData: any }) {
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  return R * c;
+}
+
+import { rateVendorAction } from '../actions';
+
+const RatingStars = ({ ratings }: { ratings: any }) => {
+  if (!ratings || ratings.totalReviews === 0) return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#94A3B8', fontSize: 10, fontWeight: 700 }}>
+       <Star size={10} /> Nouveau
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', color: '#F59E0B' }}>
+        <Star size={10} fill="#F59E0B" />
+        <span style={{ fontSize: 11, fontWeight: 900, marginLeft: 2 }}>{ratings.overallAvg.toFixed(1)}</span>
+      </div>
+      <span style={{ fontSize: 10, color: '#94A3B8', fontWeight: 700 }}>({ratings.totalReviews})</span>
+    </div>
+  );
+};
+
+export default function MarketplaceClient({ initialData, storeCoords }: { initialData: any, storeCoords?: { lat: number, lng: number } }) {
   const [viewMode, setViewMode] = useState<'products' | 'vendors' | 'bundles'>('products');
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,20 +73,52 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
   const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [selectedCity, setSelectedCity] = useState<string>('all');
   const [selectedProduct, setSelectedProduct] = useState<MarketplaceProduct | null>(null);
-  const [bundles, setBundles] = useState<any[]>(initialData.bundles || []);
   const [selectedBundle, setSelectedBundle] = useState<any>(null);
+  const [userCoords, setUserCoords] = useState(storeCoords);
+  const [maxDistance, setMaxDistance] = useState<number>(100); // 100km default
+  const [isLocating, setIsLocating] = useState(false);
+
+  // Attempt to get more precise location from terminal
+  React.useEffect(() => {
+    if ("geolocation" in navigator) {
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition((position) => {
+        setUserCoords({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+        setIsLocating(false);
+      }, (error) => {
+        console.error("Geolocation error:", error);
+        setIsLocating(false);
+      });
+    }
+  }, []);
 
   const products = initialData.products || [];
   const categories = initialData.categories || [];
 
   const filteredBundles = useMemo(() => {
-    return bundles.filter((b: any) => {
+    let list = [...(initialData.bundles || [])];
+    
+    // Re-calculate distances if userCoords changed
+    if (userCoords) {
+      list = list.map(b => ({
+        ...b,
+        distance: (b.vendor?.lat && b.vendor?.lng) 
+          ? calculateDistance(userCoords.lat, userCoords.lng, Number(b.vendor.lat), Number(b.vendor.lng))
+          : b.distance
+      })).sort((a, b) => (a.distance || 9999) - (b.distance || 9999));
+    }
+
+    return list.filter((b: any) => {
       const matchesSearch = b.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           b.vendor.companyName.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesVendor = selectedCity === 'all' || b.vendor.city === selectedCity;
-      return matchesSearch && matchesVendor;
+      const matchesDistance = !userCoords || !b.distance || b.distance <= maxDistance;
+      return matchesSearch && matchesVendor && matchesDistance;
     });
-  }, [bundles, searchQuery, selectedCity]);
+  }, [initialData.bundles, searchQuery, selectedCity, userCoords, maxDistance]);
   
   const vendors = useMemo(() => {
     const vMap: Record<string, any> = {};
@@ -77,15 +140,27 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
   }, [vendors]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter((p: any) => {
+    let list = [...(initialData.products || [])];
+
+    if (userCoords) {
+      list = list.map(p => ({
+        ...p,
+        distance: (p.vendor?.lat && p.vendor?.lng) 
+          ? calculateDistance(userCoords.lat, userCoords.lng, Number(p.vendor.lat), Number(p.vendor.lng))
+          : p.distance
+      })).sort((a, b) => (a.distance || 9999) - (b.distance || 9999));
+    }
+
+    return list.filter((p: any) => {
       const matchesCategory = activeCategory === 'all' || p.categoryId === activeCategory;
       const matchesSearch = (p.name?.toLowerCase().includes(searchQuery.toLowerCase())) || 
                            (p.vendor?.companyName?.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesPrice = Number(p.price) <= maxPrice;
       const matchesCity = selectedCity === 'all' || p.vendor?.city === selectedCity;
-      return matchesCategory && matchesSearch && matchesPrice && matchesCity;
+      const matchesDistance = !userCoords || !p.distance || p.distance <= maxDistance;
+      return matchesCategory && matchesSearch && matchesPrice && matchesCity && matchesDistance;
     });
-  }, [activeCategory, searchQuery, products, maxPrice, selectedCity]);
+  }, [activeCategory, searchQuery, initialData.products, maxPrice, selectedCity, userCoords, maxDistance]);
 
   const filteredVendors = useMemo(() => {
     return vendors.filter((v: any) => {
@@ -245,6 +320,20 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
             </div>
             
             <div className="filter-section" style={{ padding: '0 8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <span className="filter-label" style={{ fontSize: '9px', margin: 0 }}>Proximité</span>
+                {isLocating && <span style={{ fontSize: '8px', color: '#4F46E5', fontWeight: 900 }}>GPS...</span>}
+              </div>
+              <input 
+                type="range" min="1" max="500" step="10" 
+                value={maxDistance} 
+                onChange={(e) => setMaxDistance(parseInt(e.target.value))}
+                style={{ width: '100%', accentColor: '#4F46E5' }}
+              />
+              <div style={{ fontSize: '10px', fontWeight: 800, textAlign: 'center', marginTop: '4px' }}>Rayon: {maxDistance} km</div>
+            </div>
+
+            <div className="filter-section" style={{ padding: '0 8px' }}>
               <span className="filter-label" style={{ fontSize: '9px' }}>Prix Max</span>
               <input 
                 type="range" min="0" max="1000" step="50" 
@@ -286,8 +375,11 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
                         onClick={() => setSelectedVendor(p.vendor)}
                         style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%' }}
                       >
-                        <div style={{ fontSize: '11px', color: '#4F46E5', fontWeight: 800, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Building2 size={12} /> {p.vendor?.companyName}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '11px', color: '#4F46E5', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Building2 size={12} /> {p.vendor?.companyName}
+                          </div>
+                          <RatingStars ratings={p.vendor?.ratings} />
                         </div>
                       </button>
                       <button 
@@ -300,6 +392,11 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
                         <div>
                           <span style={{ fontSize: '20px', fontWeight: 950, color: '#1E1B4B' }}>{Number(p.price).toFixed(3)}</span>
                           <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 700, marginLeft: '4px' }}>DT / {p.unit}</span>
+                          {p.distance !== null && (
+                            <div style={{ fontSize: '10px', color: '#10B981', fontWeight: 900, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <MapPin size={10} /> à {p.distance.toFixed(1)} km
+                            </div>
+                          )}
                         </div>
                         <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700, background: '#F1F5F9', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <Package size={10} /> min. {p.minOrderQty}
@@ -317,7 +414,10 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
                 {filteredVendors.map((v: any) => (
                   <div key={v.id} className="premium-card vendor-card" onClick={() => setSelectedVendor(v)}>
                     <div className="vendor-avatar">🏪</div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E1B4B', margin: '0 0 4px' }}>{v.companyName}</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 0 4px' }}>
+                       <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E1B4B', margin: 0 }}>{v.companyName}</h3>
+                       <RatingStars ratings={v.ratings} />
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#64748B', fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>
                       <MapPin size={14} color="#94A3B8" /> {v.city}
                     </div>

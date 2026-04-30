@@ -138,6 +138,7 @@ model Store {
   zReports       ZReport[]
   zones          StoreZone[]
   cashSessions   CashSession[]
+  vendorRatings  VendorRating[]
 
 
   activityPoleId String?
@@ -802,6 +803,8 @@ model VendorProfile {
   // Billing & Marketplace Safeguards
   gracePeriodEndsAt   DateTime?
   lastBillingAlertAt  DateTime?
+
+  ratings        VendorRating[]
 }
 
 model CourierProfile {
@@ -870,6 +873,7 @@ model SupplierOrder {
   needsDelivery Boolean           @default(false)
   items         SupplierOrderItem[]
   settlement    MarketplaceSettlement?
+  rating        VendorRating?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 }
@@ -987,4 +991,25 @@ model CashSession {
 
   @@index([storeId])
   @@index([baristaId])
+}
+
+model VendorRating {
+  id              String   @id @default(cuid())
+  storeId         String
+  store           Store    @relation(fields: [storeId], references: [id])
+  vendorId        String
+  vendor          VendorProfile @relation(fields: [vendorId], references: [id])
+  orderId         String?  @unique
+  order           SupplierOrder? @relation(fields: [orderId], references: [id])
+  
+  ratingSpeed     Int      @default(5) // 1-5
+  ratingQuality   Int      @default(5) // 1-5
+  ratingReliability Int    @default(5) // 1-5
+  ratingDelivery  Int      @default(5) // 1-5
+  comment         String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([storeId, vendorId, orderId])
 }

@@ -230,13 +230,13 @@ export default async function AdminDashboardPage() {
               </Link>
             )}
             {draftOrders.length > 0 && (
-              <Link href="/vendor/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '16px', textDecoration: 'none' }}>
+              <Link href="/admin/orders" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '16px', textDecoration: 'none' }}>
                 <div style={{ width: '40px', height: '40px', background: '#3B82F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Truck size={20} color="#fff" />
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', fontWeight: 800, color: '#1E40AF' }}>{draftOrders.length} Commandes en Attente</div>
-                  <div style={{ fontSize: '12px', color: '#1D4ED8' }}>Certains réapprovisionnements sont à valider.</div>
+                  <div style={{ fontSize: '12px', color: '#1D4ED8' }}>Cliquez pour voir & évaluer vos fournisseurs.</div>
                 </div>
               </Link>
             )}
@@ -249,7 +249,8 @@ export default async function AdminDashboardPage() {
         <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', marginBottom: '20px' }}>Pilotage & Modules</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
           {[
-            { label: 'Sourcing & B2B', sub: 'Marketplace Fournisseurs', icon: Truck, color: '#6366F1', href: '/marketplace', bg: '#EEF2FF' },
+            { label: 'Mes Commandes', sub: 'Achats & Évaluations fournisseurs', icon: Truck, color: '#6366F1', href: '/admin/orders', bg: '#EEF2FF' },
+            { label: 'Sourcing B2B', sub: 'Marketplace fournisseurs', icon: ShoppingCart, color: '#10B981', href: '/marketplace', bg: '#ECFDF5' },
             { label: 'Stock & Inventaire', sub: 'Matières premières & Alertes', icon: Boxes, color: '#F59E0B', href: '/admin/stock', bg: '#FFFBEB' },
             { label: 'Clients & Fidélité', sub: 'Base client & Points cadeau', icon: Users, color: '#10B981', href: '/admin/customers', bg: '#ECFDF5' },
             { label: 'Tables & Salles', sub: 'Plan de salle & Occupation', icon: LayoutGrid, color: '#8B5CF6', href: '/admin/tables', bg: '#F5F3FF' },

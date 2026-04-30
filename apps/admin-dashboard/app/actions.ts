@@ -1008,7 +1008,19 @@ export async function generateZReport() {
 // ══════════════════════════════════════════════════════════════
 //  MARKETPLACE
 // ══════════════════════════════════════════════════════════════
-export async function getMarketplaceData() {
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Rayon de la Terre en km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  return R * c;
+}
+
+export async function getMarketplaceData(userLat?: number, userLng?: number) {
   const hasWalletModel = !!(prisma as any).vendorWallet;
   let activeVendorIds: Set<string> | null = null;
 
@@ -1039,6 +1051,39 @@ export async function getMarketplaceData() {
       console.error('Marketplace visibility query failed:', e);
     }
   }
+
+  // Fetch average ratings for all vendors
+  const ratingData = await (prisma as any).vendorRating.groupBy({
+    by: ['vendorId'],
+    _avg: {
+      ratingSpeed: true,
+      ratingQuality: true,
+      ratingReliability: true,
+      ratingDelivery: true
+    },
+    _count: {
+      _all: true
+    }
+  });
+
+  const vendorRatingsMap = new Map<string, any>(
+    ratingData.map((r: any) => [
+      r.vendorId, 
+      {
+        avgSpeed: r._avg.ratingSpeed || 0,
+        avgQuality: r._avg.ratingQuality || 0,
+        avgReliability: r._avg.ratingReliability || 0,
+        avgDelivery: r._avg.ratingDelivery || 0,
+        totalReviews: r._count._all,
+        overallAvg: (
+          (r._avg.ratingSpeed || 0) + 
+          (r._avg.ratingQuality || 0) + 
+          (r._avg.ratingReliability || 0) + 
+          (r._avg.ratingDelivery || 0)
+        ) / 4
+      }
+    ])
+  );
 
   const [categories, featuredRaw, flashSalesRaw, productsRaw, bundlesRaw] = await Promise.all([
     (prisma as any).mktCategory.findMany({ include: { subcategories: true } }),
@@ -1105,19 +1150,26 @@ export async function getMarketplaceData() {
       deliveryAreas: p.deliveryAreas,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
-      vendor: vendorData,
+      vendor: vendorData ? {
+        ...vendorData,
+        ratings: vendorRatingsMap.get(vendorData.id) || null
+      } : null,
+      distance: (userLat && userLng && vendorData?.lat && vendorData?.lng) 
+        ? calculateDistance(userLat, userLng, vendorData.lat, vendorData.lng) 
+        : null
     };
     return result;
   };
 
-  return {
-    categories,
-    featured: featuredRaw.map(mapProduct),
-    flashSales: flashSalesRaw.map(mapProduct),
-    products: productsRaw.map(mapProduct),
-    bundles: bundlesRaw.map((b: any) => ({
+  const mapBundle = (b: any) => {
+    const distance = (userLat && userLng && b.vendor?.lat && b.vendor?.lng)
+      ? calculateDistance(userLat, userLng, Number(b.vendor.lat), Number(b.vendor.lng))
+      : null;
+
+    return {
       ...b,
       price: Number(b.price),
+      distance,
       items: b.items.map((i: any) => ({
         ...i,
         quantity: Number(i.quantity),
@@ -1126,8 +1178,82 @@ export async function getMarketplaceData() {
           price: Number(i.vendorProduct.price)
         }
       }))
+    };
+  };
+
+  let featured = featuredRaw.map(mapProduct);
+  let flashSales = flashSalesRaw.map(mapProduct);
+  let products = productsRaw.map(mapProduct);
+  let bundles = bundlesRaw.map(mapBundle);
+
+  // Sorting by distance if user coords are provided
+  if (userLat && userLng) {
+    const sortByDistance = (a: any, b: any) => {
+      if (a.distance === null) return 1;
+      if (b.distance === null) return -1;
+      return a.distance - b.distance;
+    };
+    products.sort(sortByDistance);
+    bundles.sort(sortByDistance);
+    featured.sort(sortByDistance);
+  }
+
+  return {
+    categories,
+    featured,
+    flashSales,
+    products,
+    bundles: bundles.map(b => ({
+      ...b,
+      vendor: b.vendor ? {
+        ...b.vendor,
+        ratings: vendorRatingsMap.get(b.vendorId) || null
+      } : null
     }))
   };
+}
+
+export async function rateVendorAction(data: {
+  orderId: string;
+  vendorId: string;
+  ratingSpeed: number;
+  ratingQuality: number;
+  ratingReliability: number;
+  ratingDelivery: number;
+  comment?: string;
+}) {
+  const user = await getUser();
+  if (!user || !user.storeId) throw new Error("Non autorisé");
+
+  await (prisma as any).vendorRating.upsert({
+    where: { 
+      storeId_vendorId_orderId: {
+        storeId: user.storeId,
+        vendorId: data.vendorId,
+        orderId: data.orderId
+      }
+    },
+    create: {
+      storeId: user.storeId,
+      vendorId: data.vendorId,
+      orderId: data.orderId,
+      ratingSpeed: data.ratingSpeed,
+      ratingQuality: data.ratingQuality,
+      ratingReliability: data.ratingReliability,
+      ratingDelivery: data.ratingDelivery,
+      comment: data.comment
+    },
+    update: {
+      ratingSpeed: data.ratingSpeed,
+      ratingQuality: data.ratingQuality,
+      ratingReliability: data.ratingReliability,
+      ratingDelivery: data.ratingDelivery,
+      comment: data.comment
+    }
+  });
+
+  revalidatePath('/admin/stock');
+  revalidatePath('/marketplace');
 }
 
 export async function getMarketplaceBenchmarkData(vendorId: string) {

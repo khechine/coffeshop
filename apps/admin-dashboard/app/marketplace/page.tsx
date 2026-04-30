@@ -8,7 +8,10 @@ import MarketplaceClient from './MarketplaceClient';
 export default async function MarketplacePage() {
   const store = await getStore();
   const hasMarketplace = store && (store as any)?.hasMarketplace === true;
-  const data = await getMarketplaceData();
+  const data = await getMarketplaceData(
+    store?.lat ? Number(store.lat) : undefined,
+    store?.lng ? Number(store.lng) : undefined
+  );
 
   if (!hasMarketplace) {
     return (
@@ -32,7 +35,10 @@ export default async function MarketplacePage() {
 
   return (
     <div className="page-content" style={{ padding: '32px 40px' }}>
-      <MarketplaceClient initialData={data} />
+      <MarketplaceClient 
+        initialData={data} 
+        storeCoords={store?.lat && store?.lng ? { lat: Number(store.lat), lng: Number(store.lng) } : undefined} 
+      />
     </div>
   );
 }
