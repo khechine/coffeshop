@@ -4,18 +4,31 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { 
   ArrowLeft, ShoppingCart, Search, Filter, 
-  ChevronRight, Star, ShoppingBag, LayoutGrid 
+  ChevronRight, Star, ShoppingBag, LayoutGrid, Plus
 } from 'lucide-react';
+import { useCart } from '../../CartContext';
+import CartDrawer from '../../CartDrawer';
 import '../../marketplace.css';
 
 const fmt = (n: any) => Number(n).toFixed(3);
 
+const sanitizeUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  if (url.startsWith('http')) {
+    return url.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '');
+  }
+  if (url.startsWith('/')) return url;
+  return '/' + url;
+};
+
 export default function CategoryViewClient({ category, products, allCategories }: any) {
   const [search, setSearch] = useState('');
+  const [cartOpen, setCartOpen] = useState(false);
+  const { addToCart, cartCount } = useCart();
   
   const filteredProducts = products.filter((p: any) => 
     p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.vendor?.companyName.toLowerCase().includes(search.toLowerCase())
+    p.vendor?.companyName?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -24,7 +37,7 @@ export default function CategoryViewClient({ category, products, allCategories }
       <header className="mkt-header">
         <div className="mkt-header-inner">
           <Link href="/marketplace" className="mkt-logo" style={{ textDecoration: 'none' }}>
-            <div className="mkt-logo-icon"><ShoppingBag size={22} /></div>
+            <div className="mkt-logo-icon" style={{ background: '#1E1B4B' }}><ShoppingBag size={22} /></div>
             Coffee<span>Market</span>
           </Link>
 
@@ -42,6 +55,10 @@ export default function CategoryViewClient({ category, products, allCategories }
             <Link href="/" className="mkt-header-btn" style={{ textDecoration: 'none' }}>
               <LayoutGrid size={16} /> Dashboard
             </Link>
+            <button className="mkt-cart-btn" onClick={() => setCartOpen(true)}>
+              <ShoppingCart size={20} />
+              {cartCount > 0 && <span className="mkt-cart-badge">{cartCount}</span>}
+            </button>
           </div>
         </div>
       </header>
@@ -96,16 +113,21 @@ export default function CategoryViewClient({ category, products, allCategories }
         <div className="mkt-grid">
           {filteredProducts.map((p: any) => (
             <div key={p.id} className="mkt-card">
-              <Link href={`/marketplace/product/${p.id}`} style={{ textDecoration: 'none' }}>
-                <div className="mkt-card-img">
-                  <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'} alt={p.name} />
+              <Link href={`/marketplace/product/${p.id}`} style={{ textDecoration: 'none' }} className="mkt-card-img">
+                <img src={sanitizeUrl(p.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'} alt={p.name} />
+                <div className="mkt-card-add">
+                  <button className="mkt-card-add-btn" onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCart(p); }}>
+                    <Plus size={14} /> AJOUTER
+                  </button>
                 </div>
               </Link>
               <div className="mkt-card-body">
                 <Link href={`/marketplace/vendor/${p.vendor?.id}`} style={{ textDecoration: 'none' }} className="mkt-card-vendor">
                   {p.vendor?.companyName}
                 </Link>
-                <div className="mkt-card-name">{p.name}</div>
+                <Link href={`/marketplace/product/${p.id}`} style={{ textDecoration: 'none' }}>
+                   <div className="mkt-card-name">{p.name}</div>
+                </Link>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                    <div className="mkt-card-price">{fmt(p.price)} <span className="mkt-card-unit">DT/{p.unit}</span></div>
                 </div>
@@ -114,6 +136,7 @@ export default function CategoryViewClient({ category, products, allCategories }
           ))}
         </div>
       </div>
+      {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
     </div>
   );
 }

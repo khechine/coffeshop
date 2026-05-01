@@ -33,10 +33,16 @@ export default async function MarketplacePage() {
     );
   }
 
+  // Robust serialization for Prisma types (Decimal, Date, etc)
+  const serializedData = JSON.parse(JSON.stringify(data, (key, value) => 
+    typeof value === 'object' && value !== null && value.constructor.name === 'Decimal' 
+      ? Number(value) 
+      : value
+  ));
+
   return (
     <MarketplaceClient 
-      initialData={data} 
-      storeCoords={store?.lat && store?.lng ? { lat: Number(store.lat), lng: Number(store.lng) } : undefined} 
+      initialData={serializedData} 
     />
   );
 }

@@ -73,7 +73,7 @@ function HeroBanner({ banner }: { banner: any }) {
   );
   return (
     <div className="mkt-hero-main" style={{ background: banner.bgColor || '#1E1B4B' }}>
-      <img className="mkt-hero-img" src={banner.imageUrl?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '')} alt={banner.title} onError={(e: any) => { e.target.style.display='none'; }} />
+      <img className="mkt-hero-img" src={sanitizeUrl(banner.imageUrl) || ''} alt={banner.title} onError={(e: any) => { e.target.style.display='none'; }} />
       <div className="mkt-hero-overlay">
         {banner.badgeText && <span className="mkt-hero-badge">{banner.badgeText}</span>}
         <h2 className="mkt-hero-title">{banner.title}</h2>
@@ -96,7 +96,7 @@ function SideBanner({ banner, gradient }: { banner: any; gradient: string }) {
   );
   return (
     <div className="mkt-side-banner" style={{ background: banner.bgColor || gradient }}>
-      <img src={banner.imageUrl?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '')} alt={banner.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.5 }} onError={(e:any)=>{e.target.style.display='none';}} />
+      <img src={sanitizeUrl(banner.imageUrl) || ''} alt={banner.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.5 }} onError={(e:any)=>{e.target.style.display='none';}} />
       <div className="mkt-side-overlay" style={{ background:'linear-gradient(to top, rgba(0,0,0,0.65), transparent)' }}>
         {banner.badgeText && <span className="mkt-side-label">{banner.badgeText}</span>}
         <div className="mkt-side-title">{banner.title}</div>
@@ -110,7 +110,7 @@ function AdsBanner({ banner, fallback }: { banner?: any; fallback: { title: stri
   const b = banner || fallback;
   return (
     <div className="mkt-ads" style={{ background: b.color || banner?.bgColor || '#1E1B4B' }}>
-      <img src={(b.imageUrl || b.img)?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '')} alt={b.title} onError={(e:any)=>{e.target.style.display='none';}} />
+      <img src={sanitizeUrl(b.imageUrl || b.img) || ''} alt={b.title} onError={(e:any)=>{e.target.style.display='none';}} />
       <div className="mkt-ads-content">
         <h3>{b.title}</h3>
         {b.subtitle && <p>{b.subtitle}</p>}

@@ -35,6 +35,15 @@ export default function VendorSettingsClient({
     });
   };
 
+  const sanitizeUrl = (url: string | null | undefined) => {
+    if (!url) return null;
+    if (url.startsWith('http')) {
+      return url.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '');
+    }
+    if (url.startsWith('/')) return url;
+    return '/' + url;
+  };
+
   const handleUpload = async (file: File, type: 'logo' | 'banner') => {
     const formData = new FormData();
     formData.append('file', file);
@@ -46,7 +55,7 @@ export default function VendorSettingsClient({
       });
       const data = await res.json();
       if (data.url) {
-        const cleanUrl = data.url.replace('http://localhost:3001', '');
+        const cleanUrl = sanitizeUrl(data.url);
         setCustomForm(f => ({ ...f, [type === 'logo' ? 'logoUrl' : 'bannerUrl']: cleanUrl }));
       }
     } catch (e) {
@@ -297,7 +306,7 @@ export default function VendorSettingsClient({
                     <div className="w-24 h-24 rounded-[24px] bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
                       {customForm.logoUrl ? (
                         <img 
-                          src={customForm.logoUrl.replace('http://localhost:3001', '')} 
+                          src={sanitizeUrl(customForm.logoUrl) || ''} 
                           className="w-full h-full object-contain" 
                           onError={(e: any) => e.target.src = 'https://ui-avatars.com/api/?name=Vendor&background=6366f1&color=fff'}
                         />
@@ -326,7 +335,7 @@ export default function VendorSettingsClient({
                   <div className="w-full h-24 rounded-[24px] bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden relative group">
                     {customForm.bannerUrl ? (
                       <img 
-                        src={customForm.bannerUrl.replace('http://localhost:3001', '')} 
+                        src={sanitizeUrl(customForm.bannerUrl) || ''} 
                         className="w-full h-full object-cover" 
                         onError={(e: any) => e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200'}
                       />

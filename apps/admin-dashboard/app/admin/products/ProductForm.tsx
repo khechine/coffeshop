@@ -40,6 +40,15 @@ const TAX_RATES = [
   { label: 'Normal (19%)', value: 0.19 },
 ];
 
+const sanitizeUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  if (url.startsWith('http')) {
+    return url.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '');
+  }
+  if (url.startsWith('/')) return url;
+  return '/' + url;
+};
+
 interface ProductFormProps {
   initialData?: Product | null;
   categories: Category[];
@@ -93,8 +102,8 @@ export default function ProductForm({ initialData, categories, stockItems, globa
       });
       const data = await res.json();
       if (data.url) {
-        const cleanUrl = data.url.replace('http://localhost:3001', '');
-        setForm(f => ({ ...f, image: cleanUrl }));
+        const cleanUrl = sanitizeUrl(data.url);
+        setForm(f => ({ ...f, image: cleanUrl || '' }));
       }
     } catch (e) {
       alert('Erreur upload');
@@ -198,7 +207,7 @@ export default function ProductForm({ initialData, categories, stockItems, globa
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <div style={{ width: '80px', height: '80px', borderRadius: '16px', background: '#F8FAFC', border: '2px dashed #CBD5E1', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     {form.image ? (
-                      <img src={form.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Product" />
+                      <img src={sanitizeUrl(form.image) || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Product" />
                     ) : (
                       <Coffee size={24} color="#94A3B8" />
                     )}

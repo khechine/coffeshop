@@ -252,7 +252,7 @@ export class ManagementController {
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
       destination: (req, file, cb) => {
-        const uploadPath = join(__dirname, '..', '..', 'public', 'uploads');
+        const uploadPath = join(__dirname, '..', 'public', 'uploads');
         if (!existsSync(uploadPath)) {
           mkdirSync(uploadPath, { recursive: true });
         }
