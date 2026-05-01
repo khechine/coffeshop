@@ -16,8 +16,20 @@ export default async function VendorCrmPage() {
   const serializedCustomers = portalData.customers?.map((c: any) => ({
     ...c,
     totalSpent: Number(c.totalSpent || 0),
-    createdAt: c.createdAt?.toISOString(),
-    store: { ...c.store }
+    createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
+    store: { 
+      ...c.store,
+      supplierOrders: c.store?.supplierOrders?.map((o: any) => ({
+        ...o,
+        total: Number(o.total),
+        createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
+        items: o.items?.map((it: any) => ({
+          ...it,
+          price: Number(it.price),
+          quantity: Number(it.quantity)
+        }))
+      }))
+    }
   })) || [];
 
   const serializedCampaigns = portalData.campaigns?.map((c: any) => ({
