@@ -10,17 +10,10 @@ import { placeMarketplaceOrder, rateVendorAction } from '../actions';
 import { useCart } from './CartContext';
 import CartDrawer from './CartDrawer';
 import './marketplace.css';
+import { sanitizeUrl } from '../lib/imageUtils';
 
 /* ─── Helpers ─── */
 const fmt = (n: any) => Number(n).toFixed(3);
-const sanitizeUrl = (url: string | null | undefined) => {
-  if (!url) return null;
-  if (url.startsWith('http')) {
-    return url.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '');
-  }
-  if (url.startsWith('/')) return url;
-  return '/' + url;
-};
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
 
 function Stars({ avg = 0, total = 0, size = 10 }: any) {

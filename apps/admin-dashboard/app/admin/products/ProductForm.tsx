@@ -16,6 +16,7 @@ import {
   Info
 } from 'lucide-react';
 import { createProduct, updateProduct } from '../../actions';
+import { sanitizeUrl } from '../../lib/imageUtils';
 
 export interface Product { 
   id: string; 
@@ -39,15 +40,6 @@ const TAX_RATES = [
   { label: 'Interm. (13%)', value: 0.13 },
   { label: 'Normal (19%)', value: 0.19 },
 ];
-
-const sanitizeUrl = (url: string | null | undefined) => {
-  if (!url) return null;
-  if (url.startsWith('http')) {
-    return url.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '');
-  }
-  if (url.startsWith('/')) return url;
-  return '/' + url;
-};
 
 interface ProductFormProps {
   initialData?: Product | null;

@@ -1639,9 +1639,7 @@ export async function getMarketplaceProductAction(id: string) {
       productStandard: true,
       vendor: {
         include: { customization: true }
-      },
-      category: true,
-      subcategory: true
+      }
     }
   });
 }

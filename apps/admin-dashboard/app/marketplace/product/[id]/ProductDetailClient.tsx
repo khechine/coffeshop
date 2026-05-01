@@ -10,17 +10,9 @@ import {
 import { useCart } from '../../CartContext';
 import CartDrawer from '../../CartDrawer';
 import '../../marketplace.css';
+import { sanitizeUrl } from '../../../lib/imageUtils';
 
 const fmt = (n: any) => Number(n).toFixed(3);
-
-const sanitizeUrl = (url: string | null | undefined) => {
-  if (!url) return null;
-  if (url.startsWith('http')) {
-    return url.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '');
-  }
-  if (url.startsWith('/')) return url;
-  return '/' + url;
-};
 
 export default function ProductDetailClient({ product }: { product: any }) {
   const [qty, setQty] = useState(1);
@@ -145,7 +137,7 @@ export default function ProductDetailClient({ product }: { product: any }) {
         <div style={{ marginTop: 64, background: '#1E1B4B', padding: 48, borderRadius: 32, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 32 }}>
            <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
               <div style={{ width: 80, height: 80, background: '#fff', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                 {product.vendor?.customization?.logoUrl ? <img src={product.vendor.customization.logoUrl} style={{ width:'100%', height:'100%', objectFit:'contain' }} /> : <Building2 size={32} color="#1E1B4B" />}
+                 {product.vendor?.customization?.logoUrl ? <img src={sanitizeUrl(product.vendor.customization.logoUrl) || ''} style={{ width:'100%', height:'100%', objectFit:'contain' }} /> : <Building2 size={32} color="#1E1B4B" />}
               </div>
               <div>
                 <h4 style={{ fontSize: 24, fontWeight: 900, margin: '0 0 4px' }}>{product.vendor?.companyName}</h4>

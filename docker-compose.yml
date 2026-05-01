@@ -45,6 +45,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-supers3cr3tc0ffeesh0p}
       PORT: 3001
       PRISMA_CLI_BINARY_TARGETS: "debian-openssl-3.0.x"
+      UPLOAD_DIR: /app/apps/api/public/uploads
     depends_on:
       - coffeeshop_db
     volumes:

@@ -9,17 +9,9 @@ import {
 import { useCart } from '../../CartContext';
 import CartDrawer from '../../CartDrawer';
 import '../../marketplace.css';
+import { sanitizeUrl } from '../../../lib/imageUtils';
 
 const fmt = (n: any) => Number(n).toFixed(3);
-
-const sanitizeUrl = (url: string | null | undefined) => {
-  if (!url) return null;
-  if (url.startsWith('http')) {
-    return url.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '');
-  }
-  if (url.startsWith('/')) return url;
-  return '/' + url;
-};
 
 export default function CategoryViewClient({ category, products, allCategories }: any) {
   const [search, setSearch] = useState('');

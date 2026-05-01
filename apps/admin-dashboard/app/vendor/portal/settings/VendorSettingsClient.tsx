@@ -3,6 +3,7 @@
 import React, { useState, useTransition, useEffect, useRef } from 'react';
 import { Building2, Save, CheckCircle2, Briefcase, MapPin, Crosshair, Package, Upload, X, Palette, Type, MessageSquare } from 'lucide-react';
 import { updateVendorSectorsAction, updateVendorProfileAction, updateVendorCustomizationAction } from '../../../actions';
+import { sanitizeUrl } from '../../../lib/imageUtils';
 
 import 'leaflet/dist/leaflet.css';
 
@@ -35,14 +36,7 @@ export default function VendorSettingsClient({
     });
   };
 
-  const sanitizeUrl = (url: string | null | undefined) => {
-    if (!url) return null;
-    if (url.startsWith('http')) {
-      return url.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '');
-    }
-    if (url.startsWith('/')) return url;
-    return '/' + url;
-  };
+
 
   const handleUpload = async (file: File, type: 'logo' | 'banner') => {
     const formData = new FormData();
