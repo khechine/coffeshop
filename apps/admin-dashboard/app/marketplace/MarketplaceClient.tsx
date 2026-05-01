@@ -133,7 +133,7 @@ function ProductCard({ product, onAdd, onDetail }: any) {
           </button>
         </div>
         {product.isFlashSale && <span className="mkt-card-badge flash">⚡ Flash</span>}
-        {!product.isFlashSale && product.isFeatured && <span className="mkt-card-badge featured">★ Top</span>}
+        {!product.isFlashSale && product.isFeatured && <span className="mkt-card-badge featured">⭐ Vedette</span>}
         <button className="mkt-card-wish"><Heart size={14} /></button>
       </Link>
       <div className="mkt-card-body">
@@ -299,6 +299,24 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
       {/* Main Container */}
       <div className="mkt-container">
 
+        {/* ── Proximity Info Bar ── */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          background: '#EEF2FF',
+          border: '1px solid #C7D2FE',
+          borderRadius: 16,
+          padding: '10px 18px',
+          marginBottom: 24,
+          fontSize: 13,
+          fontWeight: 700,
+          color: '#4338CA'
+        }}>
+          <span style={{ fontSize: 18 }}>📍</span>
+          <span>Fournisseurs affichés par défaut dans un rayon de <strong>5 km</strong> autour de votre café</span>
+        </div>
+
         {/* ── Search Results Overlay ── */}
         {search.length > 0 && (
           <div style={{ marginBottom: 48, animation: 'fadeIn 0.3s ease' }}>
@@ -384,7 +402,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
             <div className="mkt-tabs">
               {(['latest','bestselling','featured'] as const).map(tab => (
                 <button key={tab} className={`mkt-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
-                  {tab === 'latest' ? '🆕 Dernières Arrivées' : tab === 'bestselling' ? '🔥 Les Plus Vendus' : '⭐ Recommandations'}
+                  {tab === 'latest' ? '🆕 Dernières Arrivées' : tab === 'bestselling' ? '🔥 Les Plus Vendus' : '⭐ Produits Vedettes'}
                 </button>
               ))}
             </div>

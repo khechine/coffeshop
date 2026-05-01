@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useTransition, useEffect, useRef } from 'react';
-import { Building2, Save, CheckCircle2, Briefcase, MapPin, Crosshair, Package, Upload, X, Palette, Type, MessageSquare } from 'lucide-react';
-import { updateVendorSectorsAction, updateVendorProfileAction, updateVendorCustomizationAction } from '../../../actions';
+import { Building2, Save, CheckCircle2, Briefcase, MapPin, Crosshair, Package, Upload, X, Palette, Type, MessageSquare, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { updateVendorSectorsAction, updateVendorProfileAction, updateVendorCustomizationAction, updateVendorPasswordAction } from '../../../actions';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 
 import 'leaflet/dist/leaflet.css';
@@ -11,10 +11,12 @@ export default function VendorSettingsClient({
   portalData,
   mktCategories,
   globalUnits,
+  userEmail = '',
 }: {
   portalData: any;
   mktCategories: { id: string; name: string; icon?: string | null }[];
   globalUnits: { id: string; name: string }[];
+  userEmail?: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ show: boolean; message: string } | null>(null);
@@ -194,6 +196,39 @@ export default function VendorSettingsClient({
     startTransition(async () => {
       await updateVendorSectorsAction(portalData.id, selectedSectorIds);
       showToast('Secteurs d\'activité enregistrés !');
+    });
+  };
+
+  // ── Password change state ─────────────────────────────────
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ current: '', newPwd: '', confirm: '' });
+  const [pwdError, setPwdError] = useState('');
+
+  const handleChangePassword = () => {
+    setPwdError('');
+    if (!pwdForm.current || !pwdForm.newPwd || !pwdForm.confirm) {
+      setPwdError('Veuillez remplir tous les champs');
+      return;
+    }
+    if (pwdForm.newPwd !== pwdForm.confirm) {
+      setPwdError('Les mots de passe ne correspondent pas');
+      return;
+    }
+    if (pwdForm.newPwd.length < 6) {
+      setPwdError('Le nouveau mot de passe doit contenir au moins 6 caractères');
+      return;
+    }
+    startTransition(async () => {
+      try {
+        await updateVendorPasswordAction({ currentPassword: pwdForm.current, newPassword: pwdForm.newPwd });
+        showToast('Mot de passe mis à jour avec succès !');
+        setPwdForm({ current: '', newPwd: '', confirm: '' });
+        setShowPasswordSection(false);
+      } catch (e: any) {
+        setPwdError(e.message || 'Erreur lors du changement de mot de passe');
+      }
     });
   };
 
@@ -427,8 +462,24 @@ export default function VendorSettingsClient({
                 <label className={labelClass}>Raison Sociale</label>
                 <input className={inputClass} value={profileForm.companyName} onChange={e => setProfileForm(f => ({ ...f, companyName: e.target.value }))} />
               </div>
+              {/* Email display */}
+              {userEmail && (
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Adresse Email du compte</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                    <input
+                      className={`${inputClass} pl-10 bg-slate-50/80 dark:bg-slate-950/30 cursor-not-allowed`}
+                      value={userEmail}
+                      readOnly
+                      disabled
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase mt-2">L’email ne peut pas être modifié directement. Contactez l’administrateur si nécessaire.</p>
+                </div>
+              )}
               <div className="md:col-span-2">
-                <label className={labelClass}>Bio / Présentation de l'entreprise</label>
+                <label className={labelClass}>Bio / Présentation de l’entreprise</label>
                 <textarea className={`${inputClass} min-h-[120px] resize-none py-4`} value={profileForm.description} onChange={e => setProfileForm(f => ({ ...f, description: e.target.value }))} />
               </div>
               <div>
@@ -502,6 +553,97 @@ export default function VendorSettingsClient({
                 {isPending ? 'Enregistrement...' : 'Sauvegarder les informations'}
               </button>
             </div>
+          </div>
+
+          {/* ── SÉCURITÉ DU COMPTE ── */}
+          <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 p-8 md:p-10 rounded-[40px] backdrop-blur-md shadow-sm dark:shadow-none">
+            <div className="flex items-center gap-6 mb-6">
+              <div className="w-16 h-16 bg-slate-50 dark:bg-slate-950/50 rounded-[24px] border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400">
+                <Lock size={28} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white">Sécurité du Compte</h2>
+                <p className="text-slate-500 text-sm font-medium">Mettez à jour votre mot de passe</p>
+              </div>
+            </div>
+
+            {!showPasswordSection ? (
+              <button
+                onClick={() => setShowPasswordSection(true)}
+                className="flex items-center gap-3 px-6 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+              >
+                <Lock size={16} /> Changer le mot de passe
+              </button>
+            ) : (
+              <div className="space-y-4">
+                {pwdError && (
+                  <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 rounded-2xl text-rose-700 dark:text-rose-400 text-sm font-bold">
+                    {pwdError}
+                  </div>
+                )}
+                <div>
+                  <label className={labelClass}>Mot de passe actuel</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                    <input
+                      type={showCurrentPwd ? 'text' : 'password'}
+                      className={`${inputClass} pl-10 pr-12`}
+                      placeholder="Saisir votre mot de passe actuel"
+                      value={pwdForm.current}
+                      onChange={e => setPwdForm(f => ({ ...f, current: e.target.value }))}
+                    />
+                    <button type="button" onClick={() => setShowCurrentPwd(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      {showCurrentPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClass}>Nouveau mot de passe</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                    <input
+                      type={showNewPwd ? 'text' : 'password'}
+                      className={`${inputClass} pl-10 pr-12`}
+                      placeholder="Minimum 6 caractères"
+                      value={pwdForm.newPwd}
+                      onChange={e => setPwdForm(f => ({ ...f, newPwd: e.target.value }))}
+                    />
+                    <button type="button" onClick={() => setShowNewPwd(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      {showNewPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClass}>Confirmer le nouveau mot de passe</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                    <input
+                      type="password"
+                      className={`${inputClass} pl-10`}
+                      placeholder="Répéter le mot de passe"
+                      value={pwdForm.confirm}
+                      onChange={e => setPwdForm(f => ({ ...f, confirm: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={handleChangePassword}
+                    disabled={isPending}
+                    className="flex-1 flex items-center justify-center gap-3 px-6 py-3 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl font-black text-sm hover:bg-slate-800 dark:hover:bg-indigo-500 transition-all disabled:opacity-50 uppercase tracking-widest"
+                  >
+                    {isPending ? 'Enregistrement...' : <><Save size={16} /> Mettre à jour</>}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowPasswordSection(false); setPwdError(''); setPwdForm({ current: '', newPwd: '', confirm: '' }); }}
+                    className="px-6 py-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-black text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

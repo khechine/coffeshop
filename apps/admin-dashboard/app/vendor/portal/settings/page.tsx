@@ -15,10 +15,20 @@ export default async function VendorSettingsPage() {
 
     if (!portalData) return <div style={{ padding: '40px' }}>Chargement ou profil non trouvé...</div>;
 
+    // Fetch user email for the profile page
+    const { cookies } = await import('next/headers');
+    const userId = cookies().get('userId')?.value;
+    let userEmail = '';
+    if (userId) {
+      const userRecord = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+      userEmail = userRecord?.email || '';
+    }
+
     return <VendorSettingsClient 
       portalData={JSON.parse(JSON.stringify(portalData))} 
       mktCategories={JSON.parse(JSON.stringify(mktCategories))} 
-      globalUnits={JSON.parse(JSON.stringify(globalUnits))} 
+      globalUnits={JSON.parse(JSON.stringify(globalUnits))}
+      userEmail={userEmail}
     />;
   } catch (error: any) {
     console.error("CRITICAL ERROR IN VENDOR SETTINGS PAGE:", error);

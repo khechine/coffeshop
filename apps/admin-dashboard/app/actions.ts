@@ -1648,6 +1648,30 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
   const store = await getStore();
   if (!store) throw new Error('Store not found');
 
+  // Enforce 2-order limit when vendor wallet balance is negative
+  try {
+    const vendorWallet = await (prisma as any).vendorWallet.findUnique({
+      where: { vendorId: data.vendorId }
+    });
+    if (vendorWallet && Number(vendorWallet.balance) < 0) {
+      const pendingOrdersCount = await (prisma as any).supplierOrder.count({
+        where: {
+          storeId: store.id,
+          vendorId: data.vendorId,
+          status: { in: ['PENDING', 'PROCESSING'] }
+        }
+      });
+      if (pendingOrdersCount >= 2) {
+        throw new Error(
+          'Limite atteinte : ce fournisseur a un solde négatif. Maximum 2 commandes en attente autorisées. Veuillez attendre la validation des commandes existantes.'
+        );
+      }
+    }
+  } catch (e: any) {
+    if (e.message?.includes('Limite atteinte')) throw e;
+    // ignore wallet check errors (graceful degradation)
+  }
+
   // AUTO-ASSIGN AVAILABLE COURIER
   const availableCourier = await prisma.courierProfile.findFirst({
     where: { status: 'AVAILABLE' }
@@ -2174,7 +2198,7 @@ export async function getVendorPortalData() {
           where: { orderId: { in: orderIds } }
         });
 
-        // Grace period check
+        // Grace period check: only active when balance is negative AND a deposit is pending
         const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
         const pendingRecentDeposit = await (prisma as any).walletDepositRequest.findFirst({
           where: {
@@ -2183,7 +2207,8 @@ export async function getVendorPortalData() {
             createdAt: { gte: threeDaysAgo }
           }
         });
-        isGracePeriodActive = !!pendingRecentDeposit;
+        const walletBalance = wallet ? Number(wallet.balance) : 0;
+        isGracePeriodActive = walletBalance <= 0 && !!pendingRecentDeposit;
 
         // Independent fetch for depositRequests if model exists
         if ((prisma as any).walletDepositRequest) {
@@ -4511,4 +4536,32 @@ export async function triggerErpSync() {
   revalidatePath('/admin/settings');
   
   return result;
+}
+
+export async function updateVendorPasswordAction(data: {
+  currentPassword: string;
+  newPassword: string;
+}) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('Utilisateur introuvable');
+
+  // Verify current password
+  const isValid = await bcrypt.compare(data.currentPassword, user.password);
+  if (!isValid) throw new Error('Mot de passe actuel incorrect');
+
+  if (data.newPassword.length < 6) {
+    throw new Error('Le nouveau mot de passe doit contenir au moins 6 caractères');
+  }
+
+  const hashedPassword = await bcrypt.hash(data.newPassword, 10);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { password: hashedPassword }
+  });
+
+  return { success: true };
 }

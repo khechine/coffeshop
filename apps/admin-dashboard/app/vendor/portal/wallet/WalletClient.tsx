@@ -72,6 +72,7 @@ export default function WalletClient({
     });
   };
 
+  // A vendor is "visible" if: balance > 0, OR grace period is active (balance <= 0 but pending deposit)
   const isVisible = wallet.balance > 0 || isGracePeriodActive;
 
   return (
@@ -148,19 +149,29 @@ export default function WalletClient({
               <p className="text-xs text-slate-400 text-center py-4">Aucune demande de dépôt</p>
             ) : (
               depositRequests.map((req: any) => (
-                <div key={req.id} className="p-3 bg-slate-50 rounded-2xl flex items-center justify-between border border-transparent hover:border-slate-100 transition-colors">
-                  <div>
-                    <p className="font-black text-slate-900 text-sm font-mono">+ {req.amount.toFixed(3)} DT</p>
-                    <p className="text-[10px] text-slate-400">{new Date(req.createdAt).toLocaleDateString()}</p>
+                <div key={req.id} className="p-3 bg-slate-50 rounded-2xl flex flex-col gap-2 border border-transparent hover:border-slate-100 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-black text-slate-900 text-sm font-mono">+ {req.amount.toFixed(3)} DT</p>
+                      <p className="text-[10px] text-slate-400">{new Date(req.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
+                      req.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                      req.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
+                      'bg-rose-100 text-rose-700'
+                    }`}>
+                      {req.status === 'PENDING' ? 'En cours' : 
+                       req.status === 'APPROVED' ? 'Validé' : 'Refusé'}
+                    </span>
                   </div>
-                  <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
-                    req.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
-                    req.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
-                    'bg-rose-100 text-rose-700'
-                  }`}>
-                    {req.status === 'PENDING' ? 'En cours' : 
-                     req.status === 'APPROVED' ? 'Validé' : 'Refusé'}
-                  </span>
+                  {req.status === 'REJECTED' && req.adminNotes && (
+                    <div className="flex items-start gap-2 bg-rose-50 border border-rose-100 rounded-xl p-2">
+                      <AlertCircle size={12} className="text-rose-500 shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-rose-700 font-bold leading-relaxed">
+                        Motif de refus : {req.adminNotes}
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))
             )}
