@@ -2013,7 +2013,13 @@ export async function getVendorOrdersWithAlertsAction() {
     where: { vendorId: vendor.id },
     include: {
       items: true,
-      store: true,
+      store: {
+        include: {
+          vendorCustomers: {
+            where: { vendorId: vendor.id }
+          }
+        }
+      },
       vendorPos: true
     },
     orderBy: { createdAt: 'desc' }
@@ -2124,7 +2130,18 @@ export async function getVendorPortalData() {
       },
       customization: true,
       customers: {
-        include: { store: true }
+        include: { 
+          store: {
+            include: {
+              supplierOrders: {
+                where: { vendorId: vendorProfile.id },
+                orderBy: { createdAt: 'desc' },
+                take: 5,
+                include: { items: true }
+              }
+            }
+          } 
+        }
       },
       campaigns: true,
       collections: true,

@@ -340,6 +340,25 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
                 />
                 <p className="text-[10px] text-slate-400 font-bold">Appuyez en dehors du champ pour sauvegarder les tags.</p>
               </div>
+              {/* Order History */}
+              <div className="space-y-3 border-t border-slate-50 pt-6">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dernières Commandes</label>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                  {selectedCust.store?.supplierOrders?.length > 0 ? (
+                    selectedCust.store.supplierOrders.map((o: any) => (
+                      <div key={o.id} className="p-3 bg-slate-50 rounded-xl flex justify-between items-center text-xs font-bold">
+                        <div>
+                          <div className="text-slate-900">#{o.id.slice(-6).toUpperCase()}</div>
+                          <div className="text-slate-400 text-[10px]">{new Date(o.createdAt).toLocaleDateString()}</div>
+                        </div>
+                        <div className="text-indigo-600">{Number(o.total).toFixed(3)} DT</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-slate-400 text-[10px]">Aucune commande trouvée</div>
+                  )}
+                </div>
+              </div>
 
               <button 
                 onClick={() => setSelectedCust(null)}

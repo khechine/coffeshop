@@ -4,9 +4,10 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { 
   ShoppingBag, MapPin, Clock, AlertTriangle, CheckCircle2, 
   ChevronRight, Filter, Bell, BellRing, Package, ArrowRight,
-  Users
+  Users, Tag, X
 } from 'lucide-react';
 import Link from 'next/link';
+import { updateVendorCustomerAction } from '../../../actions';
 
 export default function VendorOrdersClient({ initialOrders, initialAlerts }: any) {
   const [orders, setOrders] = useState(initialOrders);
@@ -14,6 +15,27 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
   const [isPending, startTransition] = useTransition();
   const [filterPos, setFilterPos] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [taggingCust, setTaggingCust] = useState<any>(null);
+
+  const handleUpdateCustomer = (id: string, data: { category?: string; tags?: string[] }) => {
+    startTransition(async () => {
+      await updateVendorCustomerAction(id, data);
+      // Update local state to reflect tags
+      setOrders((prev: any) => prev.map((o: any) => {
+        if (o.store?.vendorCustomers?.[0]?.id === id) {
+          return {
+            ...o,
+            store: {
+              ...o.store,
+              vendorCustomers: [{ ...o.store.vendorCustomers[0], ...data }]
+            }
+          };
+        }
+        return o;
+      }));
+      setTaggingCust((prev: any) => prev?.id === id ? { ...prev, ...data } : prev);
+    });
+  };
 
   // Sound alert for new orders
   useEffect(() => {
@@ -153,6 +175,17 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
                          <Users size={12} /> CRM
                       </Link>
                       <button 
+                        onClick={() => {
+                           const vc = order.store?.vendorCustomers?.[0];
+                           if (vc) setTaggingCust({ ...vc, store: order.store });
+                           else alert("Données CRM non disponibles pour ce client.");
+                        }}
+                        className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all border border-indigo-100"
+                        title="Taguer le client"
+                      >
+                         <Tag size={16} />
+                      </button>
+                      <button 
                         onClick={() => alert(`Détails Commande #${order.id.slice(-6).toUpperCase()}\nClient: ${order.store?.name}\nArticles: ${order.items.length}`)}
                         className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-900 hover:text-white transition-all"
                       >
@@ -182,6 +215,55 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
         </div>
 
       </div>
+      {taggingCust && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[40px] p-10 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="font-black text-2xl text-slate-900">Taguer {taggingCust.store?.name}</h3>
+              <button onClick={() => setTaggingCust(null)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+            </div>
+            <p className="text-slate-400 font-bold text-sm mb-8">Segmenter ce client B2B directement depuis sa commande.</p>
+            
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Catégorie</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['VIP', 'REGULAR', 'CHURN_RISK'].map(cat => (
+                    <button 
+                      key={cat}
+                      onClick={() => handleUpdateCustomer(taggingCust.id, { category: cat })}
+                      className={`px-3 py-2 rounded-xl text-[10px] font-black border-2 transition-all ${taggingCust.category === cat ? 'border-rose-500 bg-rose-50 text-rose-600 shadow-md shadow-rose-500/10' : 'border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tags personnalisés</label>
+                <input 
+                  type="text"
+                  defaultValue={taggingCust.tags?.join(', ')}
+                  onBlur={(e) => {
+                    const tags = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
+                    handleUpdateCustomer(taggingCust.id, { tags });
+                  }}
+                  placeholder="Ex: Boulangerie, Sousse"
+                  className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500/20 font-bold text-slate-900"
+                />
+              </div>
+
+              <button 
+                onClick={() => setTaggingCust(null)}
+                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all mt-4"
+              >
+                Terminer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
