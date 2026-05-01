@@ -32,7 +32,9 @@ export default async function VendorCrmPage() {
         <p className="text-slate-500 font-medium mt-1">Gérez vos relations avec les points de vente (Coffeeshops) et lancez des campagnes ciblées.</p>
       </div>
       
-      <VendorCrmClient initialCustomers={serializedCustomers} initialCampaigns={serializedCampaigns} />
+      <React.Suspense fallback={<div className="animate-pulse bg-slate-100 h-96 rounded-[40px]" />}>
+        <VendorCrmClient initialCustomers={serializedCustomers} initialCampaigns={serializedCampaigns} />
+      </React.Suspense>
     </div>
   );
 }

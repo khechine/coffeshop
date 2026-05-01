@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   Users, TrendingUp, Mail, Filter, Star, ShieldAlert, 
   Tag as TagIcon, Plus, Send, Phone, MessageCircle, 
@@ -14,10 +15,13 @@ interface VendorCrmClientProps {
 }
 
 export default function VendorCrmClient({ initialCustomers, initialCampaigns }: VendorCrmClientProps) {
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+  
   const [activeTab, setActiveTab] = useState<'customers' | 'campaigns'>('customers');
   const [customers, setCustomers] = useState(initialCustomers);
   const [campaigns, setCampaigns] = useState(initialCampaigns);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch);
   const [selectedCust, setSelectedCust] = useState<any>(null);
   const [isPending, startTransition] = useTransition();
 
