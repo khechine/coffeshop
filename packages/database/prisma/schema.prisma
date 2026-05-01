@@ -36,6 +36,13 @@ enum StockStatus {
   DISCONTINUED
 }
 
+enum IndustryType {
+  COFFEE_SHOP
+  BAKERY
+  PASTRY_SHOP
+  PASTRY_PRO
+}
+
 enum TagType {
   GENERAL
   BRAND
@@ -102,6 +109,10 @@ model Store {
   phone     String?
   lat       Float?
   lng       Float?
+  
+  industry      IndustryType @default(COFFEE_SHOP)
+  businessType  String?      @default("STORE") // STORE, INDEPENDENT
+
   
   loyaltyEarnRate   Decimal?   @default(1)    // Earn rate: Points earned per 1 DT spent
   loyaltyRedeemRate Decimal?   @default(100)  // Redeem rate: Points required to get 1 DT discount

@@ -496,7 +496,7 @@ export async function registerStoreAction(data: any) {
   const {
     email, password, name, storeName,
     address, city, phone, subdomain,
-    officialDocs
+    officialDocs, industry, businessType
   } = data;
 
   if (!email || !password || !name || !storeName || !subdomain) {
@@ -569,7 +569,9 @@ export async function registerStoreAction(data: any) {
           phone,
           status: 'PENDING_VERIFICATION',
           officialDocs: docs,
-          trialEndsAt
+          trialEndsAt,
+          industry: industry || 'COFFEE_SHOP',
+          businessType: businessType || 'STORE'
         }
       }
     },
@@ -4205,3 +4207,106 @@ export async function updateVendorCustomizationAction(data: {
 
 
 
+// ══════════════════════════════════════════════════════════════
+// SPECIAL ORDERS & PRODUCTION (Bakery / Pastry)
+// ══════════════════════════════════════════════════════════════
+
+export async function getSpecialOrders() {
+  const store = await getStore();
+  if (!store) return [];
+  return prisma.specialOrder.findMany({
+    where: { storeId: store.id },
+    include: { customer: true, product: true },
+    orderBy: { deliveryDate: 'asc' }
+  });
+}
+
+export async function createSpecialOrderAction(data: {
+  clientName: string;
+  clientPhone: string;
+  productId?: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  deliveryDate: Date;
+  deliveryTime?: string;
+  notes?: string;
+  depositAmount?: number;
+}) {
+  const store = await getStore();
+  if (!store) throw new Error("Store non trouvé");
+
+  const orderNumber = `ORD-${Math.floor(1000 + Math.random() * 9000)}-${Date.now().toString().slice(-4)}`;
+
+  const order = await prisma.specialOrder.create({
+    data: {
+      ...data,
+      orderNumber,
+      storeId: store.id,
+      status: 'PENDING'
+    }
+  });
+
+  revalidatePath('/admin/production/orders');
+  return order;
+}
+
+export async function updateSpecialOrderStatusAction(id: string, status: any) {
+  await prisma.specialOrder.update({
+    where: { id },
+    data: { status }
+  });
+  revalidatePath('/admin/production/orders');
+  revalidatePath('/admin/production/planning');
+}
+
+export async function getProductionPlanningAction() {
+  const store = await getStore();
+  if (!store) return [];
+
+  // Group by delivery date and product
+  const orders = await prisma.specialOrder.findMany({
+    where: { 
+      storeId: store.id,
+      status: { in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] }
+    },
+    orderBy: { deliveryDate: 'asc' }
+  });
+
+  return orders;
+}
+
+export async function getProductMarginsAction() {
+  const store = await getStore();
+  if (!store) return [];
+
+  const products = await prisma.product.findMany({
+    where: { storeId: store.id },
+    include: {
+      recipe: {
+        include: {
+          stockItem: true
+        }
+      }
+    }
+  });
+
+  const margins = products.map(p => {
+    const cost = p.recipe.reduce((acc, item) => {
+      const purchasePrice = Number(item.stockItem.avgPurchasePrice || 0);
+      return acc + (Number(item.quantity) * purchasePrice);
+    }, 0);
+
+    return {
+      id: p.id,
+      name: p.name,
+      price: Number(p.price),
+      cost: cost,
+      margin: Number(p.price) - cost,
+      marginPercent: Number(p.price) > 0 ? ((Number(p.price) - cost) / Number(p.price)) * 100 : 0
+    };
+  });
+
+  return margins;
+}

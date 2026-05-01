@@ -249,16 +249,18 @@ export default async function AdminDashboardPage() {
         <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', marginBottom: '20px' }}>Pilotage & Modules</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
           {[
-            { label: 'Mes Commandes', sub: 'Achats & Évaluations fournisseurs', icon: Truck, color: '#6366F1', href: '/admin/orders', bg: '#EEF2FF' },
-            { label: 'Sourcing B2B', sub: 'Marketplace fournisseurs', icon: ShoppingCart, color: '#10B981', href: '/marketplace', bg: '#ECFDF5' },
-            { label: 'Stock & Inventaire', sub: 'Matières premières & Alertes', icon: Boxes, color: '#F59E0B', href: '/admin/stock', bg: '#FFFBEB' },
-            { label: 'Clients & Fidélité', sub: 'Base client & Points cadeau', icon: Users, color: '#10B981', href: '/admin/customers', bg: '#ECFDF5' },
-            { label: 'Tables & Salles', sub: 'Plan de salle & Occupation', icon: LayoutGrid, color: '#8B5CF6', href: '/admin/tables', bg: '#F5F3FF' },
-            { label: 'Reporting & Clôtures', sub: 'Exports & Rapports journaliers', icon: FileText, color: '#EC4899', href: '/admin/reports', bg: '#FDF2F8' },
-            { label: 'Dépenses & Finance', sub: 'Suivi des coûts & Net profit', icon: Wallet, color: '#06B6D4', href: '/admin/expenses', bg: '#ECFEFF' },
-            { label: 'Configuration', sub: 'Paramètres & Terminaux', icon: Settings, color: '#64748B', href: '/admin/configuration', bg: '#F8FAFC' },
-            { label: 'Live Tracker', sub: 'Ventes en temps réel', icon: Activity, color: '#EF4444', href: '/admin/live', bg: '#FEF2F2' },
-          ].map((mod, i) => (
+            { label: 'Marketplace B2B', sub: 'Sourcing fournisseurs', icon: ShoppingCart, color: '#10B981', href: '/marketplace', bg: '#ECFDF5', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
+            { label: 'Commandes Clients', sub: 'Gestion des prep & acomptes', icon: ShoppingBag, color: '#F59E0B', href: '/admin/production/orders', bg: '#FFFBEB', industries: ['BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
+            { label: 'Planning Prod.', sub: 'Quoi préparer et quand', icon: Layers, color: '#F59E0B', href: '/admin/production/planning', bg: '#FFFBEB', industries: ['BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
+            { label: 'Coûts & Marges', sub: 'Calcul auto par recette', icon: TrendingUp, color: '#F59E0B', href: '/admin/production/margins', bg: '#FFFBEB', industries: ['BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
+            { label: 'Mes Achats', sub: 'Suivi commandes B2B', icon: Truck, color: '#6366F1', href: '/admin/orders', bg: '#EEF2FF', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
+            { label: 'Stock & Inventaire', sub: 'Matières premières', icon: Boxes, color: '#F59E0B', href: '/admin/stock', bg: '#FFFBEB', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
+            { label: 'Clients & Fidélité', sub: 'Base client & Points', icon: Users, color: '#10B981', href: '/admin/customers', bg: '#ECFDF5', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
+            { label: 'Reporting & Clôtures', sub: 'Exports & Rapports', icon: FileText, color: '#EC4899', href: '/admin/reports', bg: '#FDF2F8', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
+            { label: 'Dépenses & Finance', sub: 'Suivi des coûts nets', icon: Wallet, color: '#06B6D4', href: '/admin/expenses', bg: '#ECFEFF', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
+            { label: 'Live Tracker', sub: 'Ventes en temps réel', icon: Activity, color: '#EF4444', href: '/admin/live', bg: '#FEF2F2', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
+            { label: 'Configuration', sub: 'Paramètres & Terminaux', icon: Settings, color: '#64748B', href: '/admin/configuration', bg: '#F8FAFC', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
+          ].filter(m => !m.industries || m.industries.includes((store as any).industry || 'COFFEE_SHOP')).map((mod, i) => (
             <Link key={i} href={mod.href} style={{ 
               display: 'flex', flexDirection: 'column', gap: '12px', padding: '24px', 
               background: '#fff', border: '1px solid #F1F5F9', borderRadius: '20px', 

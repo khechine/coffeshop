@@ -13,7 +13,23 @@ import { logoutUser } from '../app/actions';
 
 type Role = 'STORE_OWNER' | 'CASHIER' | 'VENDOR' | 'SUPERADMIN' | null;
 
-export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true, planName = '', isFiscalEnabled = false }: { storeName?: string; isMobileOpen?: boolean; hasMarketplace?: boolean; planName?: string; isFiscalEnabled?: boolean }) {
+export default function Sidebar({ 
+  storeName, 
+  isMobileOpen, 
+  hasMarketplace = true, 
+  planName = '', 
+  isFiscalEnabled = false,
+  industry = 'COFFEE_SHOP',
+  businessType = 'STORE'
+}: { 
+  storeName?: string; 
+  isMobileOpen?: boolean; 
+  hasMarketplace?: boolean; 
+  planName?: string; 
+  isFiscalEnabled?: boolean;
+  industry?: string;
+  businessType?: string;
+}) {
   const [role, setRole] = useState<Role>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
@@ -150,8 +166,8 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
       </div>
 
       <nav className="sidebar-nav">
-        {/* VENTES & SERVICE */}
-        {hasPerm('POS') && (
+        {/* VENTES & SERVICE (Hidden for PASTRY_PRO) */}
+        {hasPerm('POS') && industry !== 'PASTRY_PRO' && (
           <div className="nav-group">
             {displayExpanded && (
               <div className="nav-section-header" style={{ padding: '0 12px 6px' }}>
@@ -173,7 +189,30 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
           </div>
         )}
 
-        {/* PILOTAGE */}
+        {/* PRODUCTION & COMMANDES (New for Bakery/Pastry) */}
+        {(industry === 'BAKERY' || industry === 'PASTRY_SHOP' || industry === 'PASTRY_PRO') && (
+          <div className="nav-group">
+            {displayExpanded && (
+              <div className="nav-section-header" style={{ padding: '0 12px 6px' }}>
+                <span className="nav-section-label" style={{ padding: 0, color: '#F59E0B' }}>Production & Commandes</span>
+              </div>
+            )}
+            <Link href="/admin/production/orders" className={`nav-item${isActive('/admin/production/orders') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
+              <ShoppingCart size={18} color="#F59E0B" />
+              {displayExpanded && <span>Commandes Clients</span>}
+            </Link>
+            <Link href="/admin/production/planning" className={`nav-item${isActive('/admin/production/planning') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
+              <Layers size={18} color="#F59E0B" />
+              {displayExpanded && <span>Planning Prod.</span>}
+            </Link>
+            <Link href="/admin/production/margins" className={`nav-item${isActive('/admin/production/margins') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
+              <TrendingUp size={18} color="#F59E0B" />
+              {displayExpanded && <span>Coûts & Marges</span>}
+            </Link>
+          </div>
+        )}
+
+        {/* PILOTAGE (Hidden for PASTRY_PRO except for configuration) */}
         {(hasPerm('DASHBOARD') || role === 'STORE_OWNER') && (
           <div className="nav-group">
             {displayExpanded && (
@@ -183,7 +222,7 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
             )}
             {(isCollapsed || isSectionOpen('PILOTAGE')) && (
               <>
-                {hasPerm('DASHBOARD') && (
+                {hasPerm('DASHBOARD') && industry !== 'PASTRY_PRO' && (
                   <>
                     <Link href="/" title="Tableau de bord" className={`nav-item${isActive('/') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
                       <LayoutDashboard size={18} />
@@ -197,10 +236,12 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
                 )}
                 {role === 'STORE_OWNER' && (
                   <>
-                    <Link href="/admin/live" title="Live Tracker (Direct)" className={`nav-item${isActive('/admin/live') ? ' active' : ''}`} style={{ justifyContent: 'flex-start', border: '1px solid rgba(16, 185, 129, 0.15)', background: isActive('/admin/live') ? 'rgba(16, 185, 129, 0.15)' : 'transparent', marginTop: '4px' }}>
-                      <Activity size={18} color="#10B981" />
-                      {displayExpanded && <span style={{ color: '#6EE7B7' }}>Live Tracker (Direct)</span>}
-                    </Link>
+                    {industry !== 'PASTRY_PRO' && (
+                      <Link href="/admin/live" title="Live Tracker (Direct)" className={`nav-item${isActive('/admin/live') ? ' active' : ''}`} style={{ justifyContent: 'flex-start', border: '1px solid rgba(16, 185, 129, 0.15)', background: isActive('/admin/live') ? 'rgba(16, 185, 129, 0.15)' : 'transparent', marginTop: '4px' }}>
+                        <Activity size={18} color="#10B981" />
+                        {displayExpanded && <span style={{ color: '#6EE7B7' }}>Live Tracker (Direct)</span>}
+                      </Link>
+                    )}
                     <Link href="/admin/configuration" title="Configuration Admin" className={`nav-item${isActive('/admin/configuration') ? ' active' : ''}`} style={{ justifyContent: 'flex-start', border: '1px solid rgba(99,102,241,0.15)', background: isActive('/admin/configuration') ? 'rgba(99,102,241,0.15)' : 'transparent', marginTop: '4px' }}>
                       <Settings size={18} color="#818CF8" />
                       {displayExpanded && <span style={{ color: '#C7D2FE' }}>Configuration Admin</span>}
@@ -212,8 +253,8 @@ export default function Sidebar({ storeName, isMobileOpen, hasMarketplace = true
           </div>
         )}
 
-        {/* PRODUITS & CATALOGUE */}
-        {(hasPerm('PRODUCTS') || hasPerm('STOCK')) && (
+        {/* PRODUITS & CATALOGUE (Hidden for PASTRY_PRO) */}
+        {(hasPerm('PRODUCTS') || hasPerm('STOCK')) && industry !== 'PASTRY_PRO' && (
           <div className="nav-group">
             {displayExpanded && (
               <div className="nav-section-header" style={{ padding: '0 12px 6px' }}>

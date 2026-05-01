@@ -30,7 +30,9 @@ export default function RegisterPage() {
     cin: '',
     description: '', // For vendor
     role: 'STORE_OWNER' as 'STORE_OWNER' | 'VENDOR',
-    subdomain: ''
+    subdomain: '',
+    industry: 'COFFEE_SHOP' as 'COFFEE_SHOP' | 'BAKERY' | 'PASTRY_SHOP' | 'PASTRY_PRO',
+    businessType: 'STORE' as 'STORE' | 'INDEPENDENT'
   });
 
   const [subdomainStatus, setSubdomainStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'forbidden'>('idle');
@@ -242,31 +244,59 @@ export default function RegisterPage() {
                 
                 <div className="space-y-4">
                    <button 
-                    onClick={() => { setForm({...form, role: 'STORE_OWNER'}); setStep(1); }} 
-                    className="w-full p-6 rounded-3xl border-2 border-slate-100 bg-white hover:border-indigo-500 hover:bg-indigo-50/30 transition-all duration-300 group text-left flex items-center gap-6 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5"
+                    onClick={() => { setForm({...form, role: 'STORE_OWNER', industry: 'COFFEE_SHOP', businessType: 'STORE'}); setStep(1); }} 
+                    className="w-full p-5 rounded-3xl border-2 border-slate-100 bg-white hover:border-indigo-500 hover:bg-indigo-50/30 transition-all duration-300 group text-left flex items-center gap-5 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5"
                    >
-                      <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
-                        <StoreIcon size={32} />
+                      <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+                        <Coffee size={28} />
                       </div>
                       <div className="flex-1">
-                         <div className="font-black text-lg text-slate-900 group-hover:text-indigo-600 transition-colors">Café / Restaurant</div>
-                         <div className="text-sm text-slate-500 font-medium">Gérer ma caisse et mes stocks</div>
+                         <div className="font-black text-base text-slate-900 group-hover:text-indigo-600 transition-colors">Café / Restaurant</div>
+                         <div className="text-xs text-slate-500 font-medium">Gestion caisse, stocks & marketplace</div>
                       </div>
-                      <ChevronRight size={20} className="text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                      <ChevronRight size={18} className="text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                   </button>
+
+                   <button 
+                    onClick={() => { setForm({...form, role: 'STORE_OWNER', industry: 'BAKERY', businessType: 'STORE'}); setStep(1); }} 
+                    className="w-full p-5 rounded-3xl border-2 border-slate-100 bg-white hover:border-amber-500 hover:bg-amber-50/30 transition-all duration-300 group text-left flex items-center gap-5 shadow-sm hover:shadow-xl hover:shadow-amber-500/5"
+                   >
+                      <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+                        <StoreIcon size={28} />
+                      </div>
+                      <div className="flex-1">
+                         <div className="font-black text-base text-slate-900 group-hover:text-amber-600 transition-colors">Boulangerie / Pâtisserie</div>
+                         <div className="text-xs text-slate-500 font-medium">Standard + Planning de production</div>
+                      </div>
+                      <ChevronRight size={18} className="text-slate-300 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
+                   </button>
+
+                   <button 
+                    onClick={() => { setForm({...form, role: 'STORE_OWNER', industry: 'PASTRY_PRO', businessType: 'INDEPENDENT'}); setStep(1); }} 
+                    className="w-full p-5 rounded-3xl border-2 border-slate-100 bg-white hover:border-purple-500 hover:bg-purple-50/30 transition-all duration-300 group text-left flex items-center gap-5 shadow-sm hover:shadow-xl hover:shadow-purple-500/5"
+                   >
+                      <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+                        <Briefcase size={28} />
+                      </div>
+                      <div className="flex-1">
+                         <div className="font-black text-base text-slate-900 group-hover:text-purple-600 transition-colors">Professionnel Pâtissier</div>
+                         <div className="text-xs text-slate-500 font-medium">Marketplace + Gestion Commandes Pro</div>
+                      </div>
+                      <ChevronRight size={18} className="text-slate-300 group-hover:text-purple-500 group-hover:translate-x-1 transition-all" />
                    </button>
 
                    <button 
                     onClick={() => { setForm({...form, role: 'VENDOR'}); setStep(1); }} 
-                    className="w-full p-6 rounded-3xl border-2 border-slate-100 bg-white hover:border-emerald-500 hover:bg-emerald-50/30 transition-all duration-300 group text-left flex items-center gap-6 shadow-sm hover:shadow-xl hover:shadow-emerald-500/5"
+                    className="w-full p-5 rounded-3xl border-2 border-slate-100 bg-white hover:border-emerald-500 hover:bg-emerald-50/30 transition-all duration-300 group text-left flex items-center gap-5 shadow-sm hover:shadow-xl hover:shadow-emerald-500/5"
                    >
-                      <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
-                        <Truck size={32} />
+                      <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
+                        <Truck size={28} />
                       </div>
                       <div className="flex-1">
-                         <div className="font-black text-lg text-slate-900 group-hover:text-emerald-600 transition-colors">Fournisseur B2B</div>
-                         <div className="text-sm text-slate-500 font-medium">Vendre aux établissements</div>
+                         <div className="font-black text-base text-slate-900 group-hover:text-emerald-600 transition-colors">Fournisseur B2B</div>
+                         <div className="text-xs text-slate-500 font-medium">Vendre aux établissements</div>
                       </div>
-                      <ChevronRight size={20} className="text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+                      <ChevronRight size={18} className="text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
                    </button>
                 </div>
 

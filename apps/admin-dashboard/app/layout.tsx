@@ -23,6 +23,8 @@ export default async function Layout({ children }: { children: React.ReactNode }
           hasMarketplace={hasMarketplace}
           planName={planName}
           isFiscalEnabled={isFiscalEnabled}
+          industry={(store as any)?.industry || 'COFFEE_SHOP'}
+          businessType={(store as any)?.businessType || 'STORE'}
         >
           {children}
         </LayoutShell>
