@@ -188,7 +188,7 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
   const field: React.CSSProperties = { 
     width: '100%', padding: '14px 18px', borderRadius: '16px', border: '1.5px solid #E2E8F0', 
     fontSize: '14px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
-    background: '#F8FAFC', transition: 'all 0.2s', fontWeight: 600
+    background: '#F8FAFC', color: '#0F172A', transition: 'all 0.2s', fontWeight: 600
   };
   const label: React.CSSProperties = { display: 'block', fontSize: '11px', fontWeight: 800, color: '#94A3B8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' };
 
