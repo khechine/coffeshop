@@ -39,13 +39,14 @@ export default function VendorSettingsClient({
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('http://localhost:3001/management/upload', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
+      const res = await fetch(`${API_URL}/management/upload`, {
         method: 'POST',
         body: formData,
       });
       const data = await res.json();
       if (data.url) {
-        const fullUrl = data.url.startsWith('/') ? `http://localhost:3001${data.url}` : data.url;
+        const fullUrl = data.url.startsWith('/') ? `${API_URL}${data.url}` : data.url;
         setCustomForm(f => ({ ...f, [type === 'logo' ? 'logoUrl' : 'bannerUrl']: fullUrl }));
       }
     } catch (e) {
@@ -296,7 +297,7 @@ export default function VendorSettingsClient({
                     <div className="w-24 h-24 rounded-[24px] bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
                       {customForm.logoUrl ? (
                         <img 
-                          src={customForm.logoUrl.startsWith('/') ? `http://localhost:3001${customForm.logoUrl}` : customForm.logoUrl} 
+                          src={customForm.logoUrl.startsWith('/') ? `${process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com'}${customForm.logoUrl}` : customForm.logoUrl.replace('http://localhost:3001', process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com')} 
                           className="w-full h-full object-contain" 
                           onError={(e: any) => e.target.src = 'https://ui-avatars.com/api/?name=Vendor&background=6366f1&color=fff'}
                         />
@@ -325,7 +326,7 @@ export default function VendorSettingsClient({
                   <div className="w-full h-24 rounded-[24px] bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden relative group">
                     {customForm.bannerUrl ? (
                       <img 
-                        src={customForm.bannerUrl.startsWith('/') ? `http://localhost:3001${customForm.bannerUrl}` : customForm.bannerUrl} 
+                        src={customForm.bannerUrl.startsWith('/') ? `${process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com'}${customForm.bannerUrl}` : customForm.bannerUrl.replace('http://localhost:3001', process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com')} 
                         className="w-full h-full object-cover" 
                         onError={(e: any) => e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200'}
                       />

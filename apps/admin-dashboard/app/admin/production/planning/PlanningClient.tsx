@@ -11,8 +11,9 @@ import { fr } from 'date-fns/locale';
 
 export default function PlanningClient({ initialPlanning }: { initialPlanning: any[] }) {
   const [selectedDate, setSelectedDate] = useState(startOfToday());
+  const [startDate, setStartDate] = useState(startOfToday());
 
-  const days = Array.from({ length: 7 }, (_, i) => addDays(startOfToday(), i));
+  const days = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
 
   const dayOrders = initialPlanning.filter(o => 
     isSameDay(new Date(o.deliveryDate), selectedDate)
@@ -46,11 +47,17 @@ export default function PlanningClient({ initialPlanning }: { initialPlanning: a
 
       {/* Date Picker (Horizontal) */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <button 
+          onClick={() => setStartDate(prev => addDays(prev, -7))}
+          className="flex-shrink-0 w-10 h-[88px] flex items-center justify-center rounded-2xl border border-slate-100 bg-white text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
+        >
+          <ChevronLeft size={20} />
+        </button>
         {days.map((day) => (
           <button
             key={day.toISOString()}
             onClick={() => setSelectedDate(day)}
-            className={`flex-shrink-0 flex flex-col items-center min-w-[80px] p-4 rounded-2xl border transition-all ${
+            className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[80px] h-[88px] rounded-2xl border transition-all ${
               isSameDay(day, selectedDate)
               ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200'
               : 'bg-white border-slate-100 text-slate-500 hover:border-indigo-200'
@@ -59,11 +66,20 @@ export default function PlanningClient({ initialPlanning }: { initialPlanning: a
             <span className="text-[10px] font-black uppercase tracking-widest mb-1">
               {format(day, 'EEE', { locale: fr })}
             </span>
-            <span className="text-xl font-black">
+            <span className="text-xl font-black relative">
               {format(day, 'dd')}
+              {initialPlanning.some(o => isSameDay(new Date(o.deliveryDate), day)) && (
+                <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-500" />
+              )}
             </span>
           </button>
         ))}
+        <button 
+          onClick={() => setStartDate(prev => addDays(prev, 7))}
+          className="flex-shrink-0 w-10 h-[88px] flex items-center justify-center rounded-2xl border border-slate-100 bg-white text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
+        >
+          <ChevronRight size={20} />
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

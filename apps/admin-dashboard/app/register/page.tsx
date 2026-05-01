@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Coffee, Mail, Lock, User, Store as StoreIcon, MapPin, CheckCircle, FileUp, ShieldCheck, ArrowRight, Building2, Truck, Star, Briefcase, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { Cake, Mail, Lock, User, Store as StoreIcon, MapPin, CheckCircle, FileUp, ShieldCheck, ArrowRight, Building2, Truck, Star, Briefcase, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { registerStoreAction, registerVendorAction, checkSubdomainAvailability, checkEmailAvailability } from '../actions';
 import { useEffect, useCallback } from 'react';
@@ -175,9 +175,9 @@ export default function RegisterPage() {
          <div className="relative z-10 max-w-lg">
             <div className="flex items-center gap-4 mb-16">
                <div className="w-14 h-14 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center justify-center shadow-2xl">
-                  <Coffee size={32} className="text-white" />
+                  <Cake size={32} className="text-white" />
                </div>
-               <span className="text-3xl font-black tracking-tight">CoffeeSaaS <span className="text-indigo-400">B2B</span></span>
+               <span className="text-3xl font-black tracking-tight">ElKassa Patisserie <span className="text-indigo-400">B2B</span></span>
             </div>
 
             <div className="space-y-8">
@@ -186,8 +186,8 @@ export default function RegisterPage() {
                </h1>
                <p className="text-xl text-slate-400 leading-relaxed font-medium">
                   {form.role === 'STORE_OWNER' 
-                    ? 'Rejoignez l\'écosystème leader pour la gestion de café en Tunisie. Caisse, stock et approvisionnement centralisés.'
-                    : 'Élargissez votre réseau de distribution. Vendez directement aux meilleurs cafés et restaurants du pays.'}
+                    ? 'Rejoignez l\'écosystème leader pour la gestion de pâtisserie en Tunisie. Caisse, stock et approvisionnement centralisés.'
+                    : 'Élargissez votre réseau de distribution. Vendez directement aux meilleures pâtisseries et commerces du pays.'}
                </p>
 
                <div className="grid grid-cols-1 gap-6 pt-4">
@@ -248,7 +248,7 @@ export default function RegisterPage() {
                     className="w-full p-5 rounded-3xl border-2 border-slate-100 bg-white hover:border-indigo-500 hover:bg-indigo-50/30 transition-all duration-300 group text-left flex items-center gap-5 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5"
                    >
                       <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner">
-                        <Coffee size={28} />
+                        <Cake size={28} />
                       </div>
                       <div className="flex-1">
                          <div className="font-black text-base text-slate-900 group-hover:text-indigo-600 transition-colors">Café / Restaurant</div>

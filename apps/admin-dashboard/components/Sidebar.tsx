@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, ShoppingCart, History, Store, Tablet, Users, CreditCard, Settings, 
-  Boxes, Coffee, BarChart3, ChevronDown, ChevronRight, Package, FileText, TrendingUp,
+  Boxes, Cake, BarChart3, ChevronDown, ChevronRight, Package, FileText, TrendingUp,
   Layers, LayoutGrid, Truck, ShoppingBag, Activity
 } from 'lucide-react';
 
@@ -137,11 +137,11 @@ export default function Sidebar({
     >
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
-          <Coffee size={22} color="#fff" strokeWidth={2.5} />
+          <Cake size={22} color="#fff" strokeWidth={2.5} />
         </div>
         {displayExpanded && (
           <div className="sidebar-logo-text">
-            <h1>CoffeeSaaS</h1>
+            <h1>ElKassa Patisserie</h1>
             <span>B2B Platform</span>
           </div>
         )}
@@ -265,7 +265,7 @@ export default function Sidebar({
               <>
                 {hasPerm('PRODUCTS') && (
                   <Link href="/admin/products" className={`nav-item${isActive('/admin/products') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
-                    <Coffee size={18} />
+                    <Cake size={18} />
                     {displayExpanded && <span>Menu & Recettes</span>}
                   </Link>
                 )}

@@ -11,6 +11,7 @@ import './marketplace.css';
 
 /* ─── Helpers ─── */
 const fmt = (n: any) => Number(n).toFixed(3);
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
 
 function Stars({ avg = 0, total = 0, size = 10 }: any) {
   if (!total) return <span style={{ fontSize: size, color: '#94A3B8', fontWeight: 700 }}>Nouveau</span>;
@@ -62,7 +63,7 @@ function HeroBanner({ banner }: { banner: any }) {
   );
   return (
     <div className="mkt-hero-main" style={{ background: banner.bgColor || '#1E1B4B' }}>
-      <img className="mkt-hero-img" src={banner.imageUrl} alt={banner.title} onError={(e: any) => { e.target.style.display='none'; }} />
+      <img className="mkt-hero-img" src={banner.imageUrl?.replace('http://localhost:3001', API_URL)} alt={banner.title} onError={(e: any) => { e.target.style.display='none'; }} />
       <div className="mkt-hero-overlay">
         {banner.badgeText && <span className="mkt-hero-badge">{banner.badgeText}</span>}
         <h2 className="mkt-hero-title">{banner.title}</h2>
@@ -85,7 +86,7 @@ function SideBanner({ banner, gradient }: { banner: any; gradient: string }) {
   );
   return (
     <div className="mkt-side-banner" style={{ background: banner.bgColor || gradient }}>
-      <img src={banner.imageUrl} alt={banner.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.5 }} onError={(e:any)=>{e.target.style.display='none';}} />
+      <img src={banner.imageUrl?.replace('http://localhost:3001', API_URL)} alt={banner.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.5 }} onError={(e:any)=>{e.target.style.display='none';}} />
       <div className="mkt-side-overlay" style={{ background:'linear-gradient(to top, rgba(0,0,0,0.65), transparent)' }}>
         {banner.badgeText && <span className="mkt-side-label">{banner.badgeText}</span>}
         <div className="mkt-side-title">{banner.title}</div>
@@ -99,7 +100,7 @@ function AdsBanner({ banner, fallback }: { banner?: any; fallback: { title: stri
   const b = banner || fallback;
   return (
     <div className="mkt-ads" style={{ background: b.color || banner?.bgColor || '#1E1B4B' }}>
-      <img src={b.imageUrl || b.img} alt={b.title} onError={(e:any)=>{e.target.style.display='none';}} />
+      <img src={(b.imageUrl || b.img)?.replace('http://localhost:3001', API_URL)} alt={b.title} onError={(e:any)=>{e.target.style.display='none';}} />
       <div className="mkt-ads-content">
         <h3>{b.title}</h3>
         {b.subtitle && <p>{b.subtitle}</p>}
@@ -119,7 +120,7 @@ function ProductCard({ product, onAdd, onDetail }: any) {
     <div className="mkt-card">
       <div className="mkt-card-img" onClick={onDetail} style={{ cursor: 'pointer' }}>
         <img
-          src={product.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'}
+          src={product.image?.replace('http://localhost:3001', API_URL) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'}
           alt={product.name}
           onError={(e:any)=>{e.target.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400';}}
         />
@@ -167,7 +168,7 @@ function CartDrawer({ cart, onClose, onUpdate, onRemove, total, onCheckout, isOr
           ) : cart.map((item: any) => (
             <div key={item.id} className="mkt-cart-item">
               <img className="mkt-cart-item-img"
-                src={item.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'}
+                src={item.image?.replace('http://localhost:3001', API_URL) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'}
                 alt={item.name}
                 onError={(e:any)=>{e.target.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=100';}}
               />
@@ -210,7 +211,7 @@ function ProductModal({ product, categories, onClose, onAdd }: any) {
         <button className="mkt-modal-close" onClick={onClose}><X size={18} /></button>
         <div className="mkt-modal-gallery">
           <img
-            src={product.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800'}
+            src={product.image?.replace('http://localhost:3001', API_URL) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800'}
             alt={product.name}
             onError={(e:any)=>{e.target.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800';}}
           />

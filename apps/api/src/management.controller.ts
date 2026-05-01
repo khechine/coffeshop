@@ -277,7 +277,7 @@ export class ManagementController {
 
   @Get('tables/:storeId')
   async getTables(@Param('storeId') storeId: string): Promise<any> {
-    return prisma.storeTable.findMany({
+    return (prisma as any).storeTable.findMany({
       where: { storeId },
       include: { zone: true },
       orderBy: { label: 'asc' },
@@ -286,7 +286,7 @@ export class ManagementController {
 
   @Get('zones/:storeId')
   async getZones(@Param('storeId') storeId: string): Promise<any> {
-    return prisma.storeZone.findMany({
+    return (prisma as any).storeZone.findMany({
       where: { storeId },
       include: { tables: true },
       orderBy: { name: 'asc' },

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Minus, ShoppingCart, Trash2, CheckCircle, Clock, 
-  History, User, Coffee, LogOut, Lock, LayoutGrid, CreditCard,
+  History, User, Cake, LogOut, Lock, LayoutGrid, CreditCard,
   ChevronRight, AlertCircle, Save, ArrowLeft, MoreVertical, ClipboardList,
   ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, Search,
   X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package
@@ -13,7 +13,7 @@ import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale,
 import './pos-premium.css';
 
 const ICONS: Record<string, React.FC<any>> = {
-  Tag, Coffee, Star, Heart, Smile, Zap, Home, Box, ShoppingBag
+  Tag, Cake, Star, Heart, Smile, Zap, Home, Box, ShoppingBag
 };
 
 interface Product { 
@@ -486,7 +486,7 @@ export default function PremiumPOSClient({
       <div style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'linear-gradient(135deg,#1E1B4B 0%,#312E81 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Inter, sans-serif' }}>
         <div style={{ width: '360px', textAlign: 'center' }}>
           <div style={{ width: 80, height: 80, borderRadius: '24px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 32px' }}>
-             <Coffee size={40} />
+             <Cake size={40} />
           </div>
           <h1 style={{ fontSize: '28px', fontWeight: 900, marginBottom: '8px' }}>Authentification</h1>
           <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '40px' }}>Saisissez votre code PIN {storeName}</p>
@@ -563,7 +563,7 @@ export default function PremiumPOSClient({
         
         {/* Theme Toggle */}
         <div className="pos-sidebar-icon" onClick={toggleThemeVariant} title="Changer de thème" style={{ cursor: 'pointer', marginBottom: 10 }}>
-           {theme === 'mocha' ? <Coffee size={24} /> : <Zap size={24} />}
+           {theme === 'mocha' ? <Cake size={24} /> : <Zap size={24} />}
         </div>
 
         <div className="pos-sidebar-icon" style={{ color: 'var(--pos-warning)' }} onClick={handleLogout} title="Verrouiller">
@@ -920,7 +920,7 @@ export default function PremiumPOSClient({
                        <img src={product.image} className="product-image" alt={product.name} />
                      ) : (
                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#CBD5E1', background: 'linear-gradient(135deg, var(--pos-bg) 0%, var(--pos-input-bg) 100%)' }}>
-                         <Coffee size={64} strokeWidth={1} />
+                         <Cake size={64} strokeWidth={1} />
                        </div>
                      )}
                    </div>
@@ -1013,27 +1013,27 @@ export default function PremiumPOSClient({
 
                 {/* Loyalty Program Settings Sidebar */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                   <div style={{ background: 'var(--pos-sidebar)', borderRadius: 24, padding: 24, color: '#fff' }}>
-                      <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 900 }}>Programme Fidélité</h3>
-                      <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 24 }}>Paramétrez comment vos clients gagnent et dépensent leurs points.</p>
+                   <div style={{ background: 'var(--pos-card-bg)', borderRadius: 24, padding: 24, border: '1px solid var(--pos-border)' }}>
+                      <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 900, color: 'var(--pos-text-main)' }}>Programme Fidélité</h3>
+                      <p style={{ fontSize: 13, color: 'var(--pos-text-muted)', marginBottom: 24 }}>Paramétrez comment vos clients gagnent et dépensent leurs points.</p>
                       
                       <div style={{ marginBottom: 20 }}>
-                         <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>TAUX DE GAIN</label>
+                         <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 8, opacity: 0.6 }}>TAUX DE GAIN</label>
                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <input type="number" defaultValue={loyaltyEarnRate} style={{ width: 60, padding: 10, borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 900 }} />
-                            <span style={{ fontSize: 13 }}>pts / 1 DT dépensé</span>
+                            <input type="number" defaultValue={loyaltyEarnRate} style={{ width: 60, padding: 10, borderRadius: 10, border: '1px solid var(--pos-border)', background: 'var(--pos-input-bg)', color: 'var(--pos-text-main)', fontWeight: 900 }} />
+                            <span style={{ fontSize: 13, color: 'var(--pos-text-main)', fontWeight: 600 }}>pts / 1 DT dépensé</span>
                          </div>
                       </div>
 
                       <div style={{ marginBottom: 24 }}>
-                         <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>VALEUR DU POINT</label>
+                         <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 8, opacity: 0.6 }}>VALEUR DU POINT</label>
                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <input type="number" defaultValue={loyaltyRedeemRate} style={{ width: 60, padding: 10, borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 900 }} />
-                            <span style={{ fontSize: 13 }}>pts = 1 DT remise</span>
+                            <input type="number" defaultValue={loyaltyRedeemRate} style={{ width: 60, padding: 10, borderRadius: 10, border: '1px solid var(--pos-border)', background: 'var(--pos-input-bg)', color: 'var(--pos-text-main)', fontWeight: 900 }} />
+                            <span style={{ fontSize: 13, color: 'var(--pos-text-main)', fontWeight: 600 }}>pts = 1 DT remise</span>
                          </div>
                       </div>
 
-                      <button className="btn-premium btn-premium-primary" style={{ width: '100%', border: '1px solid rgba(255,255,255,0.2)' }} onClick={() => alert("Réglages sauvegardés")}>Sauvegarder</button>
+                      <button className="btn-premium btn-premium-primary" style={{ width: '100%' }} onClick={() => alert("Réglages sauvegardés")}>Sauvegarder</button>
                    </div>
                    
                    <div style={{ background: '#fff', borderRadius: 24, padding: 24, border: '1px solid var(--pos-border)' }}>

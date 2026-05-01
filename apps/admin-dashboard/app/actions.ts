@@ -128,7 +128,7 @@ export async function toggleFiscalMode(enabled: boolean, pinCode?: string) {
 // ══════════════════════════════════════════════════════════════
 //  PRODUCTS
 // ══════════════════════════════════════════════════════════════
-export async function createProduct(data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; recipe?: { stockItemId: string; quantity: number; consumeType?: string; isPackaging?: boolean }[] }) {
+export async function createProduct(data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; image?: string | null; recipe?: { stockItemId: string; quantity: number; consumeType?: string; isPackaging?: boolean }[] }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
 
@@ -143,6 +143,7 @@ export async function createProduct(data: { name: string; price: number; categor
       taxCode: data.taxCode || undefined,
       active: data.active ?? true,
       canBeTakeaway: data.canBeTakeaway ?? true,
+      image: data.image,
       recipe: data.recipe ? {
         create: data.recipe.map(r => ({
           stockItemId: r.stockItemId,
@@ -157,7 +158,7 @@ export async function createProduct(data: { name: string; price: number; categor
 }
 
 
-export async function updateProduct(id: string, data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; recipe?: { stockItemId: string; quantity: number; consumeType?: string; isPackaging?: boolean }[] }) {
+export async function updateProduct(id: string, data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; image?: string | null; recipe?: { stockItemId: string; quantity: number; consumeType?: string; isPackaging?: boolean }[] }) {
   await prisma.recipeItem.deleteMany({ where: { productId: id } });
   await prisma.product.update({
     where: { id },
@@ -170,6 +171,7 @@ export async function updateProduct(id: string, data: { name: string; price: num
       taxCode: data.taxCode || undefined,
       active: data.active ?? true,
       canBeTakeaway: data.canBeTakeaway ?? true,
+      image: data.image,
       recipe: data.recipe ? {
         create: data.recipe.map(r => ({
           stockItemId: r.stockItemId,
@@ -1659,7 +1661,7 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
     supplierId = existingSupplier.id;
   }
 
-  const order = await prisma.supplierOrder.create({
+  const order = await (prisma as any).supplierOrder.create({
     data: {
       storeId: store.id,
       vendorId: data.vendorId,
@@ -3269,7 +3271,7 @@ export async function closeCashSessionAction(id: string, closingBalance: number,
 export async function createZoneAction(name: string) {
   const store = await getStore();
   if (!store) return;
-  const zone = await prisma.storeZone.create({
+  const zone = await (prisma as any).storeZone.create({
     data: { name, storeId: store.id }
   });
   revalidatePath('/admin/tables');
@@ -3277,16 +3279,16 @@ export async function createZoneAction(name: string) {
 }
 
 export async function updateZoneAction(id: string, name: string) {
-  await prisma.storeZone.update({ where: { id }, data: { name } });
+  await (prisma as any).storeZone.update({ where: { id }, data: { name } });
   revalidatePath('/admin/tables');
 }
 
 export async function deleteZoneAction(id: string) {
-  await prisma.storeTable.updateMany({
+  await (prisma as any).storeTable.updateMany({
     where: { zoneId: id },
     data: { zoneId: null }
   });
-  await prisma.storeZone.delete({ where: { id } });
+  await (prisma as any).storeZone.delete({ where: { id } });
   revalidatePath('/admin/tables');
 }
 
@@ -3302,7 +3304,7 @@ export async function createTableAction(data: {
 }) {
   const store = await getStore();
   if (!store) return;
-  await prisma.storeTable.create({
+  await (prisma as any).storeTable.create({
     data: {
       ...data,
       storeId: store.id
@@ -3322,7 +3324,7 @@ export async function updateTableAction(id: string, data: {
   width?: number;
   height?: number;
 }) {
-  await prisma.storeTable.update({
+  await (prisma as any).storeTable.update({
     where: { id },
     data
   });
@@ -3331,7 +3333,7 @@ export async function updateTableAction(id: string, data: {
 }
 
 export async function updateTablePositionAction(id: string, posX: number, posY: number) {
-  await prisma.storeTable.update({
+  await (prisma as any).storeTable.update({
     where: { id },
     data: { posX, posY }
   });
@@ -3340,7 +3342,7 @@ export async function updateTablePositionAction(id: string, posX: number, posY: 
 }
 
 export async function deleteTableAction(id: string) {
-  await prisma.storeTable.delete({ where: { id } });
+  await (prisma as any).storeTable.delete({ where: { id } });
   revalidatePath('/admin/tables');
   revalidatePath('/pos');
 }
@@ -3392,8 +3394,8 @@ export async function exportDataAction(type: 'sales' | 'products' | 'stock' | 'u
       users: await prisma.user.findMany({ where: { storeId: store.id } }),
       customers: await prisma.customer.findMany({ where: { storeId: store.id } }),
       expenses: await prisma.expense.findMany({ where: { storeId: store.id } }),
-      tables: await prisma.storeTable.findMany({ where: { storeId: store.id } }),
-      zones: await prisma.storeZone.findMany({ where: { storeId: store.id } }),
+      tables: await (prisma as any).storeTable.findMany({ where: { storeId: store.id } }),
+      zones: await (prisma as any).storeZone.findMany({ where: { storeId: store.id } }),
       terminals: await prisma.posTerminal.findMany({ where: { storeId: store.id } }),
       zReports: await prisma.zReport.findMany({ where: { storeId: store.id } }),
       cashSessions: await (prisma as any).cashSession.findMany({ where: { storeId: store.id } })
@@ -3885,7 +3887,7 @@ export async function seedDemoProductsAction(storeId: string) {
   const demoTables = ['T1', 'T2', 'T3', 'T4', 'T5'];
   await Promise.all(
     demoTables.map(label =>
-      prisma.storeTable.create({
+      (prisma as any).storeTable.create({
         data: { label, capacity: 4, storeId }
       })
     )
@@ -3920,7 +3922,7 @@ export async function resetDemoDataAction(storeId: string) {
   await prisma.category.deleteMany({ where: { storeId, parentId: { not: null } } });
   await prisma.category.deleteMany({ where: { storeId } });
 
-  await prisma.storeTable.deleteMany({ where: { storeId } });
+  await (prisma as any).storeTable.deleteMany({ where: { storeId } });
 
   revalidatePath('/admin/products');
   revalidatePath('/admin/stock');
@@ -4134,7 +4136,7 @@ export async function rateVendorAction(data: {
   const store = await getStore();
   if (!store) throw new Error('Non authentifié');
 
-  const order = await prisma.supplierOrder.findUnique({
+  const order = await (prisma as any).supplierOrder.findUnique({
     where: { id: data.orderId },
     select: { vendorId: true, vendorPosId: true }
   });
@@ -4146,7 +4148,7 @@ export async function rateVendorAction(data: {
       orderId: data.orderId,
       storeId: store.id,
       vendorId: order.vendorId,
-      vendorPosId: order.vendorPosId,
+      vendorPosId: (order as any).vendorPosId,
       speedScore: data.speedScore,
       qualityScore: data.qualityScore,
       reliabilityScore: data.reliabilityScore,
@@ -4260,6 +4262,75 @@ export async function updateSpecialOrderStatusAction(id: string, status: any) {
   });
   revalidatePath('/admin/production/orders');
   revalidatePath('/admin/production/planning');
+}
+
+export async function deleteSpecialOrderAction(id: string) {
+  await prisma.specialOrder.delete({
+    where: { id }
+  });
+  revalidatePath('/admin/production/orders');
+  revalidatePath('/admin/production/planning');
+}
+
+export async function updateSpecialOrderAction(id: string, data: any) {
+  const order = await prisma.specialOrder.update({
+    where: { id },
+    data
+  });
+  revalidatePath('/admin/production/orders');
+  revalidatePath('/admin/production/planning');
+  return order;
+}
+
+export async function paySpecialOrderAction(id: string, paymentMethod: string = 'CASH') {
+  const order = await prisma.specialOrder.findUnique({
+    where: { id },
+    include: { product: true }
+  });
+  if (!order) throw new Error("Order not found");
+  
+  const storeId = order.storeId;
+  
+  await prisma.specialOrder.update({
+    where: { id },
+    data: { status: 'DELIVERED' }
+  });
+
+  if (order.productId && order.product) {
+    const taxRate = Number(order.product.taxRate || 0);
+    const unitPriceHt = Number(order.unitPrice) / (1 + taxRate);
+    const totalHt = Number(order.totalPrice) / (1 + taxRate);
+    const taxAmount = Number(order.totalPrice) - totalHt;
+
+    const sale = await prisma.sale.create({
+      data: {
+        storeId,
+        total: Number(order.totalPrice),
+        paymentMethod,
+        subtotal: totalHt,
+        items: {
+          create: [{
+            productId: order.productId,
+            quantity: Number(order.quantity),
+            price: Number(order.unitPrice),
+            unitPriceHt,
+            taxRate,
+            taxAmount,
+            totalHt,
+            totalTtc: Number(order.totalPrice)
+          }]
+        }
+      }
+    });
+
+    revalidatePath('/admin/production/orders');
+    revalidatePath('/admin/production/planning');
+    return { success: true, saleId: sale.id };
+  }
+
+  revalidatePath('/admin/production/orders');
+  revalidatePath('/admin/production/planning');
+  return { success: true };
 }
 
 export async function getProductionPlanningAction() {

@@ -4,17 +4,19 @@ import { useState } from 'react';
 import { 
   Plus, Search, Filter, Calendar, Clock, User, Phone, 
   ChevronRight, MoreHorizontal, CheckCircle2, AlertCircle,
-  Package, DollarSign, FileText, Download, Printer
+  Package, DollarSign, FileText, Download, Printer,
+  Edit, Trash2, Banknote
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { createSpecialOrderAction, updateSpecialOrderStatusAction } from '../../../../app/actions';
+import { createSpecialOrderAction, updateSpecialOrderStatusAction, updateSpecialOrderAction, deleteSpecialOrderAction, paySpecialOrderAction } from '../../../../app/actions';
 
 export default function ProductionOrdersClient({ initialOrders }: { initialOrders: any[] }) {
   const [orders, setOrders] = useState(initialOrders);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<any>(null);
   
   // New Order Form State
   const [formData, setFormData] = useState({
@@ -49,28 +51,66 @@ export default function ProductionOrdersClient({ initialOrders }: { initialOrder
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await createSpecialOrderAction({
+      const orderData = {
         ...formData,
         deliveryDate: new Date(formData.deliveryDate),
         totalPrice: formData.quantity * formData.unitPrice
-      });
-      setOrders([res, ...orders]);
+      };
+
+      if (editingOrder) {
+        const res = await updateSpecialOrderAction(editingOrder.id, orderData);
+        setOrders(orders.map(o => o.id === editingOrder.id ? { ...o, ...res } : o));
+      } else {
+        const res = await createSpecialOrderAction(orderData);
+        setOrders([res, ...orders]);
+      }
       setIsModalOpen(false);
-      setFormData({
-        clientName: '',
-        clientPhone: '',
-        productName: '',
-        quantity: 1,
-        unitPrice: 0,
-        deliveryDate: format(new Date(), 'yyyy-MM-dd'),
-        deliveryTime: '10:00',
-        notes: '',
-        depositAmount: 0
-      });
+      setEditingOrder(null);
+      resetForm();
     } catch (err) {
-      alert("Erreur lors de la création");
+      alert("Erreur lors de la sauvegarde");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      clientName: '', clientPhone: '', productName: '',
+      quantity: 1, unitPrice: 0, deliveryDate: format(new Date(), 'yyyy-MM-dd'),
+      deliveryTime: '10:00', notes: '', depositAmount: 0
+    });
+  };
+
+  const handleEdit = (order: any) => {
+    setEditingOrder(order);
+    setFormData({
+      clientName: order.clientName || '',
+      clientPhone: order.clientPhone || '',
+      productName: order.productName || '',
+      quantity: Number(order.quantity) || 1,
+      unitPrice: Number(order.unitPrice) || 0,
+      deliveryDate: format(new Date(order.deliveryDate), 'yyyy-MM-dd'),
+      deliveryTime: order.deliveryTime || '10:00',
+      notes: order.notes || '',
+      depositAmount: Number(order.depositAmount) || 0
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Êtes-vous sûr de vouloir supprimer cette commande ?")) {
+      await deleteSpecialOrderAction(id);
+      setOrders(orders.filter(o => o.id !== id));
+    }
+  };
+
+  const handlePay = async (id: string) => {
+    if (confirm("Valider le paiement de cette commande ? Un ticket de vente sera généré.")) {
+      await paySpecialOrderAction(id, 'CASH');
+      setOrders(orders.map(o => o.id === id ? { ...o, status: 'DELIVERED' } : o));
+      // Optional: trigger print via global print context
+      alert("Commande payée et ticket généré !");
     }
   };
 
@@ -96,7 +136,7 @@ export default function ProductionOrdersClient({ initialOrders }: { initialOrder
         
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => { setEditingOrder(null); resetForm(); setIsModalOpen(true); }}
             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-200 active:scale-95"
           >
             <Plus size={20} />
@@ -189,16 +229,29 @@ export default function ProductionOrdersClient({ initialOrders }: { initialOrder
                     </div>
                   </td>
                   <td className="px-6 py-5">
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-1">
+                      {order.status !== 'DELIVERED' && (
+                        <button 
+                          onClick={() => handlePay(order.id)}
+                          className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors"
+                          title="Payer la commande"
+                        >
+                          <Banknote size={18} />
+                        </button>
+                      )}
                       <button 
-                        onClick={() => handleStatusUpdate(order.id, 'READY')}
-                        className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors"
-                        title="Marquer comme prête"
+                        onClick={() => handleEdit(order)}
+                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                        title="Modifier la commande"
                       >
-                        <CheckCircle2 size={18} />
+                        <Edit size={18} />
                       </button>
-                      <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-colors">
-                        <MoreHorizontal size={18} />
+                      <button 
+                        onClick={() => handleDelete(order.id)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                        title="Supprimer la commande"
+                      >
+                        <Trash2 size={18} />
                       </button>
                     </div>
                   </td>
@@ -226,7 +279,7 @@ export default function ProductionOrdersClient({ initialOrders }: { initialOrder
           <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
             <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div>
-                <h2 className="text-xl font-black text-slate-900">Nouvelle Commande Client</h2>
+                <h2 className="text-xl font-black text-slate-900">{editingOrder ? 'Modifier la Commande' : 'Nouvelle Commande Client'}</h2>
                 <p className="text-sm text-slate-500 font-medium">Saisissez les détails de la commande</p>
               </div>
               <button 
@@ -354,7 +407,7 @@ export default function ProductionOrdersClient({ initialOrders }: { initialOrder
                   disabled={loading}
                   className="flex-[2] px-6 py-4 rounded-2xl font-black bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {loading ? 'Création...' : 'Valider la Commande'}
+                  {loading ? 'Sauvegarde...' : (editingOrder ? 'Enregistrer les modifications' : 'Valider la Commande')}
                   {!loading && <ChevronRight size={20} />}
                 </button>
               </div>

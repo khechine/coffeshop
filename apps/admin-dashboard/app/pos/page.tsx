@@ -90,7 +90,7 @@ export default async function POSPage() {
     <>
       <PremiumPOSClient 
         storeId={store.id}
-        storeName={store?.name || 'CoffeeSaaS POS'} 
+        storeName={store?.name || 'ElKassa Patisserie POS'} 
         planName={planNameUpper}
         isFiscalEnabled={isFiscal}
         initialProducts={serializedProducts} 

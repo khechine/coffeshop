@@ -23,6 +23,7 @@ export interface Product {
   price: any;
   taxRate: any;
   active: boolean;
+  image?: string | null;
   unit: string;
   category: { id: string; name: string }; 
   canBeTakeaway: boolean;
@@ -52,7 +53,7 @@ export default function ProductForm({ initialData, categories, stockItems, globa
 
   const [form, setForm] = useState<{ 
     name: string; unitId: string; price: string; taxRate: number;
-    categoryId: string; active: boolean; canBeTakeaway: boolean;
+    categoryId: string; active: boolean; canBeTakeaway: boolean; image: string;
     recipe: { stockItemId: string; quantity: number; consumeType: string; isPackaging: boolean }[] 
   }>({ 
     name: initialData?.name || '', 
@@ -62,6 +63,7 @@ export default function ProductForm({ initialData, categories, stockItems, globa
     categoryId: initialData?.category.id || (categories[0]?.id || ''), 
     active: initialData?.active ?? true,
     canBeTakeaway: initialData?.canBeTakeaway ?? true,
+    image: initialData?.image || '',
     recipe: initialData ? initialData.recipe.map(r => ({ 
       stockItemId: r.stockItem.id, 
       quantity: Number(r.quantity),
@@ -78,6 +80,25 @@ export default function ProductForm({ initialData, categories, stockItems, globa
       newRecipe[index] = { ...newRecipe[index], [field]: value };
       return { ...f, recipe: newRecipe };
     });
+  };
+
+  const handleUpload = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
+      const res = await fetch(`${API_URL}/management/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.url) {
+        const fullUrl = data.url.startsWith('/') ? `${API_URL}${data.url}` : data.url;
+        setForm(f => ({ ...f, image: fullUrl }));
+      }
+    } catch (e) {
+      alert('Erreur upload');
+    }
   };
 
   const calculateCOGS = () => {
@@ -105,6 +126,7 @@ export default function ProductForm({ initialData, categories, stockItems, globa
         categoryId: form.categoryId,
         active: form.active,
         canBeTakeaway: form.canBeTakeaway,
+        image: form.image || null,
         recipe: form.recipe.filter(r => r.stockItemId && r.quantity > 0).map(r => ({
           stockItemId: r.stockItemId,
           quantity: r.quantity,
@@ -112,7 +134,7 @@ export default function ProductForm({ initialData, categories, stockItems, globa
           isPackaging: r.isPackaging
         }))
       };
-      if (initialData) await updateProduct(initialData.id, data);
+      if (initialData) await updateProduct(initialData.id, data as any);
       else await createProduct(data);
       router.push('/admin/products');
       router.refresh();
@@ -143,13 +165,13 @@ export default function ProductForm({ initialData, categories, stockItems, globa
           </button>
         </div>
         
-        <h1 style={{ margin: 0, fontSize: '22px', md: '28px', fontWeight: 1000, color: '#0F172A', letterSpacing: '-0.02em' }}>
+        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 1000, color: '#0F172A', letterSpacing: '-0.02em' }}>
           {initialData ? 'Modifier le Produit' : 'Nouveau Produit'}
         </h1>
       </div>
 
-      <div className="product-form-layout" style={{ display: 'flex', flexDirection: 'column', lg: 'row', gap: '32px' }}>
-        <div className="form-main-column" style={{ flex: '1.5', order: 2, lg: 1, display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      <div className="product-form-layout" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div className="form-main-column" style={{ flex: '1.5', order: 2, display: 'flex', flexDirection: 'column', gap: '32px' }}>
           {/* Section 1: Informations Générales */}
           <section style={{ background: '#fff', padding: '32px', borderRadius: '24px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
@@ -169,6 +191,31 @@ export default function ProductForm({ initialData, categories, stockItems, globa
                   placeholder="ex: Double Expresso Macchiato..." 
                   required 
                 />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Photo du Produit</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '80px', height: '80px', borderRadius: '16px', background: '#F8FAFC', border: '2px dashed #CBD5E1', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                    {form.image ? (
+                      <img src={form.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Product" />
+                    ) : (
+                      <Coffee size={24} color="#94A3B8" />
+                    )}
+                  </div>
+                  <div>
+                    <input 
+                      type="file" 
+                      id="product-image" 
+                      style={{ display: 'none' }} 
+                      onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+                    />
+                    <label htmlFor="product-image" style={{ display: 'inline-block', padding: '8px 16px', background: '#EEF2FF', color: '#4F46E5', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', border: '1px solid #C7D2FE' }}>
+                      + Uploader une image
+                    </label>
+                    <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '6px', fontWeight: 600 }}>Format recommandé: carré 500x500px</div>
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
@@ -199,7 +246,7 @@ export default function ProductForm({ initialData, categories, stockItems, globa
 
               <div>
                 <label style={labelStyle}>Statut du Produit</label>
-                <div style={{ display: 'flex', flexDirection: 'column', md: 'row', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <button 
                     type="button" 
                     onClick={() => setForm(f => ({ ...f, active: true }))}
@@ -280,18 +327,6 @@ export default function ProductForm({ initialData, categories, stockItems, globa
                         </span>
                       </div>
                     </div>
-                    <div style={{ flex: '1 1 150px' }}>
-                      <label style={{ fontSize: '10px', fontWeight: 900, color: '#94A3B8', marginBottom: '6px', display: 'block', textTransform: 'uppercase' }}>Condition</label>
-                      <select 
-                        style={{ ...inputStyle, padding: '10px 14px', fontSize: '13px', border: '1.5px solid #CBD5E1' }} 
-                        value={item.consumeType} 
-                        onChange={e => updateRecipeItem(idx, 'consumeType', e.target.value)}
-                      >
-                        <option value="BOTH">Les deux</option>
-                        <option value="DINE_IN">Sur place</option>
-                        <option value="TAKEAWAY">À emporter</option>
-                      </select>
-                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', paddingTop: '20px' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: item.isPackaging ? '#EEF2FF' : '#F1F5F9', padding: '10px', borderRadius: '12px', border: item.isPackaging ? '1.5px solid #6366F1' : '1.5px solid #E2E8F0' }}>
                         <input 
@@ -325,9 +360,9 @@ export default function ProductForm({ initialData, categories, stockItems, globa
           </section>
         </div>
 
-        <div className="form-sidebar" style={{ flex: '1', order: 1, lg: 2, display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div className="form-sidebar" style={{ flex: '1', order: 1, display: 'flex', flexDirection: 'column', gap: '32px' }}>
           {/* Section 3: Finance & TVA */}
-          <section className="finance-section sticky-top" style={{ background: '#fff', padding: '32px', borderRadius: '24px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'static', lg: 'sticky', top: '32px' }}>
+          <section className="finance-section sticky-top" style={{ background: '#fff', padding: '32px', borderRadius: '24px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'static', top: '32px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Percent size={20} />

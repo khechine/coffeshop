@@ -4,8 +4,8 @@ import LayoutShell from '../components/LayoutShell';
 import { getStore } from './actions';
 
 export const metadata = {
-  title: 'CoffeeSaaS B2B — Dashboard',
-  description: 'Plateforme SaaS B2B pour la gestion de cafés et bistros',
+  title: 'ElKassa Patisserie B2B — Dashboard',
+  description: 'Plateforme SaaS B2B pour la gestion de pâtisseries et commerces',
 };
 
 export default async function Layout({ children }: { children: React.ReactNode }) {

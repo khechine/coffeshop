@@ -4,14 +4,21 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { 
   ShoppingBag, Search, LayoutGrid, Star, MapPin, 
-  Phone, Mail, Calendar, ChevronRight, Package, Info
+  Phone, Mail, Calendar, ChevronRight, Package, Info,
+  ShoppingCart, Plus, Minus, Send, X
 } from 'lucide-react';
+import { placeMarketplaceOrder } from '../../../actions';
 import '../../marketplace.css';
 
 const fmt = (n: any) => Number(n).toFixed(3);
 
 export default function VendorStorefrontClient({ vendor, ratings }: any) {
   const [search, setSearch] = useState('');
+  const [cart, setCart] = useState<any[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [isOrdering, setIsOrdering] = useState(false);
+  const [orderStatus, setOrderStatus] = useState('');
+  const [activeTab, setActiveTab] = useState('products');
   
   const cust = vendor.customization || {};
   const isPremium = vendor.isPremium || !!cust.id;
@@ -25,13 +32,52 @@ export default function VendorStorefrontClient({ vendor, ratings }: any) {
     categoryId: vp.categoryId || vp.productStandard?.categoryId
   })).filter((p: any) => p.name.toLowerCase().includes(search.toLowerCase()));
 
-  // Theme colors
+  // Theme colors & URLs
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
   const primaryColor = isPremium ? (cust.primaryColor || '#1E1B4B') : '#1E1B4B';
-  const bannerUrl = isPremium ? (cust.bannerUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600') : null;
-  const logoUrl = isPremium ? (cust.logoUrl || null) : null;
+  const bannerUrl = isPremium ? (cust.bannerUrl?.replace('http://localhost:3001', API_URL) || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600') : null;
+  const logoUrl = isPremium ? (cust.logoUrl?.replace('http://localhost:3001', API_URL) || null) : null;
+  const fontFamily = isPremium ? (cust.fontFamily || 'Inter') : 'Inter';
+
+  const addToCart = (p: any) => {
+    setCart(prev => {
+      const ex = prev.find(i => i.id === p.id);
+      if (ex) return prev.map(i => i.id === p.id ? { ...i, quantity: i.quantity + 1 } : i);
+      return [...prev, { ...p, quantity: 1, vendor: { id: vendor.id, companyName: vendor.companyName } }];
+    });
+    setCartOpen(true);
+  };
+
+  const updateQty = (id: string, delta: number) =>
+    setCart(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i));
+
+  const removeItem = (id: string) => setCart(prev => prev.filter(i => i.id !== id));
+
+  const cartTotal = cart.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+  const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
+
+  const handleCheckout = async () => {
+    setIsOrdering(true);
+    try {
+      await placeMarketplaceOrder({
+        vendorId: vendor.id,
+        total: cartTotal,
+        items: cart.map(i => ({
+          productId: i.id,
+          quantity: i.quantity,
+          price: Number(i.price),
+          name: i.name
+        }))
+      });
+      setOrderStatus('SUCCESS');
+      setCart([]);
+      setTimeout(() => { setCartOpen(false); setOrderStatus(''); }, 2500);
+    } catch { setOrderStatus('ERROR'); }
+    finally { setIsOrdering(false); }
+  };
 
   return (
-    <div className="mkt-page">
+    <div className="mkt-page" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       {/* Header */}
       <header className="mkt-header">
         <div className="mkt-header-inner">
@@ -54,6 +100,10 @@ export default function VendorStorefrontClient({ vendor, ratings }: any) {
             <Link href="/" className="mkt-header-btn" style={{ textDecoration: 'none' }}>
               <LayoutGrid size={16} /> Dashboard
             </Link>
+            <button className="mkt-cart-btn" onClick={() => setCartOpen(true)}>
+              <ShoppingCart size={20} />
+              {cartCount > 0 && <span className="mkt-cart-badge">{cartCount}</span>}
+            </button>
           </div>
         </div>
       </header>
@@ -116,38 +166,154 @@ export default function VendorStorefrontClient({ vendor, ratings }: any) {
       <div className="mkt-container">
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', gap: 32, marginBottom: 32, borderBottom: '2px solid #F1F5F9' }}>
-           <button style={{ padding: '16px 8px', border: 'none', background: 'none', borderBottom: `3px solid ${primaryColor}`, color: '#1E1B4B', fontWeight: 900, fontSize: 15, cursor: 'pointer' }}>
+           <button 
+            onClick={() => setActiveTab('products')}
+            style={{ padding: '16px 8px', border: 'none', background: 'none', borderBottom: activeTab === 'products' ? `3px solid ${primaryColor}` : '3px solid transparent', color: activeTab === 'products' ? '#1E1B4B' : '#94A3B8', fontWeight: activeTab === 'products' ? 900 : 700, fontSize: 15, cursor: 'pointer' }}
+           >
               Tous les produits ({products.length})
            </button>
-           <button style={{ padding: '16px 8px', border: 'none', background: 'none', borderBottom: '3px solid transparent', color: '#94A3B8', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+           <button 
+            onClick={() => setActiveTab('reviews')}
+            style={{ padding: '16px 8px', border: 'none', background: 'none', borderBottom: activeTab === 'reviews' ? `3px solid ${primaryColor}` : '3px solid transparent', color: activeTab === 'reviews' ? '#1E1B4B' : '#94A3B8', fontWeight: activeTab === 'reviews' ? 900 : 700, fontSize: 15, cursor: 'pointer' }}
+           >
               Avis Clients
            </button>
-           <button style={{ padding: '16px 8px', border: 'none', background: 'none', borderBottom: '3px solid transparent', color: '#94A3B8', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+           <button 
+            onClick={() => setActiveTab('info')}
+            style={{ padding: '16px 8px', border: 'none', background: 'none', borderBottom: activeTab === 'info' ? `3px solid ${primaryColor}` : '3px solid transparent', color: activeTab === 'info' ? '#1E1B4B' : '#94A3B8', fontWeight: activeTab === 'info' ? 900 : 700, fontSize: 15, cursor: 'pointer' }}
+           >
               Infos & Contact
            </button>
         </div>
 
-        {/* Products Grid */}
-        <div className="mkt-grid">
-          {products.map((p: any) => (
-            <div key={p.id} className="mkt-card">
-              <div className="mkt-card-img">
-                <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'} alt={p.name} />
+        {activeTab === 'products' && (
+          <div className="mkt-grid">
+            {products.map((p: any) => (
+              <div key={p.id} className="mkt-card">
+                <div className="mkt-card-img">
+                  <img src={p.image?.replace('http://localhost:3001', API_URL) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'} alt={p.name} />
+                  <div className="mkt-card-add">
+                    <button className="mkt-card-add-btn" onClick={() => addToCart(p)}>
+                      <Plus size={14} /> AJOUTER AU PANIER
+                    </button>
+                  </div>
+                </div>
+                <div className="mkt-card-body">
+                  <div className="mkt-card-name">{p.name}</div>
+                  <div className="mkt-card-price">{fmt(p.price)} <span className="mkt-card-unit">DT/{p.unit}</span></div>
+                </div>
               </div>
-              <div className="mkt-card-body">
-                <div className="mkt-card-name">{p.name}</div>
-                <div className="mkt-card-price">{fmt(p.price)} <span className="mkt-card-unit">DT/{p.unit}</span></div>
+            ))}
+            {products.length === 0 && (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '80px 0', color: '#94A3B8' }}>
+                <Package size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                <p style={{ fontWeight: 700 }}>Aucun produit ne correspond à votre recherche chez ce vendeur.</p>
               </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'reviews' && (
+          <div style={{ padding: 40, background: '#fff', borderRadius: 24, border: '1px solid #F1F5F9', textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>⭐</div>
+            <h3 style={{ fontSize: 20, fontWeight: 900, color: '#1E1B4B', margin: '0 0 8px' }}>Avis Clients</h3>
+            <p style={{ color: '#64748B', maxWidth: 400, margin: '0 auto' }}>
+              Moyenne de {ratings.overallAvg.toFixed(1)} basée sur {ratings.totalReviews} commandes.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 24, marginTop: 40 }}>
+               <div style={{ padding: 20, background: '#F8FAFC', borderRadius: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase' }}>Rapidité</div>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: '#1E1B4B' }}>{ratings.avgSpeed.toFixed(1)}/5</div>
+               </div>
+               <div style={{ padding: 20, background: '#F8FAFC', borderRadius: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase' }}>Qualité</div>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: '#1E1B4B' }}>{ratings.avgQuality.toFixed(1)}/5</div>
+               </div>
+               <div style={{ padding: 20, background: '#F8FAFC', borderRadius: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase' }}>Fiabilité</div>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: '#1E1B4B' }}>{ratings.avgReliability.toFixed(1)}/5</div>
+               </div>
             </div>
-          ))}
-          {products.length === 0 && (
-            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '80px 0', color: '#94A3B8' }}>
-              <Package size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-              <p style={{ fontWeight: 700 }}>Aucun produit ne correspond à votre recherche chez ce vendeur.</p>
+          </div>
+        )}
+
+        {activeTab === 'info' && (
+          <div style={{ padding: 40, background: '#fff', borderRadius: 24, border: '1px solid #F1F5F9' }}>
+            <h3 style={{ fontSize: 20, fontWeight: 900, color: '#1E1B4B', margin: '0 0 24px' }}>À propos de {vendor.companyName}</h3>
+            <p style={{ color: '#475569', lineHeight: 1.7, marginBottom: 32 }}>{vendor.description || "Aucune description fournie par ce vendeur."}</p>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 32 }}>
+               <div>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', marginBottom: 12 }}>Contact</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#1E293B', fontWeight: 600 }}>
+                        <Phone size={18} className="text-indigo-500" /> {vendor.phone}
+                     </div>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#1E293B', fontWeight: 600 }}>
+                        <MapPin size={18} className="text-indigo-500" /> {vendor.address}, {vendor.city}
+                     </div>
+                  </div>
+               </div>
+               <div>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', marginBottom: 12 }}>Position GPS</div>
+                  <div style={{ color: '#1E293B', fontWeight: 600 }}>
+                     Lat: {vendor.lat} | Lng: {vendor.lng}
+                  </div>
+               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+
+      {/* Cart Drawer */}
+      {cartOpen && (
+        <>
+          <div className="mkt-overlay" onClick={() => setCartOpen(false)} />
+          <div className="mkt-drawer">
+            <div className="mkt-drawer-head">
+              <div className="mkt-drawer-title">Mon Panier ({cart.length})</div>
+              <button className="mkt-drawer-close" onClick={() => setCartOpen(false)}><X size={18} /></button>
+            </div>
+            <div className="mkt-drawer-items">
+              {cart.length === 0 ? (
+                <div className="mkt-drawer-empty">
+                  <ShoppingCart size={48} style={{ opacity:0.15, display:'block', margin:'0 auto 16px' }} />
+                  <div style={{ fontWeight:700, fontSize:14 }}>Votre panier est vide</div>
+                </div>
+              ) : cart.map((item: any) => (
+                <div key={item.id} className="mkt-cart-item">
+                  <img className="mkt-cart-item-img"
+                    src={item.image?.replace('http://localhost:3001', API_URL) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'}
+                    alt={item.name}
+                  />
+                  <div className="mkt-cart-item-info">
+                    <div className="mkt-cart-item-name">{item.name}</div>
+                    <div className="mkt-cart-item-vendor">{item.vendor?.companyName}</div>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                      <div className="mkt-qty-ctrl">
+                        <button className="mkt-qty-btn" onClick={()=>updateQty(item.id,-1)}>−</button>
+                        <span className="mkt-qty-val">{item.quantity}</span>
+                        <button className="mkt-qty-btn" onClick={()=>updateQty(item.id,1)}>+</button>
+                      </div>
+                      <span className="mkt-cart-item-price">{fmt(Number(item.price)*item.quantity)} DT</span>
+                    </div>
+                  </div>
+                  <button className="mkt-cart-remove" onClick={()=>removeItem(item.id)}><X size={14} /></button>
+                </div>
+              ))}
+            </div>
+            <div className="mkt-drawer-foot">
+              <div className="mkt-drawer-total">
+                <span className="mkt-drawer-total-label">Total TTC</span>
+                <span className="mkt-drawer-total-val">{fmt(cartTotal)} DT</span>
+              </div>
+              <button className="mkt-checkout-btn" disabled={isOrdering || cart.length === 0} onClick={handleCheckout}>
+                {isOrdering ? 'Traitement...' : orderStatus === 'SUCCESS' ? '✓ Commandé !' : <><Send size={16} /> Passer la Commande</>}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
