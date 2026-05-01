@@ -3,8 +3,10 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import { 
   ShoppingBag, MapPin, Clock, AlertTriangle, CheckCircle2, 
-  ChevronRight, Filter, Bell, BellRing, Package, ArrowRight
+  ChevronRight, Filter, Bell, BellRing, Package, ArrowRight,
+  Users
 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function VendorOrdersClient({ initialOrders, initialAlerts }: any) {
   const [orders, setOrders] = useState(initialOrders);
@@ -144,6 +146,12 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Montant Total</div>
                          <div className="text-2xl font-black text-slate-900">{Number(order.total).toFixed(3)} <span className="text-xs">DT</span></div>
                       </div>
+                      <Link 
+                        href="/vendor/portal/crm"
+                        className="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-rose-100 transition-all border border-rose-100 flex items-center gap-2"
+                      >
+                         <Users size={12} /> CRM
+                      </Link>
                       <button className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-900 hover:text-white transition-all">
                          <ChevronRight size={20} />
                       </button>

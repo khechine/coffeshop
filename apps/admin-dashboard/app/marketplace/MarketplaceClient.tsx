@@ -13,6 +13,14 @@ import './marketplace.css';
 
 /* ─── Helpers ─── */
 const fmt = (n: any) => Number(n).toFixed(3);
+const sanitizeUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  if (url.startsWith('http')) {
+    return url.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '');
+  }
+  if (url.startsWith('/')) return url;
+  return '/' + url;
+};
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
 
 function Stars({ avg = 0, total = 0, size = 10 }: any) {
@@ -122,7 +130,7 @@ function ProductCard({ product, onAdd, onDetail }: any) {
     <div className="mkt-card">
       <Link href={`/marketplace/product/${product.id}`} className="mkt-card-img" style={{ display: 'block', textDecoration: 'none' }}>
         <img
-          src={product.image?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '') || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'}
+          src={sanitizeUrl(product.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'}
           alt={product.name}
           onError={(e:any)=>{e.target.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400';}}
         />

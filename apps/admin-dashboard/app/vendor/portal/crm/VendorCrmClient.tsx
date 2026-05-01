@@ -4,7 +4,7 @@ import React, { useState, useTransition } from 'react';
 import { 
   Users, TrendingUp, Mail, Filter, Star, ShieldAlert, 
   Tag as TagIcon, Plus, Send, Phone, MessageCircle, 
-  ExternalLink, ChevronRight, Search, LayoutGrid
+  ExternalLink, ChevronRight, Search, LayoutGrid, X
 } from 'lucide-react';
 import { updateVendorCustomerAction, createVendorCampaignAction } from '../../../actions';
 
@@ -28,11 +28,13 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
     targetTags: [] as string[]
   });
 
-  const handleTagCustomer = (id: string, tags: string[]) => {
+  const handleUpdateCustomer = (id: string, data: { category?: string; tags?: string[] }) => {
     startTransition(async () => {
-      await updateVendorCustomerAction(id, { tags });
-      setCustomers(prev => prev.map(c => c.id === id ? { ...c, tags } : c));
-      setSelectedCust(null);
+      await updateVendorCustomerAction(id, data);
+      setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
+      if (selectedCust && selectedCust.id === id) {
+        setSelectedCust((prev: any) => ({ ...prev, ...data }));
+      }
     });
   };
 
@@ -75,7 +77,7 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
             </div>
             <div>
               <p className="text-sm font-black text-slate-400 uppercase tracking-wider">Ventes B2B</p>
-              <p className="text-3xl font-black text-slate-900">{customers.reduce((acc, c) => acc + c.totalSpent, 0).toFixed(0)} DT</p>
+              <p className="text-3xl font-black text-slate-900">{customers.reduce((acc, c) => acc + Number(c.totalSpent), 0).toFixed(0)} DT</p>
             </div>
           </div>
           <div className="text-xs font-bold text-slate-500">Chiffre d'affaires Marketplace</div>
@@ -182,10 +184,10 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
                       <span className="font-black text-slate-700">{c.orderCount}</span>
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <span className="font-black text-emerald-600 text-lg">{c.totalSpent.toFixed(3)} DT</span>
+                      <span className="font-black text-emerald-600 text-lg">{Number(c.totalSpent).toFixed(3)} DT</span>
                     </td>
                     <td className="px-8 py-6 text-center">
-                       <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                       <div className="flex items-center justify-center gap-2">
                           <button 
                             onClick={() => setSelectedCust(c)}
                             className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-rose-600 hover:border-rose-100 transition-all shadow-sm"
@@ -298,8 +300,11 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
       {selectedCust && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[40px] p-10 w-full max-w-md shadow-2xl">
-            <h3 className="font-black text-2xl text-slate-900 mb-2">Taguer {selectedCust.store?.name}</h3>
-            <p className="text-slate-400 font-bold text-sm mb-8">Ajoutez des tags pour segmenter vos clients B2B.</p>
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="font-black text-2xl text-slate-900">Taguer {selectedCust.store?.name}</h3>
+              <button onClick={() => setSelectedCust(null)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+            </div>
+            <p className="text-slate-400 font-bold text-sm mb-8">Segmenter et taguer vos clients B2B.</p>
             
             <div className="space-y-6">
               <div className="space-y-3">
@@ -308,8 +313,8 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
                   {['VIP', 'REGULAR', 'CHURN_RISK'].map(cat => (
                     <button 
                       key={cat}
-                      onClick={() => handleTagCustomer(selectedCust.id, selectedCust.tags)}
-                      className={`px-3 py-2 rounded-xl text-[10px] font-black border-2 transition-all ${selectedCust.category === cat ? 'border-rose-500 bg-rose-50 text-rose-600' : 'border-slate-100 text-slate-400'}`}
+                      onClick={() => handleUpdateCustomer(selectedCust.id, { category: cat })}
+                      className={`px-3 py-2 rounded-xl text-[10px] font-black border-2 transition-all ${selectedCust.category === cat ? 'border-rose-500 bg-rose-50 text-rose-600 shadow-md shadow-rose-500/10' : 'border-slate-100 text-slate-400 hover:border-slate-200'}`}
                     >
                       {cat}
                     </button>
@@ -317,20 +322,27 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
                 </div>
               </div>
 
-              <div className="pt-4 flex gap-4">
-                <button 
-                  onClick={() => setSelectedCust(null)}
-                  className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black"
-                >
-                  Annuler
-                </button>
-                <button 
-                  onClick={() => setSelectedCust(null)}
-                  className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black shadow-lg shadow-slate-900/20"
-                >
-                  Sauvegarder
-                </button>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tags personnalisés (séparés par virgule)</label>
+                <input 
+                  type="text"
+                  defaultValue={selectedCust.tags?.join(', ')}
+                  onBlur={(e) => {
+                    const tags = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
+                    handleUpdateCustomer(selectedCust.id, { tags });
+                  }}
+                  placeholder="Ex: Boulangerie, Sousse, GrosVolume"
+                  className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500/20 font-bold text-slate-900"
+                />
+                <p className="text-[10px] text-slate-400 font-bold">Appuyez en dehors du champ pour sauvegarder les tags.</p>
               </div>
+
+              <button 
+                onClick={() => setSelectedCust(null)}
+                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all mt-4"
+              >
+                Terminer
+              </button>
             </div>
           </div>
         </div>

@@ -6,6 +6,15 @@ import { useCart } from './CartContext';
 
 const fmt = (n: any) => Number(n).toFixed(3);
 
+const sanitizeUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  if (url.startsWith('http')) {
+    return url.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '');
+  }
+  if (url.startsWith('/')) return url;
+  return '/' + url;
+};
+
 export default function CartDrawer({ onClose }: { onClose: () => void }) {
   const { cart, updateQty, removeItem, cartTotal, handleCheckout, isOrdering, orderStatus } = useCart();
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
@@ -27,7 +36,7 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
           ) : cart.map((item: any) => (
             <div key={item.id} className="mkt-cart-item">
               <img className="mkt-cart-item-img"
-                src={item.image?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '') || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'}
+                src={sanitizeUrl(item.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'}
                 alt={item.name}
                 onError={(e:any)=>{e.target.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=100';}}
               />

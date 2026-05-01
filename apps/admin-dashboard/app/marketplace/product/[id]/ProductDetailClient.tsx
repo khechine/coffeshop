@@ -13,6 +13,15 @@ import '../../marketplace.css';
 
 const fmt = (n: any) => Number(n).toFixed(3);
 
+const sanitizeUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  if (url.startsWith('http')) {
+    return url.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '');
+  }
+  if (url.startsWith('/')) return url;
+  return '/' + url;
+};
+
 export default function ProductDetailClient({ product }: { product: any }) {
   const [qty, setQty] = useState(1);
   const [cartOpen, setCartOpen] = useState(false);
@@ -22,7 +31,7 @@ export default function ProductDetailClient({ product }: { product: any }) {
   const primaryColor = cust.primaryColor || '#1E1B4B';
   const fontFamily = cust.fontFamily || 'Inter';
 
-  const imageUrl = product.image?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '') || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800';
+  const imageUrl = sanitizeUrl(product.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800';
 
   const handleAddToCart = () => {
     // Custom add logic for specific qty

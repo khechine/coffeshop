@@ -15,6 +15,15 @@ import 'leaflet/dist/leaflet.css';
 
 const fmt = (n: any) => Number(n).toFixed(3);
 
+const sanitizeUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  if (url.startsWith('http')) {
+    return url.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '');
+  }
+  if (url.startsWith('/')) return url;
+  return '/' + url;
+};
+
 export default function VendorStorefrontClient({ vendor, ratings }: any) {
   const [search, setSearch] = useState('');
   const [cartOpen, setCartOpen] = useState(false);
@@ -40,8 +49,8 @@ export default function VendorStorefrontClient({ vendor, ratings }: any) {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
   const primaryColor = isPremium ? (cust.primaryColor || '#1E1B4B') : '#1E1B4B';
-  const bannerUrl = isPremium ? (cust.bannerUrl?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '') || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600') : null;
-  const logoUrl = isPremium ? (cust.logoUrl?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '') || null) : null;
+  const bannerUrl = isPremium ? (sanitizeUrl(cust.bannerUrl) || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600') : null;
+  const logoUrl = isPremium ? (sanitizeUrl(cust.logoUrl) || null) : null;
   const fontFamily = isPremium ? (cust.fontFamily || 'Inter') : 'Inter';
 
   useEffect(() => {
@@ -195,7 +204,7 @@ export default function VendorStorefrontClient({ vendor, ratings }: any) {
             {products.map((p: any) => (
               <div key={p.id} className="mkt-card">
                 <Link href={`/marketplace/product/${p.id}`} className="mkt-card-img" style={{ display: 'block', textDecoration: 'none' }}>
-                  <img src={p.image?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '') || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'} alt={p.name} />
+                  <img src={sanitizeUrl(p.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'} alt={p.name} />
                   <div className="mkt-card-add">
                     <button className="mkt-card-add-btn" onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCart(p); }}>
                       <Plus size={14} /> AJOUTER AU PANIER
