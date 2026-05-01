@@ -6,7 +6,7 @@ import {
   ShoppingBag, Search, LayoutGrid, Star, MapPin, 
   Phone, Mail, Calendar, ChevronRight, Package, Info
 } from 'lucide-react';
-import '../../../../marketplace/marketplace.css';
+import '../../marketplace.css';
 
 const fmt = (n: any) => Number(n).toFixed(3);
 
