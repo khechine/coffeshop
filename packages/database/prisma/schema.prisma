@@ -162,6 +162,9 @@ model Store {
 
   // Franchise & Premium
   vendorCustomers        VendorCustomer[]
+
+  // Third-party Integrations
+  erpIntegration         ErpIntegration?
 }
 
 model StoreZone {

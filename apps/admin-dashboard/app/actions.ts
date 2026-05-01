@@ -24,7 +24,8 @@ export async function getStore() {
         include: {
           subscription: {
             include: { plan: true }
-          }
+          },
+          erpIntegration: true
         }
       });
 
@@ -4309,4 +4310,53 @@ export async function getProductMarginsAction() {
   });
 
   return margins;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ERP INTEGRATION
+// ══════════════════════════════════════════════════════════════
+
+export async function saveErpSettings(data: { baseUrl: string; apiKey: string; apiSecret: string; isActive: boolean }) {
+  const store = await getStore();
+  if (!store) throw new Error('Store introuvable');
+
+  const existing = await (prisma as any).erpIntegration.findUnique({
+    where: { storeId: store.id }
+  });
+
+  if (existing) {
+    await (prisma as any).erpIntegration.update({
+      where: { storeId: store.id },
+      data
+    });
+  } else {
+    await (prisma as any).erpIntegration.create({
+      data: {
+        storeId: store.id,
+        ...data
+      }
+    });
+  }
+
+  revalidatePath('/admin/settings');
+}
+
+export async function triggerErpSync() {
+  const store = await getStore();
+  if (!store) throw new Error('Store introuvable');
+
+  // Dynamically import to avoid circular dependencies if any
+  const { ERPNextClient } = await import('../lib/erpnext');
+  
+  const client = await ERPNextClient.initialize(store.id);
+  if (!client) {
+    throw new Error('Intégration ERP non configurée ou inactive');
+  }
+
+  const result = await client.runFullSync();
+  revalidatePath('/admin/products');
+  revalidatePath('/admin/stock');
+  revalidatePath('/admin/settings');
+  
+  return result;
 }

@@ -35,7 +35,14 @@ interface StoreProps {
     plan?: {
       name: string;
     }
-  }
+  };
+  erpIntegration?: {
+    baseUrl: string;
+    apiKey: string;
+    apiSecret: string;
+    isActive: boolean;
+    lastSyncAt: Date | null;
+  } | null;
 }
 
 export default function SettingsClient({ store }: { store: StoreProps }) {
@@ -66,6 +73,14 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
     loyaltyEarnRate: store.loyaltyEarnRate ? Number(store.loyaltyEarnRate) : 1,
     loyaltyRedeemRate: store.loyaltyRedeemRate ? Number(store.loyaltyRedeemRate) : 100,
   });
+
+  const [erpForm, setErpForm] = useState({
+    baseUrl: store.erpIntegration?.baseUrl || '',
+    apiKey: store.erpIntegration?.apiKey || '',
+    apiSecret: store.erpIntegration?.apiSecret || '',
+    isActive: store.erpIntegration?.isActive ?? false,
+  });
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -538,6 +553,108 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
                </button>
             </div>
          </div>
+      </div>
+
+      {/* ERP Integration */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] shadow-sm overflow-hidden flex flex-col mb-8">
+        <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
+              <RefreshCw size={20} />
+            </div>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Intégration ERPNext</h3>
+          </div>
+        </div>
+        <div className="p-10 flex flex-col gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <div>
+                <label style={label}>URL ERPNext</label>
+                <input
+                  style={field}
+                  value={erpForm.baseUrl}
+                  onChange={e => setErpForm(f => ({ ...f, baseUrl: e.target.value }))}
+                  placeholder="https://paix-pain.erpbox.online/"
+                />
+              </div>
+              <div>
+                <label style={label}>API Key</label>
+                <input
+                  style={field}
+                  value={erpForm.apiKey}
+                  onChange={e => setErpForm(f => ({ ...f, apiKey: e.target.value }))}
+                  placeholder="ad313663bb99081"
+                />
+              </div>
+              <div>
+                <label style={label}>API Secret</label>
+                <input
+                  style={field}
+                  type="password"
+                  value={erpForm.apiSecret}
+                  onChange={e => setErpForm(f => ({ ...f, apiSecret: e.target.value }))}
+                  placeholder="cd90fb70fb872cf"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="erpActive"
+                  checked={erpForm.isActive}
+                  onChange={e => setErpForm(f => ({ ...f, isActive: e.target.checked }))}
+                />
+                <label htmlFor="erpActive" className="text-sm font-bold text-slate-900 dark:text-slate-300 cursor-pointer">Activer l'intégration</label>
+              </div>
+              <button 
+                className="w-full py-4 mt-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all"
+                onClick={() => {
+                  startTransition(async () => {
+                    const { saveErpSettings } = await import('../../actions');
+                    await saveErpSettings(erpForm);
+                    alert("Paramètres ERP enregistrés !");
+                  });
+                }}
+                disabled={isPending}
+              >
+                Sauvegarder Configuration
+              </button>
+            </div>
+            
+            <div className="flex flex-col justify-center items-center p-8 bg-slate-50 dark:bg-slate-950/20 rounded-3xl border border-slate-100 dark:border-slate-800 text-center gap-4">
+              <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-indigo-600 shadow-sm">
+                <RotateCcw size={28} />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-black text-slate-900 dark:text-white">Synchronisation Manuelle</div>
+                <div className="text-xs text-slate-500">Dernière sync: {store.erpIntegration?.lastSyncAt ? new Date(store.erpIntegration.lastSyncAt).toLocaleString('fr-FR') : 'Jamais'}</div>
+              </div>
+              <button 
+                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-md shadow-indigo-600/30 hover:bg-indigo-500 transition-all flex items-center gap-2 disabled:opacity-50"
+                onClick={async () => {
+                  if (!erpForm.baseUrl) return alert('Veuillez configurer et sauvegarder l\'ERP d\'abord.');
+                  setIsSyncing(true);
+                  try {
+                    const { triggerErpSync } = await import('../../actions');
+                    const res = await triggerErpSync();
+                    if (res.success) {
+                       alert('Synchronisation terminée avec succès !');
+                    } else {
+                       alert('Erreur: ' + res.error);
+                    }
+                  } catch (e: any) {
+                    alert('Erreur: ' + e.message);
+                  } finally {
+                    setIsSyncing(false);
+                  }
+                }}
+                disabled={isSyncing || !erpForm.isActive}
+              >
+                {isSyncing ? <RefreshCw size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                {isSyncing ? 'Synchronisation en cours...' : 'Importer depuis ERPNext'}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Demo Actions */}
