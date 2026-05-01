@@ -237,6 +237,25 @@ model ActivityPole {
 // MARKETPLACE CATEGORIES SYSTEM
 // ============================================
 
+model MarketplaceBanner {
+  id          String   @id @default(cuid())
+  title       String
+  subtitle    String?
+  buttonText  String?
+  buttonLink  String?
+  imageUrl    String
+  position    String   @default("HERO") // HERO, SIDEBAR_1, SIDEBAR_2, ADS_1, ADS_2, BRAND
+  bgColor     String?  @default("#1E1B4B")
+  badgeText   String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([position])
+  @@index([isActive])
+}
+
 model MktCategory {
   id          String   @id @default(cuid())
   name        String

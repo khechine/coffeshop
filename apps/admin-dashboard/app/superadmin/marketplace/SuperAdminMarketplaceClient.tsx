@@ -20,6 +20,18 @@ export default function SuperAdminMarketplaceClient({ products, orders }: { prod
           <p style={{ margin: '8px 0 0', color: '#64748B', fontSize: '16px' }}>Supervisez l'ensemble des produits et des transactions B2B.</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
+           <a
+             href="/superadmin/marketplace/banners"
+             style={{
+               display:'flex', alignItems:'center', gap:'8px',
+               padding:'12px 20px', borderRadius:'16px',
+               background:'linear-gradient(135deg,#4F46E5,#7C3AED)',
+               color:'#fff', textDecoration:'none', fontSize:'14px', fontWeight:800,
+               boxShadow:'0 8px 16px rgba(79,70,229,0.3)'
+             }}
+           >
+             🎯 Gestion des Bannières
+           </a>
            <div style={{ position: 'relative' }}>
               <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} size={18} />
               <input 
@@ -34,6 +46,7 @@ export default function SuperAdminMarketplaceClient({ products, orders }: { prod
               <Filter size={18} /> Filtres
            </button>
         </div>
+
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '32px' }}>

@@ -1085,7 +1085,7 @@ export async function getMarketplaceData(userLat?: number, userLng?: number) {
     ])
   );
 
-  const [categories, featuredRaw, flashSalesRaw, productsRaw, bundlesRaw] = await Promise.all([
+  const [categories, featuredRaw, flashSalesRaw, productsRaw, bundlesRaw, bannersRaw] = await Promise.all([
     (prisma as any).mktCategory.findMany({ include: { subcategories: true } }),
     (prisma as any).vendorProduct.findMany({
       where: { isFeatured: true },
@@ -1119,8 +1119,13 @@ export async function getMarketplaceData(userLat?: number, userLng?: number) {
         vendor: true,
         items: { include: { vendorProduct: { include: { productStandard: true } } } }
       }
-    })
+    }),
+    (prisma as any).marketplaceBanner.findMany({
+      where: { isActive: true },
+      orderBy: [{ position: 'asc' }, { sortOrder: 'asc' }]
+    }).catch(() => []) // Graceful degradation if migration hasn't run yet
   ]);
+
 
   // Filter in memory if we have wallet data, otherwise show all (graceful degradation)
   const filterByWallet = (list: any[]) => {
@@ -1218,9 +1223,11 @@ export async function getMarketplaceData(userLat?: number, userLng?: number) {
         ...b.vendor,
         ratings: vendorRatingsMap.get(b.vendorId) || null
       } : null
-    }))
+    })),
+    banners: bannersRaw || []
   };
 }
+
 
 
 
@@ -1537,7 +1544,67 @@ export async function deleteMarketplaceCategoryAction(id: string) {
   revalidatePath('/marketplace');
 }
 
+// ============================================
+// MARKETPLACE BANNER ACTIONS
+// ============================================
+
+export async function getMarketplaceBannersAdmin() {
+  const cookieStore = cookies();
+  const userId = cookieStore.get('userId')?.value;
+  if (!userId) throw new Error('Non autorisé');
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  return (prisma as any).marketplaceBanner.findMany({
+    orderBy: [{ position: 'asc' }, { sortOrder: 'asc' }]
+  });
+}
+
+export async function upsertMarketplaceBannerAction(data: {
+  id?: string;
+  title: string;
+  subtitle?: string;
+  buttonText?: string;
+  buttonLink?: string;
+  imageUrl: string;
+  position: string;
+  bgColor?: string;
+  badgeText?: string;
+  isActive: boolean;
+  sortOrder: number;
+}) {
+  const cookieStore = cookies();
+  const userId = cookieStore.get('userId')?.value;
+  if (!userId) throw new Error('Non autorisé');
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  const { id, ...rest } = data;
+
+  if (id) {
+    await (prisma as any).marketplaceBanner.update({ where: { id }, data: rest });
+  } else {
+    await (prisma as any).marketplaceBanner.create({ data: rest });
+  }
+
+  revalidatePath('/superadmin/marketplace/banners');
+  revalidatePath('/marketplace');
+}
+
+export async function deleteMarketplaceBannerAction(id: string) {
+  const cookieStore = cookies();
+  const userId = cookieStore.get('userId')?.value;
+  if (!userId) throw new Error('Non autorisé');
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  await (prisma as any).marketplaceBanner.delete({ where: { id } });
+  revalidatePath('/superadmin/marketplace/banners');
+  revalidatePath('/marketplace');
+}
+
 export async function createMarketplaceCategoryAction(data: { name: string; icon?: string }) {
+
   const cookieStore = cookies();
   const userId = cookieStore.get('userId')?.value;
 
