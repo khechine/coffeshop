@@ -2,7 +2,7 @@ import { prisma } from '@coffeeshop/database';
 import { getStore } from '../actions';
 import Link from 'next/link';
 import { 
-  ShoppingCart, TrendingUp, AlertTriangle, Coffee, ArrowRight, Package, 
+  ShoppingCart, ShoppingBag, TrendingUp, AlertTriangle, Coffee, ArrowRight, Package, 
   Layers, Users, Zap, ArrowUpRight, User, Wallet, Truck, Boxes, FileText, 
   Settings, Activity, LayoutGrid 
 } from 'lucide-react';
