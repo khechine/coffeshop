@@ -103,7 +103,7 @@ function AdsBanner({ banner, fallback }: { banner?: any; fallback: { title: stri
       <div className="mkt-ads-content">
         <h3>{b.title}</h3>
         {b.subtitle && <p>{b.subtitle}</p>}
-        <button className="mkt-ads-btn" style={{ color: b.color || '#1E1B4B' }}>{b.buttonText || 'Profiter'} →</button>
+        <Link href="/marketplace/premium-request" className="mkt-ads-btn" style={{ color: b.color || '#1E1B4B', textDecoration: 'none' }}>{b.buttonText || 'Profiter'} →</Link>
       </div>
     </div>
   );
@@ -133,7 +133,7 @@ function ProductCard({ product, onAdd, onDetail }: any) {
         <button className="mkt-card-wish"><Heart size={14} /></button>
       </div>
       <div className="mkt-card-body">
-        <div className="mkt-card-vendor">{product.vendor?.companyName}</div>
+        <Link href={`/marketplace/vendor/${product.vendor?.id}`} className="mkt-card-vendor" style={{ textDecoration: 'none' }}>{product.vendor?.companyName}</Link>
         <div className="mkt-card-name">{product.name}</div>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
           <div>
@@ -378,19 +378,46 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
           </button>
           <div className="mkt-catmenu-divider" />
           {categories.map((c: any) => (
-            <button
+            <Link
               key={c.id}
+              href={`/marketplace/category/${c.id}`}
               className={`mkt-catmenu-item ${activeCat === c.id ? 'active' : ''}`}
-              onClick={() => setActiveCat(c.id)}
+              style={{ textDecoration: 'none' }}
             >
               <span>{c.icon || '📦'}</span> {c.name}
-            </button>
+            </Link>
           ))}
         </div>
       </nav>
 
       {/* Main Container */}
       <div className="mkt-container">
+
+        {/* ── Search Results Overlay ── */}
+        {search.length > 0 && (
+          <div style={{ marginBottom: 48, animation: 'fadeIn 0.3s ease' }}>
+            <div className="mkt-section-head">
+              <div className="mkt-section-label">
+                <div className="mkt-section-label-bar" style={{ background: '#4F46E5' }} />
+                <h2 className="mkt-section-title">Résultats pour "{search}"</h2>
+              </div>
+              <span className="mkt-section-count">{tabProducts.length} produits</span>
+            </div>
+            {tabProducts.length > 0 ? (
+              <div className="mkt-grid">
+                {tabProducts.map((p: any) => (
+                  <ProductCard key={p.id} product={p} onAdd={addToCart} onDetail={() => setModal(p)} />
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '60px 0', background: '#fff', borderRadius: 24, border: '1px solid #F1F5F9' }}>
+                <Search size={48} style={{ color: '#CBD5E1', marginBottom: 16 }} />
+                <p style={{ fontWeight: 700, color: '#64748B' }}>Aucun produit trouvé pour votre recherche.</p>
+              </div>
+            )}
+            <div style={{ height: 2, background: '#F1F5F9', margin: '48px 0' }} />
+          </div>
+        )}
 
         {/* ── Hero Banner Grid ── */}
         <div className="mkt-hero-grid">
@@ -491,9 +518,9 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
                   <div className="mkt-section-label-bar" />
                   <h2 className="mkt-section-title">{cat.icon || '📦'} {cat.name}</h2>
                 </div>
-                <button className="mkt-section-link" onClick={() => setActiveCat(cat.id)}>
+                <Link href={`/marketplace/category/${cat.id}`} className="mkt-section-link" style={{ textDecoration: 'none' }}>
                   Voir la catégorie <ChevronRight size={14} />
-                </button>
+                </Link>
               </div>
               <div className="mkt-grid">
                 {catProds.slice(0, 5).map((p: any) => (

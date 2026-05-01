@@ -4294,7 +4294,7 @@ export async function getProductMarginsAction() {
 
   const margins = products.map(p => {
     const cost = p.recipe.reduce((acc, item) => {
-      const purchasePrice = Number(item.stockItem.avgPurchasePrice || 0);
+      const purchasePrice = Number(item.stockItem.cost || 0);
       return acc + (Number(item.quantity) * purchasePrice);
     }, 0);
 
