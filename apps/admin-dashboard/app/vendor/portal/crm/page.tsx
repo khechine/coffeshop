@@ -19,7 +19,7 @@ export default async function VendorCrmPage() {
     createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
     store: { 
       ...c.store,
-      supplierOrders: c.store?.supplierOrders?.map((o: any) => ({
+      supplierOrders: c.store?.orders?.map((o: any) => ({
         ...o,
         total: Number(o.total),
         createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,

@@ -2133,7 +2133,7 @@ export async function getVendorPortalData() {
         include: { 
           store: {
             include: {
-              supplierOrders: {
+              orders: {
                 where: { vendorId: vendorProfile.id },
                 orderBy: { createdAt: 'desc' },
                 take: 5,
