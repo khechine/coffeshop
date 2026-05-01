@@ -46,8 +46,8 @@ export default function VendorSettingsClient({
       });
       const data = await res.json();
       if (data.url) {
-        const fullUrl = data.url.startsWith('/') ? `${API_URL}${data.url}` : data.url;
-        setCustomForm(f => ({ ...f, [type === 'logo' ? 'logoUrl' : 'bannerUrl']: fullUrl }));
+        const cleanUrl = data.url.replace('http://localhost:3001', '');
+        setCustomForm(f => ({ ...f, [type === 'logo' ? 'logoUrl' : 'bannerUrl']: cleanUrl }));
       }
     } catch (e) {
       alert('Erreur upload');
@@ -297,7 +297,7 @@ export default function VendorSettingsClient({
                     <div className="w-24 h-24 rounded-[24px] bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
                       {customForm.logoUrl ? (
                         <img 
-                          src={customForm.logoUrl.startsWith('/') ? `${process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com'}${customForm.logoUrl}` : customForm.logoUrl.replace('http://localhost:3001', process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com')} 
+                          src={customForm.logoUrl.replace('http://localhost:3001', '')} 
                           className="w-full h-full object-contain" 
                           onError={(e: any) => e.target.src = 'https://ui-avatars.com/api/?name=Vendor&background=6366f1&color=fff'}
                         />
@@ -326,7 +326,7 @@ export default function VendorSettingsClient({
                   <div className="w-full h-24 rounded-[24px] bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden relative group">
                     {customForm.bannerUrl ? (
                       <img 
-                        src={customForm.bannerUrl.startsWith('/') ? `${process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com'}${customForm.bannerUrl}` : customForm.bannerUrl.replace('http://localhost:3001', process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com')} 
+                        src={customForm.bannerUrl.replace('http://localhost:3001', '')} 
                         className="w-full h-full object-cover" 
                         onError={(e: any) => e.target.src = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200'}
                       />

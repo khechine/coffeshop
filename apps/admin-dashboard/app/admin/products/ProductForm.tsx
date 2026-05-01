@@ -93,8 +93,8 @@ export default function ProductForm({ initialData, categories, stockItems, globa
       });
       const data = await res.json();
       if (data.url) {
-        const fullUrl = data.url.startsWith('/') ? `${API_URL}${data.url}` : data.url;
-        setForm(f => ({ ...f, image: fullUrl }));
+        const cleanUrl = data.url.replace('http://localhost:3001', '');
+        setForm(f => ({ ...f, image: cleanUrl }));
       }
     } catch (e) {
       alert('Erreur upload');

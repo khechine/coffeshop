@@ -1632,6 +1632,20 @@ export async function createMarketplaceCategoryAction(data: { name: string; icon
   revalidatePath('/marketplace');
 }
 
+export async function getMarketplaceProductAction(id: string) {
+  return await (prisma as any).vendorProduct.findUnique({
+    where: { id },
+    include: {
+      productStandard: true,
+      vendor: {
+        include: { customization: true }
+      },
+      category: true,
+      subcategory: true
+    }
+  });
+}
+
 export async function placeMarketplaceOrder(data: { vendorId: string; total: number; vendorPosId?: string; items: { productId?: string; bundleId?: string; quantity: number; price: number; name: string }[] }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
@@ -1682,8 +1696,60 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
     }
   });
 
+  // Track B2B Customer in Vendor's CRM
+  try {
+    await (prisma as any).vendorCustomer.upsert({
+      where: {
+        vendorId_storeId: {
+          vendorId: data.vendorId,
+          storeId: store.id
+        }
+      },
+      update: {
+        orderCount: { increment: 1 },
+        totalSpent: { increment: data.total }
+      },
+      create: {
+        vendorId: data.vendorId,
+        storeId: store.id,
+        orderCount: 1,
+        totalSpent: data.total,
+        category: 'REGULAR'
+      }
+    });
+  } catch (err) {
+    console.error('Failed to update vendor customer tracking', err);
+  }
+
   revalidatePath('/admin/orders');
   return order;
+}
+
+export async function updateVendorCustomerAction(customerId: string, data: { category?: string; tags?: string[] }) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Unauthorized');
+
+  return await (prisma as any).vendorCustomer.update({
+    where: { id: customerId },
+    data
+  });
+}
+
+export async function createVendorCampaignAction(data: { name: string; type: 'EMAIL' | 'SMS' | 'WHATSAPP'; content: string; targetTags?: string[] }) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Unauthorized');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({ where: { userId } });
+  if (!vendor) throw new Error('Vendor not found');
+
+  return await (prisma as any).vendorCampaign.create({
+    data: {
+      ...data,
+      vendorId: vendor.id,
+      status: 'SENT', // For now auto-send
+      sentAt: new Date()
+    }
+  });
 }
 
 export async function registerVendorAction(data: any) {

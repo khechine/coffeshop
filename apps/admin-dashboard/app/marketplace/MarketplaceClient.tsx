@@ -7,6 +7,8 @@ import {
   Star, Zap, Heart, ChevronRight, ArrowRight, LayoutGrid
 } from 'lucide-react';
 import { placeMarketplaceOrder, rateVendorAction } from '../actions';
+import { useCart } from './CartContext';
+import CartDrawer from './CartDrawer';
 import './marketplace.css';
 
 /* ─── Helpers ─── */
@@ -63,7 +65,7 @@ function HeroBanner({ banner }: { banner: any }) {
   );
   return (
     <div className="mkt-hero-main" style={{ background: banner.bgColor || '#1E1B4B' }}>
-      <img className="mkt-hero-img" src={banner.imageUrl?.replace('http://localhost:3001', API_URL)} alt={banner.title} onError={(e: any) => { e.target.style.display='none'; }} />
+      <img className="mkt-hero-img" src={banner.imageUrl?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '')} alt={banner.title} onError={(e: any) => { e.target.style.display='none'; }} />
       <div className="mkt-hero-overlay">
         {banner.badgeText && <span className="mkt-hero-badge">{banner.badgeText}</span>}
         <h2 className="mkt-hero-title">{banner.title}</h2>
@@ -86,7 +88,7 @@ function SideBanner({ banner, gradient }: { banner: any; gradient: string }) {
   );
   return (
     <div className="mkt-side-banner" style={{ background: banner.bgColor || gradient }}>
-      <img src={banner.imageUrl?.replace('http://localhost:3001', API_URL)} alt={banner.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.5 }} onError={(e:any)=>{e.target.style.display='none';}} />
+      <img src={banner.imageUrl?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '')} alt={banner.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.5 }} onError={(e:any)=>{e.target.style.display='none';}} />
       <div className="mkt-side-overlay" style={{ background:'linear-gradient(to top, rgba(0,0,0,0.65), transparent)' }}>
         {banner.badgeText && <span className="mkt-side-label">{banner.badgeText}</span>}
         <div className="mkt-side-title">{banner.title}</div>
@@ -100,7 +102,7 @@ function AdsBanner({ banner, fallback }: { banner?: any; fallback: { title: stri
   const b = banner || fallback;
   return (
     <div className="mkt-ads" style={{ background: b.color || banner?.bgColor || '#1E1B4B' }}>
-      <img src={(b.imageUrl || b.img)?.replace('http://localhost:3001', API_URL)} alt={b.title} onError={(e:any)=>{e.target.style.display='none';}} />
+      <img src={(b.imageUrl || b.img)?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '')} alt={b.title} onError={(e:any)=>{e.target.style.display='none';}} />
       <div className="mkt-ads-content">
         <h3>{b.title}</h3>
         {b.subtitle && <p>{b.subtitle}</p>}
@@ -118,24 +120,26 @@ function ProductCard({ product, onAdd, onDetail }: any) {
 
   return (
     <div className="mkt-card">
-      <div className="mkt-card-img" onClick={onDetail} style={{ cursor: 'pointer' }}>
+      <Link href={`/marketplace/product/${product.id}`} className="mkt-card-img" style={{ display: 'block', textDecoration: 'none' }}>
         <img
-          src={product.image?.replace('http://localhost:3001', API_URL) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'}
+          src={product.image?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '') || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'}
           alt={product.name}
           onError={(e:any)=>{e.target.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400';}}
         />
         <div className="mkt-card-add">
-          <button className="mkt-card-add-btn" onClick={(e)=>{e.stopPropagation();onAdd(product);}}>
+          <button className="mkt-card-add-btn" onClick={(e)=>{e.preventDefault();e.stopPropagation();onAdd(product);}}>
             <Plus size={14} /> AJOUTER AU PANIER
           </button>
         </div>
         {product.isFlashSale && <span className="mkt-card-badge flash">⚡ Flash</span>}
         {!product.isFlashSale && product.isFeatured && <span className="mkt-card-badge featured">★ Top</span>}
         <button className="mkt-card-wish"><Heart size={14} /></button>
-      </div>
+      </Link>
       <div className="mkt-card-body">
         <Link href={`/marketplace/vendor/${product.vendor?.id}`} className="mkt-card-vendor" style={{ textDecoration: 'none' }}>{product.vendor?.companyName}</Link>
-        <div className="mkt-card-name">{product.name}</div>
+        <Link href={`/marketplace/product/${product.id}`} style={{ textDecoration: 'none' }}>
+          <div className="mkt-card-name">{product.name}</div>
+        </Link>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
           <div>
             {hasDiscount && <span className="mkt-card-old-price">{fmt(product.price)}</span>}
@@ -149,59 +153,6 @@ function ProductCard({ product, onAdd, onDetail }: any) {
   );
 }
 
-/* ─── Cart Drawer ─── */
-function CartDrawer({ cart, onClose, onUpdate, onRemove, total, onCheckout, isOrdering, orderStatus }: any) {
-  return (
-    <>
-      <div className="mkt-overlay" onClick={onClose} />
-      <div className="mkt-drawer">
-        <div className="mkt-drawer-head">
-          <div className="mkt-drawer-title">Mon Panier ({cart.length})</div>
-          <button className="mkt-drawer-close" onClick={onClose}><X size={18} /></button>
-        </div>
-        <div className="mkt-drawer-items">
-          {cart.length === 0 ? (
-            <div className="mkt-drawer-empty">
-              <ShoppingCart size={48} style={{ opacity:0.15, display:'block', margin:'0 auto 16px' }} />
-              <div style={{ fontWeight:700, fontSize:14 }}>Votre panier est vide</div>
-            </div>
-          ) : cart.map((item: any) => (
-            <div key={item.id} className="mkt-cart-item">
-              <img className="mkt-cart-item-img"
-                src={item.image?.replace('http://localhost:3001', API_URL) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'}
-                alt={item.name}
-                onError={(e:any)=>{e.target.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=100';}}
-              />
-              <div className="mkt-cart-item-info">
-                <div className="mkt-cart-item-name">{item.name}</div>
-                <div className="mkt-cart-item-vendor">{item.vendor?.companyName}</div>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                  <div className="mkt-qty-ctrl">
-                    <button className="mkt-qty-btn" onClick={()=>onUpdate(item.id,-1)}>−</button>
-                    <span className="mkt-qty-val">{item.quantity}</span>
-                    <button className="mkt-qty-btn" onClick={()=>onUpdate(item.id,1)}>+</button>
-                  </div>
-                  <span className="mkt-cart-item-price">{fmt(Number(item.price)*item.quantity)} DT</span>
-                </div>
-              </div>
-              <button className="mkt-cart-remove" onClick={()=>onRemove(item.id)}><X size={14} /></button>
-            </div>
-          ))}
-        </div>
-        <div className="mkt-drawer-foot">
-          <div className="mkt-drawer-total">
-            <span className="mkt-drawer-total-label">Total TTC</span>
-            <span className="mkt-drawer-total-val">{fmt(total)} DT</span>
-          </div>
-          <button className="mkt-checkout-btn" disabled={isOrdering || cart.length === 0} onClick={onCheckout}>
-            {isOrdering ? 'Traitement...' : orderStatus === 'SUCCESS' ? '✓ Commandé !' : <><Send size={16} /> Passer la Commande</>}
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
-
 /* ─── Product Modal ─── */
 function ProductModal({ product, categories, onClose, onAdd }: any) {
   const catName = categories.find((c:any) => c.id === product.categoryId)?.name || 'Produit';
@@ -211,7 +162,7 @@ function ProductModal({ product, categories, onClose, onAdd }: any) {
         <button className="mkt-modal-close" onClick={onClose}><X size={18} /></button>
         <div className="mkt-modal-gallery">
           <img
-            src={product.image?.replace('http://localhost:3001', API_URL) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800'}
+            src={product.image?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '') || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800'}
             alt={product.name}
             onError={(e:any)=>{e.target.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800';}}
           />
@@ -256,65 +207,18 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
 
   const [activeCat, setActiveCat] = useState('all');
   const [activeTab, setActiveTab] = useState<'latest' | 'bestselling' | 'featured'>('latest');
-  const [cart, setCart] = useState<any[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [modal, setModal] = useState<any>(null);
   const [announce, setAnnounce] = useState(true);
   const [search, setSearch] = useState('');
-  const [isOrdering, setIsOrdering] = useState(false);
-  const [orderStatus, setOrderStatus] = useState('');
+
+  const { addToCart, cartCount } = useCart();
 
   // Map banners by position
   const getBanner = (pos: string) => banners.find((b: any) => b.position === pos && b.isActive);
 
   // Countdown: end of day
   const endOfDay = new Date(); endOfDay.setHours(23, 59, 59, 999);
-
-  const addToCart = (p: any) => {
-    setCart(prev => {
-      const ex = prev.find(i => i.id === p.id);
-      if (ex) return prev.map(i => i.id === p.id ? { ...i, quantity: i.quantity + 1 } : i);
-      return [...prev, { ...p, quantity: Number(p.minOrderQty || 1) }];
-    });
-    setCartOpen(true);
-  };
-
-  const updateQty = (id: string, delta: number) =>
-    setCart(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i));
-
-  const removeItem = (id: string) => setCart(prev => prev.filter(i => i.id !== id));
-
-  const cartTotal = cart.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
-  const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
-
-  const handleCheckout = async () => {
-    setIsOrdering(true);
-    try {
-      const grouped = cart.reduce((acc: Record<string, any[]>, item: any) => {
-        const vid = item.vendor?.id || item.vendorId;
-        if (!acc[vid]) acc[vid] = [];
-        acc[vid].push(item);
-        return acc;
-      }, {});
-      for (const [vendorId, items] of Object.entries(grouped)) {
-        await placeMarketplaceOrder({
-          vendorId,
-          total: (items as any[]).reduce((s: number, i: any) => s + Number(i.price) * i.quantity, 0),
-          items: (items as any[]).map((i: any) => ({
-            productId: i.id,
-            quantity: i.quantity,
-            price: Number(i.price),
-            name: i.name
-          }))
-        });
-      }
-      setOrderStatus('SUCCESS');
-      setCart([]);
-      setTimeout(() => { setCartOpen(false); setOrderStatus(''); }, 2500);
-    } catch { setOrderStatus('ERROR'); }
-    finally { setIsOrdering(false); }
-  };
-
 
   // Filtered products for tabbed section
   const tabProducts = (() => {
@@ -537,14 +441,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
       {/* ── Cart Drawer ── */}
       {cartOpen && (
         <CartDrawer
-          cart={cart}
           onClose={() => setCartOpen(false)}
-          onUpdate={updateQty}
-          onRemove={removeItem}
-          total={cartTotal}
-          onCheckout={handleCheckout}
-          isOrdering={isOrdering}
-          orderStatus={orderStatus}
         />
       )}
 
