@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ShoppingCart, ShoppingBag, Search, X, Plus, Minus, Send,
-  Star, Zap, Heart, ChevronRight, ArrowRight, LayoutGrid
+  ShoppingCart, ShoppingBag, Search, X, Plus, Heart, 
+  ChevronRight, ArrowRight, LayoutGrid, MapPin, Store, 
+  Tag, Award, Navigation, Percent
 } from 'lucide-react';
-import { placeMarketplaceOrder, rateVendorAction } from '../actions';
 import { useCart } from './CartContext';
 import CartDrawer from './CartDrawer';
 import './marketplace.css';
@@ -15,199 +15,92 @@ import { sanitizeUrl } from '../lib/imageUtils';
 
 /* ─── Helpers ─── */
 const fmt = (n: any) => Number(n).toFixed(3);
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
+const tunisianCities = [
+  "Tunis", "Ariana", "Ben Arous", "Manouba", "Nabeul", "Zaghouan", "Bizerte",
+  "Béja", "Jendouba", "Le Kef", "Siliana", "Kairouan", "Kasserine", "Sidi Bouzid",
+  "Sousse", "Monastir", "Mahdia", "Sfax", "Gafsa", "Tozeur", "Kebili", "Gabès",
+  "Medenine", "Tataouine"
+];
 
-function Stars({ avg = 0, total = 0, size = 10 }: any) {
-  if (!total) return <span style={{ fontSize: size, color: '#94A3B8', fontWeight: 700 }}>Nouveau</span>;
+/* ─── Components ─── */
+function Stars({ avg = 0, total = 0, size = 12 }: any) {
+  if (!total) return <span style={{ fontSize: size, color: '#94A3B8', fontWeight: 600 }}>Nouveau vendeur</span>;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      {[1,2,3,4,5].map(s => (
-        <Star key={s} size={size} fill={s <= Math.round(avg) ? '#F59E0B' : 'none'} stroke={s <= Math.round(avg) ? '#F59E0B' : '#E2E8F0'} />
-      ))}
-      <span style={{ fontSize: size + 1, fontWeight: 900, color: '#1E293B' }}>{Number(avg).toFixed(1)}</span>
+      <span style={{ color: '#10B981', fontSize: size }}>★</span>
+      <span style={{ fontSize: size, fontWeight: 700, color: '#1E293B' }}>{Number(avg).toFixed(1)}</span>
+      <span style={{ fontSize: size - 1, color: '#64748B' }}>({total})</span>
     </div>
   );
 }
 
-/* ─── Countdown ─── */
-function Countdown({ targetMs }: { targetMs: number }) {
-  const [t, setT] = useState({ h: 0, m: 0, s: 0 });
-  useEffect(() => {
-    const tick = () => {
-      const diff = Math.max(0, targetMs - Date.now());
-      setT({ h: Math.floor(diff / 3600000), m: Math.floor((diff % 3600000) / 60000), s: Math.floor((diff % 60000) / 1000) });
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [targetMs]);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return (
-    <div className="mkt-countdown">
-      <div className="mkt-count-block">{pad(t.h)}</div>
-      <div className="mkt-count-sep">:</div>
-      <div className="mkt-count-block">{pad(t.m)}</div>
-      <div className="mkt-count-sep">:</div>
-      <div className="mkt-count-block">{pad(t.s)}</div>
-    </div>
-  );
-}
-
-/* ─── Banner (from DB or fallback) ─── */
-function HeroBanner({ banner }: { banner: any }) {
-  if (!banner) return (
-    <div className="mkt-hero-main" style={{ background: '#1E1B4B' }}>
-      <div className="mkt-hero-overlay">
-        <span className="mkt-hero-badge">MARKETPLACE B2B</span>
-        <h2 className="mkt-hero-title">Le Meilleur du B2B<br />en Un Clic.</h2>
-        <p className="mkt-hero-sub">Approvisionnez votre café directement chez les meilleurs fournisseurs de Tunisie.</p>
-        <button className="mkt-hero-cta">Découvrir <ArrowRight size={16} /></button>
-      </div>
-    </div>
-  );
-  return (
-    <div className="mkt-hero-main" style={{ background: banner.bgColor || '#1E1B4B' }}>
-      <img className="mkt-hero-img" src={sanitizeUrl(banner.imageUrl) || ''} alt={banner.title} onError={(e: any) => { e.target.style.display='none'; }} />
-      <div className="mkt-hero-overlay">
-        {banner.badgeText && <span className="mkt-hero-badge">{banner.badgeText}</span>}
-        <h2 className="mkt-hero-title">{banner.title}</h2>
-        {banner.subtitle && <p className="mkt-hero-sub">{banner.subtitle}</p>}
-        {banner.buttonText && <button className="mkt-hero-cta">{banner.buttonText} <ArrowRight size={16} /></button>}
-      </div>
-    </div>
-  );
-}
-
-function SideBanner({ banner, gradient }: { banner: any; gradient: string }) {
-  if (!banner) return (
-    <div className="mkt-side-banner" style={{ background: gradient }}>
-      <div className="mkt-side-overlay" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)' }}>
-        <span className="mkt-side-label">OFFRE SPÉCIALE</span>
-        <div className="mkt-side-title">Packs Pro</div>
-        <span className="mkt-side-badge">-40%</span>
-      </div>
-    </div>
-  );
-  return (
-    <div className="mkt-side-banner" style={{ background: banner.bgColor || gradient }}>
-      <img src={sanitizeUrl(banner.imageUrl) || ''} alt={banner.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.5 }} onError={(e:any)=>{e.target.style.display='none';}} />
-      <div className="mkt-side-overlay" style={{ background:'linear-gradient(to top, rgba(0,0,0,0.65), transparent)' }}>
-        {banner.badgeText && <span className="mkt-side-label">{banner.badgeText}</span>}
-        <div className="mkt-side-title">{banner.title}</div>
-        {banner.subtitle && <span style={{ fontSize:12, color:'rgba(255,255,255,0.8)', fontWeight:700 }}>{banner.subtitle}</span>}
-      </div>
-    </div>
-  );
-}
-
-function AdsBanner({ banner, fallback }: { banner?: any; fallback: { title: string; subtitle: string; img: string; color: string } }) {
-  const b = banner || fallback;
-  return (
-    <div className="mkt-ads" style={{ background: b.color || banner?.bgColor || '#1E1B4B' }}>
-      <img src={sanitizeUrl(b.imageUrl || b.img) || ''} alt={b.title} onError={(e:any)=>{e.target.style.display='none';}} />
-      <div className="mkt-ads-content">
-        <h3>{b.title}</h3>
-        {b.subtitle && <p>{b.subtitle}</p>}
-        <Link href="/marketplace/premium-request" className="mkt-ads-btn" style={{ color: b.color || '#1E1B4B', textDecoration: 'none' }}>{b.buttonText || 'Profiter'} →</Link>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Product Card ─── */
-function ProductCard({ product, onAdd, onDetail, isVendor }: any) {
+function ProductCard({ product, onAdd, isVendor }: any) {
   const avg = product.vendor?.ratings?.overallAvg || 0;
   const total = product.vendor?.ratings?.totalReviews || 0;
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
+  
+  // Mock distance for demo purposes based on vendor
+  const distance = Math.floor(Math.random() * 15) + 1;
 
   return (
-    <div className="mkt-card">
-      <Link href={`/marketplace/product/${product.id}`} className="mkt-card-img" style={{ display: 'block', textDecoration: 'none' }}>
+    <div className="mkt-cocote-card group">
+      <Link href={`/marketplace/product/${product.id}`} className="mkt-cocote-card-img-wrap">
         <img
           src={sanitizeUrl(product.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'}
           alt={product.name}
-          onError={(e:any)=>{e.target.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400';}}
+          className="mkt-cocote-card-img"
         />
-        {!isVendor && (
-          <div className="mkt-card-add">
-            <button className="mkt-card-add-btn" onClick={(e)=>{e.preventDefault();e.stopPropagation();onAdd(product);}}>
-              <Plus size={14} /> AJOUTER AU PANIER
-            </button>
-          </div>
-        )}
-        {product.isFlashSale && <span className="mkt-card-badge flash">⚡ Flash</span>}
-        {!product.isFlashSale && product.isFeatured && <span className="mkt-card-badge featured">⭐ Vedette</span>}
-        <button className="mkt-card-wish"><Heart size={14} /></button>
+        {hasDiscount && <span className="mkt-cocote-badge-discount">-{Math.round((1 - product.discountPrice/product.price)*100)}%</span>}
+        <button className="mkt-cocote-wish"><Heart size={16} /></button>
       </Link>
-      <div className="mkt-card-body">
-        <Link href={`/marketplace/vendor/${product.vendor?.id}`} className="mkt-card-vendor" style={{ textDecoration: 'none' }}>{product.vendor?.companyName}</Link>
-        <Link href={`/marketplace/product/${product.id}`} style={{ textDecoration: 'none' }}>
-          <div className="mkt-card-name">{product.name}</div>
-        </Link>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
-          <div>
-            {hasDiscount && <span className="mkt-card-old-price" style={isVendor ? { filter: 'blur(4px)', opacity: 0.5 } : {}}>{fmt(product.price)}</span>}
-            <span className="mkt-card-price" style={isVendor ? { filter: 'blur(5px)' } : {}}>{fmt(hasDiscount ? product.discountPrice : product.price)}</span>
-            <span className="mkt-card-unit">DT/{product.unit}</span>
-          </div>
+      <div className="mkt-cocote-card-body">
+        <div className="mkt-cocote-card-meta">
+          <Link href={`/marketplace/vendor/${product.vendor?.id}`} className="mkt-cocote-vendor-link">
+            <Store size={12} /> {product.vendor?.companyName}
+          </Link>
+          <span className="mkt-cocote-distance"><Navigation size={10} /> {distance} km</span>
         </div>
-        <Stars avg={avg} total={total} size={10} />
+        <Link href={`/marketplace/product/${product.id}`} style={{ textDecoration: 'none' }}>
+          <h3 className="mkt-cocote-card-title">{product.name}</h3>
+        </Link>
+        <Stars avg={avg} total={total} size={11} />
+        
+        <div className="mkt-cocote-card-footer">
+          <div className="mkt-cocote-price-wrap" style={isVendor ? { filter: 'blur(4px)' } : {}}>
+             {hasDiscount && <span className="mkt-cocote-old-price">{fmt(product.price)}</span>}
+             <span className="mkt-cocote-price">{fmt(hasDiscount ? product.discountPrice : product.price)}</span>
+             <span className="mkt-cocote-unit">DT</span>
+          </div>
+          {!isVendor && (
+            <button className="mkt-cocote-add-btn" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAdd(product); }}>
+              <ShoppingCart size={16} />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-/* ─── Product Modal ─── */
-function ProductModal({ product, categories, onClose, onAdd, isVendor }: any) {
-  const catName = categories.find((c:any) => c.id === product.categoryId)?.name || 'Produit';
+function VendorCard({ vendor, distance }: any) {
+  const avg = vendor.ratings?.overallAvg || 0;
+  const total = vendor.ratings?.totalReviews || 0;
+  const logo = vendor.customization?.logoUrl ? sanitizeUrl(vendor.customization.logoUrl) : null;
+
   return (
-    <div className="mkt-modal-backdrop" onClick={onClose}>
-      <div className="mkt-modal" onClick={e=>e.stopPropagation()}>
-        <button className="mkt-modal-close" onClick={onClose}><X size={18} /></button>
-        <div className="mkt-modal-gallery">
-          <img
-            src={product.image?.replace('http://localhost:3001', '').replace('https://api.coffeeshop.elkassa.com', '') || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800'}
-            alt={product.name}
-            onError={(e:any)=>{e.target.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800';}}
-          />
-        </div>
-        <div className="mkt-modal-detail">
-          <div style={{ fontSize:12, fontWeight:800, color:'#6366F1', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8 }}>
-            {catName}
-          </div>
-          <h2 style={{ fontSize:28, fontWeight:950, color:'#1E1B4B', margin:'0 0 20px', lineHeight:1.2 }}>{product.name}</h2>
-          <div style={{ display:'flex', alignItems:'baseline', gap:10, marginBottom:28 }}>
-            <span style={{ fontSize:36, fontWeight:950, color:'#1E1B4B', filter: isVendor ? 'blur(8px)' : 'none' }}>{fmt(product.price)}</span>
-            <span style={{ fontSize:16, color:'#94A3B8', fontWeight:700 }}>DT / {product.unit}</span>
-          </div>
-          {product.description && (
-            <p style={{ fontSize:14, color:'#64748B', lineHeight:1.7, marginBottom:28 }}>{product.description}</p>
-          )}
-          <div style={{ background:'#F8FAFC', padding:20, borderRadius:20, marginBottom:28, border:'1px solid #F1F5F9' }}>
-            <div style={{ fontSize:11, fontWeight:900, color:'#94A3B8', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:12 }}>Vendeur Certifié</div>
-            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-              <div style={{ width:44, height:44, borderRadius:12, background:'#EEF2FF', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>🏪</div>
-              <div>
-                <div style={{ fontSize:15, fontWeight:900, color:'#1E293B' }}>{product.vendor?.companyName}</div>
-                <div style={{ fontSize:12, color:'#64748B', fontWeight:600 }}>{product.vendor?.city}</div>
-              </div>
-            </div>
-          </div>
-          {!isVendor ? (
-            <button
-              onClick={() => { onAdd(product); onClose(); }}
-              style={{ width:'100%', padding:20, background:'#1E1B4B', color:'#fff', border:'none', borderRadius:18, fontWeight:900, fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:12, boxShadow:'0 10px 24px rgba(30,27,75,0.25)', transition:'all 0.2s', marginTop:'auto' }}
-            >
-              <Plus size={20} /> Ajouter au Panier
-            </button>
-          ) : (
-            <div style={{ background: '#F1F5F9', color: '#64748B', padding: '16px', borderRadius: '16px', textAlign: 'center', fontSize: '13px', fontWeight: 700 }}>
-              Connectez-vous en tant qu'acheteur pour commander
-            </div>
-          )}
+    <Link href={`/marketplace/vendor/${vendor.id}`} className="mkt-cocote-vendor-card">
+      <div className="mkt-cocote-vendor-logo">
+        {logo ? <img src={logo} alt={vendor.companyName} /> : <Store size={24} color="#94A3B8" />}
+      </div>
+      <div className="mkt-cocote-vendor-info">
+        <h4 className="mkt-cocote-vendor-name">{vendor.companyName}</h4>
+        <div className="mkt-cocote-vendor-meta">
+           <Stars avg={avg} total={total} size={11} />
+           <span className="mkt-cocote-vendor-dist"><MapPin size={10} /> {distance} km · {vendor.city || 'Tunis'}</span>
         </div>
       </div>
-    </div>
+      <ChevronRight size={16} color="#CBD5E1" />
+    </Link>
   );
 }
 
@@ -215,304 +108,269 @@ function ProductModal({ product, categories, onClose, onAdd, isVendor }: any) {
 export default function MarketplaceClient({ initialData, isVendor = false }: { initialData: any; isVendor?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentRadius = parseInt(searchParams.get('radius') || '5');
-  const { products = [], categories = [], bundles = [], flashSales = [], featured = [], banners = [] } = initialData;
+  const currentRadius = parseInt(searchParams.get('radius') || '15');
+  const currentLocation = searchParams.get('loc') || 'Tunis';
+  
+  const { products = [], categories = [], flashSales = [] } = initialData;
 
-  const [activeCat, setActiveCat] = useState('all');
-  const [activeTab, setActiveTab] = useState<'latest' | 'bestselling' | 'featured'>('latest');
   const [cartOpen, setCartOpen] = useState(false);
-  const [modal, setModal] = useState<any>(null);
-  const [announce, setAnnounce] = useState(true);
   const [search, setSearch] = useState('');
-
+  const [locModalOpen, setLocModalOpen] = useState(false);
 
   const { addToCart, cartCount } = useCart();
 
-  const handleRadiusChange = (newRadius: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('radius', newRadius.toString());
-    router.push(`/marketplace?${params.toString()}`);
-  };
+  // Derived Data
+  const vendorsMap = new Map();
+  products.forEach((p: any) => { if (p.vendor) vendorsMap.set(p.vendor.id, p.vendor); });
+  const vendors = Array.from(vendorsMap.values());
+  
+  const brands = useMemo(() => {
+    const bSet = new Set<string>();
+    products.forEach((p: any) => { if (p.brand) bSet.add(p.brand); });
+    return Array.from(bSet).slice(0, 12);
+  }, [products]);
 
-  // Map banners by position
-  const getBanner = (pos: string) => banners.find((b: any) => b.position === pos && b.isActive);
+  const promosLocales = flashSales.length > 0 ? flashSales : products.filter((p: any) => p.discountPrice).slice(0, 5);
+  // Fallback if no discounts:
+  const displayPromos = promosLocales.length > 0 ? promosLocales : products.slice(0, 5);
 
-  // Countdown: end of day
-  const endOfDay = new Date(); endOfDay.setHours(23, 59, 59, 999);
-
-  // Filtered products for tabbed section
-  const tabProducts = (() => {
-    let list = activeCat === 'all' ? products : products.filter((p: any) => p.categoryId === activeCat);
-    if (search) list = list.filter((p: any) => p.name?.toLowerCase().includes(search.toLowerCase()) || p.vendor?.companyName?.toLowerCase().includes(search.toLowerCase()));
-    if (activeTab === 'featured') return list.filter((p: any) => p.isFeatured);
-    if (activeTab === 'bestselling') return [...list].sort((a, b) => Number(b.price) - Number(a.price));
-    return list;
-  })();
-
-  // Deal section products
-  const dealProducts = flashSales.length > 0 ? flashSales : products.slice(0, 5);
-
-  // Brands from vendors
-  const vendors = Array.from(new Map(products.map((p: any) => [p.vendor?.id, p.vendor])).values()).filter(Boolean);
+  const searchResults = search 
+    ? products.filter((p: any) => p.name.toLowerCase().includes(search.toLowerCase()) || p.vendor?.companyName?.toLowerCase().includes(search.toLowerCase()))
+    : [];
 
   return (
-    <div className="mkt-page">
-      {/* Announcement Bar */}
-      {announce && (
-        <div className="mkt-announce">
-          🚀 Livraison Express sur Tunis | Commandez avant 10h → Livraison avant 18h | Code promo: <strong>COFFEE10</strong>
-          <button className="mkt-announce-close" onClick={() => setAnnounce(false)}>×</button>
+    <div className="mkt-page cocote-theme">
+      
+      {/* ── Top Bar (Location) ── */}
+      <div className="mkt-cocote-topbar">
+        <div className="mkt-container mkt-cocote-topbar-inner">
+          <div className="mkt-cocote-loc-trigger" onClick={() => setLocModalOpen(true)}>
+             <MapPin size={14} />
+             <span>Votre position : <strong>{currentLocation}</strong> (Rayon {currentRadius}km)</span>
+             <ChevronRight size={12} />
+          </div>
+          <div className="mkt-cocote-topbar-links">
+             <Link href="/marketplace/vendors">Devenir Vendeur</Link>
+             <Link href="/marketplace/about">Le concept Proximité</Link>
+          </div>
         </div>
-      )}
+      </div>
 
-      {/* Header */}
-      <header className="mkt-header">
-        <div className="mkt-header-inner">
-          <Link href="/marketplace" className="mkt-logo" style={{ textDecoration: 'none' }}>
-            <div className="mkt-logo-icon"><ShoppingBag size={22} /></div>
+      {/* ── Header ── */}
+      <header className="mkt-cocote-header">
+        <div className="mkt-container mkt-cocote-header-inner">
+          <Link href="/marketplace" className="mkt-cocote-logo">
+            <div className="mkt-cocote-logo-icon"><ShoppingBag size={20} /></div>
             Coffee<span>Market</span>
           </Link>
 
-          <div className="mkt-search-wrap">
-            <Search className="mkt-search-icon" size={18} />
+          <div className="mkt-cocote-search-wrap">
             <input
-              className="mkt-search"
-              placeholder="Rechercher produits, fournisseurs, packs..."
+              type="text"
+              className="mkt-cocote-search-input"
+              placeholder="Rechercher un produit, une marque, un commerce..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
             />
+            <button className="mkt-cocote-search-btn"><Search size={18} /></button>
           </div>
 
-          <div className="mkt-header-actions">
-            <Link href="/" className="mkt-header-btn" style={{ textDecoration: 'none' }}>
-              <LayoutGrid size={16} /> Dashboard
+          <div className="mkt-cocote-header-actions">
+            <Link href="/" className="mkt-cocote-action-btn">
+              <LayoutGrid size={18} /> <span className="hidden md:inline">Dashboard</span>
             </Link>
-            <button className="mkt-cart-btn" onClick={() => setCartOpen(true)}>
-              <ShoppingCart size={20} />
-              {cartCount > 0 && <span className="mkt-cart-badge">{cartCount}</span>}
-            </button>
+            {!isVendor && (
+              <button className="mkt-cocote-cart-btn" onClick={() => setCartOpen(true)}>
+                <ShoppingCart size={20} />
+                <span className="mkt-cocote-cart-text">Panier</span>
+                {cartCount > 0 && <span className="mkt-cocote-cart-badge">{cartCount}</span>}
+              </button>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Category Mega Menu */}
-      <nav className="mkt-catmenu">
-        <div className="mkt-catmenu-inner">
-          <button className={`mkt-catmenu-item ${activeCat === 'all' ? 'active' : ''}`} onClick={() => setActiveCat('all')}>
-            <span>🏪</span> Tout
-          </button>
-          <div className="mkt-catmenu-divider" />
-          {categories.map((c: any) => (
-            <Link
-              key={c.id}
-              href={`/marketplace/category/${c.id}`}
-              className={`mkt-catmenu-item ${activeCat === c.id ? 'active' : ''}`}
-              style={{ textDecoration: 'none' }}
-            >
-              <span>{c.icon || '📦'}</span> {c.name}
-            </Link>
+      {/* ── Categories Navigation ── */}
+      <nav className="mkt-cocote-nav">
+        <div className="mkt-container mkt-cocote-nav-inner">
+          <Link href="/marketplace" className="mkt-cocote-nav-item active"><LayoutGrid size={14} /> Toutes les catégories</Link>
+          {categories.slice(0, 8).map((c: any) => (
+             <Link key={c.id} href={`/marketplace/category/${c.id}`} className="mkt-cocote-nav-item">
+               {c.name}
+             </Link>
           ))}
         </div>
       </nav>
 
-      {/* Main Container */}
-      <div className="mkt-container">
+      {/* ── Main Content ── */}
+      <div className="mkt-container mkt-cocote-main">
 
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          background: '#EEF2FF',
-          border: '1px solid #C7D2FE',
-          borderRadius: 24,
-          padding: '16px 20px',
-          marginBottom: 24,
-          gap: 16
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 24 }}>📍</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 900, color: '#4338CA', marginBottom: 2 }}>Zone de Recherche</div>
-              <div style={{ fontSize: 12, color: '#6366F1', fontWeight: 600 }}>Affichage des fournisseurs dans un rayon de <strong>{currentRadius} km</strong></div>
-            </div>
-            <div className="mkt-radius-pills" style={{ display: 'flex', gap: 6 }}>
-              {[5, 10, 20, 50, 100].map(r => (
-                <button
-                  key={r}
-                  onClick={() => router.push(`/marketplace?radius=${r}`)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 10,
-                    fontSize: 11,
-                    fontWeight: 900,
-                    transition: 'all 0.2s',
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: currentRadius === r ? '#4338CA' : '#fff',
-                    color: currentRadius === r ? '#fff' : '#4338CA',
-                    boxShadow: currentRadius === r ? '0 4px 12px rgba(67,56,202,0.2)' : 'none'
-                  }}
-                >
-                  {r} km
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          <div style={{ position: 'relative', height: 6, background: '#D1D5DB', borderRadius: 3, overflow: 'hidden' }}>
-             <div style={{ 
-               position: 'absolute', 
-               left: 0, 
-               top: 0, 
-               height: '100%', 
-               width: `${Math.min(100, (currentRadius / 100) * 100)}%`, 
-               background: '#4338CA',
-               transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-             }} />
-          </div>
-        </div>
-
-        {/* ── Search Results Overlay ── */}
-        {search.length > 0 && (
-          <div style={{ marginBottom: 48, animation: 'fadeIn 0.3s ease' }}>
-            <div className="mkt-section-head">
-              <div className="mkt-section-label">
-                <div className="mkt-section-label-bar" style={{ background: '#4F46E5' }} />
-                <h2 className="mkt-section-title">Résultats pour "{search}"</h2>
-              </div>
-              <span className="mkt-section-count">{tabProducts.length} produits</span>
-            </div>
-            {tabProducts.length > 0 ? (
-              <div className="mkt-grid">
-                {tabProducts.map((p: any) => (
-                  <ProductCard key={p.id} product={p} onAdd={addToCart} onDetail={() => setModal(p)} />
-                ))}
-              </div>
+        {/* Search Results Overlay */}
+        {search && (
+          <div className="mkt-cocote-search-results">
+            <h2 className="mkt-cocote-section-title">Résultats pour "{search}"</h2>
+            {searchResults.length > 0 ? (
+               <div className="mkt-cocote-grid">
+                 {searchResults.map((p: any) => <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />)}
+               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '60px 0', background: '#fff', borderRadius: 24, border: '1px solid #F1F5F9' }}>
-                <Search size={48} style={{ color: '#CBD5E1', marginBottom: 16 }} />
-                <p style={{ fontWeight: 700, color: '#64748B' }}>Aucun produit trouvé pour votre recherche.</p>
-              </div>
+               <div className="mkt-cocote-empty">Aucun produit ne correspond à votre recherche localisée.</div>
             )}
-            <div style={{ height: 2, background: '#F1F5F9', margin: '48px 0' }} />
+            <hr className="mkt-cocote-divider" />
           </div>
         )}
 
-        {/* ── Hero Banner Grid ── */}
-        <div className="mkt-hero-grid">
-          <HeroBanner banner={getBanner('HERO')} />
-          <div className="mkt-hero-sides">
-            <SideBanner banner={getBanner('SIDEBAR_1')} gradient="linear-gradient(135deg,#4F46E5,#7C3AED)" />
-            <SideBanner banner={getBanner('SIDEBAR_2')} gradient="linear-gradient(135deg,#10B981,#059669)" />
-          </div>
-        </div>
-
-        {/* ── Brands Ticker ── */}
-        {vendors.length > 0 && (
-          <div className="mkt-brands">
-            <div className="mkt-brands-track">
-              {[...vendors, ...vendors].map((v: any, i: number) => (
-                <div key={i} className="mkt-brand-item">
-                  <div className="mkt-brand-avatar">🏪</div>
-                  {v?.companyName}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Deal of the Day ── */}
-        <section className="mkt-section">
-          <div className="mkt-section-head">
-            <div className="mkt-section-head-left">
-              <div className="mkt-section-label">
-                <div className="mkt-section-label-bar" style={{ background: 'linear-gradient(to bottom,#EF4444,#F97316)' }} />
-                <h2 className="mkt-section-title">⚡ Deal de la Journée !</h2>
+        {/* Hero / Concept Banner */}
+        {!search && (
+          <div className="mkt-cocote-hero">
+            <div className="mkt-cocote-hero-content">
+              <h1>Soutenez les commerces de <span>votre région</span></h1>
+              <p>Découvrez les meilleurs produits B2B, cafés et équipements à proximité de <strong>{currentLocation}</strong>.</p>
+              <div className="mkt-cocote-hero-badges">
+                <span><MapPin size={14}/> Proximité garantie</span>
+                <span><Tag size={14}/> Circuit court</span>
+                <span><Award size={14}/> Vendeurs certifiés</span>
               </div>
-              <Countdown targetMs={endOfDay.getTime()} />
             </div>
-            <button className="mkt-section-link">Voir tout <ChevronRight size={14} /></button>
+            <div className="mkt-cocote-hero-graphic">
+              {/* Abstract representation of map/local */}
+              <div className="mkt-cocote-map-pin main"><MapPin size={32} /></div>
+              <div className="mkt-cocote-map-pin small p1"><Store size={16} /></div>
+              <div className="mkt-cocote-map-pin small p2"><Store size={16} /></div>
+              <div className="mkt-cocote-map-pin small p3"><Store size={16} /></div>
+            </div>
           </div>
-          <div className="mkt-grid">
-            {dealProducts.slice(0, 5).map((p: any) => (
-              <ProductCard key={p.id} product={p} onAdd={addToCart} onDetail={() => setModal(p)} isVendor={isVendor} />
-            ))}
-          </div>
-        </section>
+        )}
 
-        {/* ── Ads Banner 1 ── */}
-        <AdsBanner
-          banner={getBanner('ADS_1')}
-          fallback={{
-            title: 'Livraison Express sur tout Tunis',
-            subtitle: 'Commandez avant 10h → Livré avant 18h. Service garanti.',
-            img: 'https://images.unsplash.com/photo-1586769852836-bc069f19e1b6?q=80&w=1600',
-            color: '#1E1B4B'
-          }}
-        />
-
-        {/* ── Tabbed Products ── */}
-        <section className="mkt-section">
-          <div className="mkt-section-head">
-            <div className="mkt-tabs">
-              {(['latest','bestselling','featured'] as const).map(tab => (
-                <button key={tab} className={`mkt-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
-                  {tab === 'latest' ? '🆕 Dernières Arrivées' : tab === 'bestselling' ? '🔥 Les Plus Vendus' : '⭐ Produits Vedettes'}
-                </button>
+        {/* Promos Locales */}
+        {!search && (
+          <section className="mkt-cocote-section">
+            <div className="mkt-cocote-section-header">
+              <h2 className="mkt-cocote-section-title"><Percent size={20} className="text-rose-500" /> Promos Locales</h2>
+              <Link href="/marketplace" className="mkt-cocote-see-all">Voir tout <ChevronRight size={14} /></Link>
+            </div>
+            <div className="mkt-cocote-grid">
+              {displayPromos.map((p: any) => (
+                <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />
               ))}
             </div>
-            <span className="mkt-section-count">{tabProducts.length} produits</span>
-          </div>
-          <div className="mkt-grid">
-            {tabProducts.slice(0, 10).map((p: any) => (
-              <ProductCard key={p.id} product={p} onAdd={addToCart} onDetail={() => setModal(p)} isVendor={isVendor} />
-            ))}
-          </div>
-          {tabProducts.length > 10 && (
-            <div style={{ textAlign: 'center', marginTop: 32 }}>
-              <button className="mkt-section-link" style={{ margin: '0 auto' }}>Charger plus de produits <ArrowRight size={14} /></button>
+          </section>
+        )}
+
+        {/* Commerces de Proximité */}
+        {!search && (
+          <section className="mkt-cocote-section">
+            <div className="mkt-cocote-section-header">
+              <h2 className="mkt-cocote-section-title"><Store size={20} className="text-emerald-500" /> Commerces de proximité</h2>
+              <Link href="/marketplace/vendors" className="mkt-cocote-see-all">Explorer la carte <ChevronRight size={14} /></Link>
             </div>
-          )}
-        </section>
+            <div className="mkt-cocote-vendor-grid">
+              {vendors.slice(0, 6).map((v: any, i: number) => (
+                <VendorCard key={v.id} vendor={v} distance={Math.floor(Math.random() * 10) + 1} />
+              ))}
+            </div>
+          </section>
+        )}
 
-        {/* ── Ads Banner 2 ── */}
-        <AdsBanner
-          banner={getBanner('ADS_2')}
-          fallback={{
-            title: 'Devenez Fournisseur Premium',
-            subtitle: 'Multipliez vos ventes × 3 sur le premier marketplace B2B du café.',
-            img: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=1600',
-            color: '#4F46E5'
-          }}
-        />
-
-        {/* ── Category Sections ── */}
-        {categories.filter((c: any) => c.status !== 'ARCHIVED').slice(0, 4).map((cat: any) => {
-          const catProds = products.filter((p: any) => p.categoryId === cat.id);
-          if (catProds.length === 0) return null;
-          return (
-            <section key={cat.id} className="mkt-section">
-              <div className="mkt-section-head">
-                <div className="mkt-section-label">
-                  <div className="mkt-section-label-bar" />
-                  <h2 className="mkt-section-title">{cat.icon || '📦'} {cat.name}</h2>
-                </div>
-                <Link href={`/marketplace/category/${cat.id}`} className="mkt-section-link" style={{ textDecoration: 'none' }}>
-                  Voir la catégorie <ChevronRight size={14} />
+        {/* Catégories Populaires */}
+        {!search && (
+          <section className="mkt-cocote-section">
+            <div className="mkt-cocote-section-header">
+              <h2 className="mkt-cocote-section-title"><LayoutGrid size={20} className="text-blue-500" /> Parcourir par catégorie</h2>
+            </div>
+            <div className="mkt-cocote-category-grid">
+              {categories.slice(0, 8).map((c: any) => (
+                <Link key={c.id} href={`/marketplace/category/${c.id}`} className="mkt-cocote-category-card">
+                  <div className="mkt-cocote-category-icon">{c.icon || '📦'}</div>
+                  <span>{c.name}</span>
                 </Link>
-              </div>
-              <div className="mkt-grid">
-                {catProds.slice(0, 5).map((p: any) => (
-                  <ProductCard key={p.id} product={p} onAdd={addToCart} onDetail={() => setModal(p)} isVendor={isVendor} />
-                ))}
-              </div>
-            </section>
-          );
-        })}
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Meilleures Ventes Locales */}
+        {!search && (
+          <section className="mkt-cocote-section">
+            <div className="mkt-cocote-section-header">
+              <h2 className="mkt-cocote-section-title"><Award size={20} className="text-amber-500" /> Meilleures ventes autour de vous</h2>
+            </div>
+            <div className="mkt-cocote-grid">
+              {products.slice(0, 5).map((p: any) => (
+                <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Marques */}
+        {!search && brands.length > 0 && (
+          <section className="mkt-cocote-section">
+            <h2 className="mkt-cocote-section-title">Les marques les plus recherchées</h2>
+            <div className="mkt-cocote-brands-flex">
+              {brands.map((b: string) => (
+                <Link key={b} href={`/marketplace?brand=${encodeURIComponent(b)}`} className="mkt-cocote-brand-tag">
+                  {b}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Villes de Tunisie Index */}
+        {!search && (
+          <section className="mkt-cocote-section mkt-cocote-cities">
+            <h2 className="mkt-cocote-section-title"><MapPin size={20} className="text-indigo-500" /> Découvrez les commerces par région</h2>
+            <div className="mkt-cocote-cities-grid">
+              {tunisianCities.map(city => (
+                <Link key={city} href={`/marketplace?loc=${encodeURIComponent(city)}`} className="mkt-cocote-city-link">
+                  {city}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
       </div>
 
-      {/* ── Modals & Drawers ── */}
-      {modal && <ProductModal product={modal} categories={categories} onClose={() => setModal(null)} onAdd={addToCart} isVendor={isVendor} />}
+      {/* ── Location Modal ── */}
+      {locModalOpen && (
+        <div className="mkt-modal-backdrop" onClick={() => setLocModalOpen(false)}>
+          <div className="mkt-modal mkt-cocote-loc-modal" onClick={e=>e.stopPropagation()}>
+            <button className="mkt-modal-close" onClick={() => setLocModalOpen(false)}><X size={18} /></button>
+            <h3 className="mkt-cocote-modal-title">Où souhaitez-vous chercher ?</h3>
+            <p className="mkt-cocote-modal-desc">Modifiez votre position pour découvrir les offres locales pertinentes.</p>
+            
+            <div className="mkt-cocote-loc-form">
+               <label>Ville ou Code Postal</label>
+               <select className="mkt-cocote-input" defaultValue={currentLocation} onChange={(e) => {
+                 const params = new URLSearchParams(searchParams.toString());
+                 params.set('loc', e.target.value);
+                 router.push(`/marketplace?${params.toString()}`);
+                 setLocModalOpen(false);
+               }}>
+                 {tunisianCities.map(c => <option key={c} value={c}>{c}</option>)}
+               </select>
+               
+               <label style={{ marginTop: 16 }}>Rayon de recherche (km)</label>
+               <div className="mkt-cocote-radius-slider">
+                 <input type="range" min="5" max="100" step="5" defaultValue={currentRadius} onChange={(e) => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set('radius', e.target.value);
+                    router.push(`/marketplace?${params.toString()}`);
+                 }} />
+                 <div className="mkt-cocote-radius-labels">
+                    <span>5km</span><span>50km</span><span>100km</span>
+                 </div>
+               </div>
+               
+               <button className="mkt-cocote-btn-primary" onClick={() => setLocModalOpen(false)}>Valider ma position</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cart Drawer */}
       {!isVendor && cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
     </div>
   );

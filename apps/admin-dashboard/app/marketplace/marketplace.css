@@ -419,3 +419,151 @@
   .mkt-hero-sides { display:none; }
   .mkt-search-wrap { display:none; }
 }
+
+/* ===========================
+   COCOTE THEME EXTENSIONS
+   =========================== */
+.cocote-theme {
+  font-family: 'Outfit', sans-serif;
+  background-color: #F8FAFC;
+}
+.cocote-theme a { text-decoration: none; }
+
+/* Top Bar */
+.mkt-cocote-topbar { background: #fff; border-bottom: 1px solid #F1F5F9; font-size: 12px; }
+.mkt-cocote-topbar-inner { display: flex; justify-content: space-between; align-items: center; padding: 8px 32px; }
+.mkt-cocote-loc-trigger { display: flex; align-items: center; gap: 6px; color: #1E293B; cursor: pointer; font-weight: 500; }
+.mkt-cocote-topbar-links { display: flex; gap: 16px; font-weight: 600; color: #64748B; }
+
+/* Header */
+.mkt-cocote-header { background: #fff; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+.mkt-cocote-header-inner { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; gap: 32px; }
+.mkt-cocote-logo { display: flex; align-items: center; gap: 12px; font-size: 24px; font-weight: 900; color: #1E1B4B; }
+.mkt-cocote-logo-icon { width: 40px; height: 40px; background: #10B981; color: #fff; border-radius: 12px; display: flex; justify-content: center; align-items: center; }
+
+.mkt-cocote-search-wrap { flex: 1; max-width: 600px; display: flex; background: #F1F5F9; border-radius: 12px; overflow: hidden; border: 2px solid transparent; transition: border-color 0.2s; }
+.mkt-cocote-search-wrap:focus-within { border-color: #10B981; }
+.mkt-cocote-search-input { flex: 1; padding: 14px 20px; border: none; background: transparent; outline: none; font-size: 15px; font-family: 'Outfit'; }
+.mkt-cocote-search-btn { padding: 0 20px; background: #10B981; color: #fff; border: none; cursor: pointer; }
+
+.mkt-cocote-header-actions { display: flex; align-items: center; gap: 16px; }
+.mkt-cocote-action-btn { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #475569; padding: 10px 16px; border-radius: 10px; transition: background 0.2s; }
+.mkt-cocote-action-btn:hover { background: #F1F5F9; color: #1E293B; }
+.mkt-cocote-cart-btn { display: flex; align-items: center; gap: 10px; background: #1E1B4B; color: #fff; padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; }
+.mkt-cocote-cart-text { display: none; }
+@media (min-width: 768px) { .mkt-cocote-cart-text { display: inline; } }
+
+/* Nav */
+.mkt-cocote-nav { background: #fff; border-bottom: 1px solid #E2E8F0; }
+.mkt-cocote-nav-inner { display: flex; gap: 24px; padding: 0 32px; overflow-x: auto; }
+.mkt-cocote-nav-inner::-webkit-scrollbar { display: none; }
+.mkt-cocote-nav-item { padding: 14px 0; color: #64748B; font-weight: 600; font-size: 14px; white-space: nowrap; border-bottom: 3px solid transparent; display: flex; align-items: center; gap: 8px; }
+.mkt-cocote-nav-item:hover, .mkt-cocote-nav-item.active { color: #1E1B4B; border-bottom-color: #10B981; }
+
+/* Hero */
+.mkt-cocote-hero { display: flex; align-items: center; justify-content: space-between; background: #fff; border-radius: 24px; padding: 64px; margin-bottom: 48px; border: 1px solid #F1F5F9; }
+.mkt-cocote-hero-content { max-width: 600px; }
+.mkt-cocote-hero-content h1 { font-size: 48px; font-weight: 900; color: #1E1B4B; margin-bottom: 16px; line-height: 1.1; }
+.mkt-cocote-hero-content h1 span { color: #10B981; }
+.mkt-cocote-hero-content p { font-size: 18px; color: #64748B; margin-bottom: 32px; line-height: 1.6; }
+.mkt-cocote-hero-badges { display: flex; gap: 16px; flex-wrap: wrap; }
+.mkt-cocote-hero-badges span { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #10B981; background: #ECFDF5; padding: 8px 16px; border-radius: 100px; }
+
+.mkt-cocote-hero-graphic { position: relative; width: 300px; height: 300px; }
+.mkt-cocote-map-pin { position: absolute; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+.mkt-cocote-map-pin.main { width: 80px; height: 80px; background: #10B981; color: #fff; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; border: 4px solid #fff; }
+.mkt-cocote-map-pin.small { width: 40px; height: 40px; background: #fff; color: #1E1B4B; border: 2px solid #F1F5F9; }
+.mkt-cocote-map-pin.p1 { top: 20%; left: 20%; animation: float 3s ease-in-out infinite; }
+.mkt-cocote-map-pin.p2 { top: 70%; left: 80%; animation: float 4s ease-in-out infinite reverse; }
+.mkt-cocote-map-pin.p3 { top: 80%; left: 30%; animation: float 3.5s ease-in-out infinite; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+/* Sections */
+.mkt-cocote-section { margin-bottom: 64px; }
+.mkt-cocote-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #E2E8F0; }
+.mkt-cocote-section-title { font-size: 24px; font-weight: 800; color: #1E1B4B; margin: 0; display: flex; align-items: center; gap: 12px; }
+.mkt-cocote-see-all { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #64748B; font-size: 14px; }
+.mkt-cocote-see-all:hover { color: #10B981; }
+
+.mkt-cocote-grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.mkt-cocote-vendor-grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.mkt-cocote-category-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+
+/* Product Card */
+.mkt-cocote-card { background: #fff; border-radius: 16px; border: 1px solid #E2E8F0; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; position: relative; }
+.mkt-cocote-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.08); border-color: #CBD5E1; }
+.mkt-cocote-card-img-wrap { position: relative; aspect-ratio: 1; background: #F8FAFC; overflow: hidden; }
+.mkt-cocote-card-img { width: 100%; height: 100%; object-fit: cover; }
+.mkt-cocote-badge-discount { position: absolute; top: 12px; left: 12px; background: #E11D48; color: #fff; font-size: 12px; font-weight: 800; padding: 4px 8px; border-radius: 6px; }
+.mkt-cocote-wish { position: absolute; top: 12px; right: 12px; background: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: #94A3B8; cursor: pointer; opacity: 0; transition: opacity 0.2s, color 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.mkt-cocote-card:hover .mkt-cocote-wish { opacity: 1; }
+.mkt-cocote-wish:hover { color: #E11D48; }
+
+.mkt-cocote-card-body { padding: 16px; display: flex; flex-direction: column; flex: 1; }
+.mkt-cocote-card-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.mkt-cocote-vendor-link { font-size: 11px; font-weight: 700; color: #64748B; display: flex; align-items: center; gap: 4px; }
+.mkt-cocote-vendor-link:hover { color: #1E1B4B; }
+.mkt-cocote-distance { font-size: 10px; font-weight: 800; color: #10B981; background: #ECFDF5; padding: 2px 6px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
+
+.mkt-cocote-card-title { font-size: 15px; font-weight: 700; color: #1E1B4B; margin: 0 0 12px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 42px; }
+
+.mkt-cocote-card-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; padding-top: 16px; }
+.mkt-cocote-price-wrap { display: flex; align-items: baseline; gap: 6px; }
+.mkt-cocote-old-price { font-size: 12px; color: #94A3B8; text-decoration: line-through; font-weight: 600; }
+.mkt-cocote-price { font-size: 20px; font-weight: 800; color: #1E1B4B; }
+.mkt-cocote-unit { font-size: 12px; color: #64748B; font-weight: 600; }
+
+.mkt-cocote-add-btn { background: #1E1B4B; color: #fff; border: none; width: 36px; height: 36px; border-radius: 10px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background 0.2s; }
+.mkt-cocote-add-btn:hover { background: #10B981; }
+
+/* Vendor Card */
+.mkt-cocote-vendor-card { display: flex; align-items: center; gap: 16px; background: #fff; border: 1px solid #E2E8F0; padding: 16px; border-radius: 16px; transition: transform 0.2s, box-shadow 0.2s; }
+.mkt-cocote-vendor-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-color: #CBD5E1; }
+.mkt-cocote-vendor-logo { width: 60px; height: 60px; border-radius: 12px; background: #F1F5F9; border: 1px solid #E2E8F0; display: flex; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0; }
+.mkt-cocote-vendor-logo img { width: 100%; height: 100%; object-fit: cover; }
+.mkt-cocote-vendor-info { flex: 1; }
+.mkt-cocote-vendor-name { font-size: 16px; font-weight: 800; color: #1E1B4B; margin: 0 0 4px; }
+.mkt-cocote-vendor-meta { display: flex; align-items: center; gap: 12px; }
+.mkt-cocote-vendor-dist { font-size: 11px; font-weight: 600; color: #64748B; display: flex; align-items: center; gap: 4px; }
+
+/* Category Card */
+.mkt-cocote-category-card { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px; background: #fff; border-radius: 16px; border: 1px solid #E2E8F0; font-weight: 700; color: #1E1B4B; transition: all 0.2s; }
+.mkt-cocote-category-card:hover { border-color: #10B981; color: #10B981; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.1); }
+.mkt-cocote-category-icon { font-size: 32px; }
+
+/* Brands */
+.mkt-cocote-brands-flex { display: flex; flex-wrap: wrap; gap: 12px; }
+.mkt-cocote-brand-tag { padding: 10px 20px; background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; font-size: 14px; font-weight: 700; color: #475569; transition: all 0.2s; }
+.mkt-cocote-brand-tag:hover { background: #1E1B4B; color: #fff; border-color: #1E1B4B; }
+
+/* Cities Index */
+.mkt-cocote-cities { background: #fff; padding: 48px; border-radius: 24px; border: 1px solid #F1F5F9; }
+.mkt-cocote-cities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; margin-top: 32px; }
+.mkt-cocote-city-link { font-size: 14px; font-weight: 600; color: #64748B; padding: 8px 0; border-bottom: 1px solid #F1F5F9; transition: color 0.2s; }
+.mkt-cocote-city-link:hover { color: #10B981; border-bottom-color: #10B981; }
+
+/* Sidebar Layout (Category View) */
+.mkt-cocote-sidebar { width: 280px; flex-shrink: 0; background: #fff; padding: 24px; border-radius: 16px; border: 1px solid #F1F5F9; }
+.mkt-cocote-filter-block { margin-bottom: 32px; }
+.mkt-cocote-filter-title { font-size: 16px; font-weight: 800; color: #1E1B4B; margin: 0 0 16px; padding-bottom: 8px; border-bottom: 2px solid #F1F5F9; }
+.mkt-cocote-filter-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.mkt-cocote-checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #475569; cursor: pointer; margin-bottom: 12px; }
+.mkt-cocote-checkbox-label input { width: 16px; height: 16px; accent-color: #10B981; }
+.mkt-cocote-radius-slider { display: flex; flex-direction: column; gap: 8px; }
+.mkt-cocote-radius-slider input { width: 100%; accent-color: #10B981; }
+.mkt-cocote-radius-labels { display: flex; justify-content: space-between; color: #94A3B8; font-weight: 600; }
+
+.mkt-cocote-category-header { background: #fff; padding: 32px; border-radius: 16px; border: 1px solid #F1F5F9; margin-bottom: 24px; }
+.mkt-cocote-category-title-wrap { display: flex; align-items: center; gap: 24px; }
+.mkt-cocote-category-icon-large { font-size: 48px; width: 80px; height: 80px; background: #F8FAFC; border-radius: 16px; display: flex; justify-content: center; align-items: center; }
+
+/* Modals */
+.mkt-cocote-loc-modal { width: 100%; max-width: 480px; padding: 32px; text-align: center; }
+.mkt-cocote-modal-title { font-size: 24px; font-weight: 800; color: #1E1B4B; margin: 0 0 8px; }
+.mkt-cocote-modal-desc { font-size: 14px; color: #64748B; margin: 0 0 24px; }
+.mkt-cocote-form { display: flex; flex-direction: column; gap: 16px; text-align: left; }
+.mkt-cocote-input { width: 100%; padding: 12px 16px; border: 2px solid #E2E8F0; border-radius: 12px; font-family: 'Outfit'; font-size: 15px; outline: none; transition: border-color 0.2s; }
+.mkt-cocote-input:focus { border-color: #10B981; }
+.mkt-cocote-btn-primary { width: 100%; padding: 16px; background: #1E1B4B; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 24px; transition: background 0.2s; }
+.mkt-cocote-btn-primary:hover { background: #10B981; }
+

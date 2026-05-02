@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useTransition, useMemo } from 'react';
+import Link from 'next/link';
 import {
   Plus, Edit2, Trash2, Package, Clock, FileSpreadsheet, Download,
   CheckCircle2, AlertCircle, Loader2, BarChart3, TrendingUp, TrendingDown,
