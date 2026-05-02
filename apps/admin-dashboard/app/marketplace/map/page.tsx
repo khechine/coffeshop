@@ -1,9 +1,12 @@
 import { prisma } from '@coffeeshop/database';
+import { getUser } from '../../actions';
 import MarketplaceMapClient from './MarketplaceMapClient';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MarketplaceMapPage() {
+  const user = await getUser();
+  const isVendor = user?.role === 'VENDOR';
   const store = await prisma.store.findFirst();
   const vendors = await prisma.vendorProfile.findMany({
      where: { status: 'ACTIVE' }
@@ -53,7 +56,7 @@ export default async function MarketplaceMapPage() {
         </div>
       </div>
       
-      <MarketplaceMapClient data={mapData} />
+      <MarketplaceMapClient data={mapData} isVendor={isVendor} />
     </div>
   );
 }

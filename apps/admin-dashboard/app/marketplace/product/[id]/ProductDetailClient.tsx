@@ -14,7 +14,7 @@ import { sanitizeUrl } from '../../../lib/imageUtils';
 
 const fmt = (n: any) => Number(n).toFixed(3);
 
-export default function ProductDetailClient({ product }: { product: any }) {
+export default function ProductDetailClient({ product, isVendor = false }: { product: any; isVendor?: boolean }) {
   const [qty, setQty] = useState(1);
   const [cartOpen, setCartOpen] = useState(false);
   const { addToCart, cartCount } = useCart();
@@ -47,10 +47,12 @@ export default function ProductDetailClient({ product }: { product: any }) {
             <Link href="/" className="mkt-header-btn" style={{ textDecoration: 'none' }}>
               <LayoutGrid size={16} /> Dashboard
             </Link>
-            <button className="mkt-cart-btn" onClick={() => setCartOpen(true)}>
-              <ShoppingCart size={20} />
-              {cartCount > 0 && <span className="mkt-cart-badge">{cartCount}</span>}
-            </button>
+            {!isVendor && (
+              <button className="mkt-cart-btn" onClick={() => setCartOpen(true)}>
+                <ShoppingCart size={20} />
+                {cartCount > 0 && <span className="mkt-cart-badge">{cartCount}</span>}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -85,7 +87,7 @@ export default function ProductDetailClient({ product }: { product: any }) {
                <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase' }}>Prix Unitaire</span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <span style={{ fontSize: 32, fontWeight: 950, color: '#1E1B4B' }}>{fmt(product.price)}</span>
+                    <span style={{ fontSize: 32, fontWeight: 950, color: '#1E1B4B', filter: isVendor ? 'blur(8px)' : 'none' }}>{fmt(product.price)}</span>
                     <span style={{ fontSize: 16, fontWeight: 800, color: '#64748B' }}>DT/{product.unit}</span>
                   </div>
                </div>
@@ -110,16 +112,22 @@ export default function ProductDetailClient({ product }: { product: any }) {
                   </div>
                   <div style={{ flex: 1, textAlign: 'right' }}>
                     <span style={{ fontSize: 12, fontWeight: 800, color: '#94A3B8', display: 'block' }}>Total HT</span>
-                    <span style={{ fontSize: 24, fontWeight: 950, color: primaryColor }}>{fmt(product.price * qty)} DT</span>
+                    <span style={{ fontSize: 24, fontWeight: 950, color: primaryColor, filter: isVendor ? 'blur(8px)' : 'none' }}>{fmt(product.price * qty)} DT</span>
                   </div>
                </div>
 
-               <button 
-                onClick={handleAddToCart}
-                style={{ width: '100%', padding: '20px', background: primaryColor, color: '#fff', border: 'none', borderRadius: 16, fontWeight: 900, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, boxShadow: `0 10px 20px ${primaryColor}33` }}
-               >
-                  <ShoppingCart size={20} /> AJOUTER AU PANIER
-               </button>
+               {!isVendor ? (
+                 <button 
+                  onClick={handleAddToCart}
+                  style={{ width: '100%', padding: '20px', background: primaryColor, color: '#fff', border: 'none', borderRadius: 16, fontWeight: 900, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, boxShadow: `0 10px 20px ${primaryColor}33` }}
+                 >
+                    <ShoppingCart size={20} /> AJOUTER AU PANIER
+                 </button>
+               ) : (
+                 <div style={{ background: '#EEF2FF', color: primaryColor, padding: '20px', borderRadius: '16px', textAlign: 'center', fontSize: '15px', fontWeight: 800, border: `1px dashed ${primaryColor}33` }}>
+                   Mode Consultation : Connectez-vous en tant qu'acheteur pour commander
+                 </div>
+               )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -150,7 +158,7 @@ export default function ProductDetailClient({ product }: { product: any }) {
         </div>
       </div>
 
-      {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
+      {!isVendor && cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
     </div>
   );
 }

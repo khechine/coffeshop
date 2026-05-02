@@ -35,6 +35,7 @@ export default function VendorPortalLayout({ children }: { children: React.React
     { id: 'sales', label: 'Ventes', icon: BarChart3, href: '/vendor/portal/sales' },
     { id: 'catalog', label: 'Catalogue', icon: Package, href: '/vendor/portal/catalog' },
     { id: 'orders', label: 'Commandes', icon: ShoppingBag, href: '/vendor/portal/orders' },
+    { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, href: '/marketplace' },
     { id: 'profile', label: 'Profil', icon: Settings, href: '/vendor/portal/settings' },
   ];
 

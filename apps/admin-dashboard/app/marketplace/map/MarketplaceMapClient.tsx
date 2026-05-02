@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Target, Layers, Map as MapIcon, Compass, ChevronRight, Package, Truck, Mail, MapPin, Phone } from 'lucide-react';
 import Modal from '../../../components/Modal';
 
-export default function MarketplaceMapClient({ data }: { data: any }) {
+export default function MarketplaceMapClient({ data, isVendor = false }: { data: any, isVendor?: boolean }) {
    const mapContainer = useRef<HTMLDivElement>(null);
    const mapInstance = useRef<any>(null);
    const [isSatellite, setIsSatellite] = useState(false);
@@ -278,7 +278,7 @@ export default function MarketplaceMapClient({ data }: { data: any }) {
                          </div>
                          <div>
                             <div style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B' }}>{p.name}</div>
-                            <div style={{ fontSize: '12px', color: '#4F46E5', fontWeight: 700 }}>{Number(p.price).toFixed(3)} DT / {p.unit}</div>
+                            <div style={{ fontSize: '12px', color: '#4F46E5', fontWeight: 700, filter: isVendor ? 'blur(4px)' : 'none' }}>{Number(p.price).toFixed(3)} DT / {p.unit}</div>
                          </div>
                       </div>
                     ))}

@@ -1,4 +1,5 @@
 import { prisma } from '@coffeeshop/database';
+import { getUser } from '../../../actions';
 import VendorStorefrontClient from './VendorStorefrontClient';
 import { notFound } from 'next/navigation';
 
@@ -6,6 +7,8 @@ export const dynamic = 'force-dynamic';
 
 export default async function VendorStorefrontPage({ params }: { params: { id: string } }) {
   const { id } = params;
+  const user = await getUser();
+  const isVendor = user?.role === 'VENDOR';
 
   const vendor = await (prisma as any).vendorProfile.findUnique({
     where: { id },
@@ -50,6 +53,7 @@ export default async function VendorStorefrontPage({ params }: { params: { id: s
     <VendorStorefrontClient 
       vendor={JSON.parse(JSON.stringify(vendor))} 
       ratings={ratings}
+      isVendor={isVendor}
     />
   );
 }

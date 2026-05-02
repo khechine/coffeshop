@@ -91,7 +91,7 @@ export default async function VendorDashboardPage() {
       )}
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Link href="/vendor/portal/catalog" className="bg-white dark:bg-slate-900/40 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/50 hover:shadow-md transition-all group">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-50 dark:bg-blue-500/10 rounded-xl flex items-center justify-center group-hover:bg-blue-100 transition-colors">
@@ -113,6 +113,19 @@ export default async function VendorDashboardPage() {
             <div className="flex-1">
               <h3 className="font-bold text-slate-900 dark:text-white">Commandes</h3>
               <p className="text-slate-500 text-sm">{pendingOrders} en attente</p>
+            </div>
+            <ChevronRight size={20} className="text-slate-300" />
+          </div>
+        </Link>
+
+        <Link href="/marketplace" className="bg-white dark:bg-slate-900/40 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/50 hover:shadow-md transition-all group">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+              <ShoppingBag size={24} className="text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-slate-900 dark:text-white">Marketplace</h3>
+              <p className="text-slate-500 text-sm">Voir les tendances</p>
             </div>
             <ChevronRight size={20} className="text-slate-300" />
           </div>
