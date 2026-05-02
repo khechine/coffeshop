@@ -16,7 +16,7 @@ RUN pnpm --filter @coffeeshop/shared run build
 RUN pnpm --filter @coffeeshop/database run db:generate
 RUN pnpm --filter @coffeeshop/database run build
 RUN pnpm --filter @coffeeshop/api run build
-RUN pnpm --filter @coffeeshop/admin-dashboard run build > /tmp/dashboard-build.log 2>&1 || (echo "=== FULL BUILD LOG ===" && cat /tmp/dashboard-build.log && exit 1)
+RUN NODE_OPTIONS="--max-old-space-size=2048" pnpm --filter @coffeeshop/admin-dashboard run build > /tmp/dashboard-build.log 2>&1 || (echo "=== FULL BUILD LOG ===" && cat /tmp/dashboard-build.log && exit 1)
 
 FROM base AS runner
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*

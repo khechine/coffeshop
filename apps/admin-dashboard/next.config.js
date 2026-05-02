@@ -11,6 +11,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    webpackBuildWorker: false,
   },
 };
 
