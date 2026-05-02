@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { placeMarketplaceOrder } from '../../../actions';
 import { useCart } from '../../CartContext';
-import CartDrawer from '../../CartDrawer';
+import MarketplaceHeader from '../../components/MarketplaceHeader';
+import MarketplaceFooter from '../../components/MarketplaceFooter';
 import '../../marketplace.css';
 import 'leaflet/dist/leaflet.css';
 import { sanitizeUrl } from '../../../lib/imageUtils';
@@ -19,11 +20,9 @@ const fmt = (n: any) => Number(n).toFixed(3);
 
 
 export default function VendorStorefrontClient({ vendor, ratings, isVendor = false }: any) {
-  const [search, setSearch] = useState('');
-  const [cartOpen, setCartOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('products');
   
-  const { addToCart, cartCount } = useCart();
+  const { addToCart } = useCart();
   
   const cust = vendor.customization || {};
   const isPremium = vendor.isPremium || !!cust.id;
@@ -35,7 +34,7 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
     unit: vp.unit || vp.productStandard?.unit,
     image: vp.image || vp.productStandard?.image,
     categoryId: vp.categoryId || vp.productStandard?.categoryId
-  })).filter((p: any) => p.name.toLowerCase().includes(search.toLowerCase()));
+  }));
 
   // Map and Theme colors
   const mapRef = useRef<any>(null);
@@ -84,38 +83,8 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
   }, [activeTab, vendor.lat, vendor.lng, primaryColor]);
 
   return (
-    <div className="mkt-page" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
-      {/* Header */}
-      <header className="mkt-header">
-        <div className="mkt-header-inner">
-          <Link href="/marketplace" className="mkt-logo" style={{ textDecoration: 'none' }}>
-            <div className="mkt-logo-icon" style={{ background: primaryColor }}><ShoppingBag size={22} /></div>
-            Coffee<span>Market</span>
-          </Link>
-
-          <div className="mkt-search-wrap">
-            <Search className="mkt-search-icon" size={18} />
-            <input
-              className="mkt-search"
-              placeholder={`Rechercher chez ${vendor.companyName}...`}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="mkt-header-actions">
-            <Link href="/" className="mkt-header-btn" style={{ textDecoration: 'none' }}>
-              <LayoutGrid size={16} /> Dashboard
-            </Link>
-            {!isVendor && (
-              <button className="mkt-cart-btn" onClick={() => setCartOpen(true)}>
-                <ShoppingCart size={20} />
-                {cartCount > 0 && <span className="mkt-cart-badge">{cartCount}</span>}
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+    <div className="mkt-page cocote-theme" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
+      <MarketplaceHeader isVendor={isVendor} />
 
       {/* Hero Banner / Store Header */}
       <div style={{ position: 'relative', marginBottom: 48 }}>
@@ -213,7 +182,7 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
                   <Link href={`/marketplace/product/${p.id}`} style={{ textDecoration: 'none' }}>
                     <div className="mkt-card-name">{p.name}</div>
                   </Link>
-                  <div className="mkt-card-price" style={isVendor ? { filter: 'blur(5px)' } : {}}>{fmt(p.price)} <span className="mkt-card-unit">DT/{p.unit}</span></div>
+                  <div className="mkt-card-price" style={isVendor ? { filter: 'blur(5px)', userSelect: 'none', pointerEvents: 'none' } : {}}>{fmt(p.price)} <span className="mkt-card-unit">DT/{p.unit}</span></div>
                 </div>
               </div>
             ))}
@@ -285,10 +254,7 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
         )}
       </div>
 
-      {/* Cart Drawer */}
-      {!isVendor && cartOpen && (
-        <CartDrawer onClose={() => setCartOpen(false)} />
-      )}
+      <MarketplaceFooter />
     </div>
   );
 }

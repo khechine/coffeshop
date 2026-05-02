@@ -8,7 +8,8 @@ import {
   ChevronRight, Building2, LayoutGrid, ShoppingBag
 } from 'lucide-react';
 import { useCart } from '../../CartContext';
-import CartDrawer from '../../CartDrawer';
+import MarketplaceHeader from '../../components/MarketplaceHeader';
+import MarketplaceFooter from '../../components/MarketplaceFooter';
 import '../../marketplace.css';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 
@@ -16,46 +17,27 @@ const fmt = (n: any) => Number(n).toFixed(3);
 
 export default function ProductDetailClient({ product, isVendor = false }: { product: any; isVendor?: boolean }) {
   const [qty, setQty] = useState(1);
-  const [cartOpen, setCartOpen] = useState(false);
-  const { addToCart, cartCount } = useCart();
+  const { addToCart } = useCart();
 
   const cust = product.vendor?.customization || {};
   const primaryColor = cust.primaryColor || '#1E1B4B';
   const fontFamily = cust.fontFamily || 'Inter';
 
   const imageUrl = sanitizeUrl(product.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800';
+  
+  const gallery = [imageUrl, ...(product.images || []).map((img: string) => sanitizeUrl(img))].filter(Boolean);
+  const [activeImage, setActiveImage] = useState(gallery[0]);
 
   const handleAddToCart = () => {
     // Custom add logic for specific qty
     for(let i=0; i<qty; i++) {
         addToCart(product);
     }
-    setCartOpen(true);
   };
 
   return (
-    <div className="mkt-page" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
-      {/* Header */}
-      <header className="mkt-header">
-        <div className="mkt-header-inner">
-          <Link href="/marketplace" className="mkt-logo" style={{ textDecoration: 'none' }}>
-            <div className="mkt-logo-icon" style={{ background: primaryColor }}><ShoppingBag size={22} /></div>
-            Coffee<span>Market</span>
-          </Link>
-
-          <div className="mkt-header-actions">
-            <Link href="/" className="mkt-header-btn" style={{ textDecoration: 'none' }}>
-              <LayoutGrid size={16} /> Dashboard
-            </Link>
-            {!isVendor && (
-              <button className="mkt-cart-btn" onClick={() => setCartOpen(true)}>
-                <ShoppingCart size={20} />
-                {cartCount > 0 && <span className="mkt-cart-badge">{cartCount}</span>}
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+    <div className="mkt-page cocote-theme" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
+      <MarketplaceHeader isVendor={isVendor} />
 
       <div className="mkt-container" style={{ marginTop: 40, paddingBottom: 80 }}>
         <Link href="/marketplace" className="mkt-back-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#64748B', fontWeight: 700, textDecoration: 'none', marginBottom: 24, fontSize: 14 }}>
@@ -66,9 +48,33 @@ export default function ProductDetailClient({ product, isVendor = false }: { pro
           
           {/* Gallery */}
           <div className="mkt-product-gallery">
-            <div style={{ borderRadius: 24, overflow: 'hidden', aspectRatio: '1/1', background: '#F8FAFC', border: '1px solid #F1F5F9' }}>
-               <img src={imageUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{ borderRadius: 24, overflow: 'hidden', aspectRatio: '1/1', background: '#F8FAFC', border: '1px solid #F1F5F9', marginBottom: 16 }}>
+               <img src={activeImage} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'all 0.3s ease' }} />
             </div>
+            
+            {gallery.length > 1 && (
+              <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }} className="no-scrollbar">
+                {gallery.map((img: string, i: number) => (
+                  <button 
+                    key={i} 
+                    onClick={() => setActiveImage(img)}
+                    style={{ 
+                      width: 80, 
+                      height: 80, 
+                      borderRadius: 16, 
+                      overflow: 'hidden', 
+                      border: activeImage === img ? `2px solid ${primaryColor}` : '2px solid transparent',
+                      padding: 0,
+                      background: '#F8FAFC',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <img src={img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Info */}
@@ -83,11 +89,31 @@ export default function ProductDetailClient({ product, isVendor = false }: { pro
 
             <h1 style={{ fontSize: 40, fontWeight: 950, color: '#1E1B4B', margin: '0 0 16px', lineHeight: 1.1 }}>{product.name}</h1>
             
+            {product.tags && product.tags.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+                {product.tags.map((tag: string) => (
+                  <span key={tag} style={{ 
+                    padding: '6px 12px', 
+                    borderRadius: 10, 
+                    fontSize: 10, 
+                    fontWeight: 900, 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.05em',
+                    background: tag.toLowerCase().includes('bio') ? '#F0FDF4' : '#F8FAFC',
+                    color: tag.toLowerCase().includes('bio') ? '#166534' : '#64748B',
+                    border: tag.toLowerCase().includes('bio') ? '1px solid #DCFCE7' : '1px solid #E2E8F0'
+                  }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 32 }}>
                <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase' }}>Prix Unitaire</span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <span style={{ fontSize: 32, fontWeight: 950, color: '#1E1B4B', filter: isVendor ? 'blur(8px)' : 'none' }}>{fmt(product.price)}</span>
+                    <span style={{ fontSize: 32, fontWeight: 950, color: '#1E1B4B', filter: isVendor ? 'blur(8px)' : 'none', userSelect: isVendor ? 'none' : 'auto', pointerEvents: isVendor ? 'none' : 'auto' }}>{fmt(product.price)}</span>
                     <span style={{ fontSize: 16, fontWeight: 800, color: '#64748B' }}>DT/{product.unit}</span>
                   </div>
                </div>
@@ -99,7 +125,7 @@ export default function ProductDetailClient({ product, isVendor = false }: { pro
                )}
             </div>
 
-            <p style={{ color: '#475569', fontSize: 16, lineHeight: 1.7, marginBottom: 40 }}>
+            <p style={{ color: '#475569', fontSize: 16, lineHeight: 1.7, marginBottom: 40, whiteSpace: 'pre-line' }}>
               {product.description || "Ce produit premium est sélectionné pour sa qualité exceptionnelle. Contactez le fournisseur pour plus de détails techniques ou des commandes en gros volumes."}
             </p>
 
@@ -112,7 +138,7 @@ export default function ProductDetailClient({ product, isVendor = false }: { pro
                   </div>
                   <div style={{ flex: 1, textAlign: 'right' }}>
                     <span style={{ fontSize: 12, fontWeight: 800, color: '#94A3B8', display: 'block' }}>Total HT</span>
-                    <span style={{ fontSize: 24, fontWeight: 950, color: primaryColor, filter: isVendor ? 'blur(8px)' : 'none' }}>{fmt(product.price * qty)} DT</span>
+                    <span style={{ fontSize: 24, fontWeight: 950, color: primaryColor, filter: isVendor ? 'blur(8px)' : 'none', userSelect: isVendor ? 'none' : 'auto', pointerEvents: isVendor ? 'none' : 'auto' }}>{fmt(product.price * qty)} DT</span>
                   </div>
                </div>
 
@@ -158,7 +184,8 @@ export default function ProductDetailClient({ product, isVendor = false }: { pro
         </div>
       </div>
 
-      {!isVendor && cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
+
+      <MarketplaceFooter />
     </div>
   );
 }

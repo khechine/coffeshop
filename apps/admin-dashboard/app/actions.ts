@@ -3,7 +3,7 @@
 import { prisma, seedTunisianStarterPack } from '@coffeeshop/database';
 import { revalidatePath } from 'next/cache';
 import * as bcrypt from 'bcryptjs';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { Prisma } from '@prisma/client';
 import crypto from 'crypto';
 
@@ -603,6 +603,29 @@ export async function loginUser(email: string, pass: string) {
   const isMatch = await bcrypt.compare(pass, user.password);
   if (!isMatch) return { error: 'Mot de passe incorrect' };
 
+  // Trace the login
+  try {
+    const reqHeaders = headers();
+    const ip = reqHeaders.get('x-forwarded-for') || reqHeaders.get('x-real-ip') || 'Unknown IP';
+    const userAgent = reqHeaders.get('user-agent') || 'Unknown Device';
+    
+    // Parse basic device type from User-Agent
+    let device = 'Desktop';
+    if (/mobile/i.test(userAgent)) device = 'Mobile';
+    if (/tablet|ipad/i.test(userAgent)) device = 'Tablet';
+
+    await (prisma as any).userLoginLog.create({
+      data: {
+        userId: user.id,
+        ip,
+        userAgent,
+        device
+      }
+    });
+  } catch (err) {
+    console.error('Failed to log user login (schema might need db push):', err);
+  }
+
   const response = {
     id: user.id,
     name: user.name,
@@ -620,6 +643,37 @@ export async function loginUser(email: string, pass: string) {
 
 export async function logoutUser() {
   cookies().delete('userId');
+}
+
+export async function getUserLoginHistory(userId: string) {
+  try {
+    return await (prisma as any).userLoginLog.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
+  } catch (err) {
+    console.error('Failed to fetch user login history:', err);
+    return [];
+  }
+}
+
+export async function getStoreLoginHistory(storeId: string) {
+  try {
+    const owners = await (prisma as any).user.findMany({
+      where: { storeId, role: 'STORE_OWNER' }
+    });
+    const ownerIds = owners.map((o: any) => o.id);
+    return await (prisma as any).userLoginLog.findMany({
+      where: { userId: { in: ownerIds } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: { user: { select: { name: true } } }
+    });
+  } catch (err) {
+    console.error('Failed to fetch store login history:', err);
+    return [];
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2679,6 +2733,11 @@ export async function createMarketplaceProductAction(data: any) {
       subcategoryId: data.subcategoryId || null,
       vendorId: vendor.id,
       image: image,
+      images: Array.isArray(data.images) ? data.images : [],
+      description: data.description || null,
+      tags: Array.isArray(data.tags) ? data.tags : (data.tags ? data.tags.split(',').map((t: string) => t.trim()) : []),
+      brand: data.brand || null,
+      stockQuantity: data.stockQuantity ? Number(data.stockQuantity) : 0,
       isFeatured: data.isFeatured || false,
       isFlashSale: data.isFlashSale || false,
       discountPrice: data.discount || null,
@@ -2932,6 +2991,10 @@ export async function updateMarketplaceProductAction(id: string, data: any) {
       categoryId: data.categoryId,
       subcategoryId: data.subcategoryId || null,
       image: image,
+      description: data.description || null,
+      tags: Array.isArray(data.tags) ? data.tags : (data.tags ? data.tags.split(',').map((t: string) => t.trim()) : []),
+      brand: data.brand || null,
+      stockQuantity: data.stockQuantity ? Number(data.stockQuantity) : 0,
       isFeatured: data.isFeatured,
       isFlashSale: data.isFlashSale,
       discountPrice: data.discount,

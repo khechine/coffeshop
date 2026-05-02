@@ -4,10 +4,11 @@ import React, { useState, useTransition } from 'react';
 import { 
   Store as StoreIcon, User, MapPin, Coffee, TrendingUp, 
   CreditCard, Monitor, Calendar, Search, Filter, 
-  CheckCircle2, XCircle, Truck, ShieldCheck
+  CheckCircle2, XCircle, Truck, ShieldCheck, History
 } from 'lucide-react';
 import StoreActionButtons from './StoreActionButtons';
-import { toggleStoreMarketplaceAccess } from '../../actions';
+import { toggleStoreMarketplaceAccess, getStoreLoginHistory } from '../../actions';
+import Modal from '../../../components/Modal';
 
 type StoreWithStats = any; // We'll use the type from the server
 
@@ -16,6 +17,20 @@ export default function CafeListClient({ initialStores }: { initialStores: Store
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [cityFilter, setCityFilter] = useState('ALL');
   const [isPending, startTransition] = useTransition();
+
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [loginHistory, setLoginHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedStore, setSelectedStore] = useState<any>(null);
+
+  const handleOpenHistory = async (store: any) => {
+    setSelectedStore(store);
+    setHistoryModalOpen(true);
+    setLoadingHistory(true);
+    const logs = await getStoreLoginHistory(store.id);
+    setLoginHistory(logs);
+    setLoadingHistory(false);
+  };
 
   const cities = Array.from(new Set(initialStores.map(s => s.city).filter(Boolean)));
 
@@ -166,11 +181,61 @@ export default function CafeListClient({ initialStores }: { initialStores: Store
                 </div>
               </div>
 
-              <StoreActionButtons storeId={s.id} />
+              <div className="flex gap-2">
+                 <button 
+                   onClick={() => handleOpenHistory(s)}
+                   className="flex items-center justify-center p-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors"
+                   title="Historique des connexions"
+                 >
+                   <History size={16} />
+                 </button>
+                 <div className="flex-1">
+                   <StoreActionButtons storeId={s.id} />
+                 </div>
+              </div>
             </div>
           );
         })}
       </div>
+
+      <Modal open={historyModalOpen} onClose={() => setHistoryModalOpen(false)} title="Historique des Connexions">
+        <div style={{ minWidth: '400px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>Coffee Shop</div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#1E293B' }}>{selectedStore?.name}</div>
+          </div>
+          
+          <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            {loadingHistory ? (
+              <div style={{ textAlign: 'center', padding: '32px', color: '#64748B' }}>Chargement des traces...</div>
+            ) : loginHistory.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px', color: '#64748B', background: '#F8FAFC', borderRadius: '12px' }}>
+                Aucune connexion récente trouvée pour les propriétaires de ce point de vente.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {loginHistory.map((log: any) => (
+                  <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC', padding: '12px 16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#E0E7FF', color: '#4F46E5', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                         <Monitor size={16} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>
+                          {log.user?.name || 'Inconnu'} <span style={{ color: '#94A3B8', fontWeight: 500, fontSize: '11px' }}>({new Date(log.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })})</span>
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <MapPin size={10} /> {log.ip} • {log.device}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

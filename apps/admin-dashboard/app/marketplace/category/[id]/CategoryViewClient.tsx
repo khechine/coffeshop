@@ -9,9 +9,23 @@ import {
   MapPin, Heart, Store, Navigation, Tag
 } from 'lucide-react';
 import { useCart } from '../../CartContext';
-import CartDrawer from '../../CartDrawer';
+import MarketplaceHeader from '../../components/MarketplaceHeader';
+import MarketplaceFooter from '../../components/MarketplaceFooter';
 import '../../marketplace.css';
 import { sanitizeUrl } from '../../../lib/imageUtils';
+
+const getCategoryColor = (name: string) => {
+  const n = name?.toLowerCase() || '';
+  if (n.includes('caf')) return '#8B5A2B';
+  if (n.includes('thé') || n.includes('infus')) return '#10B981';
+  if (n.includes('lait') || n.includes('chocol')) return '#3B82F6';
+  if (n.includes('jus') || n.includes('boisson')) return '#F59E0B';
+  if (n.includes('pâtis') || n.includes('viennois') || n.includes('sucr')) return '#EC4899';
+  if (n.includes('salé') || n.includes('snack')) return '#EF4444';
+  if (n.includes('machine') || n.includes('equip')) return '#64748B';
+  if (n.includes('emball') || n.includes('jetable')) return '#14B8A6';
+  return '#6366F1';
+};
 
 const fmt = (n: any) => Number(n).toFixed(3);
 
@@ -53,10 +67,30 @@ function ProductCard({ product, onAdd, isVendor }: any) {
         <Link href={`/marketplace/product/${product.id}`} style={{ textDecoration: 'none' }}>
           <h3 className="mkt-cocote-card-title">{product.name}</h3>
         </Link>
+
+        {product.tags && product.tags.length > 0 && (
+          <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+            {product.tags.slice(0, 2).map((t: string) => (
+              <span key={t} style={{ 
+                fontSize: 8, 
+                fontWeight: 900, 
+                textTransform: 'uppercase', 
+                background: t.toLowerCase().includes('bio') ? '#F0FDF4' : '#F8FAFC',
+                color: t.toLowerCase().includes('bio') ? '#166534' : '#64748B',
+                padding: '2px 6px',
+                borderRadius: 4,
+                border: '1px solid #E2E8F0'
+              }}>
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
+
         <Stars avg={avg} total={total} size={11} />
         
         <div className="mkt-cocote-card-footer">
-          <div className="mkt-cocote-price-wrap" style={isVendor ? { filter: 'blur(4px)' } : {}}>
+          <div className="mkt-cocote-price-wrap" style={isVendor ? { filter: 'blur(4px)', userSelect: 'none', pointerEvents: 'none' } : {}}>
              {hasDiscount && <span className="mkt-cocote-old-price">{fmt(product.price)}</span>}
              <span className="mkt-cocote-price">{fmt(hasDiscount ? product.discountPrice : product.price)}</span>
              <span className="mkt-cocote-unit">DT</span>
@@ -75,9 +109,8 @@ function ProductCard({ product, onAdd, isVendor }: any) {
 export default function CategoryViewClient({ category, products, allCategories, isVendor = false }: any) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [search, setSearch] = useState('');
-  const [cartOpen, setCartOpen] = useState(false);
-  const { addToCart, cartCount } = useCart();
+  const search = searchParams.get('search') || '';
+  const { addToCart } = useCart();
   
   // Filters State
   const currentRadius = parseInt(searchParams.get('radius') || '15');
@@ -108,51 +141,28 @@ export default function CategoryViewClient({ category, products, allCategories, 
     return list;
   }, [products, search, selectedBrands, sortOrder]);
 
+  const catColor = getCategoryColor(category.name);
+
+  const parentCategory = allCategories.find((c: any) => c.subcategories?.some((s: any) => s.id === category.id));
+  const displayCategory = category;
+
   return (
     <div className="mkt-page cocote-theme">
-      {/* Header */}
-      <header className="mkt-cocote-header">
-        <div className="mkt-container mkt-cocote-header-inner">
-          <Link href="/marketplace" className="mkt-cocote-logo">
-            <div className="mkt-cocote-logo-icon"><ShoppingBag size={20} /></div>
-            Coffee<span>Market</span>
-          </Link>
+      <MarketplaceHeader isVendor={isVendor} />
 
-          <div className="mkt-cocote-search-wrap">
-            <input
-              type="text"
-              className="mkt-cocote-search-input"
-              placeholder={`Rechercher dans ${category.name}...`}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <button className="mkt-cocote-search-btn"><Search size={18} /></button>
-          </div>
-
-          <div className="mkt-cocote-header-actions">
-            <Link href="/" className="mkt-cocote-action-btn">
-              <LayoutGrid size={18} /> <span className="hidden md:inline">Dashboard</span>
-            </Link>
-            {!isVendor && (
-              <button className="mkt-cocote-cart-btn" onClick={() => setCartOpen(true)}>
-                <ShoppingCart size={20} />
-                <span className="mkt-cocote-cart-text">Panier</span>
-                {cartCount > 0 && <span className="mkt-cocote-cart-badge">{cartCount}</span>}
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* Top Location Bar */}
-      <div className="mkt-cocote-topbar" style={{ background: '#EEF2FF', borderBottom: '1px solid #E0E7FF' }}>
+      {/* Top Location Bar (Breadcrumbs & Filter preview) */}
+      <div className="mkt-cocote-topbar" style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
         <div className="mkt-container mkt-cocote-topbar-inner">
-          <div className="mkt-cocote-loc-trigger text-indigo-600">
-             <MapPin size={14} />
-             <span>Position : <strong>{currentLocation}</strong> (Rayon {currentRadius}km)</span>
-          </div>
-          <div className="mkt-cocote-breadcrumbs">
-             <Link href="/marketplace">Accueil</Link> <ChevronRight size={12} /> <span>{category.name}</span>
+          <div className="mkt-cocote-breadcrumbs" style={{ color: '#64748B' }}>
+             <Link href="/marketplace">Accueil</Link> 
+             <ChevronRight size={12} /> 
+             {parentCategory ? (
+               <>
+                 <Link href={`/marketplace/category/${parentCategory.id}`}>{parentCategory.name}</Link>
+                 <ChevronRight size={12} />
+               </>
+             ) : null}
+             <span style={{ color: catColor, fontWeight: 800 }}>{displayCategory.name}</span>
           </div>
         </div>
       </div>
@@ -165,12 +175,29 @@ export default function CategoryViewClient({ category, products, allCategories, 
             <h3 className="mkt-cocote-filter-title">Catégories</h3>
             <ul className="mkt-cocote-filter-list">
               <li><Link href="/marketplace" className="text-slate-500 hover:text-indigo-600">Toutes les catégories</Link></li>
-              <li><span className="font-bold text-indigo-600">{category.name}</span></li>
-              {(category.subcategories || []).map((sub: any) => (
-                <li key={sub.id} style={{ paddingLeft: 16 }}>
-                   <Link href={`/marketplace/category/${sub.id}`} className="text-slate-500 hover:text-indigo-600 text-sm">{sub.name}</Link>
-                </li>
-              ))}
+              {parentCategory ? (
+                <>
+                  <li><Link href={`/marketplace/category/${parentCategory.id}`} className="text-slate-500 hover:text-indigo-600 font-bold">{parentCategory.name}</Link></li>
+                  {(parentCategory.subcategories || []).map((sub: any) => (
+                    <li key={sub.id} style={{ paddingLeft: 16 }}>
+                       {sub.id === category.id ? (
+                         <span className="font-bold" style={{ color: catColor }}>→ {sub.name}</span>
+                       ) : (
+                         <Link href={`/marketplace/category/${sub.id}`} className="text-slate-500 hover:text-indigo-600 text-sm">→ {sub.name}</Link>
+                       )}
+                    </li>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <li><span className="font-bold" style={{ color: catColor }}>{category.name}</span></li>
+                  {(category.subcategories || []).map((sub: any) => (
+                    <li key={sub.id} style={{ paddingLeft: 16 }}>
+                       <Link href={`/marketplace/category/${sub.id}`} className="text-slate-500 hover:text-indigo-600 text-sm">→ {sub.name}</Link>
+                    </li>
+                  ))}
+                </>
+              )}
             </ul>
           </div>
 
@@ -219,9 +246,9 @@ export default function CategoryViewClient({ category, products, allCategories, 
         {/* ── MAIN CONTENT ── */}
         <div className="mkt-cocote-content" style={{ flex: 1 }}>
           
-          <div className="mkt-cocote-category-header">
+          <div className="mkt-cocote-category-header" style={{ borderLeftColor: catColor }}>
              <div className="mkt-cocote-category-title-wrap">
-               <div className="mkt-cocote-category-icon-large">{category.icon || '📦'}</div>
+               <div className="mkt-cocote-category-icon-large" style={{ color: catColor, background: `${catColor}15` }}>{category.icon || '📦'}</div>
                <div>
                  <h1 className="text-3xl font-black text-slate-900 m-0">{category.name}</h1>
                  <p className="text-slate-500 mt-2">{filteredProducts.length} produits trouvés à proximité de {currentLocation}</p>
@@ -252,14 +279,14 @@ export default function CategoryViewClient({ category, products, allCategories, 
                <Search size={48} style={{ color: '#CBD5E1', margin: '0 auto 16px' }} />
                <h3 className="text-xl font-bold text-slate-900 mb-2">Aucun produit trouvé</h3>
                <p className="text-slate-500">Élargissez votre rayon de recherche ou modifiez vos filtres.</p>
-               <button onClick={() => { setSelectedBrands([]); setSearch(''); }} className="mt-6 px-6 py-3 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors">Réinitialiser les filtres</button>
+               <button onClick={() => { setSelectedBrands([]); router.push(`/marketplace/category/${category.id}`); }} className="mt-6 px-6 py-3 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors">Réinitialiser les filtres</button>
             </div>
           )}
 
         </div>
       </div>
       
-      {!isVendor && cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
+      <MarketplaceFooter />
     </div>
   );
 }

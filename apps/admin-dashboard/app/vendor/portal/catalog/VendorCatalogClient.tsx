@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Plus, Edit2, Trash2, Package, Clock, FileSpreadsheet, Download,
   CheckCircle2, AlertCircle, Loader2, BarChart3, TrendingUp, TrendingDown,
-  Minus, ChevronDown, Tag, Sparkles, ShoppingBag, Search
+  Minus, ChevronDown, Tag, Sparkles, ShoppingBag, Search, X
 } from 'lucide-react';
 import Modal from '../../../../components/Modal';
 import {
@@ -13,6 +13,7 @@ import {
   deleteMarketplaceProductAction, importCsvProductsAction,
   proposeSubCategoryAction, createMarketplaceBundleAction, deleteMarketplaceBundleAction
 } from '../../../actions';
+import { sanitizeUrl } from '../../../lib/imageUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type SubCategory = { id: string; name: string; icon?: string | null };
@@ -213,8 +214,32 @@ export default function VendorCatalogClient({
     return cat.name;
   };
 
+  const handleUpload = async (file: File, isGallery = false) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
+      const res = await fetch(`${API_URL}/management/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.url) {
+        const cleanUrl = sanitizeUrl(data.url);
+        if (isGallery) {
+          setForm((f: any) => ({ ...f, images: [...(f.images || []), cleanUrl].slice(0, 5) }));
+        } else {
+          setForm((f: any) => ({ ...f, image: cleanUrl, imagePreview: cleanUrl }));
+        }
+      }
+    } catch (e) {
+      alert('Erreur upload');
+    }
+  };
+
   const [form, setForm] = useState<any>({
     name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', showUrlInput: false,
+    description: '', tags: '', images: [],
     isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQty: '1', stockQuantity: '0',
     collectionIds: []
   });
@@ -230,6 +255,9 @@ export default function VendorCatalogClient({
       flashEnd:   p.flashEnd   ? new Date(p.flashEnd).toISOString().slice(0, 16) : '',
       minOrderQty: p.minOrderQty ? p.minOrderQty.toString() : '1',
       stockQuantity: p.stockQuantity ? p.stockQuantity.toString() : '0',
+      description: p.description || '',
+      tags: Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || ''),
+      images: p.images || [],
       collectionIds: (p.collections || []).map((c: any) => c.id)
     });
     setModalOpen(true);
@@ -240,7 +268,7 @@ export default function VendorCatalogClient({
     setForm({ 
       name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', 
       showUrlInput: false, isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', 
-      minOrderQty: '1', stockQuantity: '0', collectionIds: [] 
+      minOrderQty: '1', stockQuantity: '0', description: '', tags: '', images: [], collectionIds: [] 
     });
     setModalOpen(true);
   };
@@ -601,6 +629,57 @@ export default function VendorCatalogClient({
                <div><label className={labelClass}>Marque</label><input className={inputClass} value={form.brand} onChange={e => setForm({...form, brand: e.target.value})} placeholder="Marque ou Générique" /></div>
             </div>
           </div>
+
+          <div className="space-y-4">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Image Upload */}
+                <div className="md:col-span-1">
+                   <label className={labelClass}>Image Produit</label>
+                   <div className="relative group aspect-square rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden">
+                      {form.imagePreview ? (
+                        <img src={form.imagePreview} className="w-full h-full object-cover" />
+                      ) : (
+                        <Plus size={24} className="text-slate-300" />
+                      )}
+                      <input type="file" id="prod-img" className="hidden" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0])} />
+                      <label htmlFor="prod-img" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white cursor-pointer transition-all font-black text-[10px] uppercase tracking-widest">
+                         Changer
+                      </label>
+                   </div>
+                </div>
+
+                {/* Gallery Upload */}
+                <div className="md:col-span-2 space-y-4">
+                   <label className={labelClass}>Galerie (Max 5 images)</label>
+                   <div className="flex flex-wrap gap-2">
+                      {(form.images || []).map((img: string, idx: number) => (
+                        <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-200">
+                           <img src={img} className="w-full h-full object-cover" />
+                           <button type="button" onClick={() => setForm((f: any) => ({ ...f, images: f.images.filter((_: any, i: number) => i !== idx) }))} className="absolute top-0 right-0 p-1 bg-rose-500 text-white rounded-bl-lg">
+                              <X size={10} />
+                           </button>
+                        </div>
+                      ))}
+                      {(form.images || []).length < 5 && (
+                        <label className="w-16 h-16 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300 cursor-pointer hover:border-indigo-400 hover:text-indigo-400 transition-all">
+                           <Plus size={20} />
+                           <input type="file" className="hidden" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0], true)} />
+                        </label>
+                      )}
+                   </div>
+                   
+                   <div>
+                     <label className={labelClass}>Description & Origine (B2B)</label>
+                     <textarea className={`${inputClass} min-h-[100px] py-3 resize-none`} placeholder="Décrivez l'origine, la qualité, conseils..." value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
+                   </div>
+                   <div>
+                     <label className={labelClass}>Mots-clés / Labels (séparés par virgule)</label>
+                     <input className={inputClass} placeholder="ex: Bio, Artisanal, Made in Tunisia..." value={form.tags} onChange={e => setForm({...form, tags: e.target.value})} />
+                   </div>
+                </div>
+             </div>
+          </div>
+
           <div className="flex gap-4 pt-4"><button type="button" className="flex-1 py-4 bg-slate-50 text-slate-500 rounded-2xl font-black text-sm" onClick={() => setModalOpen(false)}>Annuler</button><button type="submit" className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl font-black text-sm shadow-xl" disabled={isPending}>{isPending ? <Loader2 className="animate-spin mx-auto" /> : (editingId ? 'Mettre à jour' : 'Publier')}</button></div>
         </form>
       </Modal>

@@ -278,7 +278,7 @@ export default function MarketplaceMapClient({ data, isVendor = false }: { data:
                          </div>
                          <div>
                             <div style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B' }}>{p.name}</div>
-                            <div style={{ fontSize: '12px', color: '#4F46E5', fontWeight: 700, filter: isVendor ? 'blur(4px)' : 'none' }}>{Number(p.price).toFixed(3)} DT / {p.unit}</div>
+                            <div style={{ fontSize: '12px', color: '#4F46E5', fontWeight: 700, filter: isVendor ? 'blur(4px)' : 'none', userSelect: isVendor ? 'none' : 'auto', pointerEvents: isVendor ? 'none' : 'auto' }}>{Number(p.price).toFixed(3)} DT / {p.unit}</div>
                          </div>
                       </div>
                     ))}

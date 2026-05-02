@@ -11,10 +11,27 @@ export default async function CategoryPage({ params }: { params: { id: string } 
   const isVendor = user?.role === 'VENDOR';
   const data = await getMarketplaceData();
   
-  const category = data.categories.find((c: any) => c.id === id || c.slug === id);
+  // 1. Find category or subcategory
+  let category = data.categories.find((c: any) => c.id === id || c.slug === id);
+  let isSubcategory = false;
+
+  if (!category) {
+    for (const root of data.categories) {
+      const sub = (root.subcategories || []).find((s: any) => s.id === id || s.slug === id);
+      if (sub) {
+        category = sub;
+        isSubcategory = true;
+        break;
+      }
+    }
+  }
+
   if (!category) return notFound();
 
-  const products = data.products.filter((p: any) => p.categoryId === category.id);
+  // 2. Filter products
+  const products = data.products.filter((p: any) => 
+    isSubcategory ? p.subcategoryId === category.id : p.categoryId === category.id
+  );
 
   // Robust serialization for Prisma types (Decimal, Date, etc)
   const serializedData = JSON.parse(JSON.stringify({ category, products, allCategories: data.categories }, (key, value) => 

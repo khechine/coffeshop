@@ -9,7 +9,8 @@ import {
   Tag, Award, Navigation, Percent
 } from 'lucide-react';
 import { useCart } from './CartContext';
-import CartDrawer from './CartDrawer';
+import MarketplaceHeader from './components/MarketplaceHeader';
+import MarketplaceFooter from './components/MarketplaceFooter';
 import './marketplace.css';
 import { sanitizeUrl } from '../lib/imageUtils';
 
@@ -63,10 +64,30 @@ function ProductCard({ product, onAdd, isVendor }: any) {
         <Link href={`/marketplace/product/${product.id}`} style={{ textDecoration: 'none' }}>
           <h3 className="mkt-cocote-card-title">{product.name}</h3>
         </Link>
+
+        {product.tags && product.tags.length > 0 && (
+          <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+            {product.tags.slice(0, 2).map((t: string) => (
+              <span key={t} style={{ 
+                fontSize: 8, 
+                fontWeight: 900, 
+                textTransform: 'uppercase', 
+                background: t.toLowerCase().includes('bio') ? '#F0FDF4' : '#F8FAFC',
+                color: t.toLowerCase().includes('bio') ? '#166534' : '#64748B',
+                padding: '2px 6px',
+                borderRadius: 4,
+                border: '1px solid #E2E8F0'
+              }}>
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
+
         <Stars avg={avg} total={total} size={11} />
         
         <div className="mkt-cocote-card-footer">
-          <div className="mkt-cocote-price-wrap" style={isVendor ? { filter: 'blur(4px)' } : {}}>
+          <div className="mkt-cocote-price-wrap" style={isVendor ? { filter: 'blur(4px)', userSelect: 'none', pointerEvents: 'none' } : {}}>
              {hasDiscount && <span className="mkt-cocote-old-price">{fmt(product.price)}</span>}
              <span className="mkt-cocote-price">{fmt(hasDiscount ? product.discountPrice : product.price)}</span>
              <span className="mkt-cocote-unit">DT</span>
@@ -110,12 +131,9 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
   const searchParams = useSearchParams();
   const currentRadius = parseInt(searchParams.get('radius') || '15');
   const currentLocation = searchParams.get('loc') || 'Tunis';
+  const search = searchParams.get('search') || '';
   
   const { products = [], categories = [], flashSales = [] } = initialData;
-
-  const [cartOpen, setCartOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [locModalOpen, setLocModalOpen] = useState(false);
 
   const { addToCart, cartCount } = useCart();
 
@@ -141,54 +159,7 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
   return (
     <div className="mkt-page cocote-theme">
       
-      {/* ── Top Bar (Location) ── */}
-      <div className="mkt-cocote-topbar">
-        <div className="mkt-container mkt-cocote-topbar-inner">
-          <div className="mkt-cocote-loc-trigger" onClick={() => setLocModalOpen(true)}>
-             <MapPin size={14} />
-             <span>Votre position : <strong>{currentLocation}</strong> (Rayon {currentRadius}km)</span>
-             <ChevronRight size={12} />
-          </div>
-          <div className="mkt-cocote-topbar-links">
-             <Link href="/marketplace/vendors">Devenir Vendeur</Link>
-             <Link href="/marketplace/about">Le concept Proximité</Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Header ── */}
-      <header className="mkt-cocote-header">
-        <div className="mkt-container mkt-cocote-header-inner">
-          <Link href="/marketplace" className="mkt-cocote-logo">
-            <div className="mkt-cocote-logo-icon"><ShoppingBag size={20} /></div>
-            Coffee<span>Market</span>
-          </Link>
-
-          <div className="mkt-cocote-search-wrap">
-            <input
-              type="text"
-              className="mkt-cocote-search-input"
-              placeholder="Rechercher un produit, une marque, un commerce..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <button className="mkt-cocote-search-btn"><Search size={18} /></button>
-          </div>
-
-          <div className="mkt-cocote-header-actions">
-            <Link href="/" className="mkt-cocote-action-btn">
-              <LayoutGrid size={18} /> <span className="hidden md:inline">Dashboard</span>
-            </Link>
-            {!isVendor && (
-              <button className="mkt-cocote-cart-btn" onClick={() => setCartOpen(true)}>
-                <ShoppingCart size={20} />
-                <span className="mkt-cocote-cart-text">Panier</span>
-                {cartCount > 0 && <span className="mkt-cocote-cart-badge">{cartCount}</span>}
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+      <MarketplaceHeader isVendor={isVendor} />
 
       {/* ── Categories Navigation ── */}
       <nav className="mkt-cocote-nav">
@@ -333,45 +304,7 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
 
       </div>
 
-      {/* ── Location Modal ── */}
-      {locModalOpen && (
-        <div className="mkt-modal-backdrop" onClick={() => setLocModalOpen(false)}>
-          <div className="mkt-modal mkt-cocote-loc-modal" onClick={e=>e.stopPropagation()}>
-            <button className="mkt-modal-close" onClick={() => setLocModalOpen(false)}><X size={18} /></button>
-            <h3 className="mkt-cocote-modal-title">Où souhaitez-vous chercher ?</h3>
-            <p className="mkt-cocote-modal-desc">Modifiez votre position pour découvrir les offres locales pertinentes.</p>
-            
-            <div className="mkt-cocote-loc-form">
-               <label>Ville ou Code Postal</label>
-               <select className="mkt-cocote-input" defaultValue={currentLocation} onChange={(e) => {
-                 const params = new URLSearchParams(searchParams.toString());
-                 params.set('loc', e.target.value);
-                 router.push(`/marketplace?${params.toString()}`);
-                 setLocModalOpen(false);
-               }}>
-                 {tunisianCities.map(c => <option key={c} value={c}>{c}</option>)}
-               </select>
-               
-               <label style={{ marginTop: 16 }}>Rayon de recherche (km)</label>
-               <div className="mkt-cocote-radius-slider">
-                 <input type="range" min="5" max="100" step="5" defaultValue={currentRadius} onChange={(e) => {
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.set('radius', e.target.value);
-                    router.push(`/marketplace?${params.toString()}`);
-                 }} />
-                 <div className="mkt-cocote-radius-labels">
-                    <span>5km</span><span>50km</span><span>100km</span>
-                 </div>
-               </div>
-               
-               <button className="mkt-cocote-btn-primary" onClick={() => setLocModalOpen(false)}>Valider ma position</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cart Drawer */}
-      {!isVendor && cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
+      <MarketplaceFooter />
     </div>
   );
 }
