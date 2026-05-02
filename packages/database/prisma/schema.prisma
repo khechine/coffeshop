@@ -387,6 +387,7 @@ model VendorProduct {
   // Données spécifiques vendeur
   price           Decimal
   minOrderQty     Decimal  @default(1)
+  stockQuantity   Decimal  @default(0)
   stockStatus     StockStatus @default(IN_STOCK)
   stockThreshold  Decimal  @default(5)
   

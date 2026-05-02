@@ -13,7 +13,7 @@ import { sanitizeUrl } from '../../../lib/imageUtils';
 
 const fmt = (n: any) => Number(n).toFixed(3);
 
-export default function CategoryViewClient({ category, products, allCategories }: any) {
+export default function CategoryViewClient({ category, products, allCategories, isVendor = false }: any) {
   const [search, setSearch] = useState('');
   const [cartOpen, setCartOpen] = useState(false);
   const { addToCart, cartCount } = useCart();
@@ -47,10 +47,12 @@ export default function CategoryViewClient({ category, products, allCategories }
             <Link href="/" className="mkt-header-btn" style={{ textDecoration: 'none' }}>
               <LayoutGrid size={16} /> Dashboard
             </Link>
-            <button className="mkt-cart-btn" onClick={() => setCartOpen(true)}>
-              <ShoppingCart size={20} />
-              {cartCount > 0 && <span className="mkt-cart-badge">{cartCount}</span>}
-            </button>
+            {!isVendor && (
+              <button className="mkt-cart-btn" onClick={() => setCartOpen(true)}>
+                <ShoppingCart size={20} />
+                {cartCount > 0 && <span className="mkt-cart-badge">{cartCount}</span>}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -107,11 +109,13 @@ export default function CategoryViewClient({ category, products, allCategories }
             <div key={p.id} className="mkt-card">
               <Link href={`/marketplace/product/${p.id}`} style={{ textDecoration: 'none' }} className="mkt-card-img">
                 <img src={sanitizeUrl(p.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'} alt={p.name} />
-                <div className="mkt-card-add">
-                  <button className="mkt-card-add-btn" onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCart(p); }}>
-                    <Plus size={14} /> AJOUTER
-                  </button>
-                </div>
+                {!isVendor && (
+                  <div className="mkt-card-add">
+                    <button className="mkt-card-add-btn" onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCart(p); }}>
+                      <Plus size={14} /> AJOUTER
+                    </button>
+                  </div>
+                )}
               </Link>
               <div className="mkt-card-body">
                 <Link href={`/marketplace/vendor/${p.vendor?.id}`} style={{ textDecoration: 'none' }} className="mkt-card-vendor">
@@ -121,14 +125,14 @@ export default function CategoryViewClient({ category, products, allCategories }
                    <div className="mkt-card-name">{p.name}</div>
                 </Link>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                   <div className="mkt-card-price">{fmt(p.price)} <span className="mkt-card-unit">DT/{p.unit}</span></div>
+                   <div className="mkt-card-price" style={isVendor ? { filter: 'blur(5px)' } : {}}>{fmt(p.price)} <span className="mkt-card-unit">DT/{p.unit}</span></div>
                 </div>
               </div>
             </div>
           ))}
         </div>
       </div>
-      {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
+      {!isVendor && cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
     </div>
   );
 }

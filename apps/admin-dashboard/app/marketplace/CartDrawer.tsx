@@ -43,7 +43,22 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
                   <span className="mkt-cart-item-price">{fmt(Number(item.price)*item.quantity)} DT</span>
                 </div>
               </div>
-              <button className="mkt-cart-remove" onClick={()=>removeItem(item.id)}><X size={14} /></button>
+              <button 
+                className="mkt-cart-remove" 
+                onClick={() => removeItem(item.id)}
+                title="Supprimer du panier"
+                style={{ 
+                  padding: '8px', 
+                  borderRadius: '10px', 
+                  background: '#FEF2F2', 
+                  color: '#EF4444',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <X size={16} />
+              </button>
             </div>
           ))}
         </div>

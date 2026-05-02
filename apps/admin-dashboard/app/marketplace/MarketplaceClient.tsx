@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ShoppingCart, ShoppingBag, Search, X, Plus, Minus, Send,
@@ -114,7 +115,7 @@ function AdsBanner({ banner, fallback }: { banner?: any; fallback: { title: stri
 }
 
 /* ─── Product Card ─── */
-function ProductCard({ product, onAdd, onDetail }: any) {
+function ProductCard({ product, onAdd, onDetail, isVendor }: any) {
   const avg = product.vendor?.ratings?.overallAvg || 0;
   const total = product.vendor?.ratings?.totalReviews || 0;
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
@@ -127,11 +128,13 @@ function ProductCard({ product, onAdd, onDetail }: any) {
           alt={product.name}
           onError={(e:any)=>{e.target.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400';}}
         />
-        <div className="mkt-card-add">
-          <button className="mkt-card-add-btn" onClick={(e)=>{e.preventDefault();e.stopPropagation();onAdd(product);}}>
-            <Plus size={14} /> AJOUTER AU PANIER
-          </button>
-        </div>
+        {!isVendor && (
+          <div className="mkt-card-add">
+            <button className="mkt-card-add-btn" onClick={(e)=>{e.preventDefault();e.stopPropagation();onAdd(product);}}>
+              <Plus size={14} /> AJOUTER AU PANIER
+            </button>
+          </div>
+        )}
         {product.isFlashSale && <span className="mkt-card-badge flash">⚡ Flash</span>}
         {!product.isFlashSale && product.isFeatured && <span className="mkt-card-badge featured">⭐ Vedette</span>}
         <button className="mkt-card-wish"><Heart size={14} /></button>
@@ -143,8 +146,8 @@ function ProductCard({ product, onAdd, onDetail }: any) {
         </Link>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
           <div>
-            {hasDiscount && <span className="mkt-card-old-price">{fmt(product.price)}</span>}
-            <span className="mkt-card-price">{fmt(hasDiscount ? product.discountPrice : product.price)}</span>
+            {hasDiscount && <span className="mkt-card-old-price" style={isVendor ? { filter: 'blur(4px)', opacity: 0.5 } : {}}>{fmt(product.price)}</span>}
+            <span className="mkt-card-price" style={isVendor ? { filter: 'blur(5px)' } : {}}>{fmt(hasDiscount ? product.discountPrice : product.price)}</span>
             <span className="mkt-card-unit">DT/{product.unit}</span>
           </div>
         </div>
@@ -155,7 +158,7 @@ function ProductCard({ product, onAdd, onDetail }: any) {
 }
 
 /* ─── Product Modal ─── */
-function ProductModal({ product, categories, onClose, onAdd }: any) {
+function ProductModal({ product, categories, onClose, onAdd, isVendor }: any) {
   const catName = categories.find((c:any) => c.id === product.categoryId)?.name || 'Produit';
   return (
     <div className="mkt-modal-backdrop" onClick={onClose}>
@@ -174,7 +177,7 @@ function ProductModal({ product, categories, onClose, onAdd }: any) {
           </div>
           <h2 style={{ fontSize:28, fontWeight:950, color:'#1E1B4B', margin:'0 0 20px', lineHeight:1.2 }}>{product.name}</h2>
           <div style={{ display:'flex', alignItems:'baseline', gap:10, marginBottom:28 }}>
-            <span style={{ fontSize:36, fontWeight:950, color:'#1E1B4B' }}>{fmt(product.price)}</span>
+            <span style={{ fontSize:36, fontWeight:950, color:'#1E1B4B', filter: isVendor ? 'blur(8px)' : 'none' }}>{fmt(product.price)}</span>
             <span style={{ fontSize:16, color:'#94A3B8', fontWeight:700 }}>DT / {product.unit}</span>
           </div>
           {product.description && (
@@ -190,12 +193,18 @@ function ProductModal({ product, categories, onClose, onAdd }: any) {
               </div>
             </div>
           </div>
-          <button
-            onClick={() => { onAdd(product); onClose(); }}
-            style={{ width:'100%', padding:20, background:'#1E1B4B', color:'#fff', border:'none', borderRadius:18, fontWeight:900, fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:12, boxShadow:'0 10px 24px rgba(30,27,75,0.25)', transition:'all 0.2s', marginTop:'auto' }}
-          >
-            <Plus size={20} /> Ajouter au Panier
-          </button>
+          {!isVendor ? (
+            <button
+              onClick={() => { onAdd(product); onClose(); }}
+              style={{ width:'100%', padding:20, background:'#1E1B4B', color:'#fff', border:'none', borderRadius:18, fontWeight:900, fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:12, boxShadow:'0 10px 24px rgba(30,27,75,0.25)', transition:'all 0.2s', marginTop:'auto' }}
+            >
+              <Plus size={20} /> Ajouter au Panier
+            </button>
+          ) : (
+            <div style={{ background: '#F1F5F9', color: '#64748B', padding: '16px', borderRadius: '16px', textAlign: 'center', fontSize: '13px', fontWeight: 700 }}>
+              Connectez-vous en tant qu'acheteur pour commander
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -203,7 +212,10 @@ function ProductModal({ product, categories, onClose, onAdd }: any) {
 }
 
 /* ─── MAIN CLIENT ─── */
-export default function MarketplaceClient({ initialData }: { initialData: any }) {
+export default function MarketplaceClient({ initialData, isVendor = false }: { initialData: any; isVendor?: boolean }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentRadius = parseInt(searchParams.get('radius') || '5');
   const { products = [], categories = [], bundles = [], flashSales = [], featured = [], banners = [] } = initialData;
 
   const [activeCat, setActiveCat] = useState('all');
@@ -213,7 +225,14 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
   const [announce, setAnnounce] = useState(true);
   const [search, setSearch] = useState('');
 
+
   const { addToCart, cartCount } = useCart();
+
+  const handleRadiusChange = (newRadius: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('radius', newRadius.toString());
+    router.push(`/marketplace?${params.toString()}`);
+  };
 
   // Map banners by position
   const getBanner = (pos: string) => banners.find((b: any) => b.position === pos && b.isActive);
@@ -299,22 +318,57 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
       {/* Main Container */}
       <div className="mkt-container">
 
-        {/* ── Proximity Info Bar ── */}
         <div style={{
           display: 'flex',
-          alignItems: 'center',
-          gap: 10,
+          flexDirection: 'column',
           background: '#EEF2FF',
           border: '1px solid #C7D2FE',
-          borderRadius: 16,
-          padding: '10px 18px',
+          borderRadius: 24,
+          padding: '16px 20px',
           marginBottom: 24,
-          fontSize: 13,
-          fontWeight: 700,
-          color: '#4338CA'
+          gap: 16
         }}>
-          <span style={{ fontSize: 18 }}>📍</span>
-          <span>Fournisseurs affichés par défaut dans un rayon de <strong>5 km</strong> autour de votre café</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 24 }}>📍</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 900, color: '#4338CA', marginBottom: 2 }}>Zone de Recherche</div>
+              <div style={{ fontSize: 12, color: '#6366F1', fontWeight: 600 }}>Affichage des fournisseurs dans un rayon de <strong>{currentRadius} km</strong></div>
+            </div>
+            <div className="mkt-radius-pills" style={{ display: 'flex', gap: 6 }}>
+              {[5, 10, 20, 50, 100].map(r => (
+                <button
+                  key={r}
+                  onClick={() => router.push(`/marketplace?radius=${r}`)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 10,
+                    fontSize: 11,
+                    fontWeight: 900,
+                    transition: 'all 0.2s',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: currentRadius === r ? '#4338CA' : '#fff',
+                    color: currentRadius === r ? '#fff' : '#4338CA',
+                    boxShadow: currentRadius === r ? '0 4px 12px rgba(67,56,202,0.2)' : 'none'
+                  }}
+                >
+                  {r} km
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div style={{ position: 'relative', height: 6, background: '#D1D5DB', borderRadius: 3, overflow: 'hidden' }}>
+             <div style={{ 
+               position: 'absolute', 
+               left: 0, 
+               top: 0, 
+               height: '100%', 
+               width: `${Math.min(100, (currentRadius / 100) * 100)}%`, 
+               background: '#4338CA',
+               transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+             }} />
+          </div>
         </div>
 
         {/* ── Search Results Overlay ── */}
@@ -380,7 +434,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
           </div>
           <div className="mkt-grid">
             {dealProducts.slice(0, 5).map((p: any) => (
-              <ProductCard key={p.id} product={p} onAdd={addToCart} onDetail={() => setModal(p)} />
+              <ProductCard key={p.id} product={p} onAdd={addToCart} onDetail={() => setModal(p)} isVendor={isVendor} />
             ))}
           </div>
         </section>
@@ -410,7 +464,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
           </div>
           <div className="mkt-grid">
             {tabProducts.slice(0, 10).map((p: any) => (
-              <ProductCard key={p.id} product={p} onAdd={addToCart} onDetail={() => setModal(p)} />
+              <ProductCard key={p.id} product={p} onAdd={addToCart} onDetail={() => setModal(p)} isVendor={isVendor} />
             ))}
           </div>
           {tabProducts.length > 10 && (
@@ -448,7 +502,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
               </div>
               <div className="mkt-grid">
                 {catProds.slice(0, 5).map((p: any) => (
-                  <ProductCard key={p.id} product={p} onAdd={addToCart} onDetail={() => setModal(p)} />
+                  <ProductCard key={p.id} product={p} onAdd={addToCart} onDetail={() => setModal(p)} isVendor={isVendor} />
                 ))}
               </div>
             </section>
@@ -457,22 +511,9 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
 
       </div>
 
-      {/* ── Cart Drawer ── */}
-      {cartOpen && (
-        <CartDrawer
-          onClose={() => setCartOpen(false)}
-        />
-      )}
-
-      {/* ── Product Modal ── */}
-      {modal && (
-        <ProductModal
-          product={modal}
-          categories={categories}
-          onClose={() => setModal(null)}
-          onAdd={addToCart}
-        />
-      )}
+      {/* ── Modals & Drawers ── */}
+      {modal && <ProductModal product={modal} categories={categories} onClose={() => setModal(null)} onAdd={addToCart} isVendor={isVendor} />}
+      {!isVendor && cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
     </div>
   );
 }

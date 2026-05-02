@@ -1025,7 +1025,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-export async function getMarketplaceData(userLat?: number, userLng?: number) {
+export async function getMarketplaceData(userLat?: number, userLng?: number, radius: number = 5) {
   const hasWalletModel = !!(prisma as any).vendorWallet;
   let activeVendorIds: Set<string> | null = null;
 
@@ -1204,6 +1204,18 @@ export async function getMarketplaceData(userLat?: number, userLng?: number) {
   let flashSales = filterByWallet(flashSalesRaw).map(mapProduct);
   let products = filterByWallet(productsRaw).map(mapProduct);
   let bundles = filterByWallet(bundlesRaw).map(mapBundle);
+
+  // Filter by distance if radius is specified and user coords are available
+  if (userLat && userLng && radius) {
+    const filterByDistance = (item: any) => {
+      if (item.distance === null) return false;
+      return item.distance <= radius;
+    };
+    products = products.filter(filterByDistance);
+    bundles = bundles.filter(filterByDistance);
+    featured = featured.filter(filterByDistance);
+    flashSales = flashSales.filter(filterByDistance);
+  }
 
   // Sorting by distance if user coords are provided
   if (userLat && userLng) {

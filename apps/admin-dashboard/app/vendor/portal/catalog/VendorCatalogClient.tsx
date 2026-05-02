@@ -50,6 +50,19 @@ function CategorySelector({
 }) {
   const [parentId, setParentId] = useState<string>('');
 
+  // Sync parentId if value (subcategoryId or categoryId) is provided
+  React.useEffect(() => {
+    if (!value) return;
+    // Check if value is a parent category
+    if (categoryTree.some(c => c.id === value)) {
+      setParentId(value);
+    } else {
+      // Check if value is a subcategory
+      const parent = categoryTree.find(c => c.subcategories?.some(s => s.id === value));
+      if (parent) setParentId(parent.id);
+    }
+  }, [value, categoryTree]);
+
   const selectedParent = categoryTree.find(c => c.id === parentId);
   const hasSubcategories = selectedParent && (selectedParent.subcategories?.length || 0) > 0;
 
@@ -203,7 +216,7 @@ export default function VendorCatalogClient({
 
   const [form, setForm] = useState<any>({
     name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', showUrlInput: false,
-    isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQty: '1',
+    isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQty: '1', stockQuantity: '0',
     collectionIds: []
   });
 
@@ -217,6 +230,7 @@ export default function VendorCatalogClient({
       flashStart: p.flashStart ? new Date(p.flashStart).toISOString().slice(0, 16) : '',
       flashEnd:   p.flashEnd   ? new Date(p.flashEnd).toISOString().slice(0, 16) : '',
       minOrderQty: p.minOrderQty ? p.minOrderQty.toString() : '1',
+      stockQuantity: p.stockQuantity ? p.stockQuantity.toString() : '0',
       collectionIds: (p.collections || []).map((c: any) => c.id)
     });
     setModalOpen(true);
@@ -227,7 +241,7 @@ export default function VendorCatalogClient({
     setForm({ 
       name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', 
       showUrlInput: false, isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', 
-      minOrderQty: '1', collectionIds: [] 
+      minOrderQty: '1', stockQuantity: '0', collectionIds: [] 
     });
     setModalOpen(true);
   };
@@ -237,7 +251,7 @@ export default function VendorCatalogClient({
     const rows = initialProducts.map(p => {
       const catLabel = getCategoryLabel(p.categoryId);
       const subLabel = (p as any).subcategoryId ? getSubcategoryLabel((p as any).subcategoryId) : '';
-      return `"${p.name}",${Number(p.price).toFixed(3)},${p.unit},"${catLabel}","${subLabel}",${Number(p.minOrderQty || 1)},"${(p as any).brand || ''}","${p.image || ''}","${(p.description || '').replace(/"/g, '""')}","${(p.stockStatus || 'IN_STOCK')}"`;
+      return `"${p.name}",${Number(p.price).toFixed(3)},${p.unit},"${catLabel}","${subLabel}",${Number(p.minOrderQty || 1)},"${(p as any).brand || ''}","${p.image || ''}","${(p.description || '').replace(/"/g, '""')}","${(p.stockStatus || 'IN_STOCK')}",${Number(p.stockQuantity || 0)}`;
     }).join('\n');
     const blob = new Blob([`${header}\n${rows}`], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -287,6 +301,8 @@ export default function VendorCatalogClient({
         const description = descIdx >= 0 ? cols[descIdx] : '';
         const stockIdx = getIdx('stock');
         const stockStatus = stockIdx >= 0 ? cols[stockIdx] : 'IN_STOCK';
+        const stockQuantityIdx = getIdx('stockquantity');
+        const stockQuantity = stockQuantityIdx >= 0 ? parseFloat(cols[stockQuantityIdx].replace(',', '.')) : 0;
         
         const price = parseFloat(priceRaw.replace(',', '.'));
         const minOrderQty = minOrderQtyRaw ? parseFloat(minOrderQtyRaw.replace(',', '.')) : 1;
@@ -305,7 +321,8 @@ export default function VendorCatalogClient({
           image: image?.startsWith('http') ? image : '',
           minOrderQty: isNaN(minOrderQty) ? 1 : minOrderQty,
           description: description || undefined,
-          stockStatus: stockStatus || 'IN_STOCK'
+          stockStatus: stockStatus || 'IN_STOCK',
+          stockQuantity: isNaN(stockQuantity) ? 0 : stockQuantity
         });
       });
       setCsvRows(parsed); setCsvErrors(errors); setCsvStep('preview');
@@ -333,6 +350,7 @@ export default function VendorCatalogClient({
         ...form,
         price: parseFloat(form.price),
         minOrderQty: parseFloat(form.minOrderQty),
+        stockQuantity: parseFloat(form.stockQuantity),
         brand: form.brand || null,
         discount:   form.isFlashSale ? parseFloat(form.discount) : null,
         flashStart: form.isFlashSale && form.flashStart ? new Date(form.flashStart).toISOString() : null,
@@ -536,6 +554,12 @@ export default function VendorCatalogClient({
                     <div className="flex items-baseline gap-1">
                       <span className="text-xl font-bold text-slate-900">{Number(p.price).toFixed(3)}</span>
                       <span className="text-xs text-slate-500">DT / {p.unit}</span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <div className={`w-2 h-2 rounded-full ${Number(p.stockQuantity) > 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        Stock : {Number(p.stockQuantity)} {p.unit}
+                      </span>
                     </div>
                   </div>
                   <div className="flex gap-1">
@@ -858,6 +882,10 @@ export default function VendorCatalogClient({
             <div>
               <label className={labelClass}>Qte Min</label>
               <input className={inputClass} type="number" step="0.5" value={form.minOrderQty} onChange={e => setForm({...form, minOrderQty: e.target.value})} required />
+            </div>
+            <div>
+              <label className={labelClass}>Stock Réel</label>
+              <input className={inputClass} type="number" step="0.1" value={form.stockQuantity} onChange={e => setForm({...form, stockQuantity: e.target.value})} required />
             </div>
           </div>
 

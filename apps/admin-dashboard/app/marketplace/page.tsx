@@ -1,16 +1,21 @@
-import { getMarketplaceData, getStore } from '../actions';
+import { getMarketplaceData, getStore, getUser } from '../actions';
 import { ShoppingCart, Package, Lock } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 import MarketplaceClient from './MarketplaceClient';
 
-export default async function MarketplacePage() {
+export default async function MarketplacePage({ searchParams }: { searchParams: any }) {
+  const params = await searchParams;
+  const radius = params.radius ? parseInt(params.radius) : 5;
   const store = await getStore();
-  const hasMarketplace = store && (store as any)?.hasMarketplace === true;
+  const user = await getUser();
+  const isVendor = user?.role === 'VENDOR';
+  const hasMarketplace = isVendor || (store && (store as any)?.hasMarketplace === true);
   const data = await getMarketplaceData(
     store?.lat ? Number(store.lat) : undefined,
-    store?.lng ? Number(store.lng) : undefined
+    store?.lng ? Number(store.lng) : undefined,
+    radius
   );
 
   if (!hasMarketplace) {
@@ -43,6 +48,7 @@ export default async function MarketplacePage() {
   return (
     <MarketplaceClient 
       initialData={serializedData} 
+      isVendor={isVendor}
     />
   );
 }
