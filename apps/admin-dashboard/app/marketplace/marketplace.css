@@ -102,6 +102,165 @@
 .mkt-catmenu-item.active { background:#1E1B4B; color:#fff; }
 .mkt-catmenu-divider { width:1px; height:24px; background:#F1F5F9; margin:0 4px; flex-shrink:0; }
 
+/* Mega Menu Styles */
+.mkt-megamenu-trigger {
+  position: static; /* Required for full-width panel */
+}
+
+.mkt-megamenu-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  width: 100%;
+  background: white;
+  border-top: 1px solid #F1F5F9;
+  border-bottom: 1px solid #F1F5F9;
+  padding: 40px 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(10px);
+  z-index: 500;
+  pointer-events: none;
+}
+
+.mkt-megamenu-trigger:hover .mkt-megamenu-panel {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: all;
+}
+
+.mkt-mega-grid {
+  display: grid;
+  gap: 40px;
+}
+
+/* ── Mega Menu ── */
+.mkt-megamenu-trigger {
+  position: static;
+}
+
+.mkt-megamenu-overlay {
+  position: fixed;
+  top: 154px; 
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 490;
+  pointer-events: none;
+}
+
+.mkt-megamenu-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-top: 1px solid #f1f5f9;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 500;
+  padding: 40px 0;
+  pointer-events: none;
+}
+
+.mkt-megamenu-trigger:hover .mkt-megamenu-panel {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: all;
+}
+
+.mkt-megamenu-trigger:hover .mkt-megamenu-overlay {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mkt-mega-grid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 60px;
+  align-items: start;
+}
+
+.mkt-mega-col-main {
+  border-right: 1px solid #f1f5f9;
+  padding-right: 40px;
+}
+
+.mkt-mega-featured-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  padding: 32px;
+  border-radius: 24px;
+  border: 1px solid #e2e8f0;
+}
+
+.mkt-mega-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 900;
+  color: #6366f1;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+}
+
+.mkt-mega-featured-card h3 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.mkt-mega-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #0f172a;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.mkt-mega-btn:hover {
+  background: #334155;
+  transform: translateX(4px);
+}
+
+.mkt-mega-subgrid {
+  display: grid;
+  gap: 12px 32px;
+}
+
+.mkt-mega-sublink {
+  font-size: 14px;
+  color: #475569;
+  text-decoration: none;
+  transition: all 0.2s;
+  padding: 4px 0;
+  display: block;
+}
+
+.mkt-mega-sublink:hover {
+  color: #6366f1;
+  padding-left: 4px;
+}
+
 /* --- Layout Container --- */
 .mkt-container { max-width:1440px; margin:0 auto; padding:32px; }
 
@@ -125,6 +284,39 @@
   flex: 1;
   z-index: 2;
   max-width: 600px;
+}
+
+.mkt-catmenu {
+  position: relative;
+  background: white;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.mkt-catmenu-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 60px;
+}
+
+.mkt-catmenu-item {
+  font-size: 13px;
+  font-weight: 800;
+  color: #1E293B;
+  padding: 8px 16px;
+  border-radius: 100px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.mkt-catmenu-item:hover {
+  background: #F1F5F9;
+}
+
+.mkt-catmenu-item.active {
+  background: #1E293B;
+  color: white;
 }
 
 .mkt-hero-badge {

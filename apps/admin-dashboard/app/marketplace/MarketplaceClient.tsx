@@ -172,7 +172,7 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
   return (
     <div className="mkt-page cocote-theme">
       
-      <MarketplaceHeader isVendor={isVendor} />
+      <MarketplaceHeader isVendor={isVendor} categories={categories} />
 
       {/* ── Main Content ── */}
       <div className="mkt-container mkt-cocote-main">
@@ -280,12 +280,23 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
                 { name: 'Emballages', icon: '📦', color: '#64748B' },
                 { name: 'Entretien', icon: '🧼', color: '#14B8A6' },
                 { name: 'Accessoires', icon: '🎀', color: '#F43F5E' },
-              ].map((univ, i) => (
-                <div key={i} className="bg-white p-8 rounded-[40px] border border-slate-100 flex flex-col items-center gap-6 hover:shadow-2xl hover:translate-y-[-8px] transition-all cursor-pointer group">
-                  <div style={{ width: 80, height: 80, background: `${univ.color}10`, borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>{univ.icon}</div>
-                  <span className="text-xs font-black text-slate-900 uppercase tracking-widest text-center group-hover:text-indigo-600">{univ.name}</span>
-                </div>
-              ))}
+              ].map((univ, i) => {
+                const matchingCat = categories.find((c: any) => 
+                  c.name.toLowerCase().includes(univ.name.split(' ')[0].toLowerCase())
+                );
+                const href = matchingCat ? `/marketplace/category/${matchingCat.id}` : `/marketplace?search=${encodeURIComponent(univ.name)}`;
+                
+                return (
+                  <Link 
+                    key={i} 
+                    href={href}
+                    className="bg-white p-8 rounded-[40px] border border-slate-100 flex flex-col items-center gap-6 hover:shadow-2xl hover:translate-y-[-8px] transition-all cursor-pointer group text-decoration-none"
+                  >
+                    <div style={{ width: 80, height: 80, background: `${univ.color}10`, borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>{univ.icon}</div>
+                    <span className="text-xs font-black text-slate-900 uppercase tracking-widest text-center group-hover:text-indigo-600">{univ.name}</span>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}

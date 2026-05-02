@@ -157,7 +157,7 @@ export default function CategoryViewClient({ category, products, allCategories, 
 
   return (
     <div className="mkt-page cocote-theme">
-      <MarketplaceHeader isVendor={isVendor} />
+      <MarketplaceHeader isVendor={isVendor} categories={allCategories} />
 
       {/* Top Location Bar (Breadcrumbs & Filter preview) */}
       <div className="mkt-cocote-topbar" style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
@@ -306,14 +306,45 @@ export default function CategoryViewClient({ category, products, allCategories, 
                 { name: 'Thés & Infusions', icon: '🍵' },
                 { name: 'Artisanat', icon: '🏺' },
                 { name: 'Épicerie Fine', icon: '✨' },
-              ].map((univ, i) => (
-                <div key={i} className="bg-white p-6 rounded-[32px] flex flex-col items-center gap-4 hover:shadow-xl transition-all cursor-pointer group">
-                  <div style={{ width: 56, height: 56, background: '#F8FAFC', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>{univ.icon}</div>
-                  <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest group-hover:text-indigo-600">{univ.name}</span>
-                </div>
-              ))}
+              ].map((univ, i) => {
+                const matchingCat = allCategories.find((c: any) => 
+                  c.name.toLowerCase().includes(univ.name.split(' ')[0].toLowerCase())
+                );
+                const href = matchingCat ? `/marketplace/category/${matchingCat.id}` : `/marketplace?search=${encodeURIComponent(univ.name)}`;
+
+                return (
+                  <Link 
+                    key={i} 
+                    href={href}
+                    className="bg-white p-6 rounded-[32px] flex flex-col items-center gap-4 hover:shadow-xl transition-all cursor-pointer group text-decoration-none"
+                  >
+                    <div style={{ width: 56, height: 56, background: '#F8FAFC', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>{univ.icon}</div>
+                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest group-hover:text-indigo-600">{univ.name}</span>
+                  </Link>
+                );
+              })}
             </div>
           </section>
+          
+          {category.subcategories?.length > 0 && (
+            <section className="mb-12">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-[14px] font-black text-slate-900 uppercase tracking-[.2em]">Sous-catégories populaires</h2>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {category.subcategories.slice(0, 6).map((sub: any) => (
+                  <Link 
+                    key={sub.id} 
+                    href={`/marketplace/category/${sub.id}`}
+                    className="bg-white border border-slate-100 p-4 rounded-2xl flex flex-col items-center gap-3 hover:border-indigo-200 hover:shadow-lg transition-all text-decoration-none group"
+                  >
+                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-xl group-hover:bg-indigo-50 transition-colors">📦</div>
+                    <span className="text-[11px] font-bold text-slate-700 text-center">{sub.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
           <div className="mkt-cocote-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, padding: '24px', background: '#fff', borderRadius: '24px', border: '1px solid #F1F5F9', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
              <div className="text-sm font-black text-slate-900 uppercase tracking-widest">{filteredProducts.length} offres disponibles</div>

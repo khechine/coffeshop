@@ -17,7 +17,7 @@ const tunisianCities = [
   "Medenine", "Tataouine"
 ];
 
-export default function MarketplaceHeader({ isVendor = false }: { isVendor?: boolean }) {
+export default function MarketplaceHeader({ isVendor = false, categories = [] }: { isVendor?: boolean; categories?: any[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentRadius = parseInt(searchParams.get('radius') || '15');
@@ -112,61 +112,55 @@ export default function MarketplaceHeader({ isVendor = false }: { isVendor?: boo
       </header>
       
       <div className="mkt-catmenu">
-        <div className="mkt-catmenu-inner">
-           <Link href="/marketplace" className="mkt-catmenu-item active">Tout voir</Link>
+        <div className="mkt-container mkt-catmenu-inner">
+           <Link 
+             href="/marketplace" 
+             className={`mkt-catmenu-item ${!searchParams.get('category') && !searchParams.get('id') ? 'active' : ''}`}
+           >
+             Tout voir
+           </Link>
            
-           <div className="mkt-megamenu-trigger">
-             <Link href="/marketplace/category/cafe" className="mkt-catmenu-item">Café</Link>
-             <div className="mkt-megamenu-panel">
-               <div className="mkt-mega-grid">
-                  <div className="mkt-mega-col">
-                    <h4>Grain & Moulu</h4>
-                    <Link href="/marketplace/category/grains">Café en Grains</Link>
-                    <Link href="/marketplace/category/moulu">Café Moulu</Link>
-                  </div>
-                  <div className="mkt-mega-col">
-                    <h4>Capsules</h4>
-                    <Link href="/marketplace/category/capsules">Nespresso compatible</Link>
-                    <Link href="/marketplace/category/dolce-gusto">Dolce Gusto compatible</Link>
-                  </div>
-               </div>
+           {categories.map((cat: any) => (
+             <div key={cat.id} className="mkt-megamenu-trigger group">
+               <Link 
+                 href={`/marketplace/category/${cat.id}`} 
+                 className={`mkt-catmenu-item ${searchParams.get('id') === cat.id ? 'active' : ''}`}
+               >
+                 {cat.name}
+               </Link>
+               
+               {(cat.subcategories?.length > 0) && (
+                 <>
+                   <div className="mkt-megamenu-overlay" />
+                   <div className="mkt-megamenu-panel shadow-2xl">
+                     <div className="mkt-container">
+                       <div className="mkt-mega-grid">
+                          <div className="mkt-mega-col-main">
+                            <div className="mkt-mega-featured-card">
+                               <span className="mkt-mega-label">Univers {cat.name}</span>
+                               <h3>Découvrez notre sélection de {cat.name}</h3>
+                               <Link href={`/marketplace/category/${cat.id}`} className="mkt-mega-btn">
+                                 Tout explorer <ChevronRight size={14} />
+                               </Link>
+                            </div>
+                          </div>
+                          
+                          <div className="mkt-mega-col-links">
+                            <div className="mkt-mega-subgrid" style={{ gridTemplateColumns: `repeat(${Math.ceil(cat.subcategories.length / 8)}, 1fr)` }}>
+                              {cat.subcategories.map((sub: any) => (
+                                <Link key={sub.id} href={`/marketplace/category/${sub.id}`} className="mkt-mega-sublink">
+                                  {sub.name}
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                       </div>
+                     </div>
+                   </div>
+                 </>
+               )}
              </div>
-           </div>
-
-           <div className="mkt-megamenu-trigger">
-             <Link href="/marketplace/category/the" className="mkt-catmenu-item">Thé</Link>
-             <div className="mkt-megamenu-panel">
-               <div className="mkt-mega-grid">
-                  <div className="mkt-mega-col">
-                    <h4>Thés</h4>
-                    <Link href="/marketplace/category/the-noir">Thé Noir</Link>
-                    <Link href="/marketplace/category/the-vert">Thé Vert</Link>
-                  </div>
-                  <div className="mkt-mega-col">
-                    <h4>Infusions</h4>
-                    <Link href="/marketplace/category/tisanes">Tisanes</Link>
-                    <Link href="/marketplace/category/rooibos">Rooibos</Link>
-                  </div>
-               </div>
-             </div>
-           </div>
-
-           <div className="mkt-megamenu-trigger">
-             <Link href="/marketplace/category/machines" className="mkt-catmenu-item">Machines</Link>
-             <div className="mkt-megamenu-panel">
-               <div className="mkt-mega-grid">
-                  <div className="mkt-mega-col">
-                    <h4>Professionnel</h4>
-                    <Link href="/marketplace/category/espresso-pro">Machines Espresso</Link>
-                    <Link href="/marketplace/category/moulins">Moulins</Link>
-                  </div>
-               </div>
-             </div>
-           </div>
-
-           <Link href="/marketplace/category/accessoires" className="mkt-catmenu-item">Accessoires</Link>
-           <Link href="/marketplace/category/sirops" className="mkt-catmenu-item">Sirops</Link>
-           <Link href="/marketplace/category/epicerie" className="mkt-catmenu-item">Épicerie</Link>
+           ))}
         </div>
       </div>
 
