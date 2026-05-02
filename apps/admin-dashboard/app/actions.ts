@@ -2724,9 +2724,29 @@ export async function createMarketplaceProductAction(data: any) {
   // Handle image: use preview (base64) if available, otherwise use URL
   const image = data.imagePreview || data.image || null;
 
+  // Limits verification for non-premium vendors
+  if (!vendor.isPremium) {
+    if (data.isFlashSale) {
+      const promoCount = await (prisma as any).vendorProduct.count({
+        where: { vendorId: vendor.id, isFlashSale: true }
+      });
+      if (promoCount >= 3) {
+        throw new Error("Limite de promotions (3) atteinte pour votre plan actuel. Passez au pack Premium pour en ajouter plus !");
+      }
+    }
+    if (data.isFeatured) {
+      const featuredCount = await (prisma as any).vendorProduct.count({
+        where: { vendorId: vendor.id, isFeatured: true }
+      });
+      if (featuredCount >= 5) {
+        throw new Error("Limite de produits vedettes (5) atteinte pour votre plan actuel. Passez au pack Premium pour en ajouter plus !");
+      }
+    }
+  }
+
   await (prisma as any).vendorProduct.create({
     data: {
-      name: data.name,
+      name: data.name?.toUpperCase(),
       price: data.price,
       unit: data.unit,
       categoryId: data.categoryId,
@@ -2979,13 +2999,40 @@ async function upsertStockItem(storeId: string, name: string, quantity: number, 
 }
 
 export async function updateMarketplaceProductAction(id: string, data: any) {
+  const current = await (prisma as any).vendorProduct.findUnique({
+    where: { id },
+    include: { vendor: true }
+  });
+
+  if (!current) throw new Error('Produit introuvable');
+
+  // Limits verification for non-premium vendors
+  if (!current.vendor.isPremium) {
+    if (data.isFlashSale && !current.isFlashSale) {
+      const promoCount = await (prisma as any).vendorProduct.count({
+        where: { vendorId: current.vendorId, isFlashSale: true }
+      });
+      if (promoCount >= 3) {
+        throw new Error("Limite de promotions (3) atteinte pour votre plan actuel.");
+      }
+    }
+    if (data.isFeatured && !current.isFeatured) {
+      const featuredCount = await (prisma as any).vendorProduct.count({
+        where: { vendorId: current.vendorId, isFeatured: true }
+      });
+      if (featuredCount >= 5) {
+        throw new Error("Limite de produits vedettes (5) atteinte pour votre plan actuel.");
+      }
+    }
+  }
+
   // Handle image: use preview (base64) if available, otherwise use URL
   const image = data.imagePreview || data.image || null;
 
   await (prisma as any).vendorProduct.update({
     where: { id },
     data: {
-      name: data.name,
+      name: data.name?.toUpperCase(),
       price: data.price,
       unit: data.unit,
       categoryId: data.categoryId,
@@ -3023,7 +3070,7 @@ export async function updateVendorSectorsAction(vendorId: string, sectorIds: str
 }
 
 export async function updateVendorActivityPolesAction(vendorId: string, activityPoleIds: string[]) {
-  await prisma.vendorProfile.update({
+  await (prisma as any).vendorProfile.update({
     where: { id: vendorId },
     data: {
       activityPoles: {
@@ -3035,13 +3082,14 @@ export async function updateVendorActivityPolesAction(vendorId: string, activity
 }
 
 export async function updateVendorProfileAction(vendorId: string, data: any) {
-  await prisma.vendorProfile.update({
+  await (prisma as any).vendorProfile.update({
     where: { id: vendorId },
     data: {
-      companyName: data.companyName,
+      companyName: data.companyName?.toUpperCase(),
       description: data.description,
       address: data.address,
       city: data.city,
+      governorate: data.governorate,
       phone: data.phone,
       lat: data.lat,
       lng: data.lng,
@@ -4703,6 +4751,88 @@ export async function updateVendorPasswordAction(data: {
     where: { id: userId },
     data: { password: hashedPassword }
   });
+
+  return { success: true };
+}
+
+export async function seedMarketplaceDataAction() {
+  const { prisma } = await import('@coffeeshop/database');
+
+  // 1. Update Vendor: CAKELAND RADES
+  const user = await (prisma as any).user.findUnique({
+    where: { email: 'abdelmajidbelhaj@gmail.com' }
+  });
+
+  if (user) {
+    const profile = await (prisma as any).vendorProfile.findFirst({
+      where: { userId: user.id }
+    });
+
+    if (profile) {
+      await (prisma as any).vendorProfile.update({
+        where: { id: profile.id },
+        data: {
+          companyName: 'CAKELAND RADES',
+          address: 'BEN AROUS RADES',
+          city: 'Rades',
+          governorate: 'Ben Arous',
+          lat: 36.7686218,
+          lng: 10.2719618,
+          phone: '29730048'
+        }
+      });
+    }
+  }
+
+  // 2. Add Categories & Subcategories
+  const categories = [
+    {
+      name: 'Aliments et Boissons',
+      icon: '🍴',
+      subcategories: [
+        'Céréales, riz et pâtes',
+        'Paniers et kits de cuisine',
+        'Confiseries',
+        'Condiments et sauces',
+        'Café et thé',
+        'Collations',
+        'Boissons',
+        'Confitures et pâtes à tartiner',
+        'Laits végétaux',
+        'Beurre',
+        'Noix',
+        'Café moulu',
+        'Jus de fruits',
+        'Préparations pour gâteaux',
+        'Eau',
+        'Barres de chocolat',
+        'Sauces à salade'
+      ]
+    }
+  ];
+
+  for (const cat of categories) {
+    let root = await (prisma as any).marketplaceCategory.findFirst({
+      where: { name: cat.name }
+    });
+
+    if (!root) {
+      root = await (prisma as any).marketplaceCategory.create({
+        data: { name: cat.name, icon: cat.icon }
+      });
+    }
+
+    for (const subName of cat.subcategories) {
+      const exists = await (prisma as any).marketplaceCategory.findFirst({
+        where: { name: subName, parentId: root.id }
+      });
+      if (!exists) {
+        await (prisma as any).marketplaceCategory.create({
+          data: { name: subName, parentId: root.id, icon: '📦' }
+        });
+      }
+    }
+  }
 
   return { success: true };
 }

@@ -136,7 +136,7 @@ function CategorySelector({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function VendorCatalogClient({
-  initialProducts, initialBundles = [], categoryTree, globalUnits, benchmarkData = [], vendorId, mktSectors = [], collections = [],
+  initialProducts, initialBundles = [], categoryTree, globalUnits, benchmarkData = [], vendorId, isPremium = false, mktSectors = [], collections = [],
 }: {
   initialProducts: any[];
   initialBundles?: any[];
@@ -144,6 +144,7 @@ export default function VendorCatalogClient({
   globalUnits: any[];
   benchmarkData?: BenchmarkRow[];
   vendorId: string;
+  isPremium?: boolean;
   mktSectors?: any[];
   collections?: any[];
 }) {
@@ -361,39 +362,45 @@ export default function VendorCatalogClient({
     e.preventDefault();
     
     // Limits Check for standard vendors
-    const featuredCount = initialProducts.filter((p: any) => p.isFeatured && p.id !== editingId).length;
-    const promoCount = initialProducts.filter((p: any) => p.isFlashSale && p.id !== editingId).length;
+    if (!isPremium) {
+      const featuredCount = initialProducts.filter((p: any) => p.isFeatured && p.id !== editingId).length;
+      const promoCount = initialProducts.filter((p: any) => p.isFlashSale && p.id !== editingId).length;
 
-    if (form.isFeatured && featuredCount >= 5) {
-      alert("Limite atteinte : Vous ne pouvez avoir que 5 produits vedettes maximum dans votre plan actuel.");
-      return;
-    }
-    if (form.isFlashSale && promoCount >= 3) {
-      alert("Limite atteinte : Vous ne pouvez avoir que 3 promotions actives maximum dans votre plan actuel.");
-      return;
+      if (form.isFeatured && featuredCount >= 5) {
+        alert("Limite atteinte : Vous ne pouvez avoir que 5 produits vedettes maximum dans votre plan actuel. Devenez Premium pour plus de visibilité !");
+        return;
+      }
+      if (form.isFlashSale && promoCount >= 3) {
+        alert("Limite atteinte : Vous ne pouvez avoir que 3 promotions actives maximum dans votre plan actuel. Devenez Premium pour booster vos ventes !");
+        return;
+      }
     }
 
     startTransition(async () => {
-      const payload = {
-        ...form,
-        price: parseFloat(form.price),
-        minOrderQty: parseFloat(form.minOrderQty),
-        stockQuantity: parseFloat(form.stockQuantity),
-        brand: form.brand || null,
-        discount:   form.isFlashSale ? parseFloat(form.discount) : null,
-        flashStart: form.isFlashSale && form.flashStart ? new Date(form.flashStart).toISOString() : null,
-        flashEnd:   form.isFlashSale && form.flashEnd   ? new Date(form.flashEnd).toISOString()   : null,
-      };
-      if (editingId) await updateMarketplaceProductAction(editingId, payload);
-      else           await createMarketplaceProductAction(payload);
-      
-      if (editingId) {
-        const { updateVendorProductCollectionsAction } = await import('../../../actions');
-        await updateVendorProductCollectionsAction(editingId, form.collectionIds);
+      try {
+        const payload = {
+          ...form,
+          price: parseFloat(form.price) || 0,
+          minOrderQty: parseFloat(form.minOrderQty) || 1,
+          stockQuantity: parseFloat(form.stockQuantity) || 0,
+          brand: form.brand || null,
+          discount:   form.isFlashSale ? (parseFloat(form.discount) || null) : null,
+          flashStart: form.isFlashSale && form.flashStart ? new Date(form.flashStart).toISOString() : null,
+          flashEnd:   form.isFlashSale && form.flashEnd   ? new Date(form.flashEnd).toISOString()   : null,
+        };
+        if (editingId) await updateMarketplaceProductAction(editingId, payload);
+        else           await createMarketplaceProductAction(payload);
+        
+        if (editingId) {
+          const { updateVendorProductCollectionsAction } = await import('../../../actions');
+          await updateVendorProductCollectionsAction(editingId, form.collectionIds);
+        }
+        
+        setModalOpen(false);
+        showToast(editingId ? 'Produit mis à jour ✓' : 'Produit publié ✓');
+      } catch (err: any) {
+        alert(err.message || "Une erreur est survenue lors de l'enregistrement");
       }
-      
-      setModalOpen(false);
-      showToast(editingId ? 'Produit mis à jour ✓' : 'Produit publié ✓');
     });
   };
 
@@ -624,7 +631,7 @@ export default function VendorCatalogClient({
       {/* ── MODALS ── */}
 
       {/* MODAL PRODUIT */}
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? 'Modifier le Produit' : 'Ajouter un Produit'} size="2xl">
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? 'Modifier le Produit' : 'Ajouter un Produit'} width={800}>
         <form onSubmit={onSubmit} className="space-y-8">
           <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">

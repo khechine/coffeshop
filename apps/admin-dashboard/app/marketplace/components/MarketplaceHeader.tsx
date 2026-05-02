@@ -62,6 +62,18 @@ export default function MarketplaceHeader({ isVendor = false }: { isVendor?: boo
           <div className="mkt-cocote-topbar-links">
              <Link href="/marketplace/vendors">Devenir Vendeur</Link>
              <Link href="/marketplace/about">Le concept Proximité</Link>
+             {searchParams.get('dev') === '1' && (
+               <button 
+                 onClick={async () => {
+                   const { seedMarketplaceDataAction } = await import('../../actions');
+                   const res = await seedMarketplaceDataAction();
+                   if (res.success) alert('Vendeur et Catégories mis à jour avec succès !');
+                 }}
+                 style={{ marginLeft: 16, background: '#10B981', color: '#fff', border: 'none', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 900, cursor: 'pointer' }}
+               >
+                 SEED DATA
+               </button>
+             )}
           </div>
         </div>
       </div>
@@ -102,9 +114,56 @@ export default function MarketplaceHeader({ isVendor = false }: { isVendor?: boo
       <div className="mkt-catmenu">
         <div className="mkt-catmenu-inner">
            <Link href="/marketplace" className="mkt-catmenu-item active">Tout voir</Link>
-           <Link href="/marketplace/category/cafe" className="mkt-catmenu-item">Café</Link>
-           <Link href="/marketplace/category/the" className="mkt-catmenu-item">Thé</Link>
-           <Link href="/marketplace/category/machines" className="mkt-catmenu-item">Machines</Link>
+           
+           <div className="mkt-megamenu-trigger">
+             <Link href="/marketplace/category/cafe" className="mkt-catmenu-item">Café</Link>
+             <div className="mkt-megamenu-panel">
+               <div className="mkt-mega-grid">
+                  <div className="mkt-mega-col">
+                    <h4>Grain & Moulu</h4>
+                    <Link href="/marketplace/category/grains">Café en Grains</Link>
+                    <Link href="/marketplace/category/moulu">Café Moulu</Link>
+                  </div>
+                  <div className="mkt-mega-col">
+                    <h4>Capsules</h4>
+                    <Link href="/marketplace/category/capsules">Nespresso compatible</Link>
+                    <Link href="/marketplace/category/dolce-gusto">Dolce Gusto compatible</Link>
+                  </div>
+               </div>
+             </div>
+           </div>
+
+           <div className="mkt-megamenu-trigger">
+             <Link href="/marketplace/category/the" className="mkt-catmenu-item">Thé</Link>
+             <div className="mkt-megamenu-panel">
+               <div className="mkt-mega-grid">
+                  <div className="mkt-mega-col">
+                    <h4>Thés</h4>
+                    <Link href="/marketplace/category/the-noir">Thé Noir</Link>
+                    <Link href="/marketplace/category/the-vert">Thé Vert</Link>
+                  </div>
+                  <div className="mkt-mega-col">
+                    <h4>Infusions</h4>
+                    <Link href="/marketplace/category/tisanes">Tisanes</Link>
+                    <Link href="/marketplace/category/rooibos">Rooibos</Link>
+                  </div>
+               </div>
+             </div>
+           </div>
+
+           <div className="mkt-megamenu-trigger">
+             <Link href="/marketplace/category/machines" className="mkt-catmenu-item">Machines</Link>
+             <div className="mkt-megamenu-panel">
+               <div className="mkt-mega-grid">
+                  <div className="mkt-mega-col">
+                    <h4>Professionnel</h4>
+                    <Link href="/marketplace/category/espresso-pro">Machines Espresso</Link>
+                    <Link href="/marketplace/category/moulins">Moulins</Link>
+                  </div>
+               </div>
+             </div>
+           </div>
+
            <Link href="/marketplace/category/accessoires" className="mkt-catmenu-item">Accessoires</Link>
            <Link href="/marketplace/category/sirops" className="mkt-catmenu-item">Sirops</Link>
            <Link href="/marketplace/category/epicerie" className="mkt-catmenu-item">Épicerie</Link>

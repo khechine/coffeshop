@@ -32,6 +32,7 @@ export default async function VendorCatalogPage() {
         globalUnits={JSON.parse(JSON.stringify(globalUnits))}
         benchmarkData={JSON.parse(JSON.stringify(benchmarkData))}
         vendorId={portalData?.id || ''}
+        isPremium={portalData?.isPremium || false}
         mktSectors={JSON.parse(JSON.stringify(portalData?.mktSectors || []))}
         collections={JSON.parse(JSON.stringify(portalData?.collections || []))}
       />

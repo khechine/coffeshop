@@ -4,6 +4,7 @@ import React, { useState, useTransition, useEffect, useRef } from 'react';
 import { Building2, Save, CheckCircle2, Briefcase, MapPin, Crosshair, Package, Upload, X, Palette, Type, MessageSquare, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { updateVendorSectorsAction, updateVendorProfileAction, updateVendorCustomizationAction, updateVendorPasswordAction } from '../../../actions';
 import { sanitizeUrl } from '../../../lib/imageUtils';
+import { tunisianData } from '../../../marketplace/lib/tunisiaData';
 
 import 'leaflet/dist/leaflet.css';
 
@@ -69,6 +70,7 @@ export default function VendorSettingsClient({
     description: portalData.description || '',
     address: portalData.address || '',
     city: portalData.city || '',
+    governorate: portalData.governorate || '',
     phone: portalData.phone || '',
     lat: portalData.lat || 36.80,
     lng: portalData.lng || 10.18,
@@ -487,8 +489,31 @@ export default function VendorSettingsClient({
                 <input className={inputClass} value={profileForm.phone} onChange={e => setProfileForm(f => ({ ...f, phone: e.target.value }))} />
               </div>
               <div>
-                <label className={labelClass}>Gouvernorat / Ville</label>
-                <input className={inputClass} value={profileForm.city} onChange={e => setProfileForm(f => ({ ...f, city: e.target.value }))} />
+                <label className={labelClass}>Gouvernorat</label>
+                <select 
+                  className={inputClass} 
+                  value={profileForm.governorate} 
+                  onChange={e => setProfileForm(f => ({ ...f, governorate: e.target.value, city: '' }))}
+                >
+                  <option value="">Sélectionnez un gouvernorat</option>
+                  {Object.keys(tunisianData).map(gov => (
+                    <option key={gov} value={gov}>{gov}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Ville</label>
+                <select 
+                  className={inputClass} 
+                  value={profileForm.city} 
+                  onChange={e => setProfileForm(f => ({ ...f, city: e.target.value }))}
+                  disabled={!profileForm.governorate}
+                >
+                  <option value="">Sélectionnez une ville</option>
+                  {profileForm.governorate && (tunisianData as any)[profileForm.governorate]?.map((city: string) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
               </div>
               <div className="md:col-span-2">
                 <label className={labelClass}>Siège Social (Adresse complète ou Lien Google Maps)</label>

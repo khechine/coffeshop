@@ -29,6 +29,12 @@ const getCategoryColor = (name: string) => {
 
 const fmt = (n: any) => Number(n).toFixed(3);
 
+const getMockDistance = (vendorId: string) => {
+  if (!vendorId) return 5;
+  const sum = vendorId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return (sum % 12) + 5; 
+};
+
 function Stars({ avg = 0, total = 0, size = 12 }: any) {
   if (!total) return <span style={{ fontSize: size, color: '#94A3B8', fontWeight: 600 }}>Nouveau</span>;
   return (
@@ -44,7 +50,7 @@ function ProductCard({ product, onAdd, isVendor }: any) {
   const avg = product.vendor?.ratings?.overallAvg || 0;
   const total = product.vendor?.ratings?.totalReviews || 0;
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
-  const distance = Math.floor(Math.random() * 15) + 1; // Mock distance
+  const distance = getMockDistance(product.vendorId);
 
   return (
     <div className="mkt-cocote-card group">
@@ -59,13 +65,16 @@ function ProductCard({ product, onAdd, isVendor }: any) {
       </Link>
       <div className="mkt-cocote-card-body">
         <div className="mkt-cocote-card-meta">
-          <Link href={`/marketplace/vendor/${product.vendor?.id}`} className="mkt-cocote-vendor-link">
+          <Link href={`/marketplace/vendor/${product.vendor?.id}`} className="mkt-cocote-vendor-link" style={{ textTransform: 'uppercase' }}>
             <Store size={12} /> {product.vendor?.companyName}
           </Link>
-          <span className="mkt-cocote-distance"><Navigation size={10} /> {distance} km</span>
+          <span className="mkt-cocote-distance">
+            <Navigation size={10} /> 
+            {product.vendor?.lat && product.vendor?.lng ? `${distance} km` : `${product.vendor?.governorate || ''} ${product.vendor?.city || ''}`.trim() || 'Tunis'}
+          </span>
         </div>
         <Link href={`/marketplace/product/${product.id}`} style={{ textDecoration: 'none' }}>
-          <h3 className="mkt-cocote-card-title">{product.name}</h3>
+          <h3 className="mkt-cocote-card-title" style={{ textTransform: 'uppercase' }}>{product.name}</h3>
         </Link>
 
         {product.tags && product.tags.length > 0 && (
@@ -246,25 +255,77 @@ export default function CategoryViewClient({ category, products, allCategories, 
         {/* ── MAIN CONTENT ── */}
         <div className="mkt-cocote-content" style={{ flex: 1 }}>
           
-          <div className="mkt-cocote-category-header" style={{ borderLeftColor: catColor }}>
+          <div className="mkt-cocote-category-header" style={{ borderLeftColor: catColor, marginBottom: 40 }}>
              <div className="mkt-cocote-category-title-wrap">
                <div className="mkt-cocote-category-icon-large" style={{ color: catColor, background: `${catColor}15` }}>{category.icon || '📦'}</div>
                <div>
-                 <h1 className="text-3xl font-black text-slate-900 m-0">{category.name}</h1>
-                 <p className="text-slate-500 mt-2">{filteredProducts.length} produits trouvés à proximité de {currentLocation}</p>
+                 <h1 className="text-4xl font-black text-slate-900 m-0 uppercase tracking-tight">{category.name}</h1>
+                 <p className="text-slate-500 mt-2 font-medium">{filteredProducts.length} offres professionnelles à proximité de {currentLocation}</p>
                </div>
              </div>
           </div>
 
-          <div className="mkt-cocote-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, padding: '16px', background: '#fff', borderRadius: '16px', border: '1px solid #F1F5F9' }}>
-             <div className="text-sm font-bold text-slate-700">{filteredProducts.length} offres locales</div>
-             <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-slate-500">Trier par :</span>
-                <select className="mkt-cocote-select" value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
-                   <option value="relevant">Pertinence & Proximité</option>
-                   <option value="price_asc">Prix croissant</option>
-                   <option value="price_desc">Prix décroissant</option>
-                </select>
+          {/* ── ZONE 1: SOUS-CATÉGORIES POPULAIRES ── */}
+          <section style={{ marginBottom: 60 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h2 className="text-xl font-black text-slate-900 uppercase tracking-wider">Sous-catégories populaires</h2>
+              <button className="text-xs font-black text-indigo-600 uppercase tracking-widest hover:underline">Tout voir</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16 }}>
+              {[
+                { name: 'Laits végétaux', img: 'https://images.unsplash.com/photo-1550583724-125581f778d3?q=80&w=200' },
+                { name: 'Beurre & Crèmerie', img: 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?q=80&w=200' },
+                { name: 'Noix & Graines', img: 'https://images.unsplash.com/photo-1536591375315-1b84046557b9?q=80&w=200' },
+                { name: 'Café moulu', img: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=200' },
+                { name: 'Jus de fruits', img: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=200' },
+                { name: 'Eaux minérales', img: 'https://images.unsplash.com/photo-1523362628242-4a7458ef347c?q=80&w=200' },
+              ].map((sub, i) => (
+                <div key={i} className="group cursor-pointer">
+                  <div style={{ aspectRatio: '1', borderRadius: 20, overflow: 'hidden', marginBottom: 12, border: '1px solid #F1F5F9' }}>
+                    <img src={sub.img} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                  </div>
+                  <h4 className="text-xs font-black text-slate-900 uppercase text-center group-hover:text-indigo-600">{sub.name}</h4>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* ── ZONE 2: EXPLOREZ LES CATÉGORIES (SQUIRCLES) ── */}
+          <section style={{ marginBottom: 60, padding: 40, background: '#F1F5F9', borderRadius: 40 }}>
+            <div style={{ textAlign: 'center', marginBottom: 40 }}>
+              <h2 className="text-2xl font-black text-slate-900 uppercase tracking-widest">Explorez les univers</h2>
+              <div style={{ width: 40, height: 4, background: catColor, margin: '12px auto' }}></div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
+              {[
+                { name: 'Céréales & Riz', icon: '🌾' },
+                { name: 'Confiseries', icon: '🍬' },
+                { name: 'Condiments', icon: '🧂' },
+                { name: 'Boissons', icon: '🥤' },
+                { name: 'Snacks', icon: '🍿' },
+                { name: 'Thés & Infusions', icon: '🍵' },
+                { name: 'Artisanat', icon: '🏺' },
+                { name: 'Épicerie Fine', icon: '✨' },
+              ].map((univ, i) => (
+                <div key={i} className="bg-white p-6 rounded-[32px] flex flex-col items-center gap-4 hover:shadow-xl transition-all cursor-pointer group">
+                  <div style={{ width: 56, height: 56, background: '#F8FAFC', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>{univ.icon}</div>
+                  <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest group-hover:text-indigo-600">{univ.name}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <div className="mkt-cocote-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, padding: '24px', background: '#fff', borderRadius: '24px', border: '1px solid #F1F5F9', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+             <div className="text-sm font-black text-slate-900 uppercase tracking-widest">{filteredProducts.length} offres disponibles</div>
+             <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Trier par :</span>
+                  <select className="mkt-cocote-select" style={{ border: 'none', background: '#F8FAFC', fontWeight: 900, fontSize: 11, textTransform: 'uppercase' }} value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
+                    <option value="relevant">Pertinence</option>
+                    <option value="price_asc">Prix croissant</option>
+                    <option value="price_desc">Prix décroissant</option>
+                  </select>
+                </div>
              </div>
           </div>
 

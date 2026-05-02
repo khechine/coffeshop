@@ -840,6 +840,7 @@ model VendorProfile {
   description String?
   address     String?
   city        String?
+  governorate String?
   phone       String?
   lat         Float?
   lng         Float?

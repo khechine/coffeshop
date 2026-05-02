@@ -16,6 +16,14 @@ import { sanitizeUrl } from '../lib/imageUtils';
 
 /* ─── Helpers ─── */
 const fmt = (n: any) => Number(n).toFixed(3);
+
+const getMockDistance = (vendorId: string) => {
+  if (!vendorId) return 5;
+  // Deterministic sum based on vendor ID for consistency
+  const sum = vendorId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return (sum % 12) + 5; 
+};
+
 const tunisianCities = [
   "Tunis", "Ariana", "Ben Arous", "Manouba", "Nabeul", "Zaghouan", "Bizerte",
   "Béja", "Jendouba", "Le Kef", "Siliana", "Kairouan", "Kasserine", "Sidi Bouzid",
@@ -40,8 +48,7 @@ function ProductCard({ product, onAdd, isVendor }: any) {
   const total = product.vendor?.ratings?.totalReviews || 0;
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
   
-  // Mock distance for demo purposes based on vendor
-  const distance = Math.floor(Math.random() * 15) + 1;
+  const distance = getMockDistance(product.vendorId);
 
   return (
     <div className="mkt-cocote-card group">
@@ -56,13 +63,16 @@ function ProductCard({ product, onAdd, isVendor }: any) {
       </Link>
       <div className="mkt-cocote-card-body">
         <div className="mkt-cocote-card-meta">
-          <Link href={`/marketplace/vendor/${product.vendor?.id}`} className="mkt-cocote-vendor-link">
+          <Link href={`/marketplace/vendor/${product.vendor?.id}`} className="mkt-cocote-vendor-link" style={{ textTransform: 'uppercase' }}>
             <Store size={12} /> {product.vendor?.companyName}
           </Link>
-          <span className="mkt-cocote-distance"><Navigation size={10} /> {distance} km</span>
+          <span className="mkt-cocote-distance">
+            <Navigation size={10} /> 
+            {product.vendor?.lat && product.vendor?.lng ? `${distance} km` : `${product.vendor?.governorate || ''} ${product.vendor?.city || ''}`.trim() || 'Tunis'}
+          </span>
         </div>
         <Link href={`/marketplace/product/${product.id}`} style={{ textDecoration: 'none' }}>
-          <h3 className="mkt-cocote-card-title">{product.name}</h3>
+          <h3 className="mkt-cocote-card-title" style={{ textTransform: 'uppercase' }}>{product.name}</h3>
         </Link>
 
         {product.tags && product.tags.length > 0 && (
@@ -114,10 +124,13 @@ function VendorCard({ vendor, distance }: any) {
         {logo ? <img src={logo} alt={vendor.companyName} /> : <Store size={24} color="#94A3B8" />}
       </div>
       <div className="mkt-cocote-vendor-info">
-        <h4 className="mkt-cocote-vendor-name">{vendor.companyName}</h4>
+        <h4 className="mkt-cocote-vendor-name" style={{ textTransform: 'uppercase' }}>{vendor.companyName}</h4>
         <div className="mkt-cocote-vendor-meta">
            <Stars avg={avg} total={total} size={11} />
-           <span className="mkt-cocote-vendor-dist"><MapPin size={10} /> {distance} km · {vendor.city || 'Tunis'}</span>
+           <span className="mkt-cocote-vendor-dist">
+             <MapPin size={10} /> 
+             {vendor.lat && vendor.lng ? `${distance} km · ` : ''}{vendor.city || vendor.governorate || 'Tunis'}
+           </span>
         </div>
       </div>
       <ChevronRight size={16} color="#CBD5E1" />
@@ -181,8 +194,11 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
 
         {/* Hero / Concept Banner */}
         {!search && (
-          <div className="mkt-cocote-hero">
-            <div className="mkt-cocote-hero-content">
+          <div className="mkt-cocote-hero-premium">
+            <div className="mkt-cocote-hero-premium-content">
+              <div className="mkt-premium-badge">
+                <Sparkles size={14} /> EXCLUSIVITÉ PREMIUM
+              </div>
               <h1>Soutenez les commerces de <span>votre région</span></h1>
               <p>Découvrez les meilleurs produits B2B, cafés et équipements à proximité de <strong>{currentLocation}</strong>.</p>
               <div className="mkt-cocote-hero-badges">
@@ -191,12 +207,15 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
                 <span><Award size={14}/> Vendeurs certifiés</span>
               </div>
             </div>
-            <div className="mkt-cocote-hero-graphic">
-              {/* Abstract representation of map/local */}
-              <div className="mkt-cocote-map-pin main"><MapPin size={32} /></div>
-              <div className="mkt-cocote-map-pin small p1"><Store size={16} /></div>
-              <div className="mkt-cocote-map-pin small p2"><Store size={16} /></div>
-              <div className="mkt-cocote-map-pin small p3"><Store size={16} /></div>
+            <div className="mkt-hero-visual">
+               <div className="mkt-floating-card c1">
+                 <img src="https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=200" alt="" />
+                 <div><span>-20%</span> Café Bio</div>
+               </div>
+               <div className="mkt-floating-card c2">
+                 <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=200" alt="" />
+                 <div>Premium Roast</div>
+               </div>
             </div>
           </div>
         )}
@@ -238,24 +257,34 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
             </div>
             <div className="mkt-cocote-vendor-grid">
               {vendors.slice(0, 6).map((v: any, i: number) => (
-                <VendorCard key={v.id} vendor={v} distance={Math.floor(Math.random() * 10) + 1} />
+                <VendorCard key={v.id} vendor={v} distance={getMockDistance(v.id)} />
               ))}
             </div>
           </section>
         )}
 
-        {/* Catégories Populaires */}
+        {/* Catégories Populaires / Universes */}
         {!search && (
           <section className="mkt-cocote-section">
-            <div className="mkt-cocote-section-header">
-              <h2 className="mkt-cocote-section-title"><LayoutGrid size={20} className="text-blue-500" /> Parcourir par catégorie</h2>
+            <div style={{ textAlign: 'center', marginBottom: 48 }}>
+              <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Explorez nos univers</h2>
+              <div style={{ width: 60, height: 4, background: '#6366F1', margin: '16px auto' }}></div>
             </div>
-            <div className="mkt-cocote-category-grid">
-              {categories.slice(0, 8).map((c: any) => (
-                <Link key={c.id} href={`/marketplace/category/${c.id}`} className="mkt-cocote-category-card">
-                  <div className="mkt-cocote-category-icon">{c.icon || '📦'}</div>
-                  <span>{c.name}</span>
-                </Link>
+            <div className="mkt-cocote-category-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
+              {[
+                { name: 'Épicerie Fine', icon: '✨', color: '#F59E0B' },
+                { name: 'Café & Thé', icon: '☕', color: '#8B5A2B' },
+                { name: 'Boissons', icon: '🥤', color: '#3B82F6' },
+                { name: 'Snacks & Biscuits', icon: '🍪', color: '#EC4899' },
+                { name: 'Condiments', icon: '🧂', color: '#10B981' },
+                { name: 'Emballages', icon: '📦', color: '#64748B' },
+                { name: 'Entretien', icon: '🧼', color: '#14B8A6' },
+                { name: 'Accessoires', icon: '🎀', color: '#F43F5E' },
+              ].map((univ, i) => (
+                <div key={i} className="bg-white p-8 rounded-[40px] border border-slate-100 flex flex-col items-center gap-6 hover:shadow-2xl hover:translate-y-[-8px] transition-all cursor-pointer group">
+                  <div style={{ width: 80, height: 80, background: `${univ.color}10`, borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>{univ.icon}</div>
+                  <span className="text-xs font-black text-slate-900 uppercase tracking-widest text-center group-hover:text-indigo-600">{univ.name}</span>
+                </div>
               ))}
             </div>
           </section>
