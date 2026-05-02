@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 export default async function VendorCrmPage() {
   const portalData = await getVendorPortalData();
 
-  if (!portalData || !portalData.isPremium) {
-    redirect('/vendor/portal');
+  if (!portalData) {
+    redirect('/login');
   }
 
   // Serialize complex objects before passing to client component

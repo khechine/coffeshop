@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { 
   Users, TrendingUp, Mail, Filter, Star, ShieldAlert, 
   Tag as TagIcon, Plus, Send, Phone, MessageCircle, 
   ExternalLink, ChevronRight, Search, LayoutGrid, X
 } from 'lucide-react';
-import { updateVendorCustomerAction, createVendorCampaignAction } from '../../../actions';
+import { updateVendorCustomerAction, createVendorCampaignAction, getAvailableStoresAction, addVendorCustomerAction } from '../../../actions';
 
 interface VendorCrmClientProps {
   initialCustomers: any[];
@@ -23,6 +23,11 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
   const [campaigns, setCampaigns] = useState(initialCampaigns);
   const [search, setSearch] = useState(initialSearch);
   const [selectedCust, setSelectedCust] = useState<any>(null);
+  useEffect(() => {
+    if (selectedCust) {
+      setTagInput(selectedCust.tags?.join(', ') || '');
+    }
+  }, [selectedCust]);
   const [isPending, startTransition] = useTransition();
 
   const [campaignForm, setCampaignForm] = useState({
@@ -31,6 +36,13 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
     content: '',
     targetTags: [] as string[]
   });
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [storeSearch, setStoreSearch] = useState('');
+  const [availableStores, setAvailableStores] = useState<any[]>([]);
+  const [isSearchingStores, setIsSearchingStores] = useState(false);
+
+  const [tagInput, setTagInput] = useState('');
 
   const handleUpdateCustomer = (id: string, data: { category?: string; tags?: string[] }) => {
     startTransition(async () => {
@@ -49,6 +61,31 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
       setCampaigns(prev => [newCampaign, ...prev]);
       setCampaignForm({ name: '', type: 'EMAIL', content: '', targetTags: [] });
       alert('Campagne envoyée avec succès !');
+    });
+  };
+
+  const handleSearchStores = async (val: string) => {
+    setStoreSearch(val);
+    if (val.length < 2) {
+      setAvailableStores([]);
+      return;
+    }
+    setIsSearchingStores(true);
+    try {
+      const stores = await getAvailableStoresAction(val);
+      setAvailableStores(stores);
+    } finally {
+      setIsSearchingStores(false);
+    }
+  };
+
+  const handleAddCustomer = async (storeId: string) => {
+    startTransition(async () => {
+      const newCustomer = await addVendorCustomerAction(storeId);
+      setCustomers(prev => [newCustomer, ...prev]);
+      setIsAddModalOpen(false);
+      setStoreSearch('');
+      setAvailableStores([]);
     });
   };
 
@@ -124,15 +161,23 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
               <h3 className="font-black text-2xl text-slate-900">Mes Partenaires B2B</h3>
               <p className="text-slate-400 font-bold text-sm">Liste des coffeeshops ayant commandé via la marketplace</p>
             </div>
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Rechercher un client..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="pl-12 pr-6 py-3 bg-slate-50 border-none rounded-2xl w-72 focus:ring-2 focus:ring-rose-500/20 font-bold text-sm"
-              />
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-sm shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all"
+              >
+                <Plus size={18} /> Ajouter un client
+              </button>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input 
+                  type="text" 
+                  placeholder="Rechercher un client..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="pl-12 pr-6 py-3 bg-slate-50 border-none rounded-2xl w-72 focus:ring-2 focus:ring-rose-500/20 font-bold text-sm"
+                />
+              </div>
             </div>
           </div>
 
@@ -328,17 +373,25 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
 
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tags personnalisés (séparés par virgule)</label>
-                <input 
-                  type="text"
-                  defaultValue={selectedCust.tags?.join(', ')}
-                  onBlur={(e) => {
-                    const tags = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
-                    handleUpdateCustomer(selectedCust.id, { tags });
-                  }}
-                  placeholder="Ex: Boulangerie, Sousse, GrosVolume"
-                  className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500/20 font-bold text-slate-900"
-                />
-                <p className="text-[10px] text-slate-400 font-bold">Appuyez en dehors du champ pour sauvegarder les tags.</p>
+                <div className="flex gap-2">
+                  <input 
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    placeholder="Ex: Boulangerie, Sousse, GrosVolume"
+                    className="flex-1 px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500/20 font-bold text-slate-900"
+                  />
+                  <button 
+                    onClick={() => {
+                      const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
+                      handleUpdateCustomer(selectedCust.id, { tags });
+                    }}
+                    className="px-6 bg-rose-600 text-white rounded-2xl font-black text-xs hover:bg-rose-700 transition-all"
+                  >
+                    OK
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400 font-bold">Appuyez sur OK pour sauvegarder les tags.</p>
               </div>
               {/* Order History */}
               <div className="space-y-3 border-t border-slate-50 pt-6">
@@ -365,6 +418,71 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
                 className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all mt-4"
               >
                 Terminer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Customer Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[40px] p-10 w-full max-w-lg shadow-2xl">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="font-black text-2xl text-slate-900">Ajouter un partenaire</h3>
+              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+            </div>
+            <p className="text-slate-400 font-bold text-sm mb-8">Rechercher un établissement dans le réseau Coffeeshop.</p>
+
+            <div className="space-y-6">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input 
+                  type="text" 
+                  autoFocus
+                  placeholder="Nom du coffeeshop..."
+                  value={storeSearch}
+                  onChange={e => handleSearchStores(e.target.value)}
+                  className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500/20 font-bold text-slate-900"
+                />
+              </div>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                {isSearchingStores ? (
+                  <div className="text-center py-8 text-slate-400 font-bold animate-pulse">Recherche en cours...</div>
+                ) : availableStores.length > 0 ? (
+                  availableStores.map(s => (
+                    <div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-rose-100 hover:bg-rose-50/30 transition-all group">
+                       <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 font-black group-hover:text-rose-600">
+                             {s.name.charAt(0)}
+                          </div>
+                          <div>
+                             <div className="font-black text-slate-900">{s.name}</div>
+                             <div className="text-[10px] font-bold text-slate-400">{s.city}</div>
+                          </div>
+                       </div>
+                       <button 
+                        disabled={isPending}
+                        onClick={() => handleAddCustomer(s.id)}
+                        className="bg-white text-slate-900 border border-slate-200 px-4 py-2 rounded-xl text-xs font-black hover:bg-slate-900 hover:text-white transition-all disabled:opacity-50"
+                       >
+                         {isPending ? '...' : 'Ajouter'}
+                       </button>
+                    </div>
+                  ))
+                ) : storeSearch.length >= 2 ? (
+                  <div className="text-center py-8 text-slate-400 font-bold">Aucun établissement trouvé</div>
+                ) : (
+                  <div className="text-center py-8 text-slate-400 font-bold text-xs italic">Tapez au moins 2 caractères pour rechercher</div>
+                )}
+              </div>
+
+              <button 
+                onClick={() => setIsAddModalOpen(false)}
+                className="w-full py-5 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 transition-all mt-4"
+              >
+                Fermer
               </button>
             </div>
           </div>

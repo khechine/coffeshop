@@ -1763,9 +1763,66 @@ export async function updateVendorCustomerAction(customerId: string, data: { cat
   const userId = cookies().get('userId')?.value;
   if (!userId) throw new Error('Unauthorized');
 
+  const updateData: any = { ...data };
+  if (data.tags) {
+    updateData.tags = { set: data.tags };
+  }
+
   return await (prisma as any).vendorCustomer.update({
     where: { id: customerId },
-    data
+    data: updateData
+  });
+}
+
+export async function getAvailableStoresAction(search?: string) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Unauthorized');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({
+    where: { userId }
+  });
+  if (!vendor) throw new Error('Vendor not found');
+
+  // Find stores that are NOT already customers of this vendor
+  return await (prisma as any).store.findMany({
+    where: {
+      status: 'ACTIVE',
+      name: search ? { contains: search, mode: 'insensitive' } : undefined,
+      NOT: {
+        vendorCustomers: {
+          some: { vendorId: vendor.id }
+        }
+      }
+    },
+    take: 10,
+    select: {
+      id: true,
+      name: true,
+      city: true,
+      address: true
+    }
+  });
+}
+
+export async function addVendorCustomerAction(storeId: string) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Unauthorized');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({
+    where: { userId }
+  });
+  if (!vendor) throw new Error('Vendor not found');
+
+  return await (prisma as any).vendorCustomer.create({
+    data: {
+      vendorId: vendor.id,
+      storeId,
+      category: 'REGULAR',
+      tags: [],
+      totalSpent: 0,
+      orderCount: 0
+    },
+    include: { store: true }
   });
 }
 
@@ -2154,7 +2211,16 @@ export async function getVendorPortalData() {
         }
       },
       orders: {
-        include: { items: true, store: true },
+        include: { 
+          items: true, 
+          store: {
+            include: {
+              vendorCustomers: {
+                where: { vendorId: vendorProfile.id }
+              }
+            }
+          } 
+        },
         orderBy: { createdAt: 'desc' }
       },
       posList: {

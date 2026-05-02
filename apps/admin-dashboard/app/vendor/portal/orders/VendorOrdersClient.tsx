@@ -16,6 +16,13 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
   const [filterPos, setFilterPos] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [taggingCust, setTaggingCust] = useState<any>(null);
+  const [tagInput, setTagInput] = useState('');
+
+  useEffect(() => {
+    if (taggingCust) {
+      setTagInput(taggingCust.tags?.join(', ') || '');
+    }
+  }, [taggingCust]);
 
   const handleUpdateCustomer = (id: string, data: { category?: string; tags?: string[] }) => {
     startTransition(async () => {
@@ -242,16 +249,24 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
 
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tags personnalisés</label>
-                <input 
-                  type="text"
-                  defaultValue={taggingCust.tags?.join(', ')}
-                  onBlur={(e) => {
-                    const tags = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
-                    handleUpdateCustomer(taggingCust.id, { tags });
-                  }}
-                  placeholder="Ex: Boulangerie, Sousse"
-                  className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500/20 font-bold text-slate-900"
-                />
+                <div className="flex gap-2">
+                  <input 
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    placeholder="Ex: Boulangerie, Sousse"
+                    className="flex-1 px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500/20 font-bold text-slate-900"
+                  />
+                  <button 
+                    onClick={() => {
+                      const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
+                      handleUpdateCustomer(taggingCust.id, { tags });
+                    }}
+                    className="px-6 bg-rose-600 text-white rounded-2xl font-black text-xs hover:bg-rose-700 transition-all"
+                  >
+                    OK
+                  </button>
+                </div>
               </div>
 
               <button 
