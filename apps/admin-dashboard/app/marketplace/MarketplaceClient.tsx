@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   ShoppingCart, ShoppingBag, Search, X, Plus, Heart, 
   ChevronRight, ArrowRight, LayoutGrid, MapPin, Store, 
-  Tag, Award, Navigation, Percent
+  Tag, Award, Navigation, Percent, Sparkles
 } from 'lucide-react';
 import { useCart } from './CartContext';
 import MarketplaceHeader from './components/MarketplaceHeader';
@@ -161,18 +161,6 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
       
       <MarketplaceHeader isVendor={isVendor} />
 
-      {/* ── Categories Navigation ── */}
-      <nav className="mkt-cocote-nav">
-        <div className="mkt-container mkt-cocote-nav-inner">
-          <Link href="/marketplace" className="mkt-cocote-nav-item active"><LayoutGrid size={14} /> Toutes les catégories</Link>
-          {categories.slice(0, 8).map((c: any) => (
-             <Link key={c.id} href={`/marketplace/category/${c.id}`} className="mkt-cocote-nav-item">
-               {c.name}
-             </Link>
-          ))}
-        </div>
-      </nav>
-
       {/* ── Main Content ── */}
       <div className="mkt-container mkt-cocote-main">
 
@@ -218,13 +206,26 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
           <section className="mkt-cocote-section">
             <div className="mkt-cocote-section-header">
               <h2 className="mkt-cocote-section-title"><Percent size={20} className="text-rose-500" /> Promos Locales</h2>
-              <Link href="/marketplace" className="mkt-cocote-see-all">Voir tout <ChevronRight size={14} /></Link>
+              {displayPromos.length > 0 && <Link href="/marketplace" className="mkt-cocote-see-all">Voir tout <ChevronRight size={14} /></Link>}
             </div>
-            <div className="mkt-cocote-grid">
-              {displayPromos.map((p: any) => (
-                <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />
-              ))}
-            </div>
+            {displayPromos.length > 0 ? (
+              <div className="mkt-cocote-grid">
+                {displayPromos.map((p: any) => (
+                  <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />
+                ))}
+              </div>
+            ) : (
+              <div className="mkt-cocote-empty-promo-banner">
+                <div className="mkt-cocote-banner-content">
+                  <div className="mkt-cocote-banner-icon"><Sparkles size={32} /></div>
+                  <div className="mkt-cocote-banner-text">
+                    <h3>Prochainement : Nouvelles offres locales</h3>
+                    <p>Découvrez bientôt des promotions exclusives de vos commerçants de proximité.</p>
+                  </div>
+                </div>
+                <button className="mkt-cocote-banner-btn">Être notifié</button>
+              </div>
+            )}
           </section>
         )}
 

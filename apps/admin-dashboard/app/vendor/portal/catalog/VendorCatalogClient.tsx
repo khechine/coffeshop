@@ -357,8 +357,22 @@ export default function VendorCatalogClient({
     setImportModalOpen(false); setCsvStep('upload'); setCsvRows([]); setCsvErrors([]); setCsvResult(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Limits Check for standard vendors
+    const featuredCount = initialProducts.filter((p: any) => p.isFeatured && p.id !== editingId).length;
+    const promoCount = initialProducts.filter((p: any) => p.isFlashSale && p.id !== editingId).length;
+
+    if (form.isFeatured && featuredCount >= 5) {
+      alert("Limite atteinte : Vous ne pouvez avoir que 5 produits vedettes maximum dans votre plan actuel.");
+      return;
+    }
+    if (form.isFlashSale && promoCount >= 3) {
+      alert("Limite atteinte : Vous ne pouvez avoir que 3 promotions actives maximum dans votre plan actuel.");
+      return;
+    }
+
     startTransition(async () => {
       const payload = {
         ...form,
@@ -610,9 +624,9 @@ export default function VendorCatalogClient({
       {/* ── MODALS ── */}
 
       {/* MODAL PRODUIT */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? 'Modifier le Produit' : 'Nouveau Produit'} width={620}>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? 'Modifier le Produit' : 'Ajouter un Produit'} size="2xl">
+        <form onSubmit={onSubmit} className="space-y-8">
+          <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div><label className={labelClass}>Nom du produit</label><input className={inputClass} value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Nom public..." required /></div>
               <div className="grid grid-cols-2 gap-4">

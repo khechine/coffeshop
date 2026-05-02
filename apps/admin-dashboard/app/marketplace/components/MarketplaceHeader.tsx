@@ -98,6 +98,18 @@ export default function MarketplaceHeader({ isVendor = false }: { isVendor?: boo
           </div>
         </div>
       </header>
+      
+      <div className="mkt-catmenu">
+        <div className="mkt-catmenu-inner">
+           <Link href="/marketplace" className="mkt-catmenu-item active">Tout voir</Link>
+           <Link href="/marketplace/category/cafe" className="mkt-catmenu-item">Café</Link>
+           <Link href="/marketplace/category/the" className="mkt-catmenu-item">Thé</Link>
+           <Link href="/marketplace/category/machines" className="mkt-catmenu-item">Machines</Link>
+           <Link href="/marketplace/category/accessoires" className="mkt-catmenu-item">Accessoires</Link>
+           <Link href="/marketplace/category/sirops" className="mkt-catmenu-item">Sirops</Link>
+           <Link href="/marketplace/category/epicerie" className="mkt-catmenu-item">Épicerie</Link>
+        </div>
+      </div>
 
       {/* ── Location Modal ── */}
       {locModalOpen && (
