@@ -2840,7 +2840,7 @@ export async function importCsvProductsAction(rows: {
         if (!category) {
           const subcat = allSubcategories.find((s: any) => s.name.toLowerCase() === catName.toLowerCase());
           if (subcat) {
-            categoryId = subcat.categoryId;
+            categoryId = subcat.parentId;
             subcategoryId = subcat.id;
           }
         } else {
