@@ -227,6 +227,53 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
             </div>
           </div>
         )}
+        {/* Sélections Stratégiques (Axes Intelligents) */}
+        {!search && (
+          <section className="mkt-cocote-section" style={{ marginTop: '40px', padding: '32px', background: 'linear-gradient(135deg, #F8FAFC, #EEF2FF)', borderRadius: '32px', border: '1px solid #E2E8F0' }}>
+            <div className="mkt-cocote-section-header" style={{ marginBottom: '24px' }}>
+              <h2 className="mkt-cocote-section-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '24px', fontWeight: 900, color: '#1E293B' }}>
+                <Sparkles className="text-indigo-600" size={24} /> Sélections Stratégiques & Astuces
+              </h2>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+              
+              {/* Card 1 */}
+              <Link href="/marketplace?q=starter" style={{ textDecoration: 'none' }}>
+                <div style={{ background: '#fff', padding: '24px', borderRadius: '24px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', height: '100%', border: '2px solid transparent', transition: 'all 0.3s' }} className="hover:border-indigo-500 hover:-translate-y-1">
+                  <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+                    <ShoppingCart size={24} />
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', marginBottom: '8px' }}>Starter Pack Coffeeshop</h3>
+                  <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.5 }}>L'équipement et les ingrédients essentiels pour lancer votre établissement.</p>
+                </div>
+              </Link>
+
+              {/* Card 2 */}
+              <Link href="/marketplace?q=premium" style={{ textDecoration: 'none' }}>
+                <div style={{ background: '#fff', padding: '24px', borderRadius: '24px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', height: '100%', border: '2px solid transparent', transition: 'all 0.3s' }} className="hover:border-rose-500 hover:-translate-y-1">
+                  <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: '#FFF1F2', color: '#E11D48', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+                    <Award size={24} />
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', marginBottom: '8px' }}>Top Pâtisserie Premium</h3>
+                  <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.5 }}>Ingrédients haut de gamme et chocolats de couverture pour vos desserts.</p>
+                </div>
+              </Link>
+
+              {/* Card 3 */}
+              <Link href="/marketplace?category=bundles" style={{ textDecoration: 'none' }}>
+                <div style={{ background: '#fff', padding: '24px', borderRadius: '24px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', height: '100%', border: '2px solid transparent', transition: 'all 0.3s' }} className="hover:border-emerald-500 hover:-translate-y-1">
+                  <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: '#ECFDF5', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+                    <ShoppingBag size={24} />
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', marginBottom: '8px' }}>Bundles & Packs Barista</h3>
+                  <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.5 }}>Achetez en lot et profitez de réductions sur les consommables essentiels.</p>
+                </div>
+              </Link>
+              
+            </div>
+          </section>
+        )}
 
         {/* Promos Locales */}
         {!search && (
