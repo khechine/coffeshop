@@ -271,29 +271,24 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
               <div style={{ width: 60, height: 4, background: '#6366F1', margin: '16px auto' }}></div>
             </div>
             <div className="mkt-cocote-category-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
-              {[
-                { name: 'Épicerie Fine', icon: '✨', color: '#F59E0B' },
-                { name: 'Café & Thé', icon: '☕', color: '#8B5A2B' },
-                { name: 'Boissons', icon: '🥤', color: '#3B82F6' },
-                { name: 'Snacks & Biscuits', icon: '🍪', color: '#EC4899' },
-                { name: 'Condiments', icon: '🧂', color: '#10B981' },
-                { name: 'Emballages', icon: '📦', color: '#64748B' },
-                { name: 'Entretien', icon: '🧼', color: '#14B8A6' },
-                { name: 'Accessoires', icon: '🎀', color: '#F43F5E' },
-              ].map((univ, i) => {
-                const matchingCat = categories.find((c: any) => 
-                  c.name.toLowerCase().includes(univ.name.split(' ')[0].toLowerCase())
-                );
-                const href = matchingCat ? `/marketplace/category/${matchingCat.id}` : `/marketplace?search=${encodeURIComponent(univ.name)}`;
+              {categories.slice(0, 8).map((cat: any, i: number) => {
+                const href = `/marketplace/category/${cat.id}`;
                 
                 return (
                   <Link 
-                    key={i} 
+                    key={cat.id} 
                     href={href}
-                    className="bg-white p-8 rounded-[40px] border border-slate-100 flex flex-col items-center gap-6 hover:shadow-2xl hover:translate-y-[-8px] transition-all cursor-pointer group text-decoration-none"
+                    className="bg-white p-8 rounded-[40px] border border-slate-100 flex flex-col items-center gap-6 hover:shadow-2xl hover:translate-y-[-8px] transition-all cursor-pointer group text-decoration-none relative overflow-hidden"
                   >
-                    <div style={{ width: 80, height: 80, background: `${univ.color}10`, borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>{univ.icon}</div>
-                    <span className="text-xs font-black text-slate-900 uppercase tracking-widest text-center group-hover:text-indigo-600">{univ.name}</span>
+                    {cat.image && (
+                      <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <img src={cat.image} className="w-full h-full object-cover" alt="" />
+                      </div>
+                    )}
+                    <div className="relative z-10" style={{ width: 80, height: 80, background: `${cat.color || '#6366F1'}15`, color: cat.color || '#6366F1', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>
+                      {cat.icon || '📦'}
+                    </div>
+                    <span className="relative z-10 text-xs font-black text-slate-900 uppercase tracking-widest text-center group-hover:text-indigo-600">{cat.name}</span>
                   </Link>
                 );
               })}

@@ -1,24 +1,24 @@
 import { prisma } from '@coffeeshop/database';
-import MktCategoriesClient from './MktCategoriesClient';
+import CategoryManagementClient from './CategoryManagementClient';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MktCategoriesPage() {
-  const [categories, pendingSubcategories] = await Promise.all([
-    prisma.mktCategory.findMany({
-      include: { subcategories: true },
-      orderBy: { sortOrder: 'asc' }
+  const [categoryTree, pendingProposals] = await Promise.all([
+    prisma.marketplaceCategory.findMany({
+      where: { parentId: null },
+      include: { children: true },
+      orderBy: { name: 'asc' }
     }),
-    prisma.mktSubcategory.findMany({
-      where: { status: 'PENDING' },
-      include: { category: true }
+    prisma.marketplaceCategory.findMany({
+      where: { parentId: { not: null } },
+      include: { parent: true }
     })
   ]);
 
   return (
-    <MktCategoriesClient 
-      categories={categories} 
-      pendingSubcategories={pendingSubcategories} 
+    <CategoryManagementClient 
+      categoryTree={categoryTree as any} 
     />
   );
 }

@@ -1145,7 +1145,16 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
   );
 
   const [categories, featuredRaw, flashSalesRaw, productsRaw, bundlesRaw, bannersRaw] = await Promise.all([
-    (prisma as any).mktCategory.findMany({ include: { subcategories: true } }),
+    (prisma as any).marketplaceCategory.findMany({ 
+      where: { parentId: null },
+      include: { 
+        children: {
+          include: {
+            children: true
+          }
+        }
+      } 
+    }),
     (prisma as any).vendorProduct.findMany({
       where: { isFeatured: true },
       include: { 
@@ -1399,9 +1408,15 @@ export async function getMarketplaceBenchmarkData(vendorId: string) {
 }
 
 export async function getMarketplaceCategoryTree() {
-  const all = await (prisma as any).mktCategory.findMany({
-    where: { status: 'ACTIVE' },
-    include: { subcategories: true },
+  const all = await (prisma as any).marketplaceCategory.findMany({
+    where: { parentId: null },
+    include: { 
+      children: {
+        include: {
+          children: true
+        }
+      }
+    },
     orderBy: { name: 'asc' }
   });
   return all;
@@ -1485,7 +1500,7 @@ export async function resolveCategoryProposal(id: string, action: 'approve' | 'r
   revalidatePath('/vendor/portal/catalog');
 }
 
-export async function updateMarketplaceCategoryAction(id: string, data: { name?: string; icon?: string }) {
+export async function updateMarketplaceCategoryAction(id: string, data: { name?: string; icon?: string; image?: string; color?: string; parentId?: string }) {
   const cookieStore = cookies();
   const userId = cookieStore.get('userId')?.value;
 
@@ -1496,25 +1511,17 @@ export async function updateMarketplaceCategoryAction(id: string, data: { name?:
   const user = await (prisma as any).user.findUnique({ where: { id: userId } });
   if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
 
-  const isSubcategory = id.startsWith('sub_');
-  if (isSubcategory) {
-    const subId = id.replace('sub_', '');
-    await (prisma as any).mktSubcategory.update({
-      where: { id: subId },
-      data: {
-        name: data.name?.trim(),
-        icon: data.icon?.trim(),
-      }
-    });
-  } else {
-    await (prisma as any).mktCategory.update({
-      where: { id },
-      data: {
-        name: data.name?.trim(),
-        icon: data.icon?.trim(),
-      }
-    });
-  }
+  await (prisma as any).marketplaceCategory.update({
+    where: { id },
+    data: {
+      name: data.name?.trim(),
+      icon: data.icon?.trim(),
+      image: data.image?.trim(),
+      color: data.color?.trim(),
+      parentId: data.parentId || null,
+    }
+  });
+
   revalidatePath('/superadmin/marketplace/categories');
   revalidatePath('/marketplace');
 }
@@ -1595,22 +1602,17 @@ export async function deleteMarketplaceCategoryAction(id: string) {
   const user = await (prisma as any).user.findUnique({ where: { id: userId } });
   if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
 
-  const isSubcategory = id.startsWith('sub_');
-  if (isSubcategory) {
-    const subId = id.replace('sub_', '');
-    await (prisma as any).mktSubcategory.delete({ where: { id: subId } });
-  } else {
-    const category = await (prisma as any).mktCategory.findUnique({
-      where: { id },
-      include: { _count: { select: { subcategories: true, products: true } } }
-    });
+  const category = await (prisma as any).marketplaceCategory.findUnique({
+    where: { id },
+    include: { _count: { select: { children: true, products: true } } }
+  });
 
-    if (category?._count.subcategories! > 0 || category?._count.products! > 0) {
-      throw new Error('Impossible de supprimer une catégorie non vide (contient des sous-catégories ou des produits).');
-    }
-
-    await (prisma as any).mktCategory.delete({ where: { id } });
+  if (category?._count.children! > 0 || category?._count.products! > 0) {
+    throw new Error('Impossible de supprimer une catégorie non vide (contient des sous-catégories ou des produits).');
   }
+
+  await (prisma as any).marketplaceCategory.delete({ where: { id } });
+
   revalidatePath('/superadmin/marketplace/categories');
   revalidatePath('/marketplace');
 }
@@ -1674,7 +1676,7 @@ export async function deleteMarketplaceBannerAction(id: string) {
   revalidatePath('/marketplace');
 }
 
-export async function createMarketplaceCategoryAction(data: { name: string; icon?: string }) {
+export async function createMarketplaceCategoryAction(data: { name: string; icon?: string; image?: string; color?: string; parentId?: string }) {
 
   const cookieStore = cookies();
   const userId = cookieStore.get('userId')?.value;
@@ -1686,12 +1688,14 @@ export async function createMarketplaceCategoryAction(data: { name: string; icon
   const user = await (prisma as any).user.findUnique({ where: { id: userId } });
   if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
 
-  await (prisma as any).mktCategory.create({
+  await (prisma as any).marketplaceCategory.create({
     data: {
       name: data.name,
-      slug: data.name.toLowerCase().replace(/ /g, '-'),
+      slug: data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
       icon: data.icon,
-      status: 'ACTIVE'
+      image: data.image,
+      color: data.color,
+      parentId: data.parentId || null,
     }
   });
   revalidatePath('/superadmin/marketplace/categories');

@@ -13,14 +13,14 @@ export default async function CategoryPage({ params }: { params: { id: string } 
   
   // 1. Find category or subcategory
   let category = data.categories.find((c: any) => c.id === id || c.slug === id);
-  let isSubcategory = false;
+  let isChild = false;
 
   if (!category) {
     for (const root of data.categories) {
-      const sub = (root.subcategories || []).find((s: any) => s.id === id || s.slug === id);
-      if (sub) {
-        category = sub;
-        isSubcategory = true;
+      const child = (root.children || []).find((s: any) => s.id === id || s.slug === id);
+      if (child) {
+        category = child;
+        isChild = true;
         break;
       }
     }
@@ -30,7 +30,7 @@ export default async function CategoryPage({ params }: { params: { id: string } 
 
   // 2. Filter products
   const products = data.products.filter((p: any) => 
-    isSubcategory ? p.subcategoryId === category.id : p.categoryId === category.id
+    isChild ? p.mktCategoryId === category.id : (p.mktCategoryId === category.id || category.children?.some((c: any) => c.id === p.mktCategoryId))
   );
 
   // Robust serialization for Prisma types (Decimal, Date, etc)

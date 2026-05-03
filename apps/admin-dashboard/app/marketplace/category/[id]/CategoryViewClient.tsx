@@ -150,9 +150,9 @@ export default function CategoryViewClient({ category, products, allCategories, 
     return list;
   }, [products, search, selectedBrands, sortOrder]);
 
-  const catColor = getCategoryColor(category.name);
+  const catColor = category.color || getCategoryColor(category.name);
 
-  const parentCategory = allCategories.find((c: any) => c.subcategories?.some((s: any) => s.id === category.id));
+  const parentCategory = allCategories.find((c: any) => c.children?.some((s: any) => s.id === category.id));
   const displayCategory = category;
 
   return (
@@ -186,25 +186,25 @@ export default function CategoryViewClient({ category, products, allCategories, 
               <li><Link href="/marketplace" className="text-slate-500 hover:text-indigo-600">Toutes les catégories</Link></li>
               {parentCategory ? (
                 <>
-                  <li><Link href={`/marketplace/category/${parentCategory.id}`} className="text-slate-500 hover:text-indigo-600 font-bold">{parentCategory.name}</Link></li>
-                  {(parentCategory.subcategories || []).map((sub: any) => (
-                    <li key={sub.id} style={{ paddingLeft: 16 }}>
-                       {sub.id === category.id ? (
-                         <span className="font-bold" style={{ color: catColor }}>→ {sub.name}</span>
-                       ) : (
-                         <Link href={`/marketplace/category/${sub.id}`} className="text-slate-500 hover:text-indigo-600 text-sm">→ {sub.name}</Link>
-                       )}
-                    </li>
-                  ))}
+                   <li><Link href={`/marketplace/category/${parentCategory.id}`} className="text-slate-500 hover:text-indigo-600 font-bold">{parentCategory.name}</Link></li>
+                   {(parentCategory.children || []).map((sub: any) => (
+                     <li key={sub.id} style={{ paddingLeft: 16 }}>
+                        {sub.id === category.id ? (
+                          <span className="font-bold" style={{ color: catColor }}>→ {sub.name}</span>
+                        ) : (
+                          <Link href={`/marketplace/category/${sub.id}`} className="text-slate-500 hover:text-indigo-600 text-sm">→ {sub.name}</Link>
+                        )}
+                     </li>
+                   ))}
                 </>
               ) : (
                 <>
-                  <li><span className="font-bold" style={{ color: catColor }}>{category.name}</span></li>
-                  {(category.subcategories || []).map((sub: any) => (
-                    <li key={sub.id} style={{ paddingLeft: 16 }}>
-                       <Link href={`/marketplace/category/${sub.id}`} className="text-slate-500 hover:text-indigo-600 text-sm">→ {sub.name}</Link>
-                    </li>
-                  ))}
+                   <li><span className="font-bold" style={{ color: catColor }}>{category.name}</span></li>
+                   {(category.children || []).map((sub: any) => (
+                     <li key={sub.id} style={{ paddingLeft: 16 }}>
+                        <Link href={`/marketplace/category/${sub.id}`} className="text-slate-500 hover:text-indigo-600 text-sm">→ {sub.name}</Link>
+                     </li>
+                   ))}
                 </>
               )}
             </ul>
@@ -326,19 +326,21 @@ export default function CategoryViewClient({ category, products, allCategories, 
             </div>
           </section>
           
-          {category.subcategories?.length > 0 && (
+          {category.children?.length > 0 && (
             <section className="mb-12">
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-[14px] font-black text-slate-900 uppercase tracking-[.2em]">Sous-catégories populaires</h2>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {category.subcategories.slice(0, 6).map((sub: any) => (
+                {category.children.slice(0, 6).map((sub: any) => (
                   <Link 
                     key={sub.id} 
                     href={`/marketplace/category/${sub.id}`}
                     className="bg-white border border-slate-100 p-4 rounded-2xl flex flex-col items-center gap-3 hover:border-indigo-200 hover:shadow-lg transition-all text-decoration-none group"
                   >
-                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-xl group-hover:bg-indigo-50 transition-colors">📦</div>
+                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-xl group-hover:bg-indigo-50 transition-colors" style={{ color: sub.color || 'inherit' }}>
+                      {sub.icon || '📦'}
+                    </div>
                     <span className="text-[11px] font-bold text-slate-700 text-center">{sub.name}</span>
                   </Link>
                 ))}

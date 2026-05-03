@@ -122,33 +122,34 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
            
            {categories.map((cat: any) => (
              <div key={cat.id} className="mkt-megamenu-trigger group">
-               <Link 
-                 href={`/marketplace/category/${cat.id}`} 
-                 className={`mkt-catmenu-item ${searchParams.get('id') === cat.id ? 'active' : ''}`}
-               >
-                 {cat.name}
-               </Link>
+                <Link 
+                  href={`/marketplace/category/${cat.id}`} 
+                  className={`mkt-catmenu-item ${searchParams.get('id') === cat.id ? 'active' : ''}`}
+                  style={{ '--cat-color': cat.color || '#6366F1' } as any}
+                >
+                  {cat.name}
+                </Link>
                
-               {(cat.subcategories?.length > 0) && (
+               {(cat.children?.length > 0) && (
                  <>
                    <div className="mkt-megamenu-overlay" />
                    <div className="mkt-megamenu-panel shadow-2xl">
                      <div className="mkt-container">
                        <div className="mkt-mega-grid">
                           <div className="mkt-mega-col-main">
-                            <div className="mkt-mega-featured-card">
-                               <span className="mkt-mega-label">Univers {cat.name}</span>
-                               <h3>Découvrez notre sélection de {cat.name}</h3>
-                               <Link href={`/marketplace/category/${cat.id}`} className="mkt-mega-btn">
+                            <div className="mkt-mega-featured-card" style={{ backgroundImage: cat.image ? `linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.2)), url(${cat.image})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center', color: cat.image ? '#fff' : 'inherit' }}>
+                               <span className="mkt-mega-label" style={{ backgroundColor: cat.color || '#6366F1', color: '#fff' }}>Univers {cat.name}</span>
+                               <h3 className={cat.image ? 'text-white' : ''}>Découvrez notre sélection de {cat.name}</h3>
+                               <Link href={`/marketplace/category/${cat.id}`} className="mkt-mega-btn" style={{ backgroundColor: cat.color || '#6366F1', color: '#fff', border: 'none' }}>
                                  Tout explorer <ChevronRight size={14} />
                                </Link>
                             </div>
                           </div>
                           
                           <div className="mkt-mega-col-links">
-                            <div className="mkt-mega-subgrid" style={{ gridTemplateColumns: `repeat(${Math.ceil(cat.subcategories.length / 8)}, 1fr)` }}>
-                              {cat.subcategories.map((sub: any) => (
-                                <Link key={sub.id} href={`/marketplace/category/${sub.id}`} className="mkt-mega-sublink">
+                            <div className="mkt-mega-subgrid" style={{ gridTemplateColumns: `repeat(${Math.max(1, Math.ceil((cat.children?.length || 0) / 8))}, 1fr)` }}>
+                              {cat.children.map((sub: any) => (
+                                <Link key={sub.id} href={`/marketplace/category/${sub.id}`} className="mkt-mega-sublink hover:text-indigo-600">
                                   {sub.name}
                                 </Link>
                               ))}
