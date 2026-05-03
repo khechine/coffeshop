@@ -161,52 +161,39 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
                 >
                   {cat.name}
                 </Link>
-               
-               {(cat.children?.length > 0) && (
-                 <>
-                   <div className="mkt-megamenu-overlay" />
-                   <div className="mkt-megamenu-panel shadow-2xl">
-                     <div className="mkt-container">
-                       <div className="mkt-mega-grid">
-                          <div className="mkt-mega-col-main">
-                            <div className="mkt-mega-featured-card" style={{ backgroundImage: cat.image ? `linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.2)), url(${cat.image})` : undefined, backgroundSize: 'cover', backgroundPosition: 'center', color: cat.image ? '#fff' : 'inherit' }}>
-                               <span className="mkt-mega-label" style={{ backgroundColor: cat.color || '#6366F1', color: '#fff' }}>Univers {cat.name}</span>
-                               <h3 className={cat.image ? 'text-white' : ''}>Découvrez notre sélection de {cat.name}</h3>
-                               <Link href={`/marketplace/category/${cat.id}`} className="mkt-mega-btn" style={{ backgroundColor: cat.color || '#6366F1', color: '#fff', border: 'none' }}>
-                                 Tout explorer <ChevronRight size={14} />
-                               </Link>
-                            </div>
-                          </div>
-                          
-                          <div className="mkt-mega-col-links">
-                            <div className="mkt-mega-subgrid" style={{ gridTemplateColumns: `repeat(${Math.min(4, Math.max(1, Math.ceil((cat.children?.length || 0) / 4)))}, 1fr)`, gap: '40px' }}>
-                              {cat.children.map((sub: any) => (
-                                <div key={sub.id} className="mkt-mega-subgroup">
-                                  <Link href={`/marketplace/category/${sub.id}`} className="mkt-mega-sublink-header">
-                                    {sub.name}
+                              {(cat.children?.length > 0) && (
+                  <div className="mkt-megamenu-panel">
+                    <div className="mkt-container">
+                      <div className="mkt-mega-simple-grid">
+                        {cat.children.map((sub: any) => (
+                          <div key={sub.id} className="mkt-mega-subgroup">
+                            <Link href={`/marketplace/category/${sub.id}`} className="mkt-mega-sublink-header">
+                              {sub.name}
+                            </Link>
+                            {sub.children && sub.children.length > 0 && (
+                              <div className="mkt-mega-sublinks-stack">
+                                {sub.children.map((gchild: any) => (
+                                  <Link key={gchild.id} href={`/marketplace/category/${gchild.id}`} className="mkt-mega-sublink">
+                                    {gchild.name}
                                   </Link>
-                                  {sub.children && sub.children.length > 0 && (
-                                    <div className="mkt-mega-sublinks-stack">
-                                      {sub.children.map((gchild: any) => (
-                                        <Link key={gchild.id} href={`/marketplace/category/${gchild.id}`} className="mkt-mega-sublink">
-                                          {gchild.name}
-                                        </Link>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                       </div>
-                     </div>
-                   </div>
-                 </>
-               )}
-             </div>
-           ))}
-        </div>
-      </div>
+                        ))}
+                      </div>
+                      <div className="mkt-mega-footer">
+                        <Link href={`/marketplace/category/${cat.id}`}>
+                          Découvrir tout l'univers {cat.name} <ChevronRight size={14} />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+         </div>
+       </div>
 
       {/* ── Mobile Sidebar Drawer ── */}
       {isMobileMenuOpen && (

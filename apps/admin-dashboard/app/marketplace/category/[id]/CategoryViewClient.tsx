@@ -393,20 +393,26 @@ export default function CategoryViewClient({ category, products = [], allCategor
               <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">Découvrez d'autres catégories</h2>
               <p className="text-slate-500 mt-4 text-lg">Parcourez nos univers Food & Drink pour votre commerce.</p>
             </div>
-            <div className="mkt-category-rayons-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
+            <div className="mkt-cocote-category-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
               {allCategories.filter((c: any) => c.id !== category.id).slice(0, 8).map((univ: any) => (
                 <Link 
                   key={univ.id} 
                   href={`/marketplace/category/${univ.id}`}
-                  className="group flex flex-col gap-4 text-decoration-none"
+                  className="relative block aspect-[4/5] overflow-hidden group rounded-[4px] border border-slate-200"
                 >
-                  <div style={{ aspectRatio: '1.5', overflow: 'hidden', background: '#F3F4F6', borderRadius: 4 }}>
-                    <img 
-                      src={getCategoryImage(univ)} 
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                    />
+                  <img 
+                    src={getCategoryImage(univ)} 
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                    alt={univ.name} 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-xl">{univ.icon || '📦'}</span>
+                      <h3 className="text-white text-lg font-bold leading-tight m-0">{univ.name}</h3>
+                    </div>
+                    <p className="text-white/70 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300">Voir la collection</p>
                   </div>
-                  <span className="text-sm font-bold text-slate-900 group-hover:underline">{univ.name}</span>
                 </Link>
               ))}
             </div>

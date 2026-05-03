@@ -137,23 +137,9 @@
   gap: 40px;
 }
 
-/* ── Mega Menu ── */
+/* Radical Clean Mega Menu */
 .mkt-megamenu-trigger {
   position: static;
-}
-
-.mkt-megamenu-overlay {
-  position: fixed;
-  top: 154px; 
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(15, 23, 42, 0.4);
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.3s ease;
-  z-index: 490;
-  pointer-events: none;
 }
 
 .mkt-megamenu-panel {
@@ -161,110 +147,51 @@
   top: 100%;
   left: 0;
   right: 0;
+  width: 100%;
   background: #fff;
-  border-top: 1px solid #f1f5f9;
-  box-shadow: 0 40px 80px -12px rgba(0, 0, 0, 0.2);
+  border-top: 1px solid #E5E7EB;
+  border-bottom: 1px solid #E5E7EB;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
   opacity: 0;
   visibility: hidden;
   transform: translateY(0);
   transition: all 0.2s ease-out;
   z-index: 500;
-  padding: 60px 0;
+  padding: 48px 0;
   pointer-events: none;
-  border-radius: 0 0 12px 12px;
 }
 
 .mkt-megamenu-trigger:hover .mkt-megamenu-panel {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
   pointer-events: all;
 }
 
-.mkt-megamenu-trigger:hover .mkt-megamenu-overlay {
-  opacity: 1;
-  visibility: visible;
-}
-
-.mkt-mega-grid {
+.mkt-mega-simple-grid {
   display: grid;
-  grid-template-columns: 350px 1fr;
-  gap: 60px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 48px;
   align-items: start;
-}
-
-.mkt-mega-col-main {
-  border-right: 1px solid #f1f5f9;
-  padding-right: 40px;
-}
-
-.mkt-mega-featured-card {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  padding: 32px;
-  border-radius: 24px;
-  border: 1px solid #e2e8f0;
-}
-
-.mkt-mega-label {
-  display: block;
-  font-size: 10px;
-  font-weight: 900;
-  color: #6366f1;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 12px;
-}
-
-.mkt-mega-featured-card h3 {
-  font-size: 24px;
-  font-weight: 800;
-  color: #0f172a;
-  line-height: 1.2;
-  margin-bottom: 20px;
-}
-
-.mkt-mega-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: #0f172a;
-  color: #fff;
-  padding: 10px 20px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all 0.2s;
-}
-
-.mkt-mega-btn:hover {
-  background: #334155;
-  transform: translateX(4px);
-}
-
-.mkt-mega-subgrid {
-  display: grid;
 }
 
 .mkt-mega-subgroup {
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
 .mkt-mega-sublink-header {
-  font-size: 11px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #0f172a;
-  text-decoration: none;
-  margin-bottom: 8px;
   display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #111827;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+  text-decoration: none;
 }
 
 .mkt-mega-sublink-header:hover {
-  color: #6366f1;
+  text-decoration: underline;
 }
 
 .mkt-mega-sublinks-stack {
@@ -274,17 +201,15 @@
 }
 
 .mkt-mega-sublink {
-  font-size: 13px;
-  font-weight: 500;
-  color: #64748b;
+  font-size: 14px;
+  color: #64748B;
   text-decoration: none;
-  transition: all 0.2s;
-  display: block;
+  transition: color 0.2s;
+  font-weight: 500;
 }
 
 .mkt-mega-sublink:hover {
-  color: #6366f1;
-  transform: translateX(4px);
+  color: #111827;
 }
 
 /* --- Layout Container --- */

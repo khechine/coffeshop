@@ -146,6 +146,22 @@ function VendorCard({ vendor, distance }: any) {
   );
 }
 
+/* ── Helpers ── */
+const CATEGORY_IMAGES: Record<string, string> = {
+  'matieres-premieres': 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=600',
+  'produits-semi-finis': 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=600',
+  'produits-finis-b2b-revente': 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?q=80&w=600',
+  'equipements-materiel': 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=600',
+  'emballages': 'https://images.unsplash.com/photo-1589939705384-5185138a04b9?q=80&w=600',
+  'hygiene-nettoyage': 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=600',
+  'services': 'https://images.unsplash.com/photo-1521791136366-39851946a095?q=80&w=600',
+};
+
+const getCategoryImage = (cat: any) => {
+  if (cat.image) return cat.image;
+  return CATEGORY_IMAGES[cat.slug] || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=600';
+};
+
 /* ─── MAIN CLIENT ─── */
 export default function MarketplaceClient({ initialData, isVendor = false }: { initialData: any; isVendor?: boolean }) {
   const router = useRouter();
@@ -313,32 +329,37 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
           </section>
         )}
 
-        {/* Catégories Populaires / Universes */}
+        {/* Catégories Populaires / Universes (Faire Style) */}
         {!search && (
-          <section className="mkt-cocote-section">
+          <section className="mkt-cocote-section" style={{ marginTop: 80 }}>
             <div style={{ textAlign: 'center', marginBottom: 48 }}>
-              <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Explorez nos univers</h2>
-              <div style={{ width: 60, height: 4, background: '#6366F1', margin: '16px auto' }}></div>
+              <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight uppercase">Explorez nos univers</h2>
+              <p className="text-slate-500 mt-2 text-lg">Découvrez les meilleures sélections par métier.</p>
             </div>
-            <div className="mkt-cocote-category-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
-              {categories.slice(0, 8).map((cat: any, i: number) => {
+            <div className="mkt-cocote-category-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
+              {categories.slice(0, 8).map((cat: any) => {
                 const href = `/marketplace/category/${cat.id}`;
+                const img = getCategoryImage(cat);
                 
                 return (
                   <Link 
                     key={cat.id} 
                     href={href}
-                    className="bg-white p-8 rounded-[40px] border border-slate-100 flex flex-col items-center gap-6 hover:shadow-2xl hover:translate-y-[-8px] transition-all cursor-pointer group text-decoration-none relative overflow-hidden"
+                    className="relative block aspect-[4/5] overflow-hidden group rounded-[4px] border border-slate-200"
                   >
-                    {cat.image && (
-                      <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <img src={cat.image} className="w-full h-full object-cover" alt="" />
+                    <img 
+                      src={img} 
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                      alt={cat.name} 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute inset-0 p-8 flex flex-col justify-end">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-2xl">{cat.icon || '📦'}</span>
+                        <h3 className="text-white text-xl font-bold leading-tight m-0">{cat.name}</h3>
                       </div>
-                    )}
-                    <div className="relative z-10" style={{ width: 80, height: 80, background: `${cat.color || '#6366F1'}15`, color: cat.color || '#6366F1', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>
-                      {cat.icon || '📦'}
+                      <p className="text-white/70 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">Voir les produits</p>
                     </div>
-                    <span className="relative z-10 text-xs font-black text-slate-900 uppercase tracking-widest text-center group-hover:text-indigo-600">{cat.name}</span>
                   </Link>
                 );
               })}
