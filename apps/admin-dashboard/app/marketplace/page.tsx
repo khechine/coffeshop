@@ -40,7 +40,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
 
   // Robust serialization for Prisma types (Decimal, Date, etc)
   const serializedData = JSON.parse(JSON.stringify(data, (key, value) => 
-    typeof value === 'object' && value !== null && value.constructor.name === 'Decimal' 
+    typeof value === 'object' && value !== null && value?.constructor?.name === 'Decimal' 
       ? Number(value) 
       : value
   ));

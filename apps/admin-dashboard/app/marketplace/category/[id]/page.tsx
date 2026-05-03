@@ -35,7 +35,7 @@ export default async function CategoryPage({ params }: { params: { id: string } 
 
   // Robust serialization for Prisma types (Decimal, Date, etc)
   const serializedData = JSON.parse(JSON.stringify({ category, products, allCategories: data.categories }, (key, value) => 
-    typeof value === 'object' && value !== null && value.constructor.name === 'Decimal' 
+    typeof value === 'object' && value !== null && value?.constructor?.name === 'Decimal' 
       ? Number(value) 
       : value
   ));

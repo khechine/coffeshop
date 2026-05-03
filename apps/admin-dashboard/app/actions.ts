@@ -1604,11 +1604,11 @@ export async function deleteMarketplaceCategoryAction(id: string) {
 
   const category = await (prisma as any).marketplaceCategory.findUnique({
     where: { id },
-    include: { _count: { select: { children: true, products: true } } }
+    include: { _count: { select: { children: true } } }
   });
 
-  if (category?._count.children! > 0 || category?._count.products! > 0) {
-    throw new Error('Impossible de supprimer une catégorie non vide (contient des sous-catégories ou des produits).');
+  if (category?._count.children > 0) {
+    throw new Error('Impossible de supprimer une catégorie non vide (contient des sous-catégories).');
   }
 
   await (prisma as any).marketplaceCategory.delete({ where: { id } });
