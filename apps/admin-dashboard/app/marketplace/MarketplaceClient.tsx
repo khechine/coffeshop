@@ -236,7 +236,7 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
               </h2>
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+            <div className="mkt-cocote-grid">
               
               {/* Card 1 */}
               <Link href="/marketplace?q=starter" style={{ textDecoration: 'none' }}>

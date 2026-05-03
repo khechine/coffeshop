@@ -124,7 +124,7 @@ function ProductCard({ product, onAdd, isVendor }: any) {
   );
 }
 
-export default function CategoryViewClient({ category, products = [], allCategories = [], isVendor = false }: any) {
+export default function CategoryViewClient({ category, products = [], allCategories = [], allProducts = [], isVendor = false }: any) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = searchParams.get('search') || '';
@@ -158,6 +158,11 @@ export default function CategoryViewClient({ category, products = [], allCategor
     if (sortOrder === 'price_desc') list.sort((a: any, b: any) => (b.discountPrice || b.price) - (a.discountPrice || a.price));
     return list;
   }, [products, search, selectedBrands, sortOrder]);
+
+  const featuredProducts = useMemo(() => products.filter((p: any) => p.isFeatured).slice(0, 4), [products]);
+  const flashSales = useMemo(() => products.filter((p: any) => p.isFlashSale).slice(0, 4), [products]);
+  const bestPrices = useMemo(() => [...products].sort((a,b) => (a.discountPrice || a.price) - (b.discountPrice || b.price)).slice(0, 4), [products]);
+  const suggestions = useMemo(() => allProducts.filter((p: any) => p.isFeatured).slice(0, 8), [allProducts]);
 
   const catColor = category.color || getCategoryColor(category.name);
 
@@ -290,95 +295,51 @@ export default function CategoryViewClient({ category, products = [], allCategor
             <div style={{ position: 'absolute', bottom: '-20px', right: '100px', width: '150px', height: '150px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%' }} />
           </div>
 
-          {/* ── ZONE 1: SOUS-CATÉGORIES (Pills/Cards) ── */}
-          {(category.children || []).length > 0 && (
-            <section style={{ marginBottom: 64 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <h2 className="text-xl font-black text-slate-900 uppercase tracking-wider">Explorer les rayons</h2>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 20 }}>
-                {category.children.map((sub: any) => (
-                  <Link key={sub.id} href={`/marketplace/category/${sub.id}`} style={{ textDecoration: 'none' }}>
-                    <div className="group cursor-pointer text-center">
-                      <div style={{ 
-                        aspectRatio: '1', 
-                        borderRadius: '24px', 
-                        background: '#F1F5F9', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        fontSize: '32px',
-                        marginBottom: '12px',
-                        transition: 'all 0.3s',
-                        border: '2px solid transparent'
-                      }} className="group-hover:bg-white group-hover:border-indigo-500 group-hover:shadow-xl group-hover:-translate-y-1">
-                        {sub.icon || '📁'}
-                      </div>
-                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-tight group-hover:text-indigo-600">{sub.name}</h4>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
+          {/* ── ZONE 1: SÉLECTIONS CURÉES (Algorithme de mise en avant) ── */}
+          {products.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 64, marginBottom: 64 }}>
+              
+              {/* Vendeurs & Produits Vedettes */}
+              {featuredProducts.length > 0 && (
+                <section>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-wider">Sélection Premium</h2>
+                    <span className="text-[10px] font-black text-indigo-600 uppercase bg-indigo-50 px-3 py-1 rounded-full">Top Vendeurs</span>
+                  </div>
+                  <div className="mkt-cocote-grid">
+                    {featuredProducts.map((p: any) => <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />)}
+                  </div>
+                </section>
+              )}
+
+              {/* Meilleurs Prix B2B */}
+              {bestPrices.length > 0 && (
+                <section>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-wider">Meilleurs Prix B2B</h2>
+                    <span className="text-[10px] font-black text-emerald-600 uppercase bg-emerald-50 px-3 py-1 rounded-full">Économies directes</span>
+                  </div>
+                  <div className="mkt-cocote-grid">
+                    {bestPrices.map((p: any) => <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />)}
+                  </div>
+                </section>
+              )}
+
+              {/* Ventes Flash / Déstockage */}
+              {flashSales.length > 0 && (
+                <section>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-wider">Offres à Saisir</h2>
+                    <span className="text-[10px] font-black text-rose-600 uppercase bg-rose-50 px-3 py-1 rounded-full">Flash Sale</span>
+                  </div>
+                  <div className="mkt-cocote-grid">
+                    {flashSales.map((p: any) => <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />)}
+                  </div>
+                </section>
+              )}
+            </div>
           )}
 
-          {/* ── ZONE 2: EXPLOREZ LES CATÉGORIES (SQUIRCLES) ── */}
-          <section style={{ marginBottom: 60, padding: 40, background: '#F1F5F9', borderRadius: 40 }}>
-            <div style={{ textAlign: 'center', marginBottom: 40 }}>
-              <h2 className="text-2xl font-black text-slate-900 uppercase tracking-widest">Explorez les univers</h2>
-              <div style={{ width: 40, height: 4, background: catColor, margin: '12px auto' }}></div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
-              {[
-                { name: 'Céréales & Riz', icon: '🌾' },
-                { name: 'Confiseries', icon: '🍬' },
-                { name: 'Condiments', icon: '🧂' },
-                { name: 'Boissons', icon: '🥤' },
-                { name: 'Snacks', icon: '🍿' },
-                { name: 'Thés & Infusions', icon: '🍵' },
-                { name: 'Artisanat', icon: '🏺' },
-                { name: 'Épicerie Fine', icon: '✨' },
-              ].map((univ, i) => {
-                const matchingCat = allCategories.find((c: any) => 
-                  c.name.toLowerCase().includes(univ.name.split(' ')[0].toLowerCase())
-                );
-                const href = matchingCat ? `/marketplace/category/${matchingCat.id}` : `/marketplace?search=${encodeURIComponent(univ.name)}`;
-
-                return (
-                  <Link 
-                    key={i} 
-                    href={href}
-                    className="bg-white p-6 rounded-[32px] flex flex-col items-center gap-4 hover:shadow-xl transition-all cursor-pointer group text-decoration-none"
-                  >
-                    <div style={{ width: 56, height: 56, background: '#F8FAFC', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>{univ.icon}</div>
-                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest group-hover:text-indigo-600">{univ.name}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-          
-          {category.children?.length > 0 && (
-            <section className="mb-12">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-[14px] font-black text-slate-900 uppercase tracking-[.2em]">Sous-catégories populaires</h2>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {category.children.slice(0, 6).map((sub: any) => (
-                  <Link 
-                    key={sub.id} 
-                    href={`/marketplace/category/${sub.id}`}
-                    className="bg-white border border-slate-100 p-4 rounded-2xl flex flex-col items-center gap-3 hover:border-indigo-200 hover:shadow-lg transition-all text-decoration-none group"
-                  >
-                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-xl group-hover:bg-indigo-50 transition-colors" style={{ color: sub.color || 'inherit' }}>
-                      {sub.icon || '📦'}
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-700 text-center">{sub.name}</span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
 
           <div className="mkt-cocote-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, padding: '24px', background: '#fff', borderRadius: '24px', border: '1px solid #F1F5F9', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
              <div className="text-sm font-black text-slate-900 uppercase tracking-widest">{filteredProducts.length} offres disponibles</div>
@@ -401,13 +362,48 @@ export default function CategoryViewClient({ category, products = [], allCategor
               ))}
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: '80px 0', background: '#fff', borderRadius: 24, border: '1px solid #F1F5F9' }}>
-               <Search size={48} style={{ color: '#CBD5E1', margin: '0 auto 16px' }} />
-               <h3 className="text-xl font-bold text-slate-900 mb-2">Aucun produit trouvé</h3>
-               <p className="text-slate-500">Élargissez votre rayon de recherche ou modifiez vos filtres.</p>
-               <button onClick={() => { setSelectedBrands([]); router.push(`/marketplace/category/${category.id}`); }} className="mt-6 px-6 py-3 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors">Réinitialiser les filtres</button>
+            <div>
+              <div style={{ textAlign: 'center', padding: '80px 0', background: '#fff', borderRadius: 24, border: '1px solid #F1F5F9', marginBottom: 64 }}>
+                 <Search size={48} style={{ color: '#CBD5E1', margin: '0 auto 16px' }} />
+                 <h3 className="text-xl font-bold text-slate-900 mb-2">Aucun produit trouvé dans cette catégorie</h3>
+                 <p className="text-slate-500">Mais ne repartez pas les mains vides ! Voici quelques suggestions pour vous :</p>
+                 <button onClick={() => { setSelectedBrands([]); router.push(`/marketplace/category/${category.id}`); }} className="mt-6 px-6 py-3 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors">Réinitialiser les filtres</button>
+              </div>
+
+              {/* Suggestions Algorithmiques */}
+              <section style={{ marginBottom: 64 }}>
+                <div style={{ textAlign: 'center', marginBottom: 40 }}>
+                  <h2 className="text-2xl font-black text-slate-900 uppercase tracking-widest">Recommandations Premium</h2>
+                  <p className="text-slate-400 mt-2">Les produits les plus demandés en ce moment</p>
+                </div>
+                <div className="mkt-cocote-grid">
+                  {suggestions.map((p: any) => <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />)}
+                </div>
+              </section>
             </div>
           )}
+
+          {/* ── ZONE FINALE: EXPLOREZ LES UNIVERS ── */}
+          <section style={{ marginTop: 80, padding: '60px 40px', background: '#F8FAFC', borderRadius: 48, border: '1px solid #F1F5F9' }}>
+            <div style={{ textAlign: 'center', marginBottom: 48 }}>
+              <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Continuer la visite</h2>
+              <p className="text-slate-500 mt-2 font-medium">Découvrez nos autres univers professionnels</p>
+            </div>
+            <div className="mkt-category-rayons-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
+              {allCategories.filter((c: any) => c.id !== category.id).slice(0, 8).map((univ: any) => (
+                <Link 
+                  key={univ.id} 
+                  href={`/marketplace/category/${univ.id}`}
+                  className="bg-white p-8 rounded-[32px] flex flex-col items-center gap-4 hover:shadow-2xl hover:-translate-y-2 transition-all cursor-pointer group text-decoration-none border border-slate-100"
+                >
+                  <div style={{ width: 72, height: 72, background: `${univ.color || '#6366F1'}10`, color: univ.color || '#6366F1', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>
+                    {univ.icon || '📦'}
+                  </div>
+                  <span className="text-xs font-black text-slate-900 uppercase tracking-widest group-hover:text-indigo-600">{univ.name}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
 
         </div>
       </div>

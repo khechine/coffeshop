@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ShoppingBag, Search, LayoutGrid, ShoppingCart, 
-  MapPin, ChevronRight, X
+  MapPin, ChevronRight, X, Menu, User
 } from 'lucide-react';
 import { useCart } from '../CartContext';
 import CartDrawer from '../CartDrawer';
@@ -22,21 +22,13 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
   const searchParams = useSearchParams();
   const currentRadius = parseInt(searchParams.get('radius') || '15');
   const currentLocation = searchParams.get('loc') || 'Tunis';
-  const currentSearch = searchParams.get('search') || '';
 
   const [locModalOpen, setLocModalOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
-  const [searchInput, setSearchInput] = useState(currentSearch);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const { cartCount } = useCart();
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const params = new URLSearchParams(searchParams.toString());
-    if (searchInput) params.set('search', searchInput);
-    else params.delete('search');
-    router.push(`/marketplace?${params.toString()}`);
-  };
 
   const handleLocSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -52,7 +44,7 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
 
   return (
     <>
-      <div className="mkt-cocote-topbar">
+      <div className="mkt-cocote-topbar desktop-only">
         <div className="mkt-container mkt-cocote-topbar-inner">
           <div className="mkt-cocote-loc-trigger" onClick={() => setLocModalOpen(true)}>
              <MapPin size={14} />
@@ -62,56 +54,96 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
           <div className="mkt-cocote-topbar-links">
              <Link href="/marketplace/vendors">Devenir Vendeur</Link>
              <Link href="/marketplace/about">Le concept Proximité</Link>
-             {searchParams.get('dev') === '1' && (
-               <button 
-                 onClick={async () => {
-                   const { seedMarketplaceDataAction } = await import('../../actions');
-                   const res = await seedMarketplaceDataAction();
-                   if (res.success) alert('Vendeur et Catégories mis à jour avec succès !');
-                 }}
-                 style={{ marginLeft: 16, background: '#10B981', color: '#fff', border: 'none', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 900, cursor: 'pointer' }}
-               >
-                 SEED DATA
-               </button>
-             )}
           </div>
         </div>
       </div>
 
       <header className="mkt-cocote-header">
         <div className="mkt-container mkt-cocote-header-inner">
+          {/* Mobile Menu Toggle */}
+          <button className="mkt-mobile-toggle mobile-only" onClick={() => setIsMobileMenuOpen(true)}>
+            <Menu size={24} />
+          </button>
+
+          {/* Logo */}
           <Link href="/marketplace" className="mkt-cocote-logo">
             <div className="mkt-cocote-logo-icon"><ShoppingBag size={20} /></div>
             Coffee<span>Market</span>
           </Link>
 
-          <form onSubmit={handleSearch} className="mkt-cocote-search-wrap">
+          {/* Search - Desktop */}
+          <div className="mkt-cocote-search-wrap desktop-only">
+            <Search size={18} className="mkt-search-icon-abs" />
             <input
               type="text"
               className="mkt-cocote-search-input"
-              placeholder="Rechercher un produit, une marque, un commerce..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Rechercher un produit, une marque..."
+              defaultValue={searchParams.get('search') || ''}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const val = (e.target as HTMLInputElement).value;
+                  const params = new URLSearchParams(searchParams.toString());
+                  if (val) params.set('search', val);
+                  else params.delete('search');
+                  window.location.href = `/marketplace?${params.toString()}`;
+                }
+              }}
             />
-            <button type="submit" className="mkt-cocote-search-btn"><Search size={18} /></button>
-          </form>
+          </div>
 
           <div className="mkt-cocote-header-actions">
-            <Link href="/" className="mkt-cocote-action-btn">
-              <LayoutGrid size={18} /> <span className="hidden md:inline">Dashboard</span>
+            {/* Mobile Search Toggle */}
+            <button className="mkt-cocote-action-btn mobile-only" onClick={() => setIsSearchOpen(!isSearchOpen)}>
+              <Search size={20} />
+            </button>
+
+            <Link href="/" className="mkt-cocote-action-btn desktop-only">
+              <LayoutGrid size={18} /> <span>Dashboard</span>
             </Link>
+
             {!isVendor && (
               <button className="mkt-cocote-cart-btn" onClick={() => setCartOpen(true)}>
                 <ShoppingCart size={20} />
-                <span className="mkt-cocote-cart-text">Panier</span>
+                <span className="mkt-cocote-cart-text desktop-only">Panier</span>
                 {cartCount > 0 && <span className="mkt-cocote-cart-badge">{cartCount}</span>}
               </button>
             )}
+
+            <button className="mkt-cocote-action-btn">
+              <User size={20} />
+            </button>
           </div>
         </div>
+
+        {/* Mobile Search Bar Expansion */}
+        {isSearchOpen && (
+          <div className="mkt-mobile-search-expansion mobile-only">
+            <div className="mkt-container">
+               <div className="mkt-cocote-search-wrap visible">
+                  <Search size={18} className="mkt-search-icon-abs" />
+                  <input
+                    type="text"
+                    autoFocus
+                    className="mkt-cocote-search-input"
+                    placeholder="Rechercher..."
+                    defaultValue={searchParams.get('search') || ''}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const val = (e.target as HTMLInputElement).value;
+                        const params = new URLSearchParams(searchParams.toString());
+                        if (val) params.set('search', val);
+                        else params.delete('search');
+                        window.location.href = `/marketplace?${params.toString()}`;
+                      }
+                    }}
+                  />
+               </div>
+            </div>
+          </div>
+        )}
       </header>
       
-      <div className="mkt-catmenu">
+      <div className="mkt-catmenu desktop-only">
         <div className="mkt-container mkt-catmenu-inner">
            <Link 
              href="/marketplace" 
@@ -175,6 +207,62 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
            ))}
         </div>
       </div>
+
+      {/* ── Mobile Sidebar Drawer ── */}
+      {isMobileMenuOpen && (
+        <>
+          <div className="mkt-mobile-overlay" onClick={() => setIsMobileMenuOpen(false)} />
+          <div className="mkt-mobile-drawer">
+             <div className="mkt-drawer-header">
+                <span className="mkt-drawer-title">Menu Marketplace</span>
+                <button className="mkt-drawer-close" onClick={() => setIsMobileMenuOpen(false)}>
+                  <X size={24} />
+                </button>
+             </div>
+             
+             <div className="mkt-drawer-content">
+                <div className="mkt-drawer-section">
+                   <h4 className="mkt-drawer-section-title">Catégories</h4>
+                   <div className="mkt-drawer-categories">
+                      {categories.map((cat: any) => (
+                        <div key={cat.id} className="mkt-drawer-cat-item">
+                           <Link 
+                             href={`/marketplace/category/${cat.id}`} 
+                             className="mkt-drawer-cat-link"
+                             onClick={() => setIsMobileMenuOpen(false)}
+                           >
+                             <span className="mkt-drawer-cat-icon">{cat.icon || '📦'}</span>
+                             {cat.name}
+                           </Link>
+                           {cat.children?.length > 0 && (
+                             <div className="mkt-drawer-sublist">
+                                {cat.children.map((sub: any) => (
+                                  <Link 
+                                    key={sub.id} 
+                                    href={`/marketplace/category/${sub.id}`}
+                                    className="mkt-drawer-sublink"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                  >
+                                    {sub.name}
+                                  </Link>
+                                ))}
+                             </div>
+                           )}
+                        </div>
+                      ))}
+                   </div>
+                </div>
+
+                <div className="mkt-drawer-section">
+                   <h4 className="mkt-drawer-section-title">Compte & Infos</h4>
+                   <Link href="/vendor/register" className="mkt-drawer-link">Devenir Vendeur</Link>
+                   <Link href="/marketplace/cart" className="mkt-drawer-link">Mon Panier</Link>
+                   <Link href="/login" className="mkt-drawer-link">Se Connecter</Link>
+                </div>
+             </div>
+          </div>
+        </>
+      )}
 
       {/* ── Location Modal ── */}
       {locModalOpen && (
