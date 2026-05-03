@@ -104,16 +104,16 @@ const categoryTree = [
     name: "Emballages",
     icon: "📦",
     color: "#8B5CF6",
-    image: "https://images.unsplash.com/photo-1589939705384-5185138a04b9?q=80&w=800",
+    image: "https://images.unsplash.com/photo-1589939705384-5185138a04b9?q=80&w=1200",
     children: [
-      { name: "Gobelets & Couvercles" },
-      { name: "Pailles" },
-      { name: "Sacs takeaway" },
-      { name: "Sachets pain & Papier alimentaire" },
-      { name: "Boîtes & Barquettes" },
-      { name: "Supports cake" },
-      { name: "Packaging premium" },
-      { name: "Écologique (kraft, biodégradable)" }
+      { name: "Gobelets & Couvercles", image: "https://images.unsplash.com/photo-1517254456976-ee8682099819?q=80&w=600" },
+      { name: "Pailles", image: "https://images.unsplash.com/photo-1574279603932-f3d60361826c?q=80&w=600" },
+      { name: "Sacs takeaway", image: "https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600" },
+      { name: "Sachets pain & Papier alimentaire", image: "https://images.unsplash.com/photo-1614032684758-299161db433f?q=80&w=600" },
+      { name: "Boîtes & Barquettes", image: "https://images.unsplash.com/photo-1603596065029-afca2938c567?q=80&w=600" },
+      { name: "Supports cake", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=600" },
+      { name: "Packaging premium", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600" },
+      { name: "Écologique (kraft, biodégradable)", image: "https://images.unsplash.com/photo-1605600611284-19561ad7e612?q=80&w=600" }
     ]
   },
   {
@@ -188,40 +188,43 @@ async function main() {
             data: {
               name: childName,
               slug: childSlug,
-              parentId: rootCat.id
+              parentId: rootCat.id,
+              image: (child as any).image
             }
           });
           console.log(`  Created sub: ${subCat.name}`);
         } else {
-          // ensure parent is correct
+          // ensure parent is correct and update image
           await (prisma as any).marketplaceCategory.update({
             where: { id: subCat.id },
-            data: { parentId: rootCat.id }
+            data: { 
+              parentId: rootCat.id,
+              image: (child as any).image
+            }
           });
-          console.log(`  Sub exists: ${subCat.name}`);
+          console.log(`  Updated sub: ${subCat.name}`);
         }
 
         // Sub-sub categories (if any)
-        if (typeof child !== 'string' && child.children) {
-          for (const subChild of child.children) {
-            const subChildName = subChild;
-            const subChildSlug = slugify(subChildName);
-            let subSubCat = await (prisma as any).marketplaceCategory.findUnique({ where: { slug: subChildSlug } });
-            if (!subSubCat) {
-              subSubCat = await (prisma as any).marketplaceCategory.create({
+        if (typeof child === 'object' && (child as any).children) {
+          for (const gchildName of (child as any).children) {
+            const gchildSlug = slugify(gchildName);
+            let gchildCat = await (prisma as any).marketplaceCategory.findUnique({ where: { slug: gchildSlug } });
+            if (!gchildCat) {
+              gchildCat = await (prisma as any).marketplaceCategory.create({
                 data: {
-                  name: subChildName,
-                  slug: subChildSlug,
+                  name: gchildName,
+                  slug: gchildSlug,
                   parentId: subCat.id
                 }
               });
-              console.log(`    Created sub-sub: ${subSubCat.name}`);
+              console.log(`    Created gchild: ${gchildCat.name}`);
             } else {
               await (prisma as any).marketplaceCategory.update({
-                where: { id: subSubCat.id },
+                where: { id: gchildCat.id },
                 data: { parentId: subCat.id }
               });
-              console.log(`    Sub-sub exists: ${subSubCat.name}`);
+              console.log(`    Sub-sub exists: ${gchildCat.name}`);
             }
           }
         }

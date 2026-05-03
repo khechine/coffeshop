@@ -10,6 +10,8 @@ import {
   deleteMarketplaceCategoryAction,
   createMarketplaceCategoryAction
 } from '../../../actions';
+import { sanitizeUrl } from '../../../lib/imageUtils';
+import { Upload, ImageIcon } from 'lucide-react';
 
 type Category = {
   id: string;
@@ -59,6 +61,29 @@ export default function CategoryManagementClient({
     setEditImage(cat.image || '');
     setEditColor(cat.color || '');
     setEditParentId(cat.parentId || '');
+  };
+
+  const handleUpload = async (file: File, isEditing = false) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
+      const res = await fetch(`${API_URL}/management/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.url) {
+        const cleanUrl = sanitizeUrl(data.url) || '';
+        if (isEditing) {
+          setEditImage(cleanUrl);
+        } else {
+          setNewImage(cleanUrl);
+        }
+      }
+    } catch (e) {
+      alert('Erreur upload');
+    }
   };
 
   const handleUpdate = () => {
@@ -181,14 +206,20 @@ export default function CategoryManagementClient({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Image URL</label>
-              <input 
-                type="text" 
-                value={newImage} 
-                onChange={e => setNewImage(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-5 py-3 rounded-2xl bg-white dark:bg-slate-950 border-none font-bold text-sm focus:ring-2 focus:ring-indigo-500"
-              />
+              <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Image</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={newImage} 
+                  onChange={e => setNewImage(e.target.value)}
+                  placeholder="URL ou Upload..."
+                  className="flex-1 px-5 py-3 rounded-2xl bg-white dark:bg-slate-950 border-none font-bold text-sm focus:ring-2 focus:ring-indigo-500"
+                />
+                <label className="cursor-pointer p-3 bg-white dark:bg-slate-950 text-indigo-600 rounded-2xl border border-dashed border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center">
+                  <Upload size={18} />
+                  <input type="file" className="hidden" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0])} />
+                </label>
+              </div>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Couleur</label>
@@ -234,8 +265,14 @@ export default function CategoryManagementClient({
                   {editingId === root.id ? (
                     <div className="flex-1 flex flex-wrap gap-4 items-center">
                       <input value={editIcon} onChange={e => setEditIcon(e.target.value)} className="w-12 text-center bg-white dark:bg-slate-800 rounded-xl py-2" placeholder="Icon" />
-                      <input value={editName} onChange={e => setEditName(e.target.value)} className="flex-1 min-w-[200px] px-4 py-2 bg-white dark:bg-slate-800 rounded-xl font-bold" placeholder="Nom" />
-                      <input value={editImage} onChange={e => setEditImage(e.target.value)} className="flex-1 min-w-[200px] px-4 py-2 bg-white dark:bg-slate-800 rounded-xl font-bold" placeholder="Image URL" />
+                      <input value={editName} onChange={e => setEditName(e.target.value)} className="flex-1 min-w-[150px] px-4 py-2 bg-white dark:bg-slate-800 rounded-xl font-bold" placeholder="Nom" />
+                      <div className="flex-1 min-w-[200px] flex gap-2">
+                        <input value={editImage} onChange={e => setEditImage(e.target.value)} className="flex-1 px-4 py-2 bg-white dark:bg-slate-800 rounded-xl font-bold" placeholder="Image URL" />
+                        <label className="cursor-pointer p-2 bg-white dark:bg-slate-800 text-indigo-600 rounded-xl border border-dashed border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center">
+                          <Upload size={16} />
+                          <input type="file" className="hidden" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0], true)} />
+                        </label>
+                      </div>
                       <input type="color" value={editColor} onChange={e => setEditColor(e.target.value)} className="w-12 h-10 p-1 bg-white dark:bg-slate-800 rounded-xl" />
                       <button onClick={handleUpdate} className="p-2 bg-emerald-600 text-white rounded-xl"><Save size={18} /></button>
                       <button onClick={() => setEditingId(null)} className="p-2 bg-slate-200 dark:bg-slate-700 rounded-xl"><X size={18} /></button>
@@ -272,6 +309,13 @@ export default function CategoryManagementClient({
                     {editingId === child.id ? (
                       <div className="flex-1 flex gap-4 items-center">
                         <input value={editName} onChange={e => setEditName(e.target.value)} className="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm font-bold" />
+                        <div className="flex gap-2">
+                           <input value={editImage} onChange={e => setEditImage(e.target.value)} className="px-4 py-2 bg-slate-50 dark:bg-slate-950 rounded-xl text-xs font-bold w-40" placeholder="Image URL" />
+                           <label className="cursor-pointer p-2 bg-white dark:bg-slate-950 text-indigo-600 rounded-xl border border-dashed border-indigo-200 hover:bg-indigo-50 transition-colors">
+                              <Upload size={14} />
+                              <input type="file" className="hidden" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0], true)} />
+                           </label>
+                        </div>
                         <button onClick={handleUpdate} className="p-2 bg-indigo-600 text-white rounded-xl"><Save size={16} /></button>
                         <button onClick={() => setEditingId(null)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl"><X size={16} /></button>
                       </div>

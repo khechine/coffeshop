@@ -1033,7 +1033,7 @@
    RESPONSIVE OVERRIDES & MOBILE OPTIMIZATION
    ============================================ */
 
-.desktop-only { display: flex !important; }
+.desktop-only { display: block !important; }
 .mobile-only { display: none !important; }
 
 @media (max-width: 1024px) {

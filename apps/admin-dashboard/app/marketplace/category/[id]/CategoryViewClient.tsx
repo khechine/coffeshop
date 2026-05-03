@@ -229,24 +229,26 @@ export default function CategoryViewClient({ category, products = [], allCategor
           {/* ── SIDEBAR ── */}
           <aside style={{ width: 280, flexShrink: 0 }} className="desktop-only">
             
-            <div className="mkt-cocote-filter-block">
-              <h3 className="mkt-cocote-filter-title">Catégories</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 16 }}>
-                 <Link href="/marketplace" style={{ fontSize: 13, color: '#64748B', textDecoration: 'none', fontWeight: 600 }}>← Toutes les catégories</Link>
+            <div className="mkt-cocote-filter-block" style={{ marginBottom: 48 }}>
+              <h3 className="mkt-cocote-filter-title" style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>Catégories</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: '400px', overflowY: 'auto', paddingRight: 8 }} className="mkt-custom-scrollbar">
+                 <Link href="/marketplace" style={{ fontSize: 14, color: '#64748B', textDecoration: 'none', fontWeight: 600, padding: '8px 0' }} className="hover:text-indigo-600">← Toutes les catégories</Link>
                  {parentCategory ? (
                    <>
-                      <Link href={`/marketplace/category/${parentCategory.id}`} style={{ fontSize: 14, color: '#111827', textDecoration: 'none', fontWeight: 800, marginTop: 8 }}>{parentCategory.name}</Link>
+                      <Link href={`/marketplace/category/${parentCategory.id}`} style={{ fontSize: 15, color: '#111827', textDecoration: 'none', fontWeight: 800, marginTop: 12, marginBottom: 8 }}>{parentCategory.name}</Link>
                       {(parentCategory.children || []).map((sub: any) => (
                         <Link 
                           key={sub.id} 
                           href={`/marketplace/category/${sub.id}`}
                           style={{ 
-                            fontSize: 13, 
-                            color: sub.id === category.id ? '#111827' : '#94A3B8', 
+                            fontSize: 14, 
+                            color: sub.id === category.id ? '#111827' : '#64748B', 
                             textDecoration: 'none', 
                             fontWeight: sub.id === category.id ? 800 : 500,
-                            paddingLeft: 12,
-                            borderLeft: sub.id === category.id ? `2px solid #111827` : '1px solid #E5E7EB'
+                            padding: '6px 12px',
+                            borderRadius: 4,
+                            background: sub.id === category.id ? '#F8FAFC' : 'transparent',
+                            borderLeft: sub.id === category.id ? `3px solid #111827` : '3px solid transparent'
                           }}
                         >
                           {sub.name}
@@ -255,12 +257,13 @@ export default function CategoryViewClient({ category, products = [], allCategor
                    </>
                  ) : (
                    <>
-                      <span style={{ fontSize: 14, color: '#111827', textDecoration: 'none', fontWeight: 800, marginTop: 8 }}>{category.name}</span>
+                      <span style={{ fontSize: 15, color: '#111827', textDecoration: 'none', fontWeight: 800, marginTop: 12, marginBottom: 8 }}>{category.name}</span>
                       {(category.children || []).map((sub: any) => (
                         <Link 
                           key={sub.id} 
                           href={`/marketplace/category/${sub.id}`}
-                          style={{ fontSize: 13, color: '#94A3B8', textDecoration: 'none', fontWeight: 500, paddingLeft: 12, borderLeft: '1px solid #E5E7EB' }}
+                          style={{ fontSize: 14, color: '#64748B', textDecoration: 'none', fontWeight: 500, padding: '6px 12px', borderRadius: 4 }}
+                          className="hover:bg-slate-50 transition-colors"
                         >
                           {sub.name}
                         </Link>
@@ -270,40 +273,37 @@ export default function CategoryViewClient({ category, products = [], allCategor
               </div>
             </div>
 
-            <div className="mkt-cocote-filter-block">
-              <h3 className="mkt-cocote-filter-title">Distance (km)</h3>
-              <div className="mkt-cocote-radius-slider" style={{ marginTop: 16 }}>
+            <div className="mkt-cocote-filter-block" style={{ marginBottom: 48, padding: '32px 0', borderTop: '1px solid #F1F5F9' }}>
+              <h3 className="mkt-cocote-filter-title" style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>Distance (km)</h3>
+              <div className="mkt-cocote-radius-slider">
                  <input type="range" min="5" max="100" step="5" defaultValue={currentRadius} onChange={(e) => {
                     const params = new URLSearchParams(searchParams.toString());
                     params.set('radius', e.target.value);
                     router.push(`/marketplace/category/${category.id}?${params.toString()}`);
-                 }} />
-                 <div className="mkt-cocote-radius-labels" style={{ fontSize: 11, marginTop: 8 }}>
-                    <span>5km</span><span>100km</span>
+                 }} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                 <div className="flex justify-between mt-4">
+                    <span className="text-[10px] font-black text-slate-400">5KM</span>
+                    <span className="text-[11px] font-black text-indigo-600">{currentRadius}KM</span>
+                    <span className="text-[10px] font-black text-slate-400">100KM</span>
                  </div>
               </div>
             </div>
 
-            {brands.length > 0 && (
-              <div className="mkt-cocote-filter-block">
-                <h3 className="mkt-cocote-filter-title">Marques</h3>
-                <div className="mkt-cocote-filter-checkboxes">
-                  {brands.map((b: string) => (
-                    <label key={b} className="mkt-cocote-checkbox-label">
-                      <input type="checkbox" checked={selectedBrands.includes(b)} onChange={() => toggleBrand(b)} />
-                      <span>{b}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="mkt-cocote-filter-block">
-               <h3 className="mkt-cocote-filter-title">Labels</h3>
-               <div className="mkt-cocote-filter-checkboxes">
-                  <label className="mkt-cocote-checkbox-label"><input type="checkbox" /> <span className="flex items-center gap-2">🌱 Éco-responsable</span></label>
-                  <label className="mkt-cocote-checkbox-label"><input type="checkbox" /> <span className="flex items-center gap-2">🇹🇳 Produit Tunisien</span></label>
-                  <label className="mkt-cocote-checkbox-label"><input type="checkbox" /> <span className="flex items-center gap-2">⚒️ Artisanal</span></label>
+            <div className="mkt-cocote-filter-block" style={{ marginBottom: 48, padding: '32px 0', borderTop: '1px solid #F1F5F9' }}>
+               <h3 className="mkt-cocote-filter-title" style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>Labels</h3>
+               <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="w-5 h-5 border-2 border-slate-200 rounded flex items-center justify-center group-hover:border-indigo-500 transition-colors">
+                      <input type="checkbox" className="hidden" />
+                    </div>
+                    <span className="text-sm font-bold text-slate-600">🌱 Éco-responsable</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="w-5 h-5 border-2 border-slate-200 rounded flex items-center justify-center group-hover:border-indigo-500 transition-colors">
+                      <input type="checkbox" className="hidden" />
+                    </div>
+                    <span className="text-sm font-bold text-slate-600">🇹🇳 Produit Tunisien</span>
+                  </label>
                </div>
             </div>
           </aside>
