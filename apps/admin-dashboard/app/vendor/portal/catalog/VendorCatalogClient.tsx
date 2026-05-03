@@ -42,10 +42,11 @@ const positionConfig: Record<string, { label: string; color: string; bg: string;
 
 // ─── Hierarchical Category Selector ──────────────────────────────────────────
 function CategorySelector({
-  categoryTree, value, onChange, onPropose, inputClass,
+  categoryTree, categoryId, subcategoryId, onChange, onPropose, inputClass,
 }: {
   categoryTree: RootCategory[];
-  value: string;
+  categoryId: string;
+  subcategoryId: string | null;
   onChange: (catId: string, subcatId?: string) => void;
   onPropose: () => void;
   inputClass: string;
@@ -53,14 +54,8 @@ function CategorySelector({
   const [parentId, setParentId] = useState<string>('');
 
   React.useEffect(() => {
-    if (!value) return;
-    if (categoryTree.some(c => c.id === value)) {
-      setParentId(value);
-    } else {
-      const parent = categoryTree.find(c => c.children?.some(s => s.id === value));
-      if (parent) setParentId(parent.id);
-    }
-  }, [value, categoryTree]);
+    if (categoryId) setParentId(categoryId);
+  }, [categoryId]);
 
   const selectedParent = categoryTree.find(c => c.id === parentId);
   const hasSubcategories = selectedParent && (selectedParent.children?.length || 0) > 0;
@@ -101,8 +96,8 @@ function CategorySelector({
             </label>
             <select
               className={`${inputClass} appearance-none cursor-pointer bg-white dark:bg-slate-900`}
-              value={value && value !== parentId ? value : ''}
-              onChange={e => handleSubcategoryChange(e.target.value || parentId)}
+              value={subcategoryId || ''}
+              onChange={e => handleSubcategoryChange(e.target.value)}
             >
               <option value="">Toute la catégorie</option>
               {(selectedParent.children || []).map((c: any) => (
@@ -644,7 +639,7 @@ export default function VendorCatalogClient({
               </div>
             </div>
             <div className="space-y-4">
-               <CategorySelector categoryTree={filteredCategoryTree} value={form.categoryId} onChange={(catId, subcatId) => setForm({...form, categoryId: catId, subcategoryId: subcatId || null})} onPropose={() => setProposeModalOpen(true)} inputClass={inputClass} />
+               <CategorySelector categoryTree={filteredCategoryTree} categoryId={form.categoryId} subcategoryId={form.subcategoryId} onChange={(catId, subcatId) => setForm({...form, categoryId: catId, subcategoryId: subcatId || null})} onPropose={() => setProposeModalOpen(true)} inputClass={inputClass} />
                <div className="grid grid-cols-2 gap-4">
                  <div><label className={labelClass}>Marque</label><input className={inputClass} value={form.brand} onChange={e => setForm({...form, brand: e.target.value})} placeholder="Marque ou Générique" /></div>
                  <div>

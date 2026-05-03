@@ -84,7 +84,7 @@
 
 /* --- Category Mega Menu --- */
 .mkt-catmenu {
-  background:#fff; border-bottom:1px solid #F1F5F9;
+  background:#fff; border-bottom:1px solid #F1F5F9; position: relative;
 }
 .mkt-catmenu-inner {
   max-width:1440px; margin:0 auto; padding:0 32px;

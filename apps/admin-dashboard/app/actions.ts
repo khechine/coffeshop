@@ -2779,8 +2779,10 @@ export async function createMarketplaceProductAction(data: any) {
       image: image,
       images: Array.isArray(data.images) ? data.images : [],
       description: data.description || null,
-      tags: Array.isArray(data.tags) ? data.tags : (data.tags ? data.tags.split(',').map((t: string) => t.trim()) : []),
-      brand: data.brand || null,
+      tags: [
+        ...(Array.isArray(data.tags) ? data.tags : (data.tags ? data.tags.split(',').map((t: string) => t.trim()) : [])),
+        ...(data.brand ? [data.brand] : [])
+      ],
       stockQuantity: data.stockQuantity ? Number(data.stockQuantity) : 0,
       isFeatured: data.isFeatured || false,
       isFlashSale: data.isFlashSale || false,
@@ -3064,8 +3066,10 @@ export async function updateMarketplaceProductAction(id: string, data: any) {
       subcategoryId: data.subcategoryId || null,
       image: image,
       description: data.description || null,
-      tags: Array.isArray(data.tags) ? data.tags : (data.tags ? data.tags.split(',').map((t: string) => t.trim()) : []),
-      brand: data.brand || null,
+      tags: [
+        ...(Array.isArray(data.tags) ? data.tags : (data.tags ? data.tags.split(',').map((t: string) => t.trim()) : [])),
+        ...(data.brand ? [data.brand] : [])
+      ],
       stockQuantity: data.stockQuantity ? Number(data.stockQuantity) : 0,
       isFeatured: data.isFeatured,
       isFlashSale: data.isFlashSale,

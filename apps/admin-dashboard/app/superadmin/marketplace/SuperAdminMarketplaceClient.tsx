@@ -32,6 +32,18 @@ export default function SuperAdminMarketplaceClient({ products, orders }: { prod
            >
              🎯 Gestion des Bannières
            </a>
+           <a
+             href="/superadmin/marketplace/categories"
+             style={{
+               display:'flex', alignItems:'center', gap:'8px',
+               padding:'12px 20px', borderRadius:'16px',
+               background:'linear-gradient(135deg,#10B981,#059669)',
+               color:'#fff', textDecoration:'none', fontSize:'14px', fontWeight:800,
+               boxShadow:'0 8px 16px rgba(16,185,129,0.3)'
+             }}
+           >
+             📁 Mega Menu & Catégories
+           </a>
            <div style={{ position: 'relative' }}>
               <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} size={18} />
               <input 
