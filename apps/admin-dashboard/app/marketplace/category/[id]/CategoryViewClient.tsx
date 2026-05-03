@@ -124,6 +124,21 @@ function ProductCard({ product, onAdd, isVendor }: any) {
   );
 }
 
+const CATEGORY_IMAGES: Record<string, string> = {
+  'matieres-premieres': 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200',
+  'produits-semi-finis': 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=1200',
+  'produits-finis-b2b-revente': 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?q=80&w=1200',
+  'equipements-materiel': 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=1200',
+  'emballages': 'https://images.unsplash.com/photo-1589939705384-5185138a04b9?q=80&w=1200',
+  'hygiene-nettoyage': 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=1200',
+  'services': 'https://images.unsplash.com/photo-1521791136366-39851946a095?q=80&w=1200',
+};
+
+const getCategoryImage = (cat: any) => {
+  if (cat.image) return cat.image;
+  return CATEGORY_IMAGES[cat.slug] || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200';
+};
+
 export default function CategoryViewClient({ category, products = [], allCategories = [], allProducts = [], isVendor = false }: any) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -269,30 +284,19 @@ export default function CategoryViewClient({ category, products = [], allCategor
         {/* ── MAIN CONTENT ── */}
         <div className="mkt-cocote-content" style={{ flex: 1 }}>
           
-          {/* ── NEW PREMIUM HERO ── */}
+          {/* ── NEW PREMIUM HERO (SOBER & PROFESSIONAL) ── */}
           <div className="mkt-category-hero-premium" style={{ 
-            background: `linear-gradient(135deg, ${catColor}, ${catColor}dd)`,
-            borderRadius: '32px',
-            padding: '60px',
-            marginBottom: '48px',
-            color: '#fff',
-            position: 'relative',
-            overflow: 'hidden',
-            boxShadow: `0 20px 40px ${catColor}33`
+            backgroundImage: `url(${getCategoryImage(category)})`,
           }}>
-            <div style={{ position: 'relative', zIndex: 2 }}>
-              <div style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', width: '64px', height: '64px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', marginBottom: '24px' }}>
-                {category.icon || '📦'}
+            <div className="mkt-category-hero-overlay" />
+            <div className="mkt-category-hero-content">
+              <h1 className="text-white">{category.name}</h1>
+              <p className="text-white">Achetez en gros auprès des meilleurs fournisseurs locaux et nationaux.</p>
+              <div className="flex justify-center gap-4 mt-8">
+                 <button className="mkt-cocote-btn-primary" style={{ background: '#fff', color: '#111827' }}>Acheter {category.name}</button>
+                 <button className="px-6 py-3 border border-white text-white font-bold rounded-[4px] hover:bg-white hover:text-black transition-all">En savoir plus</button>
               </div>
-              <h1 style={{ fontSize: '48px', fontWeight: 900, margin: 0, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>{category.name}</h1>
-              <p style={{ fontSize: '18px', opacity: 0.9, marginTop: '12px', fontWeight: 500, maxWidth: '600px' }}>
-                Trouvez les meilleurs fournisseurs de {category.name.toLowerCase()} pour votre établissement. 
-                Livraison rapide et prix B2B garantis.
-              </p>
             </div>
-            {/* Abstract Decorative Circles */}
-            <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '300px', height: '300px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }} />
-            <div style={{ position: 'absolute', bottom: '-20px', right: '100px', width: '150px', height: '150px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%' }} />
           </div>
 
           {/* ── ZONE 1: SÉLECTIONS CURÉES (Algorithme de mise en avant) ── */}
@@ -383,23 +387,26 @@ export default function CategoryViewClient({ category, products = [], allCategor
             </div>
           )}
 
-          {/* ── ZONE FINALE: EXPLOREZ LES UNIVERS ── */}
-          <section style={{ marginTop: 80, padding: '60px 40px', background: '#F8FAFC', borderRadius: 48, border: '1px solid #F1F5F9' }}>
+          {/* ── ZONE FINALE: EXPLOREZ LES UNIVERS (PRO STYLE) ── */}
+          <section style={{ marginTop: 80, padding: '80px 0', borderTop: '1px solid #E5E7EB' }}>
             <div style={{ textAlign: 'center', marginBottom: 48 }}>
-              <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Continuer la visite</h2>
-              <p className="text-slate-500 mt-2 font-medium">Découvrez nos autres univers professionnels</p>
+              <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">Découvrez d'autres catégories</h2>
+              <p className="text-slate-500 mt-4 text-lg">Parcourez nos univers Food & Drink pour votre commerce.</p>
             </div>
-            <div className="mkt-category-rayons-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
+            <div className="mkt-category-rayons-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
               {allCategories.filter((c: any) => c.id !== category.id).slice(0, 8).map((univ: any) => (
                 <Link 
                   key={univ.id} 
                   href={`/marketplace/category/${univ.id}`}
-                  className="bg-white p-8 rounded-[32px] flex flex-col items-center gap-4 hover:shadow-2xl hover:-translate-y-2 transition-all cursor-pointer group text-decoration-none border border-slate-100"
+                  className="group flex flex-col gap-4 text-decoration-none"
                 >
-                  <div style={{ width: 72, height: 72, background: `${univ.color || '#6366F1'}10`, color: univ.color || '#6366F1', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>
-                    {univ.icon || '📦'}
+                  <div style={{ aspectRatio: '1.5', overflow: 'hidden', background: '#F3F4F6', borderRadius: 4 }}>
+                    <img 
+                      src={getCategoryImage(univ)} 
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    />
                   </div>
-                  <span className="text-xs font-black text-slate-900 uppercase tracking-widest group-hover:text-indigo-600">{univ.name}</span>
+                  <span className="text-sm font-bold text-slate-900 group-hover:underline">{univ.name}</span>
                 </Link>
               ))}
             </div>

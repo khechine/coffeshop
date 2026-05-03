@@ -7,6 +7,7 @@ const categoryTree = [
     name: "Matières Premières",
     icon: "🌾",
     color: "#D97706",
+    image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800",
     children: [
       {
         name: "Café en grains",
@@ -51,6 +52,7 @@ const categoryTree = [
     name: "Produits Semi-Finis",
     icon: "🥣",
     color: "#059669",
+    image: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800",
     children: [
       { name: "Bases boissons (frappé, smoothie)" },
       { name: "Sauces prêtes (chocolat, caramel)" },
@@ -65,6 +67,7 @@ const categoryTree = [
     name: "Produits Finis (B2B / Revente)",
     icon: "🥐",
     color: "#E11D48",
+    image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?q=80&w=800",
     children: [
       { name: "Capsules café" },
       { name: "Boissons prêtes (RTD)" },
@@ -81,6 +84,7 @@ const categoryTree = [
     name: "Équipements & Matériel",
     icon: "⚙️",
     color: "#4F46E5",
+    image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=800",
     children: [
       {
         name: "Matériel Coffeeshop",
@@ -100,6 +104,7 @@ const categoryTree = [
     name: "Emballages",
     icon: "📦",
     color: "#8B5CF6",
+    image: "https://images.unsplash.com/photo-1589939705384-5185138a04b9?q=80&w=800",
     children: [
       { name: "Gobelets & Couvercles" },
       { name: "Pailles" },
@@ -115,6 +120,7 @@ const categoryTree = [
     name: "Hygiène & Nettoyage",
     icon: "🧼",
     color: "#0284C7",
+    image: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=800",
     children: [
       { name: "Détergents cuisine" },
       { name: "Désinfectants" },
@@ -127,6 +133,7 @@ const categoryTree = [
     name: "Services",
     icon: "🤝",
     color: "#C026D3",
+    image: "https://images.unsplash.com/photo-1521791136366-39851946a095?q=80&w=800",
     children: [
       { name: "Livraison" },
       { name: "Maintenance machines" },
@@ -155,11 +162,20 @@ async function main() {
           slug,
           icon: root.icon,
           color: root.color,
+          image: root.image
         }
       });
       console.log(`Created root: ${rootCat.name}`);
     } else {
-      console.log(`Root exists: ${rootCat.name}`);
+      rootCat = await (prisma as any).marketplaceCategory.update({
+        where: { id: rootCat.id },
+        data: {
+          image: root.image,
+          icon: root.icon,
+          color: root.color
+        }
+      });
+      console.log(`Updated root: ${rootCat.name}`);
     }
 
     if (root.children) {

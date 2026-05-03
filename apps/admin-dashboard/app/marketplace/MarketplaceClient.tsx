@@ -200,52 +200,47 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
           </div>
         )}
 
-        {/* Hero / Concept Banner */}
+        {/* Hero / Concept Banner (SOBER & PRO) */}
         {!search && (
-          <div className="mkt-cocote-hero-premium">
-            <div className="mkt-cocote-hero-premium-content">
-              <div className="mkt-premium-badge">
-                <Sparkles size={14} /> EXCLUSIVITÉ PREMIUM
+          <div className="mkt-category-hero-premium" style={{ 
+            backgroundImage: `url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1400')`,
+            minHeight: '500px'
+          }}>
+            <div className="mkt-category-hero-overlay" />
+            <div className="mkt-category-hero-content">
+              <h1 className="text-white">Le Premier Marché B2B de Proximité</h1>
+              <p className="text-white text-lg max-w-2xl mx-auto">
+                Connectez-vous directement aux fournisseurs et artisans de votre région. 
+                Optimisez vos coûts et soutenez l'économie locale.
+              </p>
+              <div className="flex justify-center gap-6 mt-12">
+                 <button className="mkt-cocote-btn-primary px-10 py-4 text-lg">Explorer le catalogue</button>
+                 <button className="px-10 py-4 border-2 border-white text-white font-bold rounded-[4px] hover:bg-white hover:text-black transition-all">Devenir Vendeur</button>
               </div>
-              <h1>Soutenez les commerces de <span>votre région</span></h1>
-              <p>Découvrez les meilleurs produits B2B, cafés et équipements à proximité de <strong>{currentLocation}</strong>.</p>
-              <div className="mkt-cocote-hero-badges">
-                <span><MapPin size={14}/> Proximité garantie</span>
-                <span><Tag size={14}/> Circuit court</span>
-                <span><Award size={14}/> Vendeurs certifiés</span>
-              </div>
-            </div>
-            <div className="mkt-hero-visual">
-               <div className="mkt-floating-card c1">
-                 <img src="https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=200" alt="" />
-                 <div><span>-20%</span> Café Bio</div>
-               </div>
-               <div className="mkt-floating-card c2">
-                 <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=200" alt="" />
-                 <div>Premium Roast</div>
-               </div>
             </div>
           </div>
         )}
         {/* Sélections Stratégiques (Axes Intelligents) */}
+        {/* Sélections Stratégiques (Sober Section) */}
         {!search && (
-          <section className="mkt-cocote-section" style={{ marginTop: '40px', padding: '32px', background: 'linear-gradient(135deg, #F8FAFC, #EEF2FF)', borderRadius: '32px', border: '1px solid #E2E8F0' }}>
-            <div className="mkt-cocote-section-header" style={{ marginBottom: '24px' }}>
-              <h2 className="mkt-cocote-section-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '24px', fontWeight: 900, color: '#1E293B' }}>
-                <Sparkles className="text-indigo-600" size={24} /> Sélections Stratégiques & Astuces
+          <section className="mkt-cocote-section" style={{ marginTop: '40px', padding: '48px 0', borderTop: '1px solid #E5E7EB' }}>
+            <div className="mkt-cocote-section-header" style={{ marginBottom: '40px', textAlign: 'center' }}>
+              <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight uppercase">
+                Expertise & Solutions Professionnelles
               </h2>
+              <p className="text-slate-500 mt-2 font-medium">Des sélections métiers conçues pour votre rentabilité.</p>
             </div>
             
             <div className="mkt-cocote-grid">
               
               {/* Card 1 */}
               <Link href="/marketplace?q=starter" style={{ textDecoration: 'none' }}>
-                <div style={{ background: '#fff', padding: '24px', borderRadius: '24px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', height: '100%', border: '2px solid transparent', transition: 'all 0.3s' }} className="hover:border-indigo-500 hover:-translate-y-1">
-                  <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+                <div style={{ background: '#fff', padding: '32px', borderRadius: '4px', border: '1px solid #E5E7EB', height: '100%', transition: 'all 0.2s' }} className="hover:border-slate-900">
+                  <div style={{ width: '48px', height: '48px', borderRadius: '4px', background: '#F3F4F6', color: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
                     <ShoppingCart size={24} />
                   </div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', marginBottom: '8px' }}>Starter Pack Coffeeshop</h3>
-                  <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.5 }}>L'équipement et les ingrédients essentiels pour lancer votre établissement.</p>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>Pack Ouverture</h3>
+                  <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.6 }}>L'essentiel pour équiper et approvisionner votre nouvel établissement.</p>
                 </div>
               </Link>
 
