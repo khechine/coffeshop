@@ -31,7 +31,8 @@ const fmt = (n: any) => Number(n).toFixed(3);
 
 const getMockDistance = (vendorId: string) => {
   if (!vendorId) return 5;
-  const sum = vendorId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const s = String(vendorId);
+  const sum = s.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return (sum % 12) + 5; 
 };
 
@@ -115,7 +116,7 @@ function ProductCard({ product, onAdd, isVendor }: any) {
   );
 }
 
-export default function CategoryViewClient({ category, products, allCategories, isVendor = false }: any) {
+export default function CategoryViewClient({ category, products = [], allCategories = [], isVendor = false }: any) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = searchParams.get('search') || '';

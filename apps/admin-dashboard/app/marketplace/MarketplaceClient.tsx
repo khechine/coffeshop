@@ -19,8 +19,8 @@ const fmt = (n: any) => Number(n).toFixed(3);
 
 const getMockDistance = (vendorId: string) => {
   if (!vendorId) return 5;
-  // Deterministic sum based on vendor ID for consistency
-  const sum = vendorId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const s = String(vendorId);
+  const sum = s.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return (sum % 12) + 5; 
 };
 
@@ -146,7 +146,7 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
   const currentLocation = searchParams.get('loc') || 'Tunis';
   const search = searchParams.get('search') || '';
   
-  const { products = [], categories = [], flashSales = [] } = initialData;
+  const { products = [], categories = [], flashSales = [] } = initialData || {};
 
   const { addToCart, cartCount } = useCart();
 
