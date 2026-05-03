@@ -32,6 +32,9 @@ ssh $ssh_server << EOF
   cd $ssh_folder
   git pull origin main
   
+  echo "🧹 Cleaning up system to free disk space..."
+  docker system prune -af --volumes
+  
   echo "🔨 Building fresh Docker images..."
   docker compose build --no-cache || { echo "❌ Build failed"; exit 1; }
   
