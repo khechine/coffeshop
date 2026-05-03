@@ -161,37 +161,9 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
                 >
                   {cat.name}
                 </Link>
-                              {(cat.children?.length > 0) && (
-                  <div className="mkt-megamenu-panel">
-                    <div className="mkt-container">
-                      <div className="mkt-mega-simple-grid">
-                        {cat.children.map((sub: any) => (
-                          <div key={sub.id} className="mkt-mega-subgroup">
-                            <Link href={`/marketplace/category/${sub.id}`} className="mkt-mega-sublink-header">
-                              {sub.name}
-                            </Link>
-                            {sub.children && sub.children.length > 0 && (
-                              <div className="mkt-mega-sublinks-stack">
-                                {sub.children.map((gchild: any) => (
-                                  <Link key={gchild.id} href={`/marketplace/category/${gchild.id}`} className="mkt-mega-sublink">
-                                    {gchild.name}
-                                  </Link>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mkt-mega-footer">
-                        <Link href={`/marketplace/category/${cat.id}`}>
-                          Découvrir tout l'univers {cat.name} <ChevronRight size={14} />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                {cat.children?.length > 0 && <MegaMenuPanel rootCategory={cat} />}
+             </div>
+           ))}
          </div>
        </div>
 
@@ -282,5 +254,64 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
       {/* Cart Drawer */}
       {!isVendor && cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
     </>
+  );
+}
+
+function MegaMenuPanel({ rootCategory }: { rootCategory: any }) {
+  const [activeSubId, setActiveSubId] = useState<string | null>(rootCategory.children?.[0]?.id || null);
+  
+  const activeSub = rootCategory.children.find((s: any) => s.id === activeSubId) || rootCategory.children[0];
+
+  return (
+    <div className="mkt-megamenu-panel">
+      <div className="mkt-mega-v2-inner">
+        {/* Zone 1: Navigation (Subcategories) */}
+        <div className="mkt-mega-v2-nav mkt-custom-scrollbar">
+          {rootCategory.children.map((sub: any) => (
+            <div 
+              key={sub.id} 
+              className={`mkt-mega-v2-nav-item ${activeSubId === sub.id ? 'active' : ''}`}
+              onMouseEnter={() => setActiveSubId(sub.id)}
+            >
+              {sub.name}
+              <ChevronRight size={14} className={activeSubId === sub.id ? 'opacity-100' : 'opacity-0'} />
+            </div>
+          ))}
+        </div>
+
+        {/* Zone 2: Content Grid (Grandchildren) */}
+        <div className="mkt-mega-v2-content">
+          <div className="mkt-mega-v2-grid">
+            {activeSub?.children?.map((gchild: any) => (
+              <Link key={gchild.id} href={`/marketplace/category/${gchild.id}`} className="mkt-mega-v2-link">
+                {gchild.name}
+              </Link>
+            ))}
+            {(!activeSub?.children || activeSub.children.length === 0) && (
+              <div className="text-slate-400 italic text-sm py-4">
+                Aucune sous-catégorie spécifique trouvée.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Zone 3: Featured Image / Brand */}
+        <div className="mkt-mega-v2-featured">
+          <div className="mkt-mega-v2-featured-img">
+            <img 
+              src={activeSub?.image || rootCategory.image || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=800'} 
+              alt={activeSub?.name} 
+            />
+          </div>
+          <h4 className="mkt-mega-v2-featured-title">{activeSub?.name || rootCategory.name}</h4>
+          <p className="mkt-mega-v2-featured-desc">
+            Explorez notre sélection professionnelle pour {activeSub?.name || rootCategory.name.toLowerCase()}.
+          </p>
+          <Link href={`/marketplace/category/${activeSub?.id || rootCategory.id}`} className="mkt-mega-v2-featured-btn">
+            Découvrir la collection <ChevronRight size={14} />
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
