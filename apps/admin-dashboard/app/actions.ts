@@ -2785,7 +2785,10 @@ export async function createMarketplaceProductAction(data: any) {
       isFeatured: data.isFeatured || false,
       isFlashSale: data.isFlashSale || false,
       discountPrice: data.discount || null,
-      minOrderQty: data.minOrderQty ? Number(data.minOrderQty) : 1
+      minOrderQty: data.minOrderQty ? Number(data.minOrderQty) : 1,
+      collections: data.collectionIds && data.collectionIds.length > 0 ? {
+        connect: data.collectionIds.map((id: string) => ({ id }))
+      } : undefined
     }
   });
   revalidatePath('/vendor/portal/catalog');
@@ -3069,7 +3072,10 @@ export async function updateMarketplaceProductAction(id: string, data: any) {
       discountPrice: data.discount,
       flashStart: data.flashStart ? new Date(data.flashStart) : null,
       flashEnd: data.flashEnd ? new Date(data.flashEnd) : null,
-      minOrderQty: data.minOrderQty ? Number(data.minOrderQty) : 1
+      minOrderQty: data.minOrderQty ? Number(data.minOrderQty) : 1,
+      collections: data.collectionIds ? {
+        set: data.collectionIds.map((id: string) => ({ id }))
+      } : undefined
     }
   });
   revalidatePath('/vendor/portal/catalog');

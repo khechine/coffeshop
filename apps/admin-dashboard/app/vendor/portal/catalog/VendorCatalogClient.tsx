@@ -57,13 +57,13 @@ function CategorySelector({
     if (categoryTree.some(c => c.id === value)) {
       setParentId(value);
     } else {
-      const parent = categoryTree.find(c => c.subcategories?.some(s => s.id === value));
+      const parent = categoryTree.find(c => c.children?.some(s => s.id === value));
       if (parent) setParentId(parent.id);
     }
   }, [value, categoryTree]);
 
   const selectedParent = categoryTree.find(c => c.id === parentId);
-  const hasSubcategories = selectedParent && (selectedParent.subcategories?.length || 0) > 0;
+  const hasSubcategories = selectedParent && (selectedParent.children?.length || 0) > 0;
 
   const handleParentChange = (id: string) => {
     setParentId(id);
@@ -87,7 +87,7 @@ function CategorySelector({
           {categoryTree.map(c => (
             <option key={c.id} value={c.id}>
               {c.icon ? `${c.icon} ` : ''}{c.name}
-              {(c.subcategories?.length || 0) > 0 ? ` ›${c.subcategories?.length} sous-catégories` : ''}
+              {(c.children?.length || 0) > 0 ? ` ›${c.children?.length} sous-catégories` : ''}
             </option>
           ))}
         </select>
@@ -105,7 +105,7 @@ function CategorySelector({
               onChange={e => handleSubcategoryChange(e.target.value || parentId)}
             >
               <option value="">Toute la catégorie</option>
-              {(selectedParent.subcategories || []).map((c: any) => (
+              {(selectedParent.children || []).map((c: any) => (
                 <option key={c.id} value={c.id}>→ {c.name}</option>
               ))}
             </select>
@@ -185,16 +185,14 @@ export default function VendorCatalogClient({
   };
 
   const filteredCategoryTree = useMemo(() => {
-    if (!mktSectors || mktSectors.length === 0) return categoryTree;
-    const sectorIds = mktSectors.map(s => s.id);
-    return categoryTree.filter(cat => sectorIds.includes(cat.id));
-  }, [categoryTree, mktSectors]);
+    return categoryTree;
+  }, [categoryTree]);
 
   const allCategories = useMemo(() => {
     const flat: { id: string; name: string; parentName?: string }[] = [];
     for (const root of categoryTree) {
       flat.push({ id: root.id, name: root.name });
-      for (const child of (root.subcategories || [])) {
+      for (const child of (root.children || [])) {
         flat.push({ id: child.id, name: child.name, parentName: root.name });
       }
     }
@@ -647,7 +645,22 @@ export default function VendorCatalogClient({
             </div>
             <div className="space-y-4">
                <CategorySelector categoryTree={filteredCategoryTree} value={form.categoryId} onChange={(catId, subcatId) => setForm({...form, categoryId: catId, subcategoryId: subcatId || null})} onPropose={() => setProposeModalOpen(true)} inputClass={inputClass} />
-               <div><label className={labelClass}>Marque</label><input className={inputClass} value={form.brand} onChange={e => setForm({...form, brand: e.target.value})} placeholder="Marque ou Générique" /></div>
+               <div className="grid grid-cols-2 gap-4">
+                 <div><label className={labelClass}>Marque</label><input className={inputClass} value={form.brand} onChange={e => setForm({...form, brand: e.target.value})} placeholder="Marque ou Générique" /></div>
+                 <div>
+                   <label className={labelClass}>Rayonnage Interne</label>
+                   <select 
+                     className={inputClass} 
+                     value={form.collectionIds[0] || ''} 
+                     onChange={e => setForm({...form, collectionIds: e.target.value ? [e.target.value] : []})}
+                   >
+                     <option value="">Aucun rayon</option>
+                     {collections?.map((col: any) => (
+                       <option key={col.id} value={col.id}>{col.name}</option>
+                     ))}
+                   </select>
+                 </div>
+               </div>
             </div>
           </div>
 
