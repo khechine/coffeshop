@@ -264,40 +264,63 @@ export default function CategoryViewClient({ category, products = [], allCategor
         {/* ── MAIN CONTENT ── */}
         <div className="mkt-cocote-content" style={{ flex: 1 }}>
           
-          <div className="mkt-cocote-category-header" style={{ borderLeftColor: catColor, marginBottom: 40 }}>
-             <div className="mkt-cocote-category-title-wrap">
-               <div className="mkt-cocote-category-icon-large" style={{ color: catColor, background: `${catColor}15` }}>{category.icon || '📦'}</div>
-               <div>
-                 <h1 className="text-4xl font-black text-slate-900 m-0 uppercase tracking-tight">{category.name}</h1>
-                 <p className="text-slate-500 mt-2 font-medium">{filteredProducts.length} offres professionnelles à proximité de {currentLocation}</p>
-               </div>
-             </div>
+          {/* ── NEW PREMIUM HERO ── */}
+          <div className="mkt-category-hero-premium" style={{ 
+            background: `linear-gradient(135deg, ${catColor}, ${catColor}dd)`,
+            borderRadius: '32px',
+            padding: '60px',
+            marginBottom: '48px',
+            color: '#fff',
+            position: 'relative',
+            overflow: 'hidden',
+            boxShadow: `0 20px 40px ${catColor}33`
+          }}>
+            <div style={{ position: 'relative', zIndex: 2 }}>
+              <div style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', width: '64px', height: '64px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', marginBottom: '24px' }}>
+                {category.icon || '📦'}
+              </div>
+              <h1 style={{ fontSize: '48px', fontWeight: 900, margin: 0, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>{category.name}</h1>
+              <p style={{ fontSize: '18px', opacity: 0.9, marginTop: '12px', fontWeight: 500, maxWidth: '600px' }}>
+                Trouvez les meilleurs fournisseurs de {category.name.toLowerCase()} pour votre établissement. 
+                Livraison rapide et prix B2B garantis.
+              </p>
+            </div>
+            {/* Abstract Decorative Circles */}
+            <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '300px', height: '300px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }} />
+            <div style={{ position: 'absolute', bottom: '-20px', right: '100px', width: '150px', height: '150px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%' }} />
           </div>
 
-          {/* ── ZONE 1: SOUS-CATÉGORIES POPULAIRES ── */}
-          <section style={{ marginBottom: 60 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <h2 className="text-xl font-black text-slate-900 uppercase tracking-wider">Sous-catégories populaires</h2>
-              <button className="text-xs font-black text-indigo-600 uppercase tracking-widest hover:underline">Tout voir</button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16 }}>
-              {[
-                { name: 'Laits végétaux', img: 'https://images.unsplash.com/photo-1550583724-125581f778d3?q=80&w=200' },
-                { name: 'Beurre & Crèmerie', img: 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?q=80&w=200' },
-                { name: 'Noix & Graines', img: 'https://images.unsplash.com/photo-1536591375315-1b84046557b9?q=80&w=200' },
-                { name: 'Café moulu', img: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=200' },
-                { name: 'Jus de fruits', img: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=200' },
-                { name: 'Eaux minérales', img: 'https://images.unsplash.com/photo-1523362628242-4a7458ef347c?q=80&w=200' },
-              ].map((sub, i) => (
-                <div key={i} className="group cursor-pointer">
-                  <div style={{ aspectRatio: '1', borderRadius: 20, overflow: 'hidden', marginBottom: 12, border: '1px solid #F1F5F9' }}>
-                    <img src={sub.img} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                  </div>
-                  <h4 className="text-xs font-black text-slate-900 uppercase text-center group-hover:text-indigo-600">{sub.name}</h4>
-                </div>
-              ))}
-            </div>
-          </section>
+          {/* ── ZONE 1: SOUS-CATÉGORIES (Pills/Cards) ── */}
+          {(category.children || []).length > 0 && (
+            <section style={{ marginBottom: 64 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <h2 className="text-xl font-black text-slate-900 uppercase tracking-wider">Explorer les rayons</h2>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 20 }}>
+                {category.children.map((sub: any) => (
+                  <Link key={sub.id} href={`/marketplace/category/${sub.id}`} style={{ textDecoration: 'none' }}>
+                    <div className="group cursor-pointer text-center">
+                      <div style={{ 
+                        aspectRatio: '1', 
+                        borderRadius: '24px', 
+                        background: '#F1F5F9', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        fontSize: '32px',
+                        marginBottom: '12px',
+                        transition: 'all 0.3s',
+                        border: '2px solid transparent'
+                      }} className="group-hover:bg-white group-hover:border-indigo-500 group-hover:shadow-xl group-hover:-translate-y-1">
+                        {sub.icon || '📁'}
+                      </div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-tight group-hover:text-indigo-600">{sub.name}</h4>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* ── ZONE 2: EXPLOREZ LES CATÉGORIES (SQUIRCLES) ── */}
           <section style={{ marginBottom: 60, padding: 40, background: '#F1F5F9', borderRadius: 40 }}>

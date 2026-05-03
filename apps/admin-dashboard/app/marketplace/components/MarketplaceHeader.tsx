@@ -147,11 +147,22 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
                           </div>
                           
                           <div className="mkt-mega-col-links">
-                            <div className="mkt-mega-subgrid" style={{ gridTemplateColumns: `repeat(${Math.max(1, Math.ceil((cat.children?.length || 0) / 8))}, 1fr)` }}>
+                            <div className="mkt-mega-subgrid" style={{ gridTemplateColumns: `repeat(${Math.min(4, Math.max(1, Math.ceil((cat.children?.length || 0) / 4)))}, 1fr)`, gap: '40px' }}>
                               {cat.children.map((sub: any) => (
-                                <Link key={sub.id} href={`/marketplace/category/${sub.id}`} className="mkt-mega-sublink hover:text-indigo-600">
-                                  {sub.name}
-                                </Link>
+                                <div key={sub.id} className="mkt-mega-subgroup">
+                                  <Link href={`/marketplace/category/${sub.id}`} className="mkt-mega-sublink-header">
+                                    {sub.name}
+                                  </Link>
+                                  {sub.children && sub.children.length > 0 && (
+                                    <div className="mkt-mega-sublinks-stack">
+                                      {sub.children.map((gchild: any) => (
+                                        <Link key={gchild.id} href={`/marketplace/category/${gchild.id}`} className="mkt-mega-sublink">
+                                          {gchild.name}
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               ))}
                             </div>
                           </div>
