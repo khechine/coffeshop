@@ -1177,7 +1177,9 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
       include: { 
         vendor: true, 
         productStandard: true,
-        posStocks: { include: { vendorPos: true } }
+        posStocks: { include: { vendorPos: true } },
+        mktCategory: true,
+        mktSubcategory: true
       },
       orderBy: { createdAt: 'desc' }
     }),
@@ -1213,8 +1215,12 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
       id: p.id,
       name: p.name || p.productStandard?.name || 'Produit sans nom',
       unit: p.unit || p.productStandard?.unit || 'unité',
-      categoryId: p.categoryId || p.productStandard?.categoryId,
-      subcategoryId: p.subcategoryId || p.productStandard?.subcategoryId,
+      categoryId: p.mktCategoryId || p.categoryId || p.productStandard?.categoryId,
+      subcategoryId: p.mktSubcategoryId || p.subcategoryId || p.productStandard?.subcategoryId,
+      mktCategoryId: p.mktCategoryId,
+      mktSubcategoryId: p.mktSubcategoryId,
+      mktCategory: p.mktCategory,
+      mktSubcategory: p.mktSubcategory,
       vendorId: p.vendorId,
       price: Number(p.price),
       minOrderQty: p.minOrderQty ? Number(p.minOrderQty) : 1,
@@ -2753,8 +2759,8 @@ export async function createMarketplaceProductAction(data: any) {
       name: data.name?.toUpperCase(),
       price: data.price,
       unit: data.unit,
-      categoryId: data.categoryId,
-      subcategoryId: data.subcategoryId || null,
+      mktCategoryId: data.categoryId,
+      mktSubcategoryId: data.subcategoryId || null,
       vendorId: vendor.id,
       image: image,
       images: Array.isArray(data.images) ? data.images : [],
@@ -2795,12 +2801,12 @@ export async function importCsvProductsAction(rows: {
   if (!vendorProfile) throw new Error('Profil vendeur introuvable');
   const vendorId = vendorProfile.id;
 
-  const allCategories = await (prisma as any).mktCategory.findMany({
-    where: { status: 'ACTIVE' },
-    include: { subcategories: true }
+  const allCategories = await (prisma as any).marketplaceCategory.findMany({
+    where: { parentId: null },
+    include: { children: true }
   });
-  const allSubcategories = await (prisma as any).mktSubcategory.findMany({
-    where: { status: 'ACTIVE' }
+  const allSubcategories = await (prisma as any).marketplaceCategory.findMany({
+    where: { parentId: { not: null } }
   });
 
   const results = { created: 0, updated: 0, skipped: 0, errors: [] as string[], newCategories: [] as string[] };
@@ -2829,36 +2835,34 @@ export async function importCsvProductsAction(rows: {
           // If subcategory name provided, try to match it within the category
           if (row.subcategoryName) {
             const subName = row.subcategoryName.trim();
-            const subcat = (category.subcategories || []).find((s: any) => s.name.toLowerCase() === subName.toLowerCase());
+            const subcat = (category.children || []).find((s: any) => s.name.toLowerCase() === subName.toLowerCase());
             if (subcat) {
               subcategoryId = subcat.id;
             } else {
-              // Create new subcategory as HIDDEN
-              const newSub = await (prisma as any).mktSubcategory.create({
+              // Create new subcategory
+              const newSub = await (prisma as any).marketplaceCategory.create({
                 data: {
                   name: subName,
                   slug: subName.toLowerCase().replace(/ /g, '-'),
-                  categoryId: category.id,
-                  status: 'HIDDEN',
+                  parentId: category.id
                 }
               });
               subcategoryId = newSub.id;
-              results.newCategories.push(`Sous-catégorie "${subName}" créée (masquée, en attente d'approbation)`);
+              results.newCategories.push(`Sous-catégorie "${subName}" créée`);
             }
           }
         }
 
         // If category still not found, create it as HIDDEN (needs approval)
         if (!category && catName) {
-          const newCat = await (prisma as any).mktCategory.create({
-            data: {
-              name: catName,
-              slug: catName.toLowerCase().replace(/ /g, '-'),
-              status: 'HIDDEN',
-            }
-          });
-          categoryId = newCat.id;
-          results.newCategories.push(`Catégorie "${catName}" créée (masquée, en attente d'approbation)`);
+        const newCat = await (prisma as any).marketplaceCategory.create({
+          data: {
+            name: catName,
+            slug: catName.toLowerCase().replace(/ /g, '-'),
+          }
+        });
+        categoryId = newCat.id;
+        results.newCategories.push(`Catégorie "${catName}" créée`);
         }
       }
 
@@ -2875,8 +2879,8 @@ export async function importCsvProductsAction(rows: {
           data: {
             price: row.price,
             unit: row.unit,
-            categoryId,
-            subcategoryId,
+            mktCategoryId: categoryId,
+            mktSubcategoryId: subcategoryId,
             tags: brandVal ? [brandVal] : [],
             image: row.image || null,
             minOrderQty: minQty,
@@ -2891,8 +2895,8 @@ export async function importCsvProductsAction(rows: {
             name: row.name,
             price: row.price,
             unit: row.unit,
-            categoryId,
-            subcategoryId,
+            mktCategoryId: categoryId,
+            mktSubcategoryId: subcategoryId,
             tags: brandVal ? [brandVal] : [],
             image: row.image || null,
             vendorId,

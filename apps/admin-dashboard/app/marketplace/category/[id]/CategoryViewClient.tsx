@@ -74,6 +74,14 @@ function ProductCard({ product, onAdd, isVendor }: any) {
             {product.vendor?.lat && product.vendor?.lng ? `${distance} km` : `${product.vendor?.governorate || ''} ${product.vendor?.city || ''}`.trim() || 'Tunis'}
           </span>
         </div>
+
+        {/* Category Label */}
+        {(product.mktCategory || product.categoryName) && (
+          <div className="text-[9px] font-black uppercase tracking-tighter mb-1" style={{ color: product.mktCategory?.color || '#6366F1', opacity: 0.8 }}>
+            {product.mktCategory?.name || product.categoryName} {product.mktSubcategory ? `› ${product.mktSubcategory.name}` : ''}
+          </div>
+        )}
+
         <Link href={`/marketplace/product/${product.id}`} style={{ textDecoration: 'none' }}>
           <h3 className="mkt-cocote-card-title" style={{ textTransform: 'uppercase' }}>{product.name}</h3>
         </Link>
