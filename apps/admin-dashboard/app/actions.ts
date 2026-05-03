@@ -1177,9 +1177,7 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
       include: { 
         vendor: true, 
         productStandard: true,
-        posStocks: { include: { vendorPos: true } },
-        mktCategory: true,
-        mktSubcategory: true
+        posStocks: { include: { vendorPos: true } }
       },
       orderBy: { createdAt: 'desc' }
     }),
@@ -1204,6 +1202,18 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
   };
 
 
+  // Build a flat lookup map from the hierarchical categories for fast product->category resolution
+  const categoryLookup = new Map<string, { id: string; name: string; icon?: string; color?: string; parentId?: string | null }>();
+  for (const root of categories) {
+    categoryLookup.set(root.id, { id: root.id, name: root.name, icon: root.icon, color: root.color, parentId: null });
+    for (const child of (root.children || [])) {
+      categoryLookup.set(child.id, { id: child.id, name: child.name, icon: child.icon, color: child.color, parentId: root.id });
+      for (const grandchild of (child.children || [])) {
+        categoryLookup.set(grandchild.id, { id: grandchild.id, name: grandchild.name, icon: grandchild.icon, color: grandchild.color, parentId: child.id });
+      }
+    }
+  }
+
   const mapProduct = (p: any) => {
     const vendorData = p.vendor ? {
       ...p.vendor,
@@ -1211,16 +1221,20 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
       lng: p.vendor.lng ? Number(p.vendor.lng) : null
     } : null;
 
+    const catId = p.categoryId || p.productStandard?.categoryId;
+    const subCatId = p.subcategoryId || p.productStandard?.subcategoryId;
+    const resolvedCat = catId ? categoryLookup.get(catId) : null;
+    const resolvedSubCat = subCatId ? categoryLookup.get(subCatId) : null;
+
     const result: any = {
       id: p.id,
       name: p.name || p.productStandard?.name || 'Produit sans nom',
       unit: p.unit || p.productStandard?.unit || 'unité',
-      categoryId: p.mktCategoryId || p.categoryId || p.productStandard?.categoryId,
-      subcategoryId: p.mktSubcategoryId || p.subcategoryId || p.productStandard?.subcategoryId,
-      mktCategoryId: p.mktCategoryId,
-      mktSubcategoryId: p.mktSubcategoryId,
-      mktCategory: p.mktCategory,
-      mktSubcategory: p.mktSubcategory,
+      categoryId: catId,
+      subcategoryId: subCatId,
+      mktCategoryId: catId,
+      mktCategory: resolvedCat || null,
+      mktSubcategory: resolvedSubCat || null,
       vendorId: p.vendorId,
       price: Number(p.price),
       minOrderQty: p.minOrderQty ? Number(p.minOrderQty) : 1,
@@ -2759,8 +2773,8 @@ export async function createMarketplaceProductAction(data: any) {
       name: data.name?.toUpperCase(),
       price: data.price,
       unit: data.unit,
-      mktCategoryId: data.categoryId,
-      mktSubcategoryId: data.subcategoryId || null,
+      categoryId: data.categoryId,
+      subcategoryId: data.subcategoryId || null,
       vendorId: vendor.id,
       image: image,
       images: Array.isArray(data.images) ? data.images : [],
@@ -2879,8 +2893,8 @@ export async function importCsvProductsAction(rows: {
           data: {
             price: row.price,
             unit: row.unit,
-            mktCategoryId: categoryId,
-            mktSubcategoryId: subcategoryId,
+            categoryId,
+            subcategoryId,
             tags: brandVal ? [brandVal] : [],
             image: row.image || null,
             minOrderQty: minQty,
@@ -2895,8 +2909,8 @@ export async function importCsvProductsAction(rows: {
             name: row.name,
             price: row.price,
             unit: row.unit,
-            mktCategoryId: categoryId,
-            mktSubcategoryId: subcategoryId,
+            categoryId,
+            subcategoryId,
             tags: brandVal ? [brandVal] : [],
             image: row.image || null,
             vendorId,
