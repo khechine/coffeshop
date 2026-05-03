@@ -198,44 +198,26 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
       
       <MarketplaceHeader isVendor={isVendor} categories={categories} />
 
+      {/* Hero / Concept Banner (FULL WIDTH COMPACT) */}
+      {!search && (
+        <div className="mkt-category-hero-premium" style={{ 
+          backgroundImage: `url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1400')`,
+          minHeight: '320px',
+          borderRadius: 0,
+          marginBottom: 0
+        }}>
+          <div className="mkt-category-hero-overlay" />
+          <div className="mkt-category-hero-content" style={{ padding: '40px 20px' }}>
+            <h1 className="text-white" style={{ fontSize: '42px' }}>Le Marché B2B de Proximité</h1>
+            <p className="text-white/90 text-base max-w-xl mx-auto">
+              Commandez en gros auprès des fournisseurs de votre région.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Main Content ── */}
-      <div className="mkt-container mkt-cocote-main">
-
-        {/* Search Results Overlay */}
-        {search && (
-          <div className="mkt-cocote-search-results">
-            <h2 className="mkt-cocote-section-title">Résultats pour "{search}"</h2>
-            {searchResults.length > 0 ? (
-               <div className="mkt-cocote-grid">
-                 {searchResults.map((p: any) => <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />)}
-               </div>
-            ) : (
-               <div className="mkt-cocote-empty">Aucun produit ne correspond à votre recherche localisée.</div>
-            )}
-            <hr className="mkt-cocote-divider" />
-          </div>
-        )}
-
-        {/* Hero / Concept Banner (SOBER & PRO) */}
-        {!search && (
-          <div className="mkt-category-hero-premium" style={{ 
-            backgroundImage: `url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1400')`,
-            minHeight: '500px'
-          }}>
-            <div className="mkt-category-hero-overlay" />
-            <div className="mkt-category-hero-content">
-              <h1 className="text-white">Le Premier Marché B2B de Proximité</h1>
-              <p className="text-white text-lg max-w-2xl mx-auto">
-                Connectez-vous directement aux fournisseurs et artisans de votre région. 
-                Optimisez vos coûts et soutenez l'économie locale.
-              </p>
-              <div className="flex justify-center gap-6 mt-12">
-                 <button className="mkt-cocote-btn-primary px-10 py-4 text-lg">Explorer le catalogue</button>
-                 <button className="px-10 py-4 border-2 border-white text-white font-bold rounded-[4px] hover:bg-white hover:text-black transition-all">Devenir Vendeur</button>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="mkt-container mkt-cocote-main" style={{ paddingTop: 48 }}>
         {/* Sélections Stratégiques (Axes Intelligents) */}
         {/* Sélections Stratégiques (Sober Section) */}
         {!search && (

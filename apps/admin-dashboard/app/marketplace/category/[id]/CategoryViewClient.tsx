@@ -188,239 +188,224 @@ export default function CategoryViewClient({ category, products = [], allCategor
     <div className="mkt-page cocote-theme">
       <MarketplaceHeader isVendor={isVendor} categories={allCategories} />
 
-      {/* Top Location Bar (Breadcrumbs & Filter preview) */}
-      <div className="mkt-cocote-topbar" style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-        <div className="mkt-container mkt-cocote-topbar-inner">
-          <div className="mkt-cocote-breadcrumbs" style={{ color: '#64748B' }}>
-             <Link href="/marketplace">Accueil</Link> 
-             <ChevronRight size={12} /> 
-             {parentCategory ? (
-               <>
-                 <Link href={`/marketplace/category/${parentCategory.id}`}>{parentCategory.name}</Link>
-                 <ChevronRight size={12} />
-               </>
-             ) : null}
-             <span style={{ color: catColor, fontWeight: 800 }}>{displayCategory.name}</span>
-          </div>
+      {/* ── FULL-WIDTH COMPACT HERO ── */}
+      <div className="mkt-category-hero-premium" style={{ 
+        backgroundImage: `url(${getCategoryImage(category)})`,
+        minHeight: '280px',
+        borderRadius: 0,
+        marginBottom: 0
+      }}>
+        <div className="mkt-category-hero-overlay" />
+        <div className="mkt-category-hero-content" style={{ padding: '40px 20px' }}>
+          <h1 className="text-white" style={{ fontSize: '42px', fontWeight: 800 }}>{category.name}</h1>
+          <p className="text-white/90 text-lg max-w-xl mx-auto font-medium">
+            Le meilleur de l'offre B2B locale pour votre établissement.
+          </p>
         </div>
       </div>
 
-      <div className="mkt-container" style={{ marginTop: 32, display: 'flex', gap: 32, alignItems: 'flex-start' }}>
+      <div className="mkt-container" style={{ paddingTop: 40 }}>
         
-        {/* ── SIDEBAR FILTERS ── */}
-        <aside className="mkt-cocote-sidebar">
-          <div className="mkt-cocote-filter-block">
-            <h3 className="mkt-cocote-filter-title">Catégories</h3>
-            <ul className="mkt-cocote-filter-list">
-              <li><Link href="/marketplace" className="text-slate-500 hover:text-indigo-600">Toutes les catégories</Link></li>
-              {parentCategory ? (
+        {/* Breadcrumbs Top Bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40, borderBottom: '1px solid #F1F5F9', paddingBottom: 20 }}>
+           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748B', fontSize: 13, fontWeight: 600 }}>
+              <Link href="/marketplace">Accueil</Link> 
+              <ChevronRight size={12} /> 
+              {parentCategory && (
                 <>
-                   <li><Link href={`/marketplace/category/${parentCategory.id}`} className="text-slate-500 hover:text-indigo-600 font-bold">{parentCategory.name}</Link></li>
-                   {(parentCategory.children || []).map((sub: any) => (
-                     <li key={sub.id} style={{ paddingLeft: 16 }}>
-                        {sub.id === category.id ? (
-                          <span className="font-bold" style={{ color: catColor }}>→ {sub.name}</span>
-                        ) : (
-                          <Link href={`/marketplace/category/${sub.id}`} className="text-slate-500 hover:text-indigo-600 text-sm">→ {sub.name}</Link>
-                        )}
-                     </li>
-                   ))}
-                </>
-              ) : (
-                <>
-                   <li><span className="font-bold" style={{ color: catColor }}>{category.name}</span></li>
-                   {(category.children || []).map((sub: any) => (
-                     <li key={sub.id} style={{ paddingLeft: 16 }}>
-                        <Link href={`/marketplace/category/${sub.id}`} className="text-slate-500 hover:text-indigo-600 text-sm">→ {sub.name}</Link>
-                     </li>
-                   ))}
+                  <Link href={`/marketplace/category/${parentCategory.id}`}>{parentCategory.name}</Link>
+                  <ChevronRight size={12} />
                 </>
               )}
-            </ul>
-          </div>
+              <span style={{ color: '#111827' }}>{category.name}</span>
+           </div>
+           <div className="text-xs font-black text-slate-400 uppercase tracking-widest">
+              {filteredProducts.length} résultats
+           </div>
+        </div>
 
-          <div className="mkt-cocote-filter-block">
-            <h3 className="mkt-cocote-filter-title">Distance (km)</h3>
-            <div className="mkt-cocote-radius-slider" style={{ marginTop: 16 }}>
-               <input type="range" min="5" max="100" step="5" defaultValue={currentRadius} onChange={(e) => {
-                  const params = new URLSearchParams(searchParams.toString());
-                  params.set('radius', e.target.value);
-                  router.push(`/marketplace/category/${category.id}?${params.toString()}`);
-               }} />
-               <div className="mkt-cocote-radius-labels" style={{ fontSize: 11, marginTop: 8 }}>
-                  <span>5</span><span>50</span><span>100</span>
+        <div style={{ display: 'flex', gap: 64 }}>
+          
+          {/* ── SIDEBAR ── */}
+          <aside style={{ width: 280, flexShrink: 0 }} className="desktop-only">
+            
+            <div className="mkt-cocote-filter-block">
+              <h3 className="mkt-cocote-filter-title">Catégories</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 16 }}>
+                 <Link href="/marketplace" style={{ fontSize: 13, color: '#64748B', textDecoration: 'none', fontWeight: 600 }}>← Toutes les catégories</Link>
+                 {parentCategory ? (
+                   <>
+                      <Link href={`/marketplace/category/${parentCategory.id}`} style={{ fontSize: 14, color: '#111827', textDecoration: 'none', fontWeight: 800, marginTop: 8 }}>{parentCategory.name}</Link>
+                      {(parentCategory.children || []).map((sub: any) => (
+                        <Link 
+                          key={sub.id} 
+                          href={`/marketplace/category/${sub.id}`}
+                          style={{ 
+                            fontSize: 13, 
+                            color: sub.id === category.id ? '#111827' : '#94A3B8', 
+                            textDecoration: 'none', 
+                            fontWeight: sub.id === category.id ? 800 : 500,
+                            paddingLeft: 12,
+                            borderLeft: sub.id === category.id ? `2px solid #111827` : '1px solid #E5E7EB'
+                          }}
+                        >
+                          {sub.name}
+                        </Link>
+                      ))}
+                   </>
+                 ) : (
+                   <>
+                      <span style={{ fontSize: 14, color: '#111827', textDecoration: 'none', fontWeight: 800, marginTop: 8 }}>{category.name}</span>
+                      {(category.children || []).map((sub: any) => (
+                        <Link 
+                          key={sub.id} 
+                          href={`/marketplace/category/${sub.id}`}
+                          style={{ fontSize: 13, color: '#94A3B8', textDecoration: 'none', fontWeight: 500, paddingLeft: 12, borderLeft: '1px solid #E5E7EB' }}
+                        >
+                          {sub.name}
+                        </Link>
+                      ))}
+                   </>
+                 )}
+              </div>
+            </div>
+
+            <div className="mkt-cocote-filter-block">
+              <h3 className="mkt-cocote-filter-title">Distance (km)</h3>
+              <div className="mkt-cocote-radius-slider" style={{ marginTop: 16 }}>
+                 <input type="range" min="5" max="100" step="5" defaultValue={currentRadius} onChange={(e) => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set('radius', e.target.value);
+                    router.push(`/marketplace/category/${category.id}?${params.toString()}`);
+                 }} />
+                 <div className="mkt-cocote-radius-labels" style={{ fontSize: 11, marginTop: 8 }}>
+                    <span>5km</span><span>100km</span>
+                 </div>
+              </div>
+            </div>
+
+            {brands.length > 0 && (
+              <div className="mkt-cocote-filter-block">
+                <h3 className="mkt-cocote-filter-title">Marques</h3>
+                <div className="mkt-cocote-filter-checkboxes">
+                  {brands.map((b: string) => (
+                    <label key={b} className="mkt-cocote-checkbox-label">
+                      <input type="checkbox" checked={selectedBrands.includes(b)} onChange={() => toggleBrand(b)} />
+                      <span>{b}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mkt-cocote-filter-block">
+               <h3 className="mkt-cocote-filter-title">Labels</h3>
+               <div className="mkt-cocote-filter-checkboxes">
+                  <label className="mkt-cocote-checkbox-label"><input type="checkbox" /> <span className="flex items-center gap-2">🌱 Éco-responsable</span></label>
+                  <label className="mkt-cocote-checkbox-label"><input type="checkbox" /> <span className="flex items-center gap-2">🇹🇳 Produit Tunisien</span></label>
+                  <label className="mkt-cocote-checkbox-label"><input type="checkbox" /> <span className="flex items-center gap-2">⚒️ Artisanal</span></label>
                </div>
             </div>
-          </div>
+          </aside>
 
-          {brands.length > 0 && (
-            <div className="mkt-cocote-filter-block">
-              <h3 className="mkt-cocote-filter-title">Marques</h3>
-              <div className="mkt-cocote-filter-checkboxes">
-                {brands.map((b: string) => (
-                  <label key={b} className="mkt-cocote-checkbox-label">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedBrands.includes(b)} 
-                      onChange={() => toggleBrand(b)}
-                    />
-                    <span>{b}</span>
-                  </label>
-                ))}
+          {/* ── MAIN CONTENT ── */}
+          <div className="mkt-cocote-content" style={{ flex: 1 }}>
+            
+            {/* ── SELECTIONS STRATÉGIQUES ── */}
+            {products.length > 0 && !search && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 64, marginBottom: 80 }}>
+                {featuredProducts.length > 0 && (
+                  <section>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24 }}>
+                      <h2 className="text-xl font-black text-slate-900 uppercase tracking-wider">Sélection Premium</h2>
+                      <Link href="#" className="text-xs font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors">Voir tout</Link>
+                    </div>
+                    <div className="mkt-cocote-grid">
+                      {featuredProducts.map((p: any) => <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />)}
+                    </div>
+                  </section>
+                )}
+
+                {bestPrices.length > 0 && (
+                  <section>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24 }}>
+                      <h2 className="text-xl font-black text-slate-900 uppercase tracking-wider">Meilleurs Prix B2B</h2>
+                    </div>
+                    <div className="mkt-cocote-grid">
+                      {bestPrices.map((p: any) => <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />)}
+                    </div>
+                  </section>
+                )}
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="mkt-cocote-filter-block">
-             <h3 className="mkt-cocote-filter-title">Labels & Mentions</h3>
-             <div className="mkt-cocote-filter-checkboxes">
-                <label className="mkt-cocote-checkbox-label"><input type="checkbox" /> <span className="flex items-center gap-2"><Tag size={12} color="#10B981" /> Éco-responsable</span></label>
-                <label className="mkt-cocote-checkbox-label"><input type="checkbox" /> <span className="flex items-center gap-2"><Tag size={12} color="#F59E0B" /> Produit Tunisien (619)</span></label>
-                <label className="mkt-cocote-checkbox-label"><input type="checkbox" /> <span className="flex items-center gap-2"><Tag size={12} color="#6366F1" /> Artisanat Local</span></label>
-             </div>
-          </div>
-        </aside>
-
-        {/* ── MAIN CONTENT ── */}
-        <div className="mkt-cocote-content" style={{ flex: 1 }}>
-          
-          {/* ── NEW PREMIUM HERO (SOBER & PROFESSIONAL) ── */}
-          <div className="mkt-category-hero-premium" style={{ 
-            backgroundImage: `url(${getCategoryImage(category)})`,
-          }}>
-            <div className="mkt-category-hero-overlay" />
-            <div className="mkt-category-hero-content">
-              <h1 className="text-white">{category.name}</h1>
-              <p className="text-white">Achetez en gros auprès des meilleurs fournisseurs locaux et nationaux.</p>
-              <div className="flex justify-center gap-4 mt-8">
-                 <button className="mkt-cocote-btn-primary" style={{ background: '#fff', color: '#111827' }}>Acheter {category.name}</button>
-                 <button className="px-6 py-3 border border-white text-white font-bold rounded-[4px] hover:bg-white hover:text-black transition-all">En savoir plus</button>
-              </div>
-            </div>
-          </div>
-
-          {/* ── ZONE 1: SÉLECTIONS CURÉES (Algorithme de mise en avant) ── */}
-          {products.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 64, marginBottom: 64 }}>
-              
-              {/* Vendeurs & Produits Vedettes */}
-              {featuredProducts.length > 0 && (
-                <section>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-wider">Sélection Premium</h2>
-                    <span className="text-[10px] font-black text-indigo-600 uppercase bg-indigo-50 px-3 py-1 rounded-full">Top Vendeurs</span>
-                  </div>
-                  <div className="mkt-cocote-grid">
-                    {featuredProducts.map((p: any) => <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />)}
-                  </div>
-                </section>
-              )}
-
-              {/* Meilleurs Prix B2B */}
-              {bestPrices.length > 0 && (
-                <section>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-wider">Meilleurs Prix B2B</h2>
-                    <span className="text-[10px] font-black text-emerald-600 uppercase bg-emerald-50 px-3 py-1 rounded-full">Économies directes</span>
-                  </div>
-                  <div className="mkt-cocote-grid">
-                    {bestPrices.map((p: any) => <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />)}
-                  </div>
-                </section>
-              )}
-
-              {/* Ventes Flash / Déstockage */}
-              {flashSales.length > 0 && (
-                <section>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-wider">Offres à Saisir</h2>
-                    <span className="text-[10px] font-black text-rose-600 uppercase bg-rose-50 px-3 py-1 rounded-full">Flash Sale</span>
-                  </div>
-                  <div className="mkt-cocote-grid">
-                    {flashSales.map((p: any) => <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />)}
-                  </div>
-                </section>
-              )}
-            </div>
-          )}
-
-
-          <div className="mkt-cocote-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, padding: '24px', background: '#fff', borderRadius: '24px', border: '1px solid #F1F5F9', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
-             <div className="text-sm font-black text-slate-900 uppercase tracking-widest">{filteredProducts.length} offres disponibles</div>
-             <div className="flex items-center gap-6">
-                <div className="flex items-center gap-3">
+            {/* ── TOOLBAR ── */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, padding: '20px 0', borderBottom: '1px solid #F1F5F9' }}>
+               <div className="text-sm font-black text-slate-900 uppercase tracking-widest">{filteredProducts.length} produits disponibles</div>
+               <div className="flex items-center gap-4">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Trier par :</span>
-                  <select className="mkt-cocote-select" style={{ border: 'none', background: '#F8FAFC', fontWeight: 900, fontSize: 11, textTransform: 'uppercase' }} value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
+                  <select 
+                    className="bg-transparent font-black text-slate-900 uppercase text-[11px] border-none outline-none cursor-pointer"
+                    value={sortOrder} 
+                    onChange={e => setSortOrder(e.target.value)}
+                  >
                     <option value="relevant">Pertinence</option>
                     <option value="price_asc">Prix croissant</option>
                     <option value="price_desc">Prix décroissant</option>
                   </select>
-                </div>
-             </div>
-          </div>
-
-          {filteredProducts.length > 0 ? (
-            <div className="mkt-cocote-grid">
-              {filteredProducts.map((p: any) => (
-                <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />
-              ))}
+               </div>
             </div>
-          ) : (
-            <div>
-              <div style={{ textAlign: 'center', padding: '80px 0', background: '#fff', borderRadius: 24, border: '1px solid #F1F5F9', marginBottom: 64 }}>
-                 <Search size={48} style={{ color: '#CBD5E1', margin: '0 auto 16px' }} />
-                 <h3 className="text-xl font-bold text-slate-900 mb-2">Aucun produit trouvé dans cette catégorie</h3>
-                 <p className="text-slate-500">Mais ne repartez pas les mains vides ! Voici quelques suggestions pour vous :</p>
-                 <button onClick={() => { setSelectedBrands([]); router.push(`/marketplace/category/${category.id}`); }} className="mt-6 px-6 py-3 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors">Réinitialiser les filtres</button>
+
+            {/* ── PRODUCTS GRID ── */}
+            {filteredProducts.length > 0 ? (
+              <div className="mkt-cocote-grid">
+                {filteredProducts.map((p: any) => (
+                  <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />
+                ))}
               </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '100px 0', border: '1px solid #F1F5F9', borderRadius: 4 }}>
+                 <Search size={48} className="text-slate-200 mx-auto mb-4" />
+                 <h3 className="text-xl font-bold text-slate-900 mb-2">Aucun produit ne correspond</h3>
+                 <p className="text-slate-400">Essayez de modifier vos filtres ou votre rayon de recherche.</p>
+              </div>
+            )}
 
-              {/* Suggestions Algorithmiques */}
-              <section style={{ marginBottom: 64 }}>
-                <div style={{ textAlign: 'center', marginBottom: 40 }}>
-                  <h2 className="text-2xl font-black text-slate-900 uppercase tracking-widest">Recommandations Premium</h2>
-                  <p className="text-slate-400 mt-2">Les produits les plus demandés en ce moment</p>
-                </div>
-                <div className="mkt-cocote-grid">
-                  {suggestions.map((p: any) => <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />)}
-                </div>
-              </section>
-            </div>
-          )}
-
-          {/* ── ZONE FINALE: EXPLOREZ LES UNIVERS (PRO STYLE) ── */}
-          <section style={{ marginTop: 80, padding: '80px 0', borderTop: '1px solid #E5E7EB' }}>
-            <div style={{ textAlign: 'center', marginBottom: 48 }}>
-              <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">Découvrez d'autres catégories</h2>
-              <p className="text-slate-500 mt-4 text-lg">Parcourez nos univers Food & Drink pour votre commerce.</p>
-            </div>
-            <div className="mkt-cocote-category-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
-              {allCategories.filter((c: any) => c.id !== category.id).slice(0, 8).map((univ: any) => (
-                <Link 
-                  key={univ.id} 
-                  href={`/marketplace/category/${univ.id}`}
-                  className="relative block aspect-[4/5] overflow-hidden group rounded-[4px] border border-slate-200"
-                >
-                  <img 
-                    src={getCategoryImage(univ)} 
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                    alt={univ.name} 
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <div className="absolute inset-0 p-6 flex flex-col justify-end">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-xl">{univ.icon || '📦'}</span>
-                      <h3 className="text-white text-lg font-bold leading-tight m-0">{univ.name}</h3>
+            {/* ── RECOMMANDATIONS ── */}
+            <section style={{ marginTop: 120, padding: '80px 0', borderTop: '1px solid #E5E7EB' }}>
+              <div style={{ textAlign: 'center', marginBottom: 64 }}>
+                <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">D'autres univers pour vous</h2>
+                <p className="text-slate-500 mt-4 text-lg max-w-2xl mx-auto">Découvrez les meilleures sélections Food & Drink par métier.</p>
+              </div>
+              <div className="mkt-cocote-category-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
+                {allCategories.filter((c: any) => c.id !== category.id).slice(0, 8).map((univ: any) => (
+                  <Link 
+                    key={univ.id} 
+                    href={`/marketplace/category/${univ.id}`}
+                    className="relative block aspect-[4/5] overflow-hidden group rounded-[4px] border border-slate-200 shadow-sm"
+                  >
+                    <img 
+                      src={getCategoryImage(univ)} 
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                      alt={univ.name} 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-xl">{univ.icon || '📦'}</span>
+                        <h3 className="text-white text-lg font-bold leading-tight m-0 uppercase tracking-tight">{univ.name}</h3>
+                      </div>
+                      <p className="text-white/70 text-xs opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">Voir la collection</p>
                     </div>
-                    <p className="text-white/70 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300">Voir la collection</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
+                  </Link>
+                ))}
+              </div>
+            </section>
 
+          </div>
         </div>
       </div>
-      
+
       <MarketplaceFooter />
     </div>
   );

@@ -17,7 +17,16 @@ import { sanitizeUrl } from '../../../lib/imageUtils';
 
 const fmt = (n: any) => Number(n).toFixed(3);
 
-
+function Stars({ avg = 0, total = 0, size = 12 }: any) {
+  if (!total) return <span style={{ fontSize: size, color: '#94A3B8', fontWeight: 600 }}>Nouveau</span>;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <span style={{ color: '#111827', fontSize: size }}>★</span>
+      <span style={{ fontSize: size, fontWeight: 700, color: '#111827' }}>{Number(avg).toFixed(1)}</span>
+      <span style={{ fontSize: size - 1, color: '#64748B' }}>({total})</span>
+    </div>
+  );
+}
 
 export default function VendorStorefrontClient({ vendor, ratings, isVendor = false }: any) {
   const [activeTab, setActiveTab] = useState('products');
@@ -86,54 +95,50 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
     <div className="mkt-page cocote-theme" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       <MarketplaceHeader isVendor={isVendor} />
 
-      {/* Hero Banner / Store Header (Faire Style) */}
-      <div style={{ position: 'relative', marginBottom: 64 }}>
+      {/* Hero Banner (FULL WIDTH COMPACT) */}
+      <div style={{ position: 'relative', marginBottom: 40 }}>
         {bannerUrl ? (
-          <div style={{ height: 400, width: '100%', overflow: 'hidden' }}>
+          <div style={{ height: 280, width: '100%', overflow: 'hidden' }}>
              <img src={bannerUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Banner" />
              <div className="mkt-category-hero-overlay" />
           </div>
         ) : (
-          <div style={{ height: 250, background: '#F3F4F6', borderBottom: '1px solid #E5E7EB' }} />
+          <div style={{ height: 180, background: '#F8FAFC', borderBottom: '1px solid #E5E7EB' }} />
         )}
 
-        <div className="mkt-container" style={{ marginTop: -100, position: 'relative', zIndex: 10 }}>
-          <div style={{ background: '#fff', padding: '48px', borderRadius: 4, border: '1px solid #E5E7EB', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', display: 'flex', flexWrap: 'wrap', gap: 48, alignItems: 'center' }}>
+        <div className="mkt-container" style={{ marginTop: -80, position: 'relative', zIndex: 10 }}>
+          <div style={{ background: '#fff', padding: '32px 48px', borderRadius: 4, border: '1px solid #E5E7EB', boxShadow: '0 10px 30px rgba(0,0,0,0.06)', display: 'flex', flexWrap: 'wrap', gap: 40, alignItems: 'center' }}>
             
             {/* Logo */}
             <div style={{ 
-              width: 160, height: 160, borderRadius: 4, background: '#fff', 
+              width: 120, height: 120, borderRadius: 4, background: '#fff', 
               border: '1px solid #E5E7EB',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64,
-              overflow: 'hidden', flexShrink: 0
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48,
+              overflow: 'hidden', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
             }}>
               {logoUrl ? <img src={logoUrl} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : '🏪'}
             </div>
 
             {/* Vendor Info */}
             <div style={{ flex: 1, minWidth: 300 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
-                <h1 style={{ fontSize: 48, fontWeight: 800, color: '#111827', margin: 0 }}>{vendor.companyName}</h1>
-                {isPremium && <span style={{ background: '#111827', color: '#fff', padding: '4px 12px', borderRadius: 4, fontSize: 11, fontWeight: 800, textTransform: 'uppercase' }}>Distributeur Certifié</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
+                <h1 style={{ fontSize: 36, fontWeight: 800, color: '#111827', margin: 0 }}>{vendor.companyName}</h1>
+                {isPremium && <span style={{ background: '#111827', color: '#fff', padding: '4px 10px', borderRadius: 2, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Certifié</span>}
               </div>
               
-              <div style={{ display: 'flex', gap: 24, color: '#64748B', fontSize: 16, fontWeight: 500, flexWrap: 'wrap', marginBottom: 24 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><MapPin size={18} /> {vendor.city || 'Tunis'}</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ShoppingBag size={18} /> Min. Commande: 150 DT</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Star size={18} fill="#111827" color="#111827" /> {ratings.overallAvg.toFixed(1)} ({ratings.totalReviews} avis)</span>
+              <div style={{ display: 'flex', gap: 24, color: '#64748B', fontSize: 14, fontWeight: 600, flexWrap: 'wrap' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><MapPin size={16} /> {vendor.city || 'Tunis'}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ShoppingBag size={16} /> Min: 150 DT</span>
+                <Stars avg={ratings.overallAvg} total={ratings.totalReviews} size={13} />
               </div>
-
-              {cust.welcomeMessage && (
-                <p style={{ color: '#475569', fontSize: 18, lineHeight: 1.6, maxWidth: 700 }}>{cust.welcomeMessage}</p>
-              )}
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-               <button className="mkt-cocote-btn-primary" style={{ padding: '16px 40px', fontSize: 16 }}>
-                  Acheter la marque
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+               <button className="mkt-cocote-btn-primary" style={{ padding: '12px 32px' }}>
+                  Commander
                </button>
-               <button className="px-8 py-4 border border-slate-200 text-slate-900 font-bold rounded-[4px] hover:bg-slate-50 transition-all">
+               <button className="px-6 py-3 border border-slate-200 text-slate-900 font-bold rounded-[4px] hover:bg-slate-50 transition-all text-sm">
                   Suivre
                </button>
             </div>
