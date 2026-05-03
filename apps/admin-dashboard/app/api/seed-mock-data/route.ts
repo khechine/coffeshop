@@ -69,13 +69,27 @@ export async function GET() {
               companyName,
               governorate: region.governorate,
               city: region.city,
-              lat: region.lat + (Math.random() - 0.5) * 0.01, // subtle variation
-              lng: region.lng + (Math.random() - 0.5) * 0.01,
+              lat: region.lat + (Math.random() - 0.5) * 0.05, 
+              lng: region.lng + (Math.random() - 0.5) * 0.05,
               status: 'ACTIVE',
               isPremium: true
             }
           });
           logs.push(`Created profile: ${companyName}`);
+        }
+
+        // Ensure Wallet exists with balance (for visibility)
+        const existingWallet = await (prisma as any).vendorWallet.findUnique({ where: { vendorId: profile.id } });
+        if (!existingWallet) {
+          await (prisma as any).vendorWallet.create({
+            data: {
+              vendorId: profile.id,
+              balance: 100.0,
+              currency: 'DT',
+              status: 'ACTIVE'
+            }
+          });
+          logs.push(`  Created wallet for ${companyName} (100 DT)`);
         }
 
         // 3. Create mock products for this vendor in different categories
@@ -100,7 +114,10 @@ export async function GET() {
                 stockQuantity: 100,
                 description: `Qualité professionnelle certifiée par ${companyName}. Idéal pour coffeeshops et restaurants.`,
                 image: `https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&sig=${Math.random()}`,
-                tags: ['Premium', region.city, 'Local']
+                tags: ['Premium', region.city, 'Local'],
+                isFeatured: Math.random() > 0.7,
+                isFlashSale: Math.random() > 0.8,
+                discountPrice: Math.random() > 0.8 ? (5 + Math.random() * 40) : null
               }
             });
             logs.push(`  Added product: ${productName}`);
