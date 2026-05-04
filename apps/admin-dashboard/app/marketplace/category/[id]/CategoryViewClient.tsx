@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowLeft, ShoppingCart, Search, Filter, 
   ChevronRight, Star, ShoppingBag, LayoutGrid, Plus,
-  MapPin, Heart, Store, Navigation, Tag
+  MapPin, Heart, Store, Navigation, Tag, Sparkles
 } from 'lucide-react';
 import { useCart } from '../../CartContext';
 import MarketplaceHeader from '../../components/MarketplaceHeader';
@@ -51,19 +51,32 @@ function ProductCard({ product, onAdd, isVendor }: any) {
   const avg = product.vendor?.ratings?.overallAvg || 0;
   const total = product.vendor?.ratings?.totalReviews || 0;
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
-  const distance = getMockDistance(product.vendorId);
+    const distance = getMockDistance(product.vendorId);
+    const isPremium = product.vendor?.email === 'vendor3@cafe.tn' || product.isFeatured;
+    const vendorLogo = product.vendor?.customization?.logoUrl ?? undefined;
+    const locations = product.vendor?.branches?.map((b: any) => b.name) || [product.vendor?.city || 'Tunis'];
 
-  return (
-    <div className="mkt-cocote-card group">
-      <Link href={`/marketplace/product/${product.id}`} className="mkt-cocote-card-img-wrap">
-        <img
-          src={sanitizeUrl(product.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'}
-          alt={product.name}
-          className="mkt-cocote-card-img"
-        />
-        {hasDiscount && <span className="mkt-cocote-badge-discount">-{Math.round((1 - product.discountPrice/product.price)*100)}%</span>}
-        <button className="mkt-cocote-wish"><Heart size={16} /></button>
-      </Link>
+    return (
+      <div className={`mkt-cocote-card group ${isPremium ? 'is-premium' : ''}`} style={isPremium ? { '--premium-color': product.vendor?.customization?.color || '#6366F1' } as any : {}}>
+        <Link href={`/marketplace/product/${product.id}`} className="mkt-cocote-card-img-wrap">
+          <img
+            src={sanitizeUrl(product.image) ?? 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'}
+            alt={product.name}
+            className="mkt-cocote-card-img"
+          />
+          {isPremium && (
+            <div className="mkt-cocote-premium-badge">
+              <Sparkles size={10} /> Premium
+            </div>
+          )}
+          {isPremium && vendorLogo && (
+            <div className="mkt-cocote-vendor-logo-overlay">
+              <img src={sanitizeUrl(vendorLogo as string) ?? undefined} alt={product.vendor?.companyName} />
+            </div>
+          )}
+          {hasDiscount && <span className="mkt-cocote-badge-discount">-{Math.round((1 - product.discountPrice/product.price)*100)}%</span>}
+          <button className="mkt-cocote-wish"><Heart size={16} /></button>
+        </Link>
       <div className="mkt-cocote-card-body">
         <div className="mkt-cocote-card-meta">
           <Link href={`/marketplace/vendor/${product.vendor?.id}`} className="mkt-cocote-vendor-link" style={{ textTransform: 'uppercase' }}>
@@ -106,6 +119,12 @@ function ProductCard({ product, onAdd, isVendor }: any) {
         )}
 
         <Stars avg={avg} total={total} size={11} />
+        
+        {isPremium && (
+          <div className="mkt-cocote-availability-badge">
+            <MapPin size={8} /> Disponible à <span className="mkt-cocote-availability-tag">{locations.slice(0, 2).join(', ')}{locations.length > 2 ? '...' : ''}</span>
+          </div>
+        )}
         
         <div className="mkt-cocote-card-footer">
           <div className="mkt-cocote-price-wrap" style={isVendor ? { filter: 'blur(4px)', userSelect: 'none', pointerEvents: 'none' } : {}}>

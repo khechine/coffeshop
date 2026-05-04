@@ -764,14 +764,78 @@
   transform: rotate(-5deg) scale(1.05);
 }
 
-.mkt-cocote-search-wrap { flex: 1; max-width: 600px; display: flex; background: #F1F5F9; border-radius: 12px; overflow: hidden; border: 2px solid transparent; transition: border-color 0.2s; }
-.mkt-cocote-search-wrap:focus-within { border-color: #6366F1; }
-.mkt-cocote-search-input { flex: 1; padding: 14px 20px; border: none; background: transparent; outline: none; font-size: 15px; font-family: 'Outfit'; }
-.mkt-cocote-search-btn { padding: 0 20px; background: #10B981; color: #fff; border: none; cursor: pointer; }
+.mkt-cocote-search-wrap { 
+  flex: 1; 
+  max-width: 600px; 
+  display: flex; 
+  align-items: center;
+  background: #F8FAFC; 
+  border-radius: 12px; 
+  overflow: hidden; 
+  border: 1px solid #E2E8F0; 
+  transition: all 0.2s; 
+  padding: 0 16px;
+  position: relative;
+}
+.mkt-cocote-search-wrap:focus-within { 
+  border-color: #6366F1; 
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+.mkt-search-icon-abs {
+  color: #94A3B8;
+  flex-shrink: 0;
+}
+.mkt-cocote-search-input { 
+  flex: 1; 
+  padding: 14px 12px; 
+  border: none; 
+  background: transparent; 
+  outline: none; 
+  font-size: 15px; 
+  font-family: 'Outfit'; 
+  color: #0F172A;
+}
+.mkt-cocote-search-input::placeholder {
+  color: #94A3B8;
+}
 
 .mkt-cocote-header-actions { display: flex; align-items: center; gap: 16px; }
-.mkt-cocote-action-btn { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #475569; padding: 10px 16px; border-radius: 10px; transition: background 0.2s; }
-.mkt-cocote-action-btn:hover { background: #F1F5F9; color: #1E293B; }
+.mkt-cocote-action-btn { 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: #475569; 
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  transition: all 0.2s; 
+}
+.mkt-cocote-action-btn:hover { background: #EEF2FF; color: #6366F1; border-color: #6366F1; }
+
+.mkt-cocote-dashboard-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #1E293B;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.mkt-cocote-dashboard-btn:hover {
+  background: #F8FAFC;
+  border-color: #6366F1;
+  color: #6366F1;
+  transform: translateY(-1px);
+}
 .mkt-cocote-cart-btn { display: flex; align-items: center; gap: 10px; background: #1E1B4B; color: #fff; padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; }
 .mkt-cocote-cart-text { display: none; }
 @media (min-width: 768px) { .mkt-cocote-cart-text { display: inline; } }
@@ -832,6 +896,7 @@
   overflow: hidden;
   background: #F9FAFB;
   border-bottom: 1px solid #F3F4F6;
+  position: relative;
 }
 .mkt-cocote-card-img {
   width: 100%;
@@ -851,7 +916,19 @@
 .mkt-cocote-card-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .mkt-cocote-vendor-link { font-size: 11px; font-weight: 700; color: #64748B; display: flex; align-items: center; gap: 4px; }
 .mkt-cocote-vendor-link:hover { color: #111827; }
-.mkt-cocote-distance { font-size: 10px; font-weight: 800; color: #10B981; background: #ECFDF5; padding: 2px 6px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
+.mkt-cocote-distance { 
+  font-size: 10px; 
+  font-weight: 900; 
+  color: #10B981; 
+  background: #ECFDF5; 
+  padding: 2px 8px; 
+  border-radius: 100px; 
+  display: flex; 
+  align-items: center; 
+  gap: 4px; 
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 .mkt-cocote-card-title { font-size: 15px; font-weight: 700; color: #111827; margin: 0 0 12px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 42px; }
 
@@ -1013,8 +1090,77 @@
 }
 
 
-@media (max-width: 768px) {
-  .mkt-megamenu-panel { display: none; }
+/* --- Premium Product Card --- */
+.mkt-cocote-card.is-premium {
+  border: 2px solid #6366F1;
+  background: #F8FAFF;
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.15);
+}
+
+.mkt-cocote-card.is-premium:hover {
+  border-color: #4F46E5;
+  box-shadow: 0 15px 40px rgba(99, 102, 241, 0.25);
+}
+
+.mkt-cocote-premium-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: linear-gradient(135deg, #6366F1, #818CF8);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 100px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  z-index: 10;
+}
+
+.mkt-cocote-vendor-logo-overlay {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  background: #fff;
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 10;
+  border: 1px solid #E2E8F0;
+}
+
+.mkt-cocote-vendor-logo-overlay img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.mkt-cocote-availability-badge {
+  font-size: 9px;
+  font-weight: 800;
+  color: #475569;
+  background: #F1F5F9;
+  padding: 2px 8px;
+  border-radius: 100px;
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mkt-cocote-availability-tag {
+  color: #6366F1;
+  font-weight: 900;
 }
 
 /* --- Premium Hero --- */

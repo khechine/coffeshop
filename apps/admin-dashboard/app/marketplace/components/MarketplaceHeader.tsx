@@ -103,7 +103,7 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
               <Search size={20} />
             </button>
 
-            <Link href="/" className="mkt-cocote-action-btn desktop-only">
+            <Link href="/" className="mkt-cocote-dashboard-btn desktop-only">
               <LayoutGrid size={18} /> <span>Dashboard</span>
             </Link>
 
@@ -232,7 +232,7 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
       {/* ── Location Modal ── */}
       {locModalOpen && (
         <div className="mkt-modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)' }} onClick={() => setLocModalOpen(false)}>
-          <div className="mkt-modal mkt-cocote-loc-modal" style={{ width: '480px', padding: '48px', borderRadius: '16px', background: '#fff', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: 'none' }} onClick={e=>e.stopPropagation()}>
+          <div className="mkt-modal mkt-cocote-loc-modal" style={{ width: '540px', padding: '40px 48px', borderRadius: '16px', background: '#fff', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: 'none' }} onClick={e=>e.stopPropagation()}>
             <button className="mkt-modal-close" style={{ top: '24px', right: '24px' }} onClick={() => setLocModalOpen(false)}><X size={20} /></button>
             
             <div style={{ width: '64px', height: '64px', background: '#EEF2FF', color: '#6366F1', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
@@ -262,7 +262,7 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
                  </div>
                </div>
                
-               <button type="submit" className="mkt-cocote-btn-primary" style={{ width: '100%', padding: '16px', borderRadius: '8px', background: '#111827', color: '#fff', fontSize: '15px', fontWeight: 800, border: 'none', cursor: 'pointer', transition: 'all 0.2s', marginTop: '8px' }} className="hover:bg-indigo-600">
+               <button type="submit" className="mkt-cocote-btn-primary hover:bg-indigo-600" style={{ width: '100%', padding: '16px', borderRadius: '8px', background: '#111827', color: '#fff', fontSize: '15px', fontWeight: 800, border: 'none', cursor: 'pointer', transition: 'all 0.2s', marginTop: '8px' }}>
                  Valider ma position
                </button>
             </form>
