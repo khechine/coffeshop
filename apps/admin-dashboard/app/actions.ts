@@ -2242,6 +2242,7 @@ export async function getVendorOrdersWithAlertsAction() {
   });
 
   posStocks.forEach((s: any) => {
+    if (!s.vendorProduct) return;
     const qty = Number(s.quantity);
     const threshold = Number(s.vendorProduct.stockThreshold || 5);
     if (qty <= threshold) {

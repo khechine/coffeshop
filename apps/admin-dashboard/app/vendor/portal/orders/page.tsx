@@ -11,7 +11,7 @@ export default async function VendorOrdersPage() {
     ...o,
     total: Number(o.total),
     createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
-    items: o.items.map((it: any) => ({
+    items: (o.items || []).map((it: any) => ({
       ...it,
       price: Number(it.price),
       quantity: Number(it.quantity)
@@ -21,8 +21,8 @@ export default async function VendorOrdersPage() {
       vendorCustomers: o.store.vendorCustomers?.map((vc: any) => ({
         ...vc,
         totalSpent: Number(vc.totalSpent),
-        lastOrderAt: vc.lastOrderAt?.toISOString(),
-        createdAt: vc.createdAt?.toISOString()
+        lastOrderAt: typeof vc.lastOrderAt?.toISOString === 'function' ? vc.lastOrderAt.toISOString() : vc.lastOrderAt,
+        createdAt: typeof vc.createdAt?.toISOString === 'function' ? vc.createdAt.toISOString() : vc.createdAt
       }))
     } : null
   }));

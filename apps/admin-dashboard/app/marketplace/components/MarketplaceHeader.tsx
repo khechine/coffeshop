@@ -118,7 +118,7 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
               <Search size={20} />
             </button>
 
-            <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: '#F8FAFC', color: '#1E293B', borderRadius: '12px', fontSize: 14, fontWeight: 800, textDecoration: 'none', border: '1px solid #E2E8F0' }} className="desktop-only hover:bg-white hover:shadow-sm transition-all">
+            <Link href={isVendor ? "/vendor/dashboard" : "/admin"} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: '#F8FAFC', color: '#1E293B', borderRadius: '12px', fontSize: 14, fontWeight: 800, textDecoration: 'none', border: '1px solid #E2E8F0' }} className="desktop-only hover:bg-white hover:shadow-sm transition-all">
               <LayoutGrid size={18} /> <span>Dashboard</span>
             </Link>
 

@@ -28,7 +28,13 @@ export default function HomePage() {
 
   useEffect(() => {
     if (user) {
-      window.location.href = '/admin';
+      if (user.role === 'VENDOR') {
+        window.location.href = '/vendor/dashboard';
+      } else if (user.role === 'SUPERADMIN') {
+        window.location.href = '/superadmin';
+      } else {
+        window.location.href = '/admin';
+      }
     }
   }, [user]);
 
@@ -263,6 +269,12 @@ export default function HomePage() {
   }
 
   // If user exists, we show the Dashboard.
-  window.location.href = '/admin'; 
+  if (user?.role === 'VENDOR') {
+    window.location.href = '/vendor/dashboard';
+  } else if (user?.role === 'SUPERADMIN') {
+    window.location.href = '/superadmin';
+  } else {
+    window.location.href = '/admin';
+  }
   return null;
 }

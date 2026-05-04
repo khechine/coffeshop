@@ -7,7 +7,7 @@ import {
   Users, Tag, X
 } from 'lucide-react';
 import Link from 'next/link';
-import { updateVendorCustomerAction } from '../../../actions';
+import { updateVendorCustomerAction, updateSupplierOrderStatus } from '../../../actions';
 
 export default function VendorOrdersClient({ initialOrders, initialAlerts }: any) {
   const [orders, setOrders] = useState(initialOrders);
@@ -41,6 +41,13 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
         return o;
       }));
       setTaggingCust((prev: any) => prev?.id === id ? { ...prev, ...data } : prev);
+    });
+  };
+
+  const handleStatusChange = (orderId: string, newStatus: string) => {
+    startTransition(async () => {
+      await updateSupplierOrderStatus(orderId, newStatus as any);
+      setOrders((prev: any) => prev.map((o: any) => o.id === orderId ? { ...o, status: newStatus } : o));
     });
   };
 
@@ -164,7 +171,7 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
                             </span>
                          </div>
                          <div className="flex items-center gap-4 text-sm text-slate-500 font-medium">
-                            <div className="flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500" /> {order.store?.name || 'Inconnu'}</div>
+                            <div className="flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500" /> {order.status === 'PENDING' ? 'Nouveau Client' : (order.store?.name || 'Inconnu')}</div>
                             <div className="flex items-center gap-1.5"><Clock size={14} /> {new Date(order.createdAt).toLocaleTimeString()}</div>
                          </div>
                       </div>
@@ -175,22 +182,26 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Montant Total</div>
                          <div className="text-2xl font-black text-slate-900">{Number(order.total).toFixed(3)} <span className="text-xs">DT</span></div>
                       </div>
-                      <Link 
-                        href={`/vendor/portal/crm?search=${encodeURIComponent(order.store?.name || '')}`}
-                        className="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-rose-100 transition-all border border-rose-100 flex items-center gap-2"
-                      >
-                         <Users size={12} /> CRM
-                      </Link>
-                      <button 
-                        onClick={() => {
-                           const vc = order.store?.vendorCustomers?.[0] || { id: `new_${order.store?.id}` };
-                           setTaggingCust({ ...vc, store: order.store });
-                        }}
-                        className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all border border-indigo-100"
-                        title="Taguer le client"
-                      >
-                         <Tag size={16} />
-                      </button>
+                      {order.status !== 'PENDING' && (
+                        <>
+                          <Link 
+                            href={`/vendor/portal/crm?search=${encodeURIComponent(order.store?.name || '')}`}
+                            className="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-rose-100 transition-all border border-rose-100 flex items-center gap-2"
+                          >
+                             <Users size={12} /> CRM
+                          </Link>
+                          <button 
+                            onClick={() => {
+                               const vc = order.store?.vendorCustomers?.[0] || { id: `new_${order.store?.id}` };
+                               setTaggingCust({ ...vc, store: order.store });
+                            }}
+                            className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all border border-indigo-100"
+                            title="Taguer le client"
+                          >
+                             <Tag size={16} />
+                          </button>
+                        </>
+                      )}
                       <button 
                         onClick={() => alert(`Détails Commande #${order.id.slice(-6).toUpperCase()}\nClient: ${order.store?.name}\nArticles: ${order.items.length}`)}
                         className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-900 hover:text-white transition-all"
@@ -199,6 +210,46 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
                       </button>
                    </div>
                 </div>
+
+                {/* Order Actions based on status */}
+                {order.status === 'PENDING' ? (
+                  <div className="mt-4 border-t border-slate-50 pt-4 flex gap-3">
+                    <button 
+                      onClick={() => handleStatusChange(order.id, 'CANCELED')}
+                      disabled={isPending}
+                      className="w-1/3 flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200 transition-all disabled:opacity-50"
+                    >
+                      Rejeter
+                    </button>
+                    <button 
+                      onClick={() => handleStatusChange(order.id, 'CONFIRMED')}
+                      disabled={isPending}
+                      className="w-2/3 flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50"
+                    >
+                      {isPending ? 'Validation...' : 'Accepter la commande'}
+                    </button>
+                  </div>
+                ) : order.status === 'CONFIRMED' ? (
+                  <div className="mt-4 border-t border-slate-50 pt-4 flex gap-3">
+                    <button 
+                      onClick={() => handleStatusChange(order.id, 'SHIPPED')}
+                      disabled={isPending}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50"
+                    >
+                      {isPending ? 'Envoi...' : 'Confirmer l\'expédition'}
+                    </button>
+                  </div>
+                ) : order.status === 'SHIPPED' ? (
+                  <div className="mt-4 border-t border-slate-50 pt-4">
+                    <button 
+                      onClick={() => handleStatusChange(order.id, 'DELIVERED')}
+                      disabled={isPending}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50"
+                    >
+                      {isPending ? 'Mise à jour...' : 'Marquer comme livré'}
+                    </button>
+                  </div>
+                ) : null}
 
                 {/* ITEMS PREVIEW */}
                 <div className="mt-6 pt-6 border-t border-slate-50 flex flex-wrap gap-2">
