@@ -56,10 +56,16 @@ function ProductCard({ product, onAdd, isVendor }: any) {
     const isMultiFranchise = branches.length > 1;
     
     // Calculate nearest distance if branches exist
-    const distances = branches.length > 0 
-      ? branches.map((b: any) => getMockDistance(b.id || product.vendorId))
-      : [getMockDistance(product.vendorId)];
-    const minDistance = Math.min(...distances);
+    let minDistance = product.distance || 0;
+    if (minDistance === 0) {
+      const distances = branches.length > 0 
+        ? branches.map((b: any) => getMockDistance(b.id || product.vendorId))
+        : [getMockDistance(product.vendorId)];
+      minDistance = Math.min(...distances);
+    }
+    
+    // Explicit format for distance
+    const formattedDistance = typeof minDistance === 'number' ? minDistance.toFixed(1) : minDistance;
     
     const isPremium = product.vendor?.email === 'vendor3@cafe.tn' || product.isFeatured;
     const vendorLogo = product.vendor?.customization?.logoUrl ?? undefined;
@@ -96,7 +102,7 @@ function ProductCard({ product, onAdd, isVendor }: any) {
           </Link>
           <span className="mkt-cocote-distance">
             <Navigation size={10} /> 
-            {minDistance} km
+            {formattedDistance} km
           </span>
         </div>
 
@@ -201,7 +207,7 @@ export default function CategoryViewClient({ category, products = [], allCategor
   const { addToCart } = useCart();
   
   // Filters State
-  const currentRadius = parseInt(searchParams.get('radius') || '15');
+  const currentRadius = parseInt(searchParams.get('radius') || '500');
   const currentLocation = searchParams.get('loc') || 'Tunis';
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState('relevant');

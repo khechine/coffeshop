@@ -53,10 +53,16 @@ function ProductCard({ product, onAdd, isVendor }: any) {
     const isMultiFranchise = branches.length > 1;
     
     // Calculate nearest distance if branches exist
-    const distances = branches.length > 0 
-      ? branches.map((b: any) => getMockDistance(b.id || product.vendorId))
-      : [getMockDistance(product.vendorId)];
-    const minDistance = Math.min(...distances);
+    let minDistance = product.distance || 0;
+    if (minDistance === 0) {
+      const distances = branches.length > 0 
+        ? branches.map((b: any) => getMockDistance(b.id || product.vendorId))
+        : [getMockDistance(product.vendorId)];
+      minDistance = Math.min(...distances);
+    }
+    
+    // Explicit format for distance
+    const formattedDistance = typeof minDistance === 'number' ? minDistance.toFixed(1) : minDistance;
     
     const isPremium = product.vendor?.email === 'vendor3@cafe.tn' || product.isFeatured;
     const vendorLogo = product.vendor?.customization?.logoUrl ?? undefined;
@@ -93,7 +99,7 @@ function ProductCard({ product, onAdd, isVendor }: any) {
           </Link>
           <span className="mkt-cocote-distance">
             <Navigation size={10} /> 
-            {minDistance} km
+            {formattedDistance} km
           </span>
         </div>
 
@@ -221,7 +227,7 @@ const getCategoryImage = (cat: any) => {
 export default function MarketplaceClient({ initialData, isVendor = false }: { initialData: any; isVendor?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentRadius = parseInt(searchParams.get('radius') || '15');
+  const currentRadius = parseInt(searchParams.get('radius') || '500');
   const currentLocation = searchParams.get('loc') || 'Tunis';
   const search = searchParams.get('search') || '';
   
@@ -319,7 +325,7 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
                 <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2"><Store size={18} /> Vendeurs correspondants</h3>
                 <div className="mkt-cocote-vendor-grid">
                   {searchResultsVendors.map((v: any) => (
-                    <VendorCard key={v.id} vendor={v} distance={getMockDistance(v.id)} />
+                    <VendorCard key={v.id} vendor={v} distance={v.distance || getMockDistance(v.id)} />
                   ))}
                 </div>
               </div>
@@ -451,7 +457,7 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
             </div>
             <div className="mkt-cocote-vendor-grid">
               {vendors.slice(0, 6).map((v: any, i: number) => (
-                <VendorCard key={v.id} vendor={v} distance={getMockDistance(v.id)} />
+                <VendorCard key={v.id} vendor={v} distance={v.distance || getMockDistance(v.id)} />
               ))}
             </div>
           </section>

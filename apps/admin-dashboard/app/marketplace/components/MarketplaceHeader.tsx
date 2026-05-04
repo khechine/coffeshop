@@ -20,7 +20,7 @@ const tunisianCities = [
 export default function MarketplaceHeader({ isVendor = false, categories = [] }: { isVendor?: boolean; categories?: any[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentRadius = parseInt(searchParams.get('radius') || '15');
+  const currentRadius = parseInt(searchParams.get('radius') || '500');
   const currentLocation = searchParams.get('loc') || 'Tunis';
 
   const [locModalOpen, setLocModalOpen] = useState(false);

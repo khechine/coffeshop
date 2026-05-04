@@ -7,12 +7,13 @@ import {
   Users, Tag, X
 } from 'lucide-react';
 import Link from 'next/link';
-import { updateVendorCustomerAction, updateSupplierOrderStatus } from '../../../actions';
+import { updateVendorCustomerAction, updateSupplierOrderStatus, approveMarketplaceOrderAction, addVendorCustomerAction } from '../../../actions';
 
 export default function VendorOrdersClient({ initialOrders, initialAlerts }: any) {
   const [orders, setOrders] = useState(initialOrders);
   const [alerts, setAlerts] = useState(initialAlerts);
   const [isPending, startTransition] = useTransition();
+  const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null);
   const [filterPos, setFilterPos] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [taggingCust, setTaggingCust] = useState<any>(null);
@@ -26,28 +27,59 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
 
   const handleUpdateCustomer = (id: string, data: { category?: string; tags?: string[] }) => {
     startTransition(async () => {
-      await updateVendorCustomerAction(id, data);
+      let realId = id;
+      
+      // If this is a new customer (no existing CRM record), create one first
+      if (id.startsWith('new_')) {
+        const storeId = id.replace('new_', '');
+        try {
+          const newCustomer = await addVendorCustomerAction(storeId);
+          realId = newCustomer.id;
+          // Update taggingCust with real ID
+          setTaggingCust((prev: any) => prev ? { ...prev, id: realId } : prev);
+        } catch (e: any) {
+          console.error('Failed to create CRM record:', e);
+          alert('Erreur lors de la création du client CRM. Veuillez réessayer.');
+          return;
+        }
+      }
+      
+      await updateVendorCustomerAction(realId, data);
       // Update local state to reflect tags
       setOrders((prev: any) => prev.map((o: any) => {
-        if (o.store?.vendorCustomers?.[0]?.id === id) {
+        const vcId = o.store?.vendorCustomers?.[0]?.id;
+        if (vcId === realId || vcId === id) {
           return {
             ...o,
             store: {
               ...o.store,
-              vendorCustomers: [{ ...o.store.vendorCustomers[0], ...data }]
+              vendorCustomers: [{ ...(o.store.vendorCustomers?.[0] || {}), id: realId, ...data }]
             }
           };
         }
         return o;
       }));
-      setTaggingCust((prev: any) => prev?.id === id ? { ...prev, ...data } : prev);
+      setTaggingCust((prev: any) => (prev?.id === realId || prev?.id === id) ? { ...prev, id: realId, ...data } : prev);
     });
   };
 
   const handleStatusChange = (orderId: string, newStatus: string) => {
+    setLoadingOrderId(orderId);
     startTransition(async () => {
-      await updateSupplierOrderStatus(orderId, newStatus as any);
-      setOrders((prev: any) => prev.map((o: any) => o.id === orderId ? { ...o, status: newStatus } : o));
+      try {
+        await updateSupplierOrderStatus(orderId, newStatus as any);
+        // When vendor confirms, also trigger the settlement/approval flow
+        if (newStatus === 'CONFIRMED') {
+          try {
+            await approveMarketplaceOrderAction(orderId, 'VENDOR');
+          } catch (e) {
+            console.log('Settlement approval note:', e);
+          }
+        }
+        setOrders((prev: any) => prev.map((o: any) => o.id === orderId ? { ...o, status: newStatus } : o));
+      } finally {
+        setLoadingOrderId(null);
+      }
     });
   };
 
@@ -73,8 +105,10 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING': return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'CONFIRMED': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
       case 'SHIPPED': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'DELIVERED': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+      case 'CANCELLED': return 'bg-rose-100 text-rose-700 border-rose-200';
       default: return 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
@@ -215,38 +249,38 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
                 {order.status === 'PENDING' ? (
                   <div className="mt-4 border-t border-slate-50 pt-4 flex gap-3">
                     <button 
-                      onClick={() => handleStatusChange(order.id, 'CANCELED')}
-                      disabled={isPending}
+                      onClick={() => handleStatusChange(order.id, 'CANCELLED')}
+                      disabled={loadingOrderId === order.id}
                       className="w-1/3 flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200 transition-all disabled:opacity-50"
                     >
-                      Rejeter
+                      {loadingOrderId === order.id ? '...' : 'Rejeter'}
                     </button>
                     <button 
                       onClick={() => handleStatusChange(order.id, 'CONFIRMED')}
-                      disabled={isPending}
+                      disabled={loadingOrderId === order.id}
                       className="w-2/3 flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50"
                     >
-                      {isPending ? 'Validation...' : 'Accepter la commande'}
+                      {loadingOrderId === order.id ? 'Validation...' : 'Accepter la commande'}
                     </button>
                   </div>
                 ) : order.status === 'CONFIRMED' ? (
                   <div className="mt-4 border-t border-slate-50 pt-4 flex gap-3">
                     <button 
                       onClick={() => handleStatusChange(order.id, 'SHIPPED')}
-                      disabled={isPending}
+                      disabled={loadingOrderId === order.id}
                       className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50"
                     >
-                      {isPending ? 'Envoi...' : 'Confirmer l\'expédition'}
+                      {loadingOrderId === order.id ? 'Envoi...' : 'Confirmer l\'expédition'}
                     </button>
                   </div>
                 ) : order.status === 'SHIPPED' ? (
                   <div className="mt-4 border-t border-slate-50 pt-4">
                     <button 
                       onClick={() => handleStatusChange(order.id, 'DELIVERED')}
-                      disabled={isPending}
+                      disabled={loadingOrderId === order.id}
                       className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50"
                     >
-                      {isPending ? 'Mise à jour...' : 'Marquer comme livré'}
+                      {loadingOrderId === order.id ? 'Mise à jour...' : 'Marquer comme livré'}
                     </button>
                   </div>
                 ) : null}

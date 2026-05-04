@@ -1079,7 +1079,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-export async function getMarketplaceData(userLat?: number, userLng?: number, radius: number = 5) {
+export async function getMarketplaceData(userLat?: number, userLng?: number, radius: number = 500) {
   const hasWalletModel = !!(prisma as any).vendorWallet;
   let activeVendorIds: Set<string> | null = null;
 
@@ -1891,8 +1891,15 @@ export async function addVendorCustomerAction(storeId: string) {
   });
   if (!vendor) throw new Error('Vendor not found');
 
-  return await (prisma as any).vendorCustomer.create({
-    data: {
+  return await (prisma as any).vendorCustomer.upsert({
+    where: {
+      vendorId_storeId: {
+        vendorId: vendor.id,
+        storeId
+      }
+    },
+    update: {},
+    create: {
       vendorId: vendor.id,
       storeId,
       category: 'REGULAR',

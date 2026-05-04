@@ -7,7 +7,7 @@ import MarketplaceClient from './MarketplaceClient';
 
 export default async function MarketplacePage({ searchParams }: { searchParams: any }) {
   const params = await searchParams;
-  const radius = params.radius ? parseInt(params.radius) : 5;
+  const radius = params.radius ? parseInt(params.radius) : 500;
   const store = await getStore();
   const user = await getUser();
   const isVendor = user?.role === 'VENDOR';

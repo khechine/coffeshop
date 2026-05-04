@@ -4,12 +4,19 @@ import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-export default async function CategoryPage({ params }: { params: { id: string } }) {
+export default async function CategoryPage({ params, searchParams }: { params: { id: string }, searchParams: any }) {
   const { id } = params;
+  const sParams = await searchParams;
+  const radius = sParams.radius ? parseInt(sParams.radius) : 500;
   const store = await getStore();
   const user = await getUser();
   const isVendor = user?.role === 'VENDOR';
-  const data = await getMarketplaceData();
+  
+  const data = await getMarketplaceData(
+    store?.lat ? Number(store.lat) : undefined,
+    store?.lng ? Number(store.lng) : undefined,
+    radius
+  );
   
   // 1. Find category or subcategory
   let category = data.categories.find((c: any) => c.id === id || c.slug === id);
