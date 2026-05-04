@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ShoppingBag, Search, LayoutGrid, ShoppingCart, 
-  MapPin, ChevronRight, X, Menu, User
+  MapPin, ChevronRight, X, Menu, User, ArrowRight
 } from 'lucide-react';
 import { useCart } from '../CartContext';
 import CartDrawer from '../CartDrawer';
@@ -231,39 +231,45 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
 
       {/* ── Location Modal ── */}
       {locModalOpen && (
-        <div className="mkt-modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)' }} onClick={() => setLocModalOpen(false)}>
-          <div className="mkt-modal mkt-cocote-loc-modal" style={{ width: '540px', padding: '40px 48px', borderRadius: '16px', background: '#fff', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: 'none' }} onClick={e=>e.stopPropagation()}>
-            <button className="mkt-modal-close" style={{ top: '24px', right: '24px' }} onClick={() => setLocModalOpen(false)}><X size={20} /></button>
+        <div className="mkt-modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)', zIndex: 9999 }} onClick={() => setLocModalOpen(false)}>
+          <div className="mkt-modal mkt-cocote-loc-modal" style={{ width: '90%', maxWidth: '540px', padding: '48px 32px', borderRadius: '24px', background: '#fff', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: 'none', position: 'relative' }} onClick={e=>e.stopPropagation()}>
+            <button className="mkt-modal-close" style={{ top: '24px', right: '24px', background: '#F8FAFC', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748B' }} onClick={() => setLocModalOpen(false)}><X size={20} /></button>
             
-            <div style={{ width: '64px', height: '64px', background: '#EEF2FF', color: '#6366F1', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-              <MapPin size={32} />
-            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ width: '64px', height: '64px', background: '#EEF2FF', color: '#6366F1', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                <MapPin size={32} />
+              </div>
 
-            <h3 className="mkt-cocote-modal-title" style={{ fontSize: '24px', fontWeight: 900, color: '#0F172A', marginBottom: '12px' }}>Où souhaitez-vous chercher ?</h3>
-            <p className="mkt-cocote-modal-desc" style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, marginBottom: '32px' }}>Modifiez votre position pour découvrir les offres locales pertinentes dans votre région.</p>
+              <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#0F172A', marginBottom: '12px' }}>Où souhaitez-vous chercher ?</h3>
+              <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, marginBottom: '32px' }}>
+                Votre position actuelle : <strong style={{ color: '#6366F1' }}>{currentLocation}</strong> (Rayon {currentRadius}km)
+              </p>
+            </div>
             
             <form className="mkt-cocote-loc-form" onSubmit={handleLocSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                <div>
-                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Ville ou Code Postal</label>
-                 <select name="loc" className="mkt-cocote-input" style={{ width: '100%', padding: '14px 16px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '15px', fontWeight: 600, appearance: 'none', background: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748B\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E") no-repeat right 16px center / 16px' }} defaultValue={currentLocation}>
-                   {tunisianCities.map(c => <option key={c} value={c}>{c}</option>)}
-                 </select>
+                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Choisir votre ville</label>
+                 <div style={{ position: 'relative' }}>
+                   <select name="loc" className="mkt-cocote-input" style={{ width: '100%', padding: '16px 20px', borderRadius: '12px', border: '2px solid #F1F5F9', fontSize: '16px', fontWeight: 600, color: '#1E293B', appearance: 'none', background: '#F8FAFC' }} defaultValue={currentLocation}>
+                     {tunisianCities.map(c => <option key={c} value={c}>{c}</option>)}
+                   </select>
+                   <ChevronRight size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%) rotate(90deg)', color: '#94A3B8', pointerEvents: 'none' }} />
+                 </div>
                </div>
                
                <div>
-                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Rayon de recherche (km)</label>
-                 <div className="mkt-cocote-radius-slider" style={{ marginTop: '16px' }}>
-                   <input name="radius" type="range" min="5" max="100" step="5" defaultValue={currentRadius} style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '10px', appearance: 'none', cursor: 'pointer' }} className="accent-indigo-600" />
-                   <div className="flex justify-between mt-4">
+                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Rayon de recherche : <span style={{ color: '#6366F1' }}>{currentRadius} km</span></label>
+                 <div className="mkt-cocote-radius-slider">
+                   <input name="radius" type="range" min="5" max="100" step="5" defaultValue={currentRadius} style={{ width: '100%', height: '8px', background: '#EEF2FF', borderRadius: '10px', appearance: 'none', cursor: 'pointer' }} className="accent-indigo-600" />
+                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
                       <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8' }}>5KM</span>
-                      <span style={{ fontSize: '11px', fontWeight: 900, color: '#6366F1' }}>{currentRadius}KM</span>
                       <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8' }}>100KM</span>
                    </div>
                  </div>
                </div>
                
-               <button type="submit" className="mkt-cocote-btn-primary hover:bg-indigo-600" style={{ width: '100%', padding: '16px', borderRadius: '8px', background: '#111827', color: '#fff', fontSize: '15px', fontWeight: 800, border: 'none', cursor: 'pointer', transition: 'all 0.2s', marginTop: '8px' }}>
-                 Valider ma position
+               <button type="submit" className="mkt-cocote-btn-primary" style={{ width: '100%', padding: '18px', borderRadius: '14px', background: '#111827', color: '#fff', fontSize: '16px', fontWeight: 800, border: 'none', cursor: 'pointer', transition: 'all 0.2s', marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                 Valider ma position <ArrowRight size={18} />
                </button>
             </form>
           </div>

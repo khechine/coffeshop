@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowLeft, ShoppingCart, Search, Filter, 
-  ChevronRight, Star, ShoppingBag, LayoutGrid, Plus,
+  ChevronRight, Star, ArrowRight, LayoutGrid, Plus,
   MapPin, Heart, Store, Navigation, Tag, Sparkles
 } from 'lucide-react';
 import { useCart } from '../../CartContext';
@@ -48,13 +48,25 @@ function Stars({ avg = 0, total = 0, size = 12 }: any) {
 }
 
 function ProductCard({ product, onAdd, isVendor }: any) {
+  const [showBranches, setShowBranches] = React.useState(false);
   const avg = product.vendor?.ratings?.overallAvg || 0;
   const total = product.vendor?.ratings?.totalReviews || 0;
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
-    const distance = getMockDistance(product.vendorId);
+    const branches = product.vendor?.branches || [];
+    const isMultiFranchise = branches.length > 1;
+    
+    // Calculate nearest distance if branches exist
+    const distances = branches.length > 0 
+      ? branches.map((b: any) => getMockDistance(b.id || product.vendorId))
+      : [getMockDistance(product.vendorId)];
+    const minDistance = Math.min(...distances);
+    
     const isPremium = product.vendor?.email === 'vendor3@cafe.tn' || product.isFeatured;
     const vendorLogo = product.vendor?.customization?.logoUrl ?? undefined;
-    const locations = product.vendor?.branches?.map((b: any) => b.name) || [product.vendor?.city || 'Tunis'];
+    
+    const locationNames = branches.length > 0 
+      ? branches.map((b: any) => b.city || b.name) 
+      : [product.vendor?.city || 'Tunis'];
 
     return (
       <div className={`mkt-cocote-card group ${isPremium ? 'is-premium' : ''}`} style={isPremium ? { '--premium-color': product.vendor?.customization?.color || '#6366F1' } as any : {}}>
@@ -66,7 +78,7 @@ function ProductCard({ product, onAdd, isVendor }: any) {
           />
           {isPremium && (
             <div className="mkt-cocote-premium-badge">
-              <Sparkles size={10} /> Premium
+              <Sparkles size={10} /> {isMultiFranchise ? 'Multi-Franchise' : 'Premium'}
             </div>
           )}
           {isPremium && vendorLogo && (
@@ -84,7 +96,7 @@ function ProductCard({ product, onAdd, isVendor }: any) {
           </Link>
           <span className="mkt-cocote-distance">
             <Navigation size={10} /> 
-            {product.vendor?.lat && product.vendor?.lng ? `${distance} km` : `${product.vendor?.governorate || ''} ${product.vendor?.city || ''}`.trim() || 'Tunis'}
+            {minDistance} km
           </span>
         </div>
 
@@ -121,8 +133,33 @@ function ProductCard({ product, onAdd, isVendor }: any) {
         <Stars avg={avg} total={total} size={11} />
         
         {isPremium && (
-          <div className="mkt-cocote-availability-badge">
-            <MapPin size={8} /> Disponible à <span className="mkt-cocote-availability-tag">{locations.slice(0, 2).join(', ')}{locations.length > 2 ? '...' : ''}</span>
+          <div className="relative">
+            <div 
+              className="mkt-cocote-availability-badge cursor-pointer hover:bg-slate-200 transition-colors"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowBranches(!showBranches); }}
+            >
+              <MapPin size={8} /> {isMultiFranchise ? `${branches.length} points de vente` : 'Disponible à'} <span className="mkt-cocote-availability-tag">{locationNames.slice(0, 2).join(', ')}{locationNames.length > 2 ? '...' : ''}</span>
+            </div>
+
+            {showBranches && branches.length > 0 && (
+              <div className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-100 p-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 border-bottom pb-2">Nos établissements</div>
+                <div className="flex flex-col gap-3">
+                  {branches.map((b: any, idx: number) => (
+                    <div key={idx} className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                        <MapPin size={10} className="text-indigo-600" />
+                      </div>
+                      <div>
+                        <div className="text-[12px] font-bold text-slate-900">{b.name}</div>
+                        <div className="text-[10px] text-slate-500">{b.city}, {b.governorate}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="absolute -bottom-2 left-4 w-4 h-4 bg-white border-r border-b border-slate-100 rotate-45"></div>
+              </div>
+            )}
           </div>
         )}
         

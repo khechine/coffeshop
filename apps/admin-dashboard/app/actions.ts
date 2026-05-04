@@ -2083,8 +2083,24 @@ export async function updateVendorPosAction(id: string, data: any) {
     where: { id },
     data
   });
+  revalidatePath('/vendor/portal/settings');
+}
 
-  revalidatePath('/vendor/portal');
+export async function deleteVendorPosAction(id: string) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  const pos = await (prisma as any).vendorPos.findUnique({
+    where: { id },
+    include: { vendor: true }
+  });
+
+  if (!pos || pos.vendor.userId !== userId) throw new Error('Accès refusé');
+
+  await (prisma as any).vendorPos.delete({
+    where: { id }
+  });
+  revalidatePath('/vendor/portal/settings');
 }
 
 export async function updateVendorPosStockAction(posId: string, productId: string, quantity: number) {
