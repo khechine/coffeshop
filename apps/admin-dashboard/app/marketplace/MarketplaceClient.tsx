@@ -293,11 +293,11 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
       )}
 
       {/* ── Main Content ── */}
-      <div className="mkt-container mkt-cocote-main" style={{ paddingTop: 48 }}>
+      <div className="mkt-container mkt-cocote-main" style={{ paddingTop: 24 }}>
         {/* Sélections Stratégiques (Axes Intelligents) */}
         {/* Sélections Stratégiques (Sober Section) */}
         {!search && (
-          <section className="mkt-cocote-section" style={{ marginTop: '64px', padding: '80px 0', borderTop: '1px solid #F1F5F9' }}>
+          <section className="mkt-cocote-section" style={{ padding: '40px 0 64px 0' }}>
             <div className="mkt-cocote-section-header" style={{ marginBottom: '56px', textAlign: 'center' }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '100px', background: '#EEF2FF', color: '#6366F1', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>
                 <Sparkles size={14} /> Solutions Métiers

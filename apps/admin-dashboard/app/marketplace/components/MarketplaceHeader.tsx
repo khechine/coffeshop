@@ -78,22 +78,23 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
           </Link>
 
           {/* Search - Desktop */}
-          <div className="desktop-only" style={{ flex: 1, margin: '0 24px', display: 'flex', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', borderRight: '1px solid #E2E8F0' }}>
-               <select className="bg-transparent border-none outline-none text-xs font-bold text-slate-600 cursor-pointer pr-2">
+          <div className="desktop-only" style={{ flex: 1, maxWidth: '600px', display: 'flex', alignItems: 'center', background: '#F8FAFC', borderRadius: '100px', border: '1px solid #E2E8F0', padding: '4px 8px', margin: '0 auto', height: '48px' }}>
+            <div style={{ padding: '0 12px', borderRight: '1px solid #CBD5E1', height: '24px', display: 'flex', alignItems: 'center' }}>
+               <select className="bg-transparent border-none outline-none text-xs font-bold text-slate-600 cursor-pointer" style={{ appearance: 'none', paddingRight: '12px', background: 'url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%2364748B\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E") no-repeat right center / 16px' }}>
                  <option value="all">Tout</option>
                  <option value="products">Produits</option>
                  <option value="vendors">Vendeurs</option>
                  <option value="offers">Offres</option>
+                 <option value="zones">Zones</option>
                </select>
             </div>
-            <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
-              <Search size={18} style={{ position: 'absolute', left: 12, color: '#94A3B8' }} />
+            <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', height: '100%' }}>
+              <Search size={18} style={{ position: 'absolute', left: 16, color: '#94A3B8' }} />
               <input
                 type="text"
-                className="bg-transparent border-none outline-none text-sm w-full"
-                style={{ padding: '12px 12px 12px 40px' }}
-                placeholder="Rechercher..."
+                className="bg-transparent border-none outline-none text-sm w-full text-slate-800"
+                style={{ padding: '0 16px 0 44px', height: '100%' }}
+                placeholder="Rechercher un produit, vendeur..."
                 defaultValue={searchParams.get('search') || ''}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
