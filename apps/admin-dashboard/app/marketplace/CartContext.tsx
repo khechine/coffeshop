@@ -27,6 +27,8 @@ interface CartContextType {
   handleCheckout: () => Promise<void>;
   isOrdering: boolean;
   orderStatus: string;
+  orderError: string;
+  dismissError: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -35,6 +37,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isOrdering, setIsOrdering] = useState(false);
   const [orderStatus, setOrderStatus] = useState('');
+  const [orderError, setOrderError] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Load cart from localStorage
@@ -85,13 +88,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const cartTotal = cart.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
 
+  const dismissError = () => setOrderError('');
+
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     setIsOrdering(true);
+    setOrderError('');
     try {
-      // Group by vendor for multi-vendor ordering if supported by backend, 
-      // or just send as one if backend handles it.
-      // Current placeMarketplaceOrder seems to take one vendorId.
+      // Group by vendor for multi-vendor ordering
       const grouped = cart.reduce((acc: Record<string, CartItem[]>, item) => {
         const vid = item.vendor?.id || 'unknown';
         if (!acc[vid]) acc[vid] = [];
@@ -116,9 +120,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setOrderStatus('SUCCESS');
       setCart([]);
       setTimeout(() => setOrderStatus(''), 3000);
-    } catch (e) {
-      setOrderStatus('ERROR');
-      setTimeout(() => setOrderStatus(''), 3000);
+    } catch (e: any) {
+      const msg = e?.message || '';
+      if (msg.startsWith('VENDOR_UNAVAILABLE:')) {
+        setOrderError(msg.replace('VENDOR_UNAVAILABLE:', ''));
+        setOrderStatus('');
+      } else {
+        setOrderStatus('ERROR');
+        setTimeout(() => setOrderStatus(''), 3000);
+      }
     } finally {
       setIsOrdering(false);
     }
@@ -127,7 +137,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   return (
     <CartContext.Provider value={{ 
       cart, addToCart, updateQty, removeItem, clearCart, 
-      cartTotal, cartCount, handleCheckout, isOrdering, orderStatus 
+      cartTotal, cartCount, handleCheckout, isOrdering, orderStatus,
+      orderError, dismissError
     }}>
       {children}
     </CartContext.Provider>

@@ -1085,13 +1085,19 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
 
   if (hasWalletModel) {
     try {
-      // 1. Vendors with balance > 0
-      const positiveWallets = await (prisma as any).vendorWallet.findMany({
-        where: { balance: { gt: 0 } },
-        select: { vendorId: true }
+      const allWallets = await (prisma as any).vendorWallet.findMany({
+        select: { vendorId: true, balance: true }
       });
 
-      // 2. Vendors with pending deposit in last 72h (Grace Period)
+      // Count ALL pending/confirmed orders per vendor
+      const pendingOrdersCounts = await (prisma as any).supplierOrder.groupBy({
+        by: ['vendorId'],
+        where: { status: { in: ['PENDING', 'CONFIRMED'] } },
+        _count: { _all: true }
+      });
+      const pendingMap = new Map<string, number>(pendingOrdersCounts.map((x: any) => [x.vendorId, Number(x._count._all)]));
+
+      // Vendors with pending deposit in last 72h (Grace Period)
       const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
       const graceRequests = await (prisma as any).walletDepositRequest.findMany({
         where: {
@@ -1100,12 +1106,31 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
         },
         select: { vendorId: true }
       });
+      const graceSet = new Set(graceRequests.map((r: any) => r.vendorId));
 
-      const ids = [
-        ...positiveWallets.map((w: any) => w.vendorId),
-        ...graceRequests.map((r: any) => r.vendorId)
-      ];
-      activeVendorIds = new Set(ids);
+      const activeIds = new Set<string>();
+
+      // Active if: balance >= 0 OR in grace period OR (balance < 0 AND pendingOrders < 2)
+      for (const w of allWallets) {
+         if (
+            Number(w.balance) >= 0 ||
+            graceSet.has(w.vendorId) ||
+            (Number(w.balance) < 0 && (pendingMap.get(w.vendorId) || 0) < 2)
+         ) {
+            activeIds.add(w.vendorId);
+         }
+      }
+
+      // Also add vendors who don't have a wallet created yet (default active)
+      const allVendors = await (prisma as any).vendorProfile.findMany({ select: { id: true } });
+      const walletVendorIds = new Set(allWallets.map((w: any) => w.vendorId));
+      for (const v of allVendors) {
+         if (!walletVendorIds.has(v.id)) {
+            activeIds.add(v.id);
+         }
+      }
+
+      activeVendorIds = activeIds;
     } catch (e) {
       console.error('Marketplace visibility query failed:', e);
     }
@@ -1744,21 +1769,21 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
       where: { vendorId: data.vendorId }
     });
     if (vendorWallet && Number(vendorWallet.balance) < 0) {
+      // Count ALL pending/processing orders for this vendor (from any client)
       const pendingOrdersCount = await (prisma as any).supplierOrder.count({
         where: {
-          storeId: store.id,
           vendorId: data.vendorId,
-          status: { in: ['PENDING', 'PROCESSING'] }
+          status: { in: ['PENDING', 'CONFIRMED'] }
         }
       });
       if (pendingOrdersCount >= 2) {
         throw new Error(
-          'Limite atteinte : ce fournisseur a un solde négatif. Maximum 2 commandes en attente autorisées. Veuillez attendre la validation des commandes existantes.'
+          'VENDOR_UNAVAILABLE:Ce fournisseur est temporairement indisponible pour de nouvelles commandes. Des transactions sont en cours de traitement. Veuillez réessayer ultérieurement.'
         );
       }
     }
   } catch (e: any) {
-    if (e.message?.includes('Limite atteinte')) throw e;
+    if (e.message?.startsWith('VENDOR_UNAVAILABLE:')) throw e;
     // ignore wallet check errors (graceful degradation)
   }
 
@@ -1864,7 +1889,6 @@ export async function getAvailableStoresAction(search?: string) {
   // Find stores that are NOT already customers of this vendor
   return await (prisma as any).store.findMany({
     where: {
-      status: 'ACTIVE',
       name: search ? { contains: search, mode: 'insensitive' } : undefined,
       NOT: {
         vendorCustomers: {

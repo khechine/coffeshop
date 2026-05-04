@@ -7,7 +7,28 @@ import { sanitizeUrl } from '../lib/imageUtils';
 
 const fmt = (n: any) => Number(n).toFixed(3);
 export default function CartDrawer({ onClose }: { onClose: () => void }) {
-  const { cart, updateQty, removeItem, cartTotal, handleCheckout, isOrdering, orderStatus } = useCart();
+  const { cart, updateQty, removeItem, cartTotal, handleCheckout, isOrdering, orderStatus, orderError, dismissError } = useCart();
+
+  // Handle automatic redirect on error
+  React.useEffect(() => {
+    if (orderError) {
+      const timer = setTimeout(() => {
+        dismissError();
+        window.location.href = '/marketplace';
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [orderError, dismissError]);
+
+  // Handle redirect on success
+  React.useEffect(() => {
+    if (orderStatus === 'SUCCESS') {
+      const timer = setTimeout(() => {
+        window.location.href = '/vendor/dashboard'; // redirect to orders (buyer dashboard) or just reload
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [orderStatus]);
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
 
   return (
@@ -63,11 +84,23 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <div className="mkt-drawer-foot">
+          {orderError && (
+            <div style={{ background: '#FFF7ED', color: '#EA580C', padding: '12px', borderRadius: '12px', marginBottom: '16px', fontSize: '13px', fontWeight: 600, border: '1px solid #FFEDD5' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>⚠️</span>
+                <div>
+                  <div style={{ marginBottom: '4px' }}>Transaction en attente</div>
+                  <div style={{ fontWeight: 500, fontSize: '12px', opacity: 0.9 }}>{orderError}</div>
+                  <div style={{ marginTop: '8px', fontSize: '11px', fontStyle: 'italic', opacity: 0.7 }}>Redirection automatique...</div>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="mkt-drawer-total">
             <span className="mkt-drawer-total-label">Total TTC</span>
             <span className="mkt-drawer-total-val">{fmt(cartTotal)} DT</span>
           </div>
-          <button className="mkt-checkout-btn" disabled={isOrdering || cart.length === 0} onClick={handleCheckout}>
+          <button className="mkt-checkout-btn" disabled={isOrdering || cart.length === 0 || !!orderError} onClick={handleCheckout}>
             {isOrdering ? 'Traitement...' : orderStatus === 'SUCCESS' ? '✓ Commandé !' : <><Send size={16} /> Passer la Commande</>}
           </button>
         </div>

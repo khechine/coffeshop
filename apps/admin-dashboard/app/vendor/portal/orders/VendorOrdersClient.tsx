@@ -18,6 +18,7 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
   const [filterStatus, setFilterStatus] = useState('all');
   const [taggingCust, setTaggingCust] = useState<any>(null);
   const [tagInput, setTagInput] = useState('');
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     if (taggingCust) {
@@ -140,28 +141,30 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
         
         {/* LEFT COLUMN: FILTERS & ALERTS LIST */}
         <div className="lg:col-span-1 space-y-6">
-           <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
-              <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-4">Filtrer par Magasin</label>
-                <div className="space-y-2">
-                  <button 
-                    onClick={() => setFilterPos('all')}
-                    className={`w-full text-left px-4 py-3 rounded-2xl text-sm font-bold transition-all ${filterPos === 'all' ? 'bg-slate-900 text-white shadow-lg' : 'hover:bg-slate-50 text-slate-600'}`}
-                  >
-                    Tous les magasins
-                  </button>
-                  {posList.map((pos: any) => (
+           {posList.length > 0 && (
+             <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-4">Filtrer par Magasin</label>
+                  <div className="space-y-2">
                     <button 
-                      key={pos}
-                      onClick={() => setFilterPos(pos)}
-                      className={`w-full text-left px-4 py-3 rounded-2xl text-sm font-bold transition-all ${filterPos === pos ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-50 text-slate-600'}`}
+                      onClick={() => setFilterPos('all')}
+                      className={`w-full text-left px-4 py-3 rounded-2xl text-sm font-bold transition-all ${filterPos === 'all' ? 'bg-slate-900 text-white shadow-lg' : 'hover:bg-slate-50 text-slate-600'}`}
                     >
-                      {pos}
+                      Tous les magasins
                     </button>
-                  ))}
+                    {posList.map((pos: any) => (
+                      <button 
+                        key={pos}
+                        onClick={() => setFilterPos(pos)}
+                        className={`w-full text-left px-4 py-3 rounded-2xl text-sm font-bold transition-all ${filterPos === pos ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-50 text-slate-600'}`}
+                      >
+                        {pos}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-           </div>
+             </div>
+           )}
 
            {/* ACTIVE ALERTS LIST */}
            <div className="space-y-4">
@@ -237,13 +240,31 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
                         </>
                       )}
                       <button 
-                        onClick={() => alert(`Détails Commande #${order.id.slice(-6).toUpperCase()}\nClient: ${order.store?.name}\nArticles: ${order.items.length}`)}
+                        onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
                         className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-900 hover:text-white transition-all"
                       >
-                         <ChevronRight size={20} />
+                         <ChevronRight size={20} className={`transition-transform ${expandedOrderId === order.id ? 'rotate-90' : ''}`} />
                       </button>
                    </div>
                 </div>
+
+                {/* Expanded Details */}
+                {expandedOrderId === order.id && (
+                  <div className="mt-6 pt-6 border-t border-slate-50 space-y-3 animate-in fade-in slide-in-from-top-4 duration-300">
+                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Articles commandés</div>
+                     {order.items?.map((item: any, idx: number) => (
+                       <div key={idx} className="flex justify-between items-center text-sm font-bold text-slate-700 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                         <div className="flex items-center gap-3">
+                           <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+                             x{item.quantity}
+                           </div>
+                           <span>{item.name || 'Produit'}</span>
+                         </div>
+                         <span>{Number(Number(item.price) * item.quantity).toFixed(3)} DT</span>
+                       </div>
+                     ))}
+                  </div>
+                )}
 
                 {/* Order Actions based on status */}
                 {order.status === 'PENDING' ? (
