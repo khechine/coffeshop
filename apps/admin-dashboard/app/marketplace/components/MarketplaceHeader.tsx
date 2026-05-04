@@ -78,23 +78,34 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
           </Link>
 
           {/* Search - Desktop */}
-          <div className="mkt-cocote-search-wrap desktop-only">
-            <Search size={18} className="mkt-search-icon-abs" />
-            <input
-              type="text"
-              className="mkt-cocote-search-input"
-              placeholder="Rechercher un produit, une marque..."
-              defaultValue={searchParams.get('search') || ''}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const val = (e.target as HTMLInputElement).value;
-                  const params = new URLSearchParams(searchParams.toString());
-                  if (val) params.set('search', val);
-                  else params.delete('search');
-                  window.location.href = `/marketplace?${params.toString()}`;
-                }
-              }}
-            />
+          <div className="desktop-only" style={{ flex: 1, margin: '0 24px', display: 'flex', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', borderRight: '1px solid #E2E8F0' }}>
+               <select className="bg-transparent border-none outline-none text-xs font-bold text-slate-600 cursor-pointer pr-2">
+                 <option value="all">Tout</option>
+                 <option value="products">Produits</option>
+                 <option value="vendors">Vendeurs</option>
+                 <option value="offers">Offres</option>
+               </select>
+            </div>
+            <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+              <Search size={18} style={{ position: 'absolute', left: 12, color: '#94A3B8' }} />
+              <input
+                type="text"
+                className="bg-transparent border-none outline-none text-sm w-full"
+                style={{ padding: '12px 12px 12px 40px' }}
+                placeholder="Rechercher..."
+                defaultValue={searchParams.get('search') || ''}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = (e.target as HTMLInputElement).value;
+                    const params = new URLSearchParams(searchParams.toString());
+                    if (val) params.set('search', val);
+                    else params.delete('search');
+                    window.location.href = `/marketplace?${params.toString()}`;
+                  }
+                }}
+              />
+            </div>
           </div>
 
           <div className="mkt-cocote-header-actions">
@@ -103,7 +114,7 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
               <Search size={20} />
             </button>
 
-            <Link href="/" className="mkt-cocote-dashboard-btn desktop-only">
+            <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: '#F8FAFC', color: '#1E293B', borderRadius: '12px', fontSize: 14, fontWeight: 800, textDecoration: 'none', border: '1px solid #E2E8F0' }} className="desktop-only hover:bg-white hover:shadow-sm transition-all">
               <LayoutGrid size={18} /> <span>Dashboard</span>
             </Link>
 
@@ -161,7 +172,7 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
            {categories.map((cat: any) => (
              <div key={cat.id} className="mkt-megamenu-trigger group">
                 <Link 
-                  href={`/marketplace/category/${cat.id}`} 
+                  href={`/marketplace/category/${cat.slug || cat.id}`} 
                   className={`mkt-catmenu-item ${searchParams.get('id') === cat.id ? 'active' : ''}`}
                   style={{ '--cat-color': cat.color || '#6366F1' } as any}
                 >
@@ -192,7 +203,7 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
                       {categories.map((cat: any) => (
                         <div key={cat.id} className="mkt-drawer-cat-item">
                            <Link 
-                             href={`/marketplace/category/${cat.id}`} 
+                             href={`/marketplace/category/${cat.slug || cat.id}`} 
                              className="mkt-drawer-cat-link"
                              onClick={() => setIsMobileMenuOpen(false)}
                            >
@@ -204,7 +215,7 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
                                 {cat.children.map((sub: any) => (
                                   <Link 
                                     key={sub.id} 
-                                    href={`/marketplace/category/${sub.id}`}
+                                    href={`/marketplace/category/${sub.slug || sub.id}`}
                                     className="mkt-drawer-sublink"
                                     onClick={() => setIsMobileMenuOpen(false)}
                                   >
@@ -308,7 +319,7 @@ function MegaMenuPanel({ rootCategory }: { rootCategory: any }) {
         <div className="mkt-mega-v2-content">
           <div className="mkt-mega-v2-grid">
             {activeSub?.children?.map((gchild: any) => (
-              <Link key={gchild.id} href={`/marketplace/category/${gchild.id}`} className="mkt-mega-v2-link">
+              <Link key={gchild.id} href={`/marketplace/category/${gchild.slug || gchild.id}`} className="mkt-mega-v2-link">
                 {gchild.name}
               </Link>
             ))}
@@ -332,7 +343,7 @@ function MegaMenuPanel({ rootCategory }: { rootCategory: any }) {
           <p className="mkt-mega-v2-featured-desc">
             Explorez notre sélection professionnelle pour {activeSub?.name || rootCategory.name.toLowerCase()}.
           </p>
-          <Link href={`/marketplace/category/${activeSub?.id || rootCategory.id}`} className="mkt-mega-v2-featured-btn">
+          <Link href={`/marketplace/category/${activeSub?.slug || activeSub?.id || rootCategory.slug || rootCategory.id}`} className="mkt-mega-v2-featured-btn">
             Découvrir la collection <ChevronRight size={14} />
           </Link>
         </div>

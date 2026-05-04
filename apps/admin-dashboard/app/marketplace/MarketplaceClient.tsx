@@ -109,21 +109,20 @@ function ProductCard({ product, onAdd, isVendor }: any) {
         </Link>
 
         {product.tags && product.tags.length > 0 && (
-          <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-            {product.tags.slice(0, 2).map((t: string) => (
-              <span key={t} style={{ 
-                fontSize: 8, 
-                fontWeight: 900, 
-                textTransform: 'uppercase', 
-                background: t.toLowerCase().includes('bio') ? '#F0FDF4' : '#F8FAFC',
-                color: t.toLowerCase().includes('bio') ? '#166534' : '#64748B',
-                padding: '2px 6px',
-                borderRadius: 4,
-                border: '1px solid #E2E8F0'
-              }}>
-                {t}
-              </span>
-            ))}
+          <div className="flex flex-wrap gap-1 mb-2">
+            {product.tags.slice(0, 3).map((t: string) => {
+              let bg = '#F8FAFC', color = '#64748B', border = '#E2E8F0';
+              if (t.includes('Éco-responsable') || t.toLowerCase().includes('bio')) {
+                bg = '#F0FDF4'; color = '#166534'; border = '#DCFCE7';
+              } else if (t.includes('Tunisien')) {
+                bg = '#FEF2F2'; color = '#991B1B'; border = '#FEE2E2';
+              }
+              return (
+                <span key={t} style={{ fontSize: 8, fontWeight: 900, textTransform: 'uppercase', background: bg, color: color, padding: '2px 6px', borderRadius: 4, border: `1px solid ${border}` }}>
+                  {t}
+                </span>
+              );
+            })}
           </div>
         )}
 
@@ -226,7 +225,9 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
   const currentLocation = searchParams.get('loc') || 'Tunis';
   const search = searchParams.get('search') || '';
   
-  const { products = [], categories = [], flashSales = [] } = initialData || {};
+  const { products = [], categories = [], flashSales = [], banners = [] } = initialData || {};
+  
+  const heroAds = banners.filter((b: any) => b.position?.startsWith('ADS_') || b.position === 'HERO').slice(0, 2);
 
   const { addToCart, cartCount } = useCart();
 
@@ -268,6 +269,25 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
             <p className="text-white/90 text-base max-w-xl mx-auto">
               Commandez en gros auprès des fournisseurs de votre région.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Banners from Superadmin ── */}
+      {heroAds.length > 0 && !search && (
+        <div className="mkt-container" style={{ marginTop: '32px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: heroAds.length === 2 ? '1fr 1fr' : '1fr', gap: '24px' }}>
+            {heroAds.map((ad: any) => (
+              <a key={ad.id} href={ad.buttonLink || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'block', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E2E8F0', position: 'relative', aspectRatio: '21/9' }} className="group">
+                <img src={sanitizeUrl(ad.imageUrl) || ''} alt={ad.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }} className="group-hover:scale-105" />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.2))', padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  {ad.badgeText && <span style={{ background: ad.bgColor || '#6366F1', color: '#fff', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', padding: '4px 8px', borderRadius: '4px', width: 'fit-content', marginBottom: '12px' }}>{ad.badgeText}</span>}
+                  <h3 style={{ color: '#fff', fontSize: '24px', fontWeight: 900, marginBottom: '8px' }}>{ad.title}</h3>
+                  {ad.subtitle && <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px', marginBottom: '16px' }}>{ad.subtitle}</p>}
+                  {ad.buttonText && <span style={{ color: '#fff', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', textDecoration: 'underline' }}>{ad.buttonText}</span>}
+                </div>
+              </a>
+            ))}
           </div>
         </div>
       )}
@@ -394,7 +414,7 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
             </div>
             <div className="mkt-cocote-category-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
               {categories.slice(0, 8).map((cat: any) => {
-                const href = `/marketplace/category/${cat.id}`;
+                const href = `/marketplace/category/${cat.slug || cat.id}`;
                 const img = getCategoryImage(cat);
                 
                 return (

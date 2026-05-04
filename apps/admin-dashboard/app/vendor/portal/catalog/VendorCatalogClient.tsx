@@ -235,7 +235,7 @@ export default function VendorCatalogClient({
     name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', showUrlInput: false,
     description: '', tags: '', images: [],
     isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', minOrderQty: '1', stockQuantity: '0',
-    collectionIds: []
+    collectionIds: [], isEco: false, isTunisian: false
   });
 
   const handleEdit = (p: any) => {
@@ -250,7 +250,9 @@ export default function VendorCatalogClient({
       minOrderQty: p.minOrderQty ? p.minOrderQty.toString() : '1',
       stockQuantity: p.stockQuantity ? p.stockQuantity.toString() : '0',
       description: p.description || '',
-      tags: Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || ''),
+      tags: Array.isArray(p.tags) ? p.tags.filter((t: string) => t !== '🌱 Éco-responsable' && t !== '🇹🇳 Produit Tunisien').join(', ') : '',
+      isEco: Array.isArray(p.tags) && p.tags.includes('🌱 Éco-responsable'),
+      isTunisian: Array.isArray(p.tags) && p.tags.includes('🇹🇳 Produit Tunisien'),
       images: p.images || [],
       collectionIds: (p.collections || []).map((c: any) => c.id)
     });
@@ -262,7 +264,8 @@ export default function VendorCatalogClient({
     setForm({ 
       name: '', price: '', unit: 'kg', categoryId: '', subcategoryId: '', brand: '', image: '', imagePreview: '', 
       showUrlInput: false, isFeatured: false, isFlashSale: false, discount: '', flashStart: '', flashEnd: '', 
-      minOrderQty: '1', stockQuantity: '0', description: '', tags: '', images: [], collectionIds: [] 
+      minOrderQty: '1', stockQuantity: '0', description: '', tags: '', images: [], collectionIds: [],
+      isEco: false, isTunisian: false
     });
     setModalOpen(true);
   };
@@ -371,6 +374,10 @@ export default function VendorCatalogClient({
 
     startTransition(async () => {
       try {
+        const customTags = form.tags ? form.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
+        if (form.isEco) customTags.push('🌱 Éco-responsable');
+        if (form.isTunisian) customTags.push('🇹🇳 Produit Tunisien');
+
         const payload = {
           ...form,
           price: parseFloat(form.price) || 0,
@@ -380,6 +387,7 @@ export default function VendorCatalogClient({
           discount:   form.isFlashSale ? (parseFloat(form.discount) || null) : null,
           flashStart: form.isFlashSale && form.flashStart ? new Date(form.flashStart).toISOString() : null,
           flashEnd:   form.isFlashSale && form.flashEnd   ? new Date(form.flashEnd).toISOString()   : null,
+          tags: customTags
         };
         if (editingId) await updateMarketplaceProductAction(editingId, payload);
         else           await createMarketplaceProductAction(payload);
@@ -701,9 +709,19 @@ export default function VendorCatalogClient({
                      <label className={labelClass}>Description & Origine (B2B)</label>
                      <textarea className={`${inputClass} min-h-[100px] py-3 resize-none`} placeholder="Décrivez l'origine, la qualité, conseils..." value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
                    </div>
-                   <div>
+                    <div>
                      <label className={labelClass}>Mots-clés / Labels (séparés par virgule)</label>
                      <input className={inputClass} placeholder="ex: Bio, Artisanal, Made in Tunisia..." value={form.tags} onChange={e => setForm({...form, tags: e.target.value})} />
+                   </div>
+                   <div className="flex gap-4">
+                     <label className="flex items-center gap-2 cursor-pointer p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl border border-emerald-100 dark:border-emerald-500/20 text-xs font-black text-emerald-700 dark:text-emerald-400">
+                       <input type="checkbox" className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500" checked={form.isEco} onChange={e => setForm({...form, isEco: e.target.checked})} />
+                       🌱 Éco-responsable
+                     </label>
+                     <label className="flex items-center gap-2 cursor-pointer p-3 bg-red-50 dark:bg-red-500/10 rounded-xl border border-red-100 dark:border-red-500/20 text-xs font-black text-red-700 dark:text-red-400">
+                       <input type="checkbox" className="w-4 h-4 rounded text-red-600 focus:ring-red-500" checked={form.isTunisian} onChange={e => setForm({...form, isTunisian: e.target.checked})} />
+                       🇹🇳 Produit Tunisien
+                     </label>
                    </div>
                 </div>
              </div>

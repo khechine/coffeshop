@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowLeft, ShoppingCart, Search, Filter, 
   ChevronRight, Star, ArrowRight, LayoutGrid, Plus,
-  MapPin, Heart, Store, Navigation, Tag, Sparkles
+  MapPin, Heart, Store, Navigation, Tag, Sparkles, Check
 } from 'lucide-react';
 import { useCart } from '../../CartContext';
 import MarketplaceHeader from '../../components/MarketplaceHeader';
@@ -112,21 +112,20 @@ function ProductCard({ product, onAdd, isVendor }: any) {
         </Link>
 
         {product.tags && product.tags.length > 0 && (
-          <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-            {product.tags.slice(0, 2).map((t: string) => (
-              <span key={t} style={{ 
-                fontSize: 8, 
-                fontWeight: 900, 
-                textTransform: 'uppercase', 
-                background: t.toLowerCase().includes('bio') ? '#F0FDF4' : '#F8FAFC',
-                color: t.toLowerCase().includes('bio') ? '#166534' : '#64748B',
-                padding: '2px 6px',
-                borderRadius: 4,
-                border: '1px solid #E2E8F0'
-              }}>
-                {t}
-              </span>
-            ))}
+          <div className="flex flex-wrap gap-1 mb-2">
+            {product.tags.slice(0, 3).map((t: string) => {
+              let bg = '#F8FAFC', color = '#64748B', border = '#E2E8F0';
+              if (t.includes('Éco-responsable') || t.toLowerCase().includes('bio')) {
+                bg = '#F0FDF4'; color = '#166534'; border = '#DCFCE7';
+              } else if (t.includes('Tunisien')) {
+                bg = '#FEF2F2'; color = '#991B1B'; border = '#FEE2E2';
+              }
+              return (
+                <span key={t} style={{ fontSize: 8, fontWeight: 900, textTransform: 'uppercase', background: bg, color: color, padding: '2px 6px', borderRadius: 4, border: `1px solid ${border}` }}>
+                  {t}
+                </span>
+              );
+            })}
           </div>
         )}
 
@@ -206,6 +205,8 @@ export default function CategoryViewClient({ category, products = [], allCategor
   const currentLocation = searchParams.get('loc') || 'Tunis';
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState('relevant');
+  const [filterEco, setFilterEco] = useState(false);
+  const [filterTunisian, setFilterTunisian] = useState(false);
 
   const brands = useMemo(() => {
     const bSet = new Set<string>();
@@ -225,10 +226,16 @@ export default function CategoryViewClient({ category, products = [], allCategor
     if (selectedBrands.length > 0) {
       list = list.filter((p: any) => p.brand && selectedBrands.includes(p.brand));
     }
+    if (filterEco) {
+      list = list.filter((p: any) => p.tags && p.tags.includes('🌱 Éco-responsable'));
+    }
+    if (filterTunisian) {
+      list = list.filter((p: any) => p.tags && p.tags.includes('🇹🇳 Produit Tunisien'));
+    }
     if (sortOrder === 'price_asc') list.sort((a: any, b: any) => (a.discountPrice || a.price) - (b.discountPrice || b.price));
     if (sortOrder === 'price_desc') list.sort((a: any, b: any) => (b.discountPrice || b.price) - (a.discountPrice || a.price));
     return list;
-  }, [products, search, selectedBrands, sortOrder]);
+  }, [products, search, selectedBrands, sortOrder, filterEco, filterTunisian]);
 
   const featuredProducts = useMemo(() => products.filter((p: any) => p.isFeatured).slice(0, 4), [products]);
   const flashSales = useMemo(() => products.filter((p: any) => p.isFlashSale).slice(0, 4), [products]);
@@ -291,11 +298,11 @@ export default function CategoryViewClient({ category, products = [], allCategor
                  <Link href="/marketplace" style={{ fontSize: 14, color: '#64748B', textDecoration: 'none', fontWeight: 600, padding: '8px 0' }} className="hover:text-indigo-600">← Toutes les catégories</Link>
                  {parentCategory ? (
                    <>
-                      <Link href={`/marketplace/category/${parentCategory.id}`} style={{ fontSize: 15, color: '#111827', textDecoration: 'none', fontWeight: 800, marginTop: 12, marginBottom: 8 }}>{parentCategory.name}</Link>
+                      <Link href={`/marketplace/category/${parentCategory.slug || parentCategory.id}`} style={{ fontSize: 15, color: '#111827', textDecoration: 'none', fontWeight: 800, marginTop: 12, marginBottom: 8 }}>{parentCategory.name}</Link>
                       {(parentCategory.children || []).map((sub: any) => (
                         <Link 
                           key={sub.id} 
-                          href={`/marketplace/category/${sub.id}`}
+                          href={`/marketplace/category/${sub.slug || sub.id}`}
                           style={{ 
                             fontSize: 14, 
                             color: sub.id === category.id ? '#111827' : '#64748B', 
@@ -317,7 +324,7 @@ export default function CategoryViewClient({ category, products = [], allCategor
                       {(category.children || []).map((sub: any) => (
                         <Link 
                           key={sub.id} 
-                          href={`/marketplace/category/${sub.id}`}
+                          href={`/marketplace/category/${sub.slug || sub.id}`}
                           style={{ fontSize: 14, color: '#64748B', textDecoration: 'none', fontWeight: 500, padding: '6px 12px', borderRadius: 4 }}
                           className="hover:bg-slate-50 transition-colors"
                         >
@@ -349,14 +356,16 @@ export default function CategoryViewClient({ category, products = [], allCategor
                <h3 className="mkt-cocote-filter-title" style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>Labels</h3>
                <div className="flex flex-col gap-3">
                   <label className="flex items-center gap-3 cursor-pointer group">
-                    <div className="w-5 h-5 border-2 border-slate-200 rounded flex items-center justify-center group-hover:border-indigo-500 transition-colors">
-                      <input type="checkbox" className="hidden" />
+                    <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-colors ${filterEco ? 'border-emerald-500 bg-emerald-500' : 'border-slate-200 group-hover:border-emerald-400'}`}>
+                      <input type="checkbox" className="hidden" checked={filterEco} onChange={e => setFilterEco(e.target.checked)} />
+                      {filterEco && <Check size={12} className="text-white" />}
                     </div>
                     <span className="text-sm font-bold text-slate-600">🌱 Éco-responsable</span>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer group">
-                    <div className="w-5 h-5 border-2 border-slate-200 rounded flex items-center justify-center group-hover:border-indigo-500 transition-colors">
-                      <input type="checkbox" className="hidden" />
+                    <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-colors ${filterTunisian ? 'border-red-500 bg-red-500' : 'border-slate-200 group-hover:border-red-400'}`}>
+                      <input type="checkbox" className="hidden" checked={filterTunisian} onChange={e => setFilterTunisian(e.target.checked)} />
+                      {filterTunisian && <Check size={12} className="text-white" />}
                     </div>
                     <span className="text-sm font-bold text-slate-600">🇹🇳 Produit Tunisien</span>
                   </label>
