@@ -2577,6 +2577,8 @@ export async function approveMarketplaceOrderAction(orderId: string, role: 'VEND
     const vendorProfile = await (prisma as any).vendorProfile.findFirst({ where: { userId: user.id } });
     if (!vendorProfile || vendorProfile.id !== order.vendorId) throw new Error('Non autorisé');
     updateData.vendorApproved = true;
+    // Auto-approve superadmin side: commission is deducted immediately when vendor confirms
+    updateData.superadminApproved = true;
   } else if (role === 'SUPERADMIN') {
     if (user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
     updateData.superadminApproved = true;

@@ -205,7 +205,7 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
                             </span>
                          </div>
                          <div className="flex items-center gap-4 text-sm text-slate-500 font-medium">
-                            <div className="flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500" /> {order.status === 'PENDING' ? 'Nouveau Client' : (order.store?.name || 'Inconnu')}</div>
+                            <div className="flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500" /> {(order.status === 'PENDING' || order.status === 'CANCELLED') ? 'Client masqué' : (order.store?.name || 'Inconnu')}</div>
                             <div className="flex items-center gap-1.5"><Clock size={14} /> {new Date(order.createdAt).toLocaleTimeString()}</div>
                          </div>
                       </div>
@@ -216,7 +216,7 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Montant Total</div>
                          <div className="text-2xl font-black text-slate-900">{Number(order.total).toFixed(3)} <span className="text-xs">DT</span></div>
                       </div>
-                      {order.status !== 'PENDING' && (
+                      {(order.status !== 'PENDING' && order.status !== 'CANCELLED') && (
                         <>
                           <Link 
                             href={`/vendor/portal/crm?search=${encodeURIComponent(order.store?.name || '')}`}
