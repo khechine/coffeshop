@@ -67,8 +67,14 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
 
           {/* Logo */}
           <Link href="/marketplace" className="mkt-cocote-logo">
-            <div className="mkt-cocote-logo-icon"><ShoppingBag size={20} /></div>
-            Coffee<span>Market</span>
+            <div className="mkt-cocote-logo-icon">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" />
+                <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            ElKassa <span>Marketplace</span>
           </Link>
 
           {/* Search - Desktop */}
@@ -173,7 +179,7 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
           <div className="mkt-mobile-overlay" onClick={() => setIsMobileMenuOpen(false)} />
           <div className="mkt-mobile-drawer">
              <div className="mkt-drawer-header">
-                <span className="mkt-drawer-title">Menu Marketplace</span>
+                <span className="mkt-drawer-title">ElKassa Marketplace</span>
                 <button className="mkt-drawer-close" onClick={() => setIsMobileMenuOpen(false)}>
                   <X size={24} />
                 </button>
@@ -225,27 +231,40 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
 
       {/* ── Location Modal ── */}
       {locModalOpen && (
-        <div className="mkt-modal-backdrop" onClick={() => setLocModalOpen(false)}>
-          <div className="mkt-modal mkt-cocote-loc-modal" onClick={e=>e.stopPropagation()}>
-            <button className="mkt-modal-close" onClick={() => setLocModalOpen(false)}><X size={18} /></button>
-            <h3 className="mkt-cocote-modal-title">Où souhaitez-vous chercher ?</h3>
-            <p className="mkt-cocote-modal-desc">Modifiez votre position pour découvrir les offres locales pertinentes.</p>
+        <div className="mkt-modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)' }} onClick={() => setLocModalOpen(false)}>
+          <div className="mkt-modal mkt-cocote-loc-modal" style={{ width: '480px', padding: '48px', borderRadius: '16px', background: '#fff', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: 'none' }} onClick={e=>e.stopPropagation()}>
+            <button className="mkt-modal-close" style={{ top: '24px', right: '24px' }} onClick={() => setLocModalOpen(false)}><X size={20} /></button>
             
-            <form className="mkt-cocote-loc-form" onSubmit={handleLocSubmit}>
-               <label>Ville ou Code Postal</label>
-               <select name="loc" className="mkt-cocote-input" defaultValue={currentLocation}>
-                 {tunisianCities.map(c => <option key={c} value={c}>{c}</option>)}
-               </select>
+            <div style={{ width: '64px', height: '64px', background: '#EEF2FF', color: '#6366F1', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+              <MapPin size={32} />
+            </div>
+
+            <h3 className="mkt-cocote-modal-title" style={{ fontSize: '24px', fontWeight: 900, color: '#0F172A', marginBottom: '12px' }}>Où souhaitez-vous chercher ?</h3>
+            <p className="mkt-cocote-modal-desc" style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, marginBottom: '32px' }}>Modifiez votre position pour découvrir les offres locales pertinentes dans votre région.</p>
+            
+            <form className="mkt-cocote-loc-form" onSubmit={handleLocSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+               <div>
+                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Ville ou Code Postal</label>
+                 <select name="loc" className="mkt-cocote-input" style={{ width: '100%', padding: '14px 16px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '15px', fontWeight: 600, appearance: 'none', background: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748B\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E") no-repeat right 16px center / 16px' }} defaultValue={currentLocation}>
+                   {tunisianCities.map(c => <option key={c} value={c}>{c}</option>)}
+                 </select>
+               </div>
                
-               <label style={{ marginTop: 16 }}>Rayon de recherche (km)</label>
-               <div className="mkt-cocote-radius-slider">
-                 <input name="radius" type="range" min="5" max="100" step="5" defaultValue={currentRadius} />
-                 <div className="mkt-cocote-radius-labels">
-                    <span>5km</span><span>50km</span><span>100km</span>
+               <div>
+                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Rayon de recherche (km)</label>
+                 <div className="mkt-cocote-radius-slider" style={{ marginTop: '16px' }}>
+                   <input name="radius" type="range" min="5" max="100" step="5" defaultValue={currentRadius} style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '10px', appearance: 'none', cursor: 'pointer' }} className="accent-indigo-600" />
+                   <div className="flex justify-between mt-4">
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8' }}>5KM</span>
+                      <span style={{ fontSize: '11px', fontWeight: 900, color: '#6366F1' }}>{currentRadius}KM</span>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8' }}>100KM</span>
+                   </div>
                  </div>
                </div>
                
-               <button type="submit" className="mkt-cocote-btn-primary">Valider ma position</button>
+               <button type="submit" className="mkt-cocote-btn-primary" style={{ width: '100%', padding: '16px', borderRadius: '8px', background: '#111827', color: '#fff', fontSize: '15px', fontWeight: 800, border: 'none', cursor: 'pointer', transition: 'all 0.2s', marginTop: '8px' }} className="hover:bg-indigo-600">
+                 Valider ma position
+               </button>
             </form>
           </div>
         </div>

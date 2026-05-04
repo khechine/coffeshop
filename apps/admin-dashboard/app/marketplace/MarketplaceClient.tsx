@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   ShoppingCart, ShoppingBag, Search, X, Plus, Heart, 
   ChevronRight, ArrowRight, LayoutGrid, MapPin, Store, 
-  Tag, Award, Navigation, Percent, Sparkles
+  Tag, Award, Navigation, Percent, Sparkles, Package
 } from 'lucide-react';
 import { useCart } from './CartContext';
 import MarketplaceHeader from './components/MarketplaceHeader';
@@ -221,46 +221,64 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
         {/* Sélections Stratégiques (Axes Intelligents) */}
         {/* Sélections Stratégiques (Sober Section) */}
         {!search && (
-          <section className="mkt-cocote-section" style={{ marginTop: '40px', padding: '48px 0', borderTop: '1px solid #E5E7EB' }}>
-            <div className="mkt-cocote-section-header" style={{ marginBottom: '40px', textAlign: 'center' }}>
-              <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight uppercase">
+          <section className="mkt-cocote-section" style={{ marginTop: '64px', padding: '80px 0', borderTop: '1px solid #F1F5F9' }}>
+            <div className="mkt-cocote-section-header" style={{ marginBottom: '56px', textAlign: 'center' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '100px', background: '#EEF2FF', color: '#6366F1', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>
+                <Sparkles size={14} /> Solutions Métiers
+              </div>
+              <h2 className="text-4xl font-black text-slate-900 tracking-tight" style={{ marginBottom: '16px' }}>
                 Expertise & Solutions Professionnelles
               </h2>
-              <p className="text-slate-500 mt-2 font-medium">Des sélections métiers conçues pour votre rentabilité.</p>
+              <p className="text-slate-500 max-w-2xl mx-auto text-lg">Des sélections stratégiques conçues par nos experts pour maximiser la rentabilité de votre établissement.</p>
             </div>
             
-            <div className="mkt-cocote-grid">
+            <div className="mkt-cocote-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px' }}>
               
-              {/* Card 1 */}
+              {/* Card 1: Pack Ouverture */}
               <Link href="/marketplace?q=starter" style={{ textDecoration: 'none' }}>
-                <div style={{ background: '#fff', padding: '32px', borderRadius: '4px', border: '1px solid #E5E7EB', height: '100%', transition: 'all 0.2s' }} className="hover:border-slate-900">
-                  <div style={{ width: '48px', height: '48px', borderRadius: '4px', background: '#F3F4F6', color: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-                    <ShoppingCart size={24} />
+                <div style={{ background: '#fff', padding: '40px', borderRadius: '8px', border: '1px solid #E2E8F0', height: '100%', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative', overflow: 'hidden' }} className="group hover:border-indigo-600 hover:shadow-xl hover:-translate-y-2">
+                  <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', background: '#6366F1', opacity: 0 }} className="group-hover:opacity-100 transition-opacity" />
+                  <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: '#F8FAFC', color: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', border: '1px solid #F1F5F9' }} className="group-hover:bg-indigo-600 group-hover:color-white transition-colors">
+                    <Package size={32} />
                   </div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>Pack Ouverture</h3>
-                  <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.6 }}>L'essentiel pour équiper et approvisionner votre nouvel établissement.</p>
+                  <div style={{ fontSize: '10px', fontWeight: 900, color: '#6366F1', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Optimisation de lancement</div>
+                  <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', marginBottom: '16px' }}>Pack Ouverture & Relance</h3>
+                  <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, marginBottom: '24px' }}>L'essentiel des équipements et du stock initial pour démarrer votre activité en toute sérénité.</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, color: '#111827' }}>
+                    Voir la sélection <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
               </Link>
 
-              {/* Card 2 */}
+              {/* Card 2: Top Pâtisserie */}
               <Link href="/marketplace?q=premium" style={{ textDecoration: 'none' }}>
-                <div style={{ background: '#fff', padding: '24px', borderRadius: '24px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', height: '100%', border: '2px solid transparent', transition: 'all 0.3s' }} className="hover:border-rose-500 hover:-translate-y-1">
-                  <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: '#FFF1F2', color: '#E11D48', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
-                    <Award size={24} />
+                <div style={{ background: '#fff', padding: '40px', borderRadius: '8px', border: '1px solid #E2E8F0', height: '100%', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative', overflow: 'hidden' }} className="group hover:border-indigo-600 hover:shadow-xl hover:-translate-y-2">
+                  <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', background: '#6366F1', opacity: 0 }} className="group-hover:opacity-100 transition-opacity" />
+                  <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: '#F8FAFC', color: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', border: '1px solid #F1F5F9' }} className="group-hover:bg-indigo-600 group-hover:color-white transition-colors">
+                    <Award size={32} />
                   </div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', marginBottom: '8px' }}>Top Pâtisserie Premium</h3>
-                  <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.5 }}>Ingrédients haut de gamme et chocolats de couverture pour vos desserts.</p>
+                  <div style={{ fontSize: '10px', fontWeight: 900, color: '#6366F1', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Sélection d'exception</div>
+                  <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', marginBottom: '16px' }}>Ingrédients Pâtisserie Premium</h3>
+                  <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, marginBottom: '24px' }}>Chocolats de couverture, beurres techniques et purées de fruits pour les professionnels exigeants.</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, color: '#111827' }}>
+                    Explorer les produits <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
               </Link>
 
-              {/* Card 3 */}
+              {/* Card 3: Bundles Barista */}
               <Link href="/marketplace?category=bundles" style={{ textDecoration: 'none' }}>
-                <div style={{ background: '#fff', padding: '24px', borderRadius: '24px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', height: '100%', border: '2px solid transparent', transition: 'all 0.3s' }} className="hover:border-emerald-500 hover:-translate-y-1">
-                  <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: '#ECFDF5', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
-                    <ShoppingBag size={24} />
+                <div style={{ background: '#fff', padding: '40px', borderRadius: '8px', border: '1px solid #E2E8F0', height: '100%', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative', overflow: 'hidden' }} className="group hover:border-indigo-600 hover:shadow-xl hover:-translate-y-2">
+                  <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', background: '#6366F1', opacity: 0 }} className="group-hover:opacity-100 transition-opacity" />
+                  <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: '#F8FAFC', color: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', border: '1px solid #F1F5F9' }} className="group-hover:bg-indigo-600 group-hover:color-white transition-colors">
+                    <ShoppingBag size={32} />
                   </div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', marginBottom: '8px' }}>Bundles & Packs Barista</h3>
-                  <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.5 }}>Achetez en lot et profitez de réductions sur les consommables essentiels.</p>
+                  <div style={{ fontSize: '10px', fontWeight: 900, color: '#6366F1', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Économie de volume</div>
+                  <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', marginBottom: '16px' }}>Packs Barista & Consommables</h3>
+                  <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, marginBottom: '24px' }}>Réduisez vos coûts d'exploitation avec nos bundles optimisés sur les gobelets, pailles et laits.</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, color: '#111827' }}>
+                    Voir les offres en lot <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
               </Link>
               

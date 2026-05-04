@@ -730,11 +730,42 @@
 /* Header */
 .mkt-cocote-header { background: #fff; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
 .mkt-cocote-header-inner { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; gap: 32px; }
-.mkt-cocote-logo { display: flex; align-items: center; gap: 12px; font-size: 24px; font-weight: 900; color: #1E1B4B; }
-.mkt-cocote-logo-icon { width: 40px; height: 40px; background: #10B981; color: #fff; border-radius: 12px; display: flex; justify-content: center; align-items: center; }
+.mkt-cocote-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 24px;
+  font-weight: 950;
+  color: #0F172A;
+  text-decoration: none;
+  letter-spacing: -0.04em;
+}
+
+.mkt-cocote-logo span {
+  color: #6366F1;
+  font-weight: 800;
+  opacity: 0.8;
+}
+
+.mkt-cocote-logo-icon {
+  width: 44px;
+  height: 44px;
+  background: #111827;
+  color: #fff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease;
+}
+
+.mkt-cocote-logo:hover .mkt-cocote-logo-icon {
+  transform: rotate(-5deg) scale(1.05);
+}
 
 .mkt-cocote-search-wrap { flex: 1; max-width: 600px; display: flex; background: #F1F5F9; border-radius: 12px; overflow: hidden; border: 2px solid transparent; transition: border-color 0.2s; }
-.mkt-cocote-search-wrap:focus-within { border-color: #10B981; }
+.mkt-cocote-search-wrap:focus-within { border-color: #6366F1; }
 .mkt-cocote-search-input { flex: 1; padding: 14px 20px; border: none; background: transparent; outline: none; font-size: 15px; font-family: 'Outfit'; }
 .mkt-cocote-search-btn { padding: 0 20px; background: #10B981; color: #fff; border: none; cursor: pointer; }
 
