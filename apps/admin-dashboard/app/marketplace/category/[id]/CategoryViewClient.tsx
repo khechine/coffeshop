@@ -194,7 +194,7 @@ const getCategoryImage = (cat: any) => {
   return CATEGORY_IMAGES[cat.slug] || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1200';
 };
 
-export default function CategoryViewClient({ category, products = [], allCategories = [], allProducts = [], isVendor = false }: any) {
+export default function CategoryViewClient({ category, products = [], allCategories = [], allProducts = [], banners = [], isVendor = false }: any) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = searchParams.get('search') || '';
@@ -241,6 +241,12 @@ export default function CategoryViewClient({ category, products = [], allCategor
   const flashSales = useMemo(() => products.filter((p: any) => p.isFlashSale).slice(0, 4), [products]);
   const bestPrices = useMemo(() => [...products].sort((a,b) => (a.discountPrice || a.price) - (b.discountPrice || b.price)).slice(0, 4), [products]);
   const suggestions = useMemo(() => allProducts.filter((p: any) => p.isFeatured).slice(0, 8), [allProducts]);
+  
+  const sidebarAds = useMemo(() => {
+    const specific = banners.filter((b: any) => b.position === 'SIDEBAR_1' || b.position === 'SIDEBAR_2').slice(0, 2);
+    if (specific.length > 0) return specific;
+    return banners.filter((b: any) => b.position?.startsWith('ADS_')).slice(0, 1);
+  }, [banners]);
 
   const catColor = category.color || getCategoryColor(category.name);
 
@@ -371,6 +377,22 @@ export default function CategoryViewClient({ category, products = [], allCategor
                   </label>
                </div>
             </div>
+
+            {sidebarAds.length > 0 && (
+              <div className="mkt-cocote-sidebar-ads" style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: 48 }}>
+                {sidebarAds.map((ad: any) => (
+                  <a key={ad.id} href={ad.buttonLink || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'block', borderRadius: '12px', overflow: 'hidden', border: '1px solid #E2E8F0', position: 'relative', aspectRatio: '4/5' }} className="group shadow-sm hover:shadow-md transition-shadow">
+                    <img src={ad.imageUrl ? (sanitizeUrl(ad.imageUrl) || '') : ''} alt={ad.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }} className="group-hover:scale-105" />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.1) 100%)', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                      {ad.badgeText && <span style={{ background: ad.bgColor || '#6366F1', color: '#fff', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', padding: '4px 8px', borderRadius: '4px', width: 'fit-content', marginBottom: '8px' }}>{ad.badgeText}</span>}
+                      <h3 style={{ color: '#fff', fontSize: '18px', fontWeight: 900, marginBottom: '4px' }}>{ad.title}</h3>
+                      {ad.subtitle && <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '12px', marginBottom: '12px' }}>{ad.subtitle}</p>}
+                      {ad.buttonText && <span style={{ color: '#fff', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', textDecoration: 'underline' }}>{ad.buttonText}</span>}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
           </aside>
 
           {/* ── MAIN CONTENT ── */}
@@ -436,40 +458,42 @@ export default function CategoryViewClient({ category, products = [], allCategor
               </div>
             )}
 
-            {/* ── RECOMMANDATIONS ── */}
-            <section style={{ marginTop: 120, padding: '80px 0', borderTop: '1px solid #E5E7EB' }}>
-              <div style={{ textAlign: 'center', marginBottom: 64 }}>
-                <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">D'autres univers pour vous</h2>
-                <p className="text-slate-500 mt-4 text-lg max-w-2xl mx-auto">Découvrez les meilleures sélections Food & Drink par métier.</p>
-              </div>
-              <div className="mkt-cocote-category-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
-                {allCategories.filter((c: any) => c.id !== category.id).slice(0, 8).map((univ: any) => (
-                  <Link 
-                    key={univ.id} 
-                    href={`/marketplace/category/${univ.id}`}
-                    className="relative block aspect-[4/5] overflow-hidden group rounded-[4px] border border-slate-200 shadow-sm"
-                  >
-                    <img 
-                      src={getCategoryImage(univ)} 
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                      alt={univ.name} 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    <div className="absolute inset-0 p-6 flex flex-col justify-end">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-xl">{univ.icon || '📦'}</span>
-                        <h3 className="text-white text-lg font-bold leading-tight m-0 uppercase tracking-tight">{univ.name}</h3>
-                      </div>
-                      <p className="text-white/70 text-xs opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">Voir la collection</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-
           </div>
         </div>
       </div>
+
+      {/* ── RECOMMANDATIONS (FULL PAGE) ── */}
+      <section style={{ backgroundColor: '#F8FAFC', padding: '80px 0', borderTop: '1px solid #E2E8F0', marginTop: 80 }}>
+        <div className="mkt-container">
+          <div style={{ textAlign: 'center', marginBottom: 64 }}>
+            <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">D'autres univers pour vous</h2>
+            <p className="text-slate-500 mt-4 text-lg max-w-2xl mx-auto">Découvrez les meilleures sélections Food & Drink par métier.</p>
+          </div>
+          <div className="mkt-cocote-category-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
+            {allCategories.filter((c: any) => c.id !== category.id).slice(0, 8).map((univ: any) => (
+              <Link 
+                key={univ.id} 
+                href={`/marketplace/category/${univ.slug || univ.id}`}
+                className="relative block aspect-[4/5] overflow-hidden group rounded-[4px] border border-slate-200 shadow-sm"
+              >
+                <img 
+                  src={getCategoryImage(univ)} 
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                  alt={univ.name} 
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-xl">{univ.icon || '📦'}</span>
+                    <h3 className="text-white text-lg font-bold leading-tight m-0 uppercase tracking-tight">{univ.name}</h3>
+                  </div>
+                  <p className="text-white/70 text-xs opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">Voir la collection</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <MarketplaceFooter />
     </div>

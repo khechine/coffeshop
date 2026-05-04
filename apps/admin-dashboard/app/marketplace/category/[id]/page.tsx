@@ -38,7 +38,8 @@ export default async function CategoryPage({ params }: { params: { id: string } 
     category, 
     products, 
     allCategories: data.categories,
-    allProducts: data.products 
+    allProducts: data.products,
+    banners: data.banners
   }, (key, value) => 
     typeof value === 'object' && value !== null && value?.constructor?.name === 'Decimal' 
       ? Number(value) 
@@ -51,6 +52,7 @@ export default async function CategoryPage({ params }: { params: { id: string } 
       products={serializedData.products}
       allCategories={serializedData.allCategories}
       allProducts={serializedData.allProducts}
+      banners={serializedData.banners || []}
       isVendor={isVendor}
     />
   );

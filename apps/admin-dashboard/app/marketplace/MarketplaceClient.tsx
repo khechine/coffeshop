@@ -227,7 +227,8 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
   
   const { products = [], categories = [], flashSales = [], banners = [] } = initialData || {};
   
-  const heroAds = banners.filter((b: any) => b.position?.startsWith('ADS_') || b.position === 'HERO').slice(0, 2);
+  const mainHero = banners.find((b: any) => b.position === 'HERO');
+  const heroAds = banners.filter((b: any) => b.position !== 'HERO' && b.position?.startsWith('ADS_')).slice(0, 2);
 
   const { addToCart, cartCount } = useCart();
 
@@ -258,17 +259,25 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
       {/* Hero / Concept Banner (FULL WIDTH COMPACT) */}
       {!search && (
         <div className="mkt-category-hero-premium" style={{ 
-          backgroundImage: `url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1400')`,
+          backgroundImage: `url('${mainHero?.imageUrl ? sanitizeUrl(mainHero.imageUrl) : 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1400'}')`,
           minHeight: '320px',
           borderRadius: 0,
           marginBottom: 0
         }}>
           <div className="mkt-category-hero-overlay" />
           <div className="mkt-category-hero-content" style={{ padding: '40px 20px' }}>
-            <h1 className="text-white" style={{ fontSize: '42px' }}>Le Marché B2B de Proximité</h1>
-            <p className="text-white/90 text-base max-w-xl mx-auto">
-              Commandez en gros auprès des fournisseurs de votre région.
+            {mainHero?.badgeText && (
+              <span style={{ display: 'inline-block', background: mainHero.bgColor || '#6366F1', color: '#fff', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', padding: '6px 12px', borderRadius: '4px', marginBottom: '16px' }}>{mainHero.badgeText}</span>
+            )}
+            <h1 className="text-white" style={{ fontSize: '42px' }}>{mainHero?.title || 'Le Marché B2B de Proximité'}</h1>
+            <p className="text-white/90 text-base max-w-xl mx-auto" style={{ marginTop: '16px' }}>
+              {mainHero?.subtitle || 'Commandez en gros auprès des fournisseurs de votre région.'}
             </p>
+            {mainHero?.buttonText && mainHero?.buttonLink && (
+              <a href={mainHero.buttonLink} style={{ display: 'inline-block', marginTop: '24px', padding: '12px 24px', background: '#fff', color: '#0F172A', fontWeight: 800, borderRadius: '8px', textDecoration: 'none' }}>
+                {mainHero.buttonText}
+              </a>
+            )}
           </div>
         </div>
       )}
