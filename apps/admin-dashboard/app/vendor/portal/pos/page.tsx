@@ -23,6 +23,11 @@ export default async function VendorPosPage() {
     createdAt: p.createdAt?.toISOString()
   })) || [];
 
+  const vendorMainCoords = {
+    lat: portalData.lat,
+    lng: portalData.lng
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto p-4 md:p-8">
       <div className="mb-8">
@@ -30,7 +35,11 @@ export default async function VendorPosPage() {
         <p className="text-slate-500 font-medium mt-1">Gérez vos différentes branches et succursales physiques.</p>
       </div>
       
-      <VendorPosClient initialPosList={serializedPosList} products={serializedProducts} />
+      <VendorPosClient 
+        initialPosList={serializedPosList} 
+        products={serializedProducts} 
+        vendorMainCoords={vendorMainCoords}
+      />
     </div>
   );
 }

@@ -8,13 +8,27 @@ import { useEffect, useRef } from 'react';
 interface VendorPosClientProps {
   initialPosList: any[];
   products: any[];
+  vendorMainCoords?: { lat: number | null; lng: number | null };
 }
 
-export default function VendorPosClient({ initialPosList, products }: VendorPosClientProps) {
+export default function VendorPosClient({ initialPosList, products, vendorMainCoords }: VendorPosClientProps) {
   const [posList, setPosList] = useState(initialPosList || []);
   const [isPending, startTransition] = useTransition();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<any>(null);
+
+  const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const d = R * c; // Distance in km
+    return d;
+  };
   
   // Stock Modal State
   const [activeStockPos, setActiveStockPos] = useState<any>(null);
@@ -120,6 +134,12 @@ export default function VendorPosClient({ initialPosList, products }: VendorPosC
                      {pos.isActive && <CheckCircle2 size={16} className="text-emerald-500" />}
                    </h3>
                    {pos.city && <p className="text-slate-500 text-sm font-medium mt-1 flex items-center gap-1"><MapPin size={14} /> {pos.city}</p>}
+                   {vendorMainCoords?.lat && vendorMainCoords?.lng && pos.lat && pos.lng && (
+                     <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-2 flex items-center gap-2">
+                       <Navigation size={10} />
+                       {getDistance(vendorMainCoords.lat, vendorMainCoords.lng, pos.lat, pos.lng).toFixed(1)} km du siège
+                     </p>
+                   )}
                  </div>
                   <div className="flex gap-2">
                     <button 
