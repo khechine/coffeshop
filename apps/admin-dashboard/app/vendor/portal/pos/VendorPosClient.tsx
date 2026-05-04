@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { MapPin, Plus, Store, Phone, CheckCircle2, Navigation, Package, XCircle } from 'lucide-react';
-import { createVendorPosAction, updateVendorPosAction, updateVendorPosStockAction } from '../../../actions';
+import { MapPin, Plus, Store, Phone, CheckCircle2, Navigation, Package, XCircle, Edit, Trash2, Locate, Map, X } from 'lucide-react';
+import { createVendorPosAction, updateVendorPosAction, updateVendorPosStockAction, deleteVendorPosAction } from '../../../actions';
+import { useEffect, useRef } from 'react';
 
 interface VendorPosClientProps {
   initialPosList: any[];
@@ -12,27 +13,35 @@ interface VendorPosClientProps {
 export default function VendorPosClient({ initialPosList, products }: VendorPosClientProps) {
   const [posList, setPosList] = useState(initialPosList || []);
   const [isPending, startTransition] = useTransition();
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingBranch, setEditingBranch] = useState<any>(null);
   
   // Stock Modal State
   const [activeStockPos, setActiveStockPos] = useState<any>(null);
   const [stockInputs, setStockInputs] = useState<Record<string, number>>({});
 
-  // Form State
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [phone, setPhone] = useState('');
-
-  const handleAddPos = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name) return;
-
+  const handleSaveBranch = (formData: any) => {
     startTransition(async () => {
       try {
-        await createVendorPosAction({ name, address, city, phone });
-        setShowAddForm(false);
-        setName(''); setAddress(''); setCity(''); setPhone('');
+        if (editingBranch?.id) {
+          await updateVendorPosAction(editingBranch.id, formData);
+        } else {
+          await createVendorPosAction(formData);
+        }
+        setIsModalOpen(false);
+        setEditingBranch(null);
+        window.location.reload();
+      } catch (error: any) {
+        alert(error.message);
+      }
+    });
+  };
+
+  const handleDeleteBranch = (id: string) => {
+    if (!confirm('Supprimer cette franchise ? Cette action est irréversible.')) return;
+    startTransition(async () => {
+      try {
+        await deleteVendorPosAction(id);
         window.location.reload();
       } catch (error: any) {
         alert(error.message);
@@ -91,66 +100,14 @@ export default function VendorPosClient({ initialPosList, products }: VendorPosC
           <span>{posList.length} Point{posList.length > 1 ? 's' : ''} de vente enregistré{posList.length > 1 ? 's' : ''}</span>
         </div>
         <button 
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-black flex items-center gap-2 hover:bg-indigo-700 transition-colors"
+          onClick={() => { setEditingBranch(null); setIsModalOpen(true); }}
+          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-black flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20"
         >
-          <Plus size={16} /> Ajouter une branche
+          <Plus size={18} /> Ajouter une franchise
         </button>
       </div>
 
-      {showAddForm && (
-        <form onSubmit={handleAddPos} className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 space-y-4 animate-in fade-in slide-in-from-top-4">
-          <h3 className="font-black text-lg text-slate-900 mb-4">Nouvelle Branche</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-black uppercase text-slate-500 mb-1 block">Nom de la branche</label>
-              <input 
-                type="text" required
-                value={name} onChange={e => setName(e.target.value)}
-                placeholder="Ex: Entrepôt Tunis, Magasin Sfax..."
-                className="w-full p-3 bg-slate-50 rounded-xl font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-black uppercase text-slate-500 mb-1 block">Téléphone (Optionnel)</label>
-              <input 
-                type="text" 
-                value={phone} onChange={e => setPhone(e.target.value)}
-                placeholder="Ex: 55 123 456"
-                className="w-full p-3 bg-slate-50 rounded-xl font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div>
-                  <label className="text-xs font-black uppercase text-slate-500 mb-1 block">Ville</label>
-                  <input 
-                    type="text" 
-                    value={city} onChange={e => setCity(e.target.value)}
-                    placeholder="Ex: Tunis"
-                    className="w-full p-3 bg-slate-50 rounded-xl font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-               </div>
-               <div>
-                  <label className="text-xs font-black uppercase text-slate-500 mb-1 block">Adresse complète</label>
-                  <input 
-                    type="text" 
-                    value={address} onChange={e => setAddress(e.target.value)}
-                    placeholder="Ex: 15 Avenue Habib Bourguiba"
-                    className="w-full p-3 bg-slate-50 rounded-xl font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-               </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 mt-6">
-            <button type="button" onClick={() => setShowAddForm(false)} className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl">Annuler</button>
-            <button type="submit" disabled={isPending} className="px-6 py-3 bg-indigo-600 text-white font-black rounded-xl shadow-md shadow-indigo-600/20 disabled:opacity-50">
-              {isPending ? 'Enregistrement...' : 'Enregistrer la branche'}
-            </button>
-          </div>
-        </form>
-      )}
+      {/* Inline Form Removed - Replaced by Modal */}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {posList.map((pos) => (
@@ -164,13 +121,27 @@ export default function VendorPosClient({ initialPosList, products }: VendorPosC
                    </h3>
                    {pos.city && <p className="text-slate-500 text-sm font-medium mt-1 flex items-center gap-1"><MapPin size={14} /> {pos.city}</p>}
                  </div>
-                 <button 
-                   onClick={() => toggleStatus(pos.id, pos.isActive)}
-                   disabled={isPending}
-                   className={`text-xs font-black uppercase px-3 py-1 rounded-lg ${pos.isActive ? 'bg-rose-50 text-rose-600 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
-                 >
-                   {pos.isActive ? 'Désactiver' : 'Activer'}
-                 </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => { setEditingBranch(pos); setIsModalOpen(true); }}
+                      className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteBranch(pos.id)}
+                      className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                    <button 
+                      onClick={() => toggleStatus(pos.id, pos.isActive)}
+                      disabled={isPending}
+                      className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border ${pos.isActive ? 'border-rose-100 text-rose-500 hover:bg-rose-50' : 'border-emerald-100 text-emerald-500 hover:bg-emerald-50'}`}
+                    >
+                      {pos.isActive ? 'Désactiver' : 'Activer'}
+                    </button>
+                  </div>
                </div>
 
                <div className="space-y-2 mt-6">
@@ -201,9 +172,9 @@ export default function VendorPosClient({ initialPosList, products }: VendorPosC
           </div>
         ))}
         
-        {posList.length === 0 && !showAddForm && (
+        {posList.length === 0 && (
           <div className="col-span-full py-12 text-center text-slate-400 font-medium border-2 border-dashed border-slate-200 rounded-[32px]">
-            Aucun point de vente enregistré.<br/>Cliquez sur "Ajouter une branche" pour commencer.
+            Aucun point de vente enregistré.<br/>Cliquez sur "Ajouter une franchise" pour commencer.
           </div>
         )}
       </div>
@@ -261,6 +232,127 @@ export default function VendorPosClient({ initialPosList, products }: VendorPosC
            </div>
         </div>
       )}
+      {/* ── Modal Franchise (Add/Edit) ── */}
+      {isModalOpen && (
+        <BranchModal 
+          branch={editingBranch} 
+          onClose={() => { setIsModalOpen(false); setEditingBranch(null); }} 
+          onSave={handleSaveBranch}
+          isPending={isPending}
+        />
+      )}
+    </div>
+  );
+}
+
+function BranchModal({ branch, onClose, onSave, isPending }: any) {
+  const [form, setForm] = useState({
+    name: branch?.name || '',
+    address: branch?.address || '',
+    city: branch?.city || '',
+    phone: branch?.phone || '',
+    lat: branch?.lat || 36.80,
+    lng: branch?.lng || 10.18,
+    isActive: branch?.isActive !== undefined ? branch.isActive : true
+  });
+
+  const mapRef = useRef<any>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const markerRef = useRef<any>(null);
+
+  useEffect(() => {
+    const initMap = async () => {
+      const L = (await import('leaflet')).default;
+      if (!mapContainerRef.current) return;
+      
+      mapRef.current = L.map(mapContainerRef.current, { zoomControl: false }).setView([form.lat, form.lng], 13);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mapRef.current);
+      L.control.zoom({ position: 'bottomright' }).addTo(mapRef.current);
+
+      const icon = L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div style="background:#4F46E5; width:24px; height:24px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:2px solid white; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);"></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 24]
+      });
+
+      markerRef.current = L.marker([form.lat, form.lng], { icon, draggable: true }).addTo(mapRef.current);
+      
+      markerRef.current.on('dragend', (e: any) => {
+        const { lat, lng } = e.target.getLatLng();
+        setForm(f => ({ ...f, lat, lng }));
+      });
+    };
+    initMap();
+    return () => { if (mapRef.current) mapRef.current.remove(); };
+  }, []);
+
+  const inputClass = "w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all";
+  const labelClass = "block text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-widest";
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="p-8 md:p-10">
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center gap-4">
+               <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
+                  <Map size={24} />
+               </div>
+               <div>
+                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">
+                    {branch ? 'Modifier la franchise' : 'Nouvelle franchise'}
+                  </h3>
+                  <p className="text-xs font-bold text-slate-400">Configurez les détails et la position GPS</p>
+               </div>
+            </div>
+            <button onClick={onClose} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-colors">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+            <div className="md:col-span-2">
+              <label className={labelClass}>Nom de l'établissement</label>
+              <input className={inputClass} value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Ex: ElKassa - Entrepôt Sud" />
+            </div>
+            <div>
+              <label className={labelClass}>Ville / Gouvernorat</label>
+              <input className={inputClass} value={form.city} onChange={e => setForm({...form, city: e.target.value})} placeholder="Ex: Sfax" />
+            </div>
+            <div>
+              <label className={labelClass}>Téléphone contact</label>
+              <input className={inputClass} value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="Ex: 71 000 000" />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelClass}>Adresse complète</label>
+              <input className={inputClass} value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Ex: Z.I Poudrière II" />
+            </div>
+
+            <div className="md:col-span-2">
+              <div className="flex justify-between items-end mb-1.5">
+                 <label className={labelClass}>Position GPS précise</label>
+                 <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md uppercase">Déplacez le marqueur bleu</span>
+              </div>
+              <div className="h-52 rounded-3xl overflow-hidden border border-slate-100 relative shadow-inner">
+                <div ref={mapContainerRef} className="h-full w-full" />
+                <div className="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm px-4 py-2 rounded-2xl shadow-xl text-[10px] font-black text-slate-900 border border-slate-100 flex items-center gap-3">
+                  <Navigation size={12} className="text-indigo-600" />
+                  <span>{form.lat.toFixed(6)}, {form.lng.toFixed(6)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            disabled={isPending || !form.name}
+            onClick={() => onSave(form)}
+            className="w-full py-4 bg-indigo-600 text-white rounded-[24px] font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/20 hover:bg-indigo-500 hover:-translate-y-0.5 transition-all disabled:opacity-50"
+          >
+            {isPending ? 'Synchronisation en cours...' : (branch ? 'Mettre à jour la franchise' : 'Enregistrer la franchise')}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
