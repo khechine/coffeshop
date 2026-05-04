@@ -247,8 +247,14 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
   // Fallback if no discounts:
   const displayPromos = promosLocales.length > 0 ? promosLocales : products.slice(0, 5);
 
-  const searchResults = search 
+  const searchType = searchParams.get('type') || 'all';
+
+  const searchResultsProducts = search && (searchType === 'all' || searchType === 'products')
     ? products.filter((p: any) => p.name.toLowerCase().includes(search.toLowerCase()) || p.vendor?.companyName?.toLowerCase().includes(search.toLowerCase()))
+    : [];
+
+  const searchResultsVendors = search && (searchType === 'all' || searchType === 'vendors')
+    ? vendors.filter((v: any) => v.companyName?.toLowerCase().includes(search.toLowerCase()))
     : [];
 
   return (
@@ -303,6 +309,43 @@ export default function MarketplaceClient({ initialData, isVendor = false }: { i
 
       {/* ── Main Content ── */}
       <div className="mkt-container mkt-cocote-main" style={{ paddingTop: 24 }}>
+        
+        {search && (
+          <div style={{ marginBottom: '40px' }}>
+            <h2 className="text-2xl font-black text-slate-900 mb-6">Résultats pour "{search}"</h2>
+            
+            {searchResultsVendors.length > 0 && (
+              <div className="mb-12">
+                <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2"><Store size={18} /> Vendeurs correspondants</h3>
+                <div className="mkt-cocote-vendor-grid">
+                  {searchResultsVendors.map((v: any) => (
+                    <VendorCard key={v.id} vendor={v} distance={getMockDistance(v.id)} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {searchResultsProducts.length > 0 && (
+              <div>
+                <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2"><ShoppingBag size={18} /> Produits correspondants</h3>
+                <div className="mkt-cocote-grid">
+                  {searchResultsProducts.map((p: any) => (
+                    <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {searchResultsVendors.length === 0 && searchResultsProducts.length === 0 && (
+              <div className="text-center py-20 bg-slate-50 rounded-2xl border border-slate-100">
+                <Search size={48} className="mx-auto text-slate-300 mb-4" />
+                <h3 className="text-xl font-bold text-slate-700 mb-2">Aucun résultat trouvé</h3>
+                <p className="text-slate-500">Essayez de modifier votre recherche ou de changer le type de filtre.</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Sélections Stratégiques (Axes Intelligents) */}
         {/* Sélections Stratégiques (Sober Section) */}
         {!search && (

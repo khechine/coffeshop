@@ -345,7 +345,7 @@ export default function CategoryViewClient({ category, products = [], allCategor
             <div className="mkt-cocote-filter-block" style={{ marginBottom: 48, padding: '32px 0', borderTop: '1px solid #F1F5F9' }}>
               <h3 className="mkt-cocote-filter-title" style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 20 }}>Distance (km)</h3>
               <div className="mkt-cocote-radius-slider">
-                 <input type="range" min="5" max="100" step="5" defaultValue={currentRadius} onChange={(e) => {
+                 <input type="range" min="5" max="500" step="5" defaultValue={currentRadius} onChange={(e) => {
                     const params = new URLSearchParams(searchParams.toString());
                     params.set('radius', e.target.value);
                     router.push(`/marketplace/category/${category.id}?${params.toString()}`);
@@ -353,7 +353,7 @@ export default function CategoryViewClient({ category, products = [], allCategor
                  <div className="flex justify-between mt-4">
                     <span className="text-[10px] font-black text-slate-400">5KM</span>
                     <span className="text-[11px] font-black text-indigo-600">{currentRadius}KM</span>
-                    <span className="text-[10px] font-black text-slate-400">100KM</span>
+                    <span className="text-[10px] font-black text-slate-400">500KM</span>
                  </div>
               </div>
             </div>

@@ -80,7 +80,7 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
           {/* Search - Desktop */}
           <div className="desktop-only" style={{ flex: 1, maxWidth: '600px', display: 'flex', alignItems: 'center', background: '#F8FAFC', borderRadius: '100px', border: '1px solid #E2E8F0', padding: '4px 8px', margin: '0 auto', height: '48px' }}>
             <div style={{ padding: '0 12px', borderRight: '1px solid #CBD5E1', height: '24px', display: 'flex', alignItems: 'center' }}>
-               <select className="bg-transparent border-none outline-none text-xs font-bold text-slate-600 cursor-pointer" style={{ appearance: 'none', paddingRight: '12px', background: 'url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%2364748B\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E") no-repeat right center / 16px' }}>
+               <select id="mkt-search-type" defaultValue={searchParams.get('type') || 'all'} className="bg-transparent border-none outline-none text-xs font-bold text-slate-600 cursor-pointer" style={{ appearance: 'none', paddingRight: '12px', background: 'url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%2364748B\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E") no-repeat right center / 16px' }}>
                  <option value="all">Tout</option>
                  <option value="products">Produits</option>
                  <option value="vendors">Vendeurs</option>
@@ -99,9 +99,12 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     const val = (e.target as HTMLInputElement).value;
+                    const typeEl = document.getElementById('mkt-search-type') as HTMLSelectElement;
                     const params = new URLSearchParams(searchParams.toString());
                     if (val) params.set('search', val);
                     else params.delete('search');
+                    if (typeEl && typeEl.value !== 'all') params.set('type', typeEl.value);
+                    else params.delete('type');
                     window.location.href = `/marketplace?${params.toString()}`;
                   }
                 }}
@@ -272,10 +275,10 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
                <div>
                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Rayon de recherche : <span style={{ color: '#6366F1' }}>{currentRadius} km</span></label>
                  <div className="mkt-cocote-radius-slider">
-                   <input name="radius" type="range" min="5" max="100" step="5" defaultValue={currentRadius} style={{ width: '100%', height: '8px', background: '#EEF2FF', borderRadius: '10px', appearance: 'none', cursor: 'pointer' }} className="accent-indigo-600" />
+                   <input name="radius" type="range" min="5" max="500" step="5" defaultValue={currentRadius} style={{ width: '100%', height: '8px', background: '#EEF2FF', borderRadius: '10px', appearance: 'none', cursor: 'pointer' }} className="accent-indigo-600" />
                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
                       <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8' }}>5KM</span>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8' }}>100KM</span>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8' }}>500KM</span>
                    </div>
                  </div>
                </div>

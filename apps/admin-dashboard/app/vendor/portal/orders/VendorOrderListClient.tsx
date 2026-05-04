@@ -164,6 +164,14 @@ export default function VendorOrderListClient({ orders }: { orders: any[] }) {
                 </div>
 
                 {order.status === 'PENDING' ? (
+                  <button 
+                    onClick={() => handleStatusChange(order.id, 'CONFIRMED')}
+                    disabled={isPending}
+                    className="w-full flex items-center justify-center gap-3 px-8 py-5 rounded-[24px] bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50 uppercase tracking-widest mt-2"
+                  >
+                    {isPending ? 'Validation...' : 'Accepter la commande'}
+                  </button>
+                ) : order.status === 'CONFIRMED' ? (
                   <div className="space-y-3 pt-2">
                     <div className="relative flex items-center gap-3 bg-white dark:bg-slate-950/50 px-5 py-4 rounded-[24px] border border-slate-200 dark:border-slate-800 focus-within:border-indigo-500 transition-colors shadow-sm dark:shadow-none">
                       <Truck size={20} className="text-indigo-600 dark:text-indigo-400" />
@@ -181,6 +189,7 @@ export default function VendorOrderListClient({ orders }: { orders: any[] }) {
                       {isPending ? 'Confirmation...' : 'Confirmer l\'expédition'}
                     </button>
                   </div>
+
                 ) : order.status === 'SHIPPED' ? (
                   <button 
                     onClick={() => handleStatusChange(order.id, 'DELIVERED')}

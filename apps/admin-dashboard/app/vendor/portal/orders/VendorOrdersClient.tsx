@@ -183,9 +183,8 @@ export default function VendorOrdersClient({ initialOrders, initialAlerts }: any
                       </Link>
                       <button 
                         onClick={() => {
-                           const vc = order.store?.vendorCustomers?.[0];
-                           if (vc) setTaggingCust({ ...vc, store: order.store });
-                           else alert("Données CRM non disponibles pour ce client.");
+                           const vc = order.store?.vendorCustomers?.[0] || { id: `new_${order.store?.id}` };
+                           setTaggingCust({ ...vc, store: order.store });
                         }}
                         className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all border border-indigo-100"
                         title="Taguer le client"

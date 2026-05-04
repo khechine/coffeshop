@@ -4,6 +4,7 @@ import React, { useState, useTransition } from 'react';
 import { MapPin, Plus, Store, Phone, CheckCircle2, Navigation, Package, XCircle, Edit, Trash2, Locate, Map, X } from 'lucide-react';
 import { createVendorPosAction, updateVendorPosAction, updateVendorPosStockAction, deleteVendorPosAction } from '../../../actions';
 import { useEffect, useRef } from 'react';
+import 'leaflet/dist/leaflet.css';
 
 interface VendorPosClientProps {
   initialPosList: any[];
