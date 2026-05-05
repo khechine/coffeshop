@@ -38,7 +38,7 @@ export default async function VendorCrmPage() {
   })) || [];
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 md:p-8">
+    <div className="w-full">
       <div className="mb-8">
         <h1 className="text-3xl font-black text-slate-900 tracking-tight">CRM & Marketing B2B</h1>
         <p className="text-slate-500 font-medium mt-1">Gérez vos relations avec les points de vente (Coffeeshops) et lancez des campagnes ciblées.</p>

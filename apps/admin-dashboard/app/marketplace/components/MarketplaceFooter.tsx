@@ -4,57 +4,55 @@ import { ShoppingBag, MapPin, Mail, Phone, Heart } from 'lucide-react';
 
 export default function MarketplaceFooter() {
   return (
-    <footer className="mkt-cocote-footer" style={{ background: '#0F172A', color: '#CBD5E1', padding: '80px 0 40px', marginTop: '80px' }}>
-      <div className="mkt-container">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '64px', marginBottom: '64px' }}>
-          
-          <div style={{ maxWidth: '400px' }}>
-            <Link href="/marketplace" className="mkt-cocote-logo" style={{ color: '#fff', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '24px', fontWeight: 950, textDecoration: 'none' }}>
-              <div className="mkt-cocote-logo-icon" style={{ background: '#6366F1', color: '#fff', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" />
-                  <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M2 12L17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+    <footer style={{ background: '#111827', color: '#9CA3AF', padding: '60px 0 40px', marginTop: '80px', borderTop: '4px solid #E31E24' }}>
+      <div className="mkt-container" style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '48px', marginBottom: '48px' }}>
+           
+          <div>
+            <Link href="/marketplace" style={{ color: '#fff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '20px', fontWeight: 950, textDecoration: 'none', letterSpacing: '-0.03em' }}>
+              <div style={{ background: '#fff', color: '#111827', width: '36px', height: '36px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px' }}>
+                EK
               </div>
-              ElKassa <span style={{ color: '#6366F1' }}>Marketplace</span>
+              ElKassa <span style={{ fontWeight: 700 }}>Market</span>
             </Link>
-            <p style={{ fontSize: '15px', lineHeight: '1.7', color: '#94A3B8', marginBottom: '32px' }}>
-              La première place de marché B2B dédiée à la proximité en Tunisie. Connectez votre établissement aux meilleurs fournisseurs locaux en quelques clics.
+            <p style={{ fontSize: '13px', lineHeight: '1.6', color: '#6B7280', margin: '16px 0 24px' }}>
+              La marketplace B2B de proximité en Tunisie. Commandez en gros auprès des meilleurs fournisseurs locaux.
             </p>
-            <div style={{ display: 'flex', gap: '20px' }}>
-               <a href="#" style={{ color: '#64748B' }} className="hover:text-indigo-400 transition-colors"><MapPin size={22} /></a>
-               <a href="#" style={{ color: '#64748B' }} className="hover:text-indigo-400 transition-colors"><Mail size={22} /></a>
-               <a href="#" style={{ color: '#64748B' }} className="hover:text-indigo-400 transition-colors"><Phone size={22} /></a>
-            </div>
           </div>
 
           <div>
-            <h4 style={{ color: '#fff', fontSize: '16px', fontWeight: 900, marginBottom: '28px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Plateforme</h4>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <li><Link href="/marketplace/about" style={{ color: '#94A3B8', textDecoration: 'none', fontSize: '15px' }} className="hover:text-white transition-colors">À propos</Link></li>
-              <li><Link href="/marketplace/concept" style={{ color: '#94A3B8', textDecoration: 'none', fontSize: '15px' }} className="hover:text-white transition-colors">Le concept Proximité</Link></li>
-              <li><Link href="/marketplace/vendors" style={{ color: '#94A3B8', textDecoration: 'none', fontSize: '15px' }} className="hover:text-white transition-colors">Devenir Vendeur</Link></li>
-              <li><Link href="/marketplace/faq" style={{ color: '#94A3B8', textDecoration: 'none', fontSize: '15px' }} className="hover:text-white transition-colors">Foire aux questions</Link></li>
-              <li><Link href="/marketplace/terms" style={{ color: '#94A3B8', textDecoration: 'none', fontSize: '15px' }} className="hover:text-white transition-colors">Conditions générales</Link></li>
+            <h4 style={{ color: '#F9FAFB', fontSize: '12px', fontWeight: 900, marginBottom: '20px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Plateforme</h4>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <li><Link href="/marketplace/about" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }} onMouseEnter={(e) => e.currentTarget.style.color = '#fff'} onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}>À propos</Link></li>
+              <li><Link href="/marketplace/concept" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }} onMouseEnter={(e) => e.currentTarget.style.color = '#fff'} onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}>Le concept</Link></li>
+              <li><Link href="/marketplace/vendors" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }} onMouseEnter={(e) => e.currentTarget.style.color = '#fff'} onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}>Devenir Vendeur</Link></li>
+              <li><Link href="/marketplace/faq" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }} onMouseEnter={(e) => e.currentTarget.style.color = '#fff'} onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}>FAQ</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 style={{ color: '#fff', fontSize: '16px', fontWeight: 900, marginBottom: '28px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Top Villes</h4>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <li><Link href="/marketplace?loc=Tunis" style={{ color: '#94A3B8', textDecoration: 'none', fontSize: '15px' }} className="hover:text-white transition-colors">Tunis & Banlieues</Link></li>
-              <li><Link href="/marketplace?loc=Sousse" style={{ color: '#94A3B8', textDecoration: 'none', fontSize: '15px' }} className="hover:text-white transition-colors">Sousse & Sahel</Link></li>
-              <li><Link href="/marketplace?loc=Sfax" style={{ color: '#94A3B8', textDecoration: 'none', fontSize: '15px' }} className="hover:text-white transition-colors">Sfax & Sud</Link></li>
-              <li><Link href="/marketplace?loc=Bizerte" style={{ color: '#94A3B8', textDecoration: 'none', fontSize: '15px' }} className="hover:text-white transition-colors">Bizerte</Link></li>
+            <h4 style={{ color: '#F9FAFB', fontSize: '12px', fontWeight: 900, marginBottom: '20px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Catégories</h4>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <li><Link href="/marketplace/category/matieres-premieres" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }} onMouseEnter={(e) => e.currentTarget.style.color = '#fff'} onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}>Matières Premières</Link></li>
+              <li><Link href="/marketplace/category/equipements-materiel" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }} onMouseEnter={(e) => e.currentTarget.style.color = '#fff'} onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}>Équipements</Link></li>
+              <li><Link href="/marketplace/category/produits-finis-b2b-revente" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }} onMouseEnter={(e) => e.currentTarget.style.color = '#fff'} onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}>Produits Finis</Link></li>
+              <li><Link href="/marketplace/category/emballages" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }} onMouseEnter={(e) => e.currentTarget.style.color = '#fff'} onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}>Emballages</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 style={{ color: '#F9FAFB', fontSize: '12px', fontWeight: 900, marginBottom: '20px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Légal</h4>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <li><Link href="/marketplace/terms" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }} onMouseEnter={(e) => e.currentTarget.style.color = '#fff'} onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}>Conditions générales</Link></li>
+              <li><Link href="/marketplace/privacy" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }} onMouseEnter={(e) => e.currentTarget.style.color = '#fff'} onMouseLeave={(e) => e.currentTarget.style.color = '#9CA3AF'}>Politique de confidentialité</Link></li>
             </ul>
           </div>
 
         </div>
 
-        <div style={{ borderTop: '1px solid #1E293B', paddingTop: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '24px', fontSize: '14px', color: '#64748B' }}>
-          <p style={{ margin: 0 }}>© 2026 ElKassa Marketplace. Plateforme B2B de proximité.</p>
-          <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>Fait avec <Heart size={16} color="#6366F1" fill="#6366F1" /> en Tunisie</p>
+        <div style={{ borderTop: '1px solid #1F2937', paddingTop: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', fontSize: '12px', color: '#6B7280' }}>
+          <p style={{ margin: 0 }}>© 2026 ElKassa Marketplace. Tous droits réservés.</p>
+          <p style={{ margin: 0 }}>Fait avec précision en Tunisie</p>
         </div>
       </div>
     </footer>

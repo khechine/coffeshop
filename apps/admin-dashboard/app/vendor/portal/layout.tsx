@@ -122,7 +122,7 @@ export default function VendorPortalLayout({ children }: { children: React.React
 
       {/* Main Content Area */}
       <main className="flex-1 md:ml-[280px] min-w-0 transition-all duration-300">
-        <div className="p-6 md:p-8 max-w-6xl mx-auto">
+        <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
           <VendorAlertBar />
           {children}
         </div>

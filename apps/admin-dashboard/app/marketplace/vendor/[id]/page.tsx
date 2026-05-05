@@ -21,6 +21,8 @@ export default async function VendorStorefrontPage({ params }: { params: { id: s
     }
   });
 
+  const allCategories = await (prisma as any).marketplaceCategory.findMany();
+
   if (!vendor) return notFound();
 
   // Fetch specialized ratings manually since include might not work for aggregate/groupby results
@@ -54,6 +56,7 @@ export default async function VendorStorefrontPage({ params }: { params: { id: s
       vendor={JSON.parse(JSON.stringify(vendor))} 
       ratings={ratings}
       isVendor={isVendor}
+      allCategories={JSON.parse(JSON.stringify(allCategories))}
     />
   );
 }

@@ -18,3 +18,7 @@ yarn-error.log*
 tmp
 packages/database/prisma/dev.db
 packages/database/prisma/dev.db-journal
+
+apps/*
+!apps/admin-dashboard
+!apps/api   

@@ -21,6 +21,7 @@ export default async function CategoryPage({ params, searchParams }: { params: {
   // 1. Find category or subcategory
   let category = data.categories.find((c: any) => c.id === id || c.slug === id);
   let isChild = false;
+  let isVirtual = false;
 
   if (!category) {
     for (const root of data.categories) {
@@ -33,12 +34,31 @@ export default async function CategoryPage({ params, searchParams }: { params: {
     }
   }
 
-  if (!category) return notFound();
+  // Fallback: Virtual Category (Keyword based)
+  if (!category) {
+    isVirtual = true;
+    category = {
+      id: 'virtual-' + id,
+      name: id.charAt(0).toUpperCase() + id.slice(1).replace(/-/g, ' '),
+      slug: id,
+      description: `Résultats pour la recherche : ${id}`,
+      isVirtual: true
+    };
+  }
 
   // 2. Filter products
-  const products = data.products.filter((p: any) => 
-    isChild ? p.mktCategoryId === category.id : (p.mktCategoryId === category.id || category.children?.some((c: any) => c.id === p.mktCategoryId))
-  );
+  let products = [];
+  if (isVirtual) {
+    const q = id.toLowerCase();
+    products = data.products.filter((p: any) => 
+      p.name.toLowerCase().includes(q) || 
+      p.description?.toLowerCase().includes(q)
+    );
+  } else {
+    products = data.products.filter((p: any) => 
+      isChild ? p.mktCategoryId === category.id : (p.mktCategoryId === category.id || category.children?.some((c: any) => c.id === p.mktCategoryId))
+    );
+  }
 
   // Robust serialization for Prisma types (Decimal, Date, etc)
   const serializedData = JSON.parse(JSON.stringify({ 

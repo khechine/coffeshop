@@ -1748,10 +1748,37 @@ export async function createMarketplaceCategoryAction(data: { name: string; icon
 }
 
 export async function getMarketplaceProductAction(id: string) {
-  return await (prisma as any).vendorProduct.findUnique({
+  const product = await (prisma as any).vendorProduct.findUnique({
     where: { id },
     include: {
       productStandard: true,
+      vendor: {
+        include: { customization: true }
+      }
+    }
+  });
+
+  if (product) {
+    const catId = product.categoryId || product.productStandard?.categoryId;
+    if (catId) {
+      const category = await (prisma as any).marketplaceCategory.findUnique({
+        where: { id: catId }
+      });
+      (product as any).category = category;
+    }
+  }
+
+  return product;
+}
+
+export async function getRelatedProductsAction(categoryId: string, excludeId: string) {
+  return await (prisma as any).vendorProduct.findMany({
+    where: { 
+      categoryId,
+      id: { not: excludeId }
+    },
+    take: 10,
+    include: {
       vendor: {
         include: { customization: true }
       }
@@ -4562,6 +4589,7 @@ export async function updateVendorCustomizationAction(data: {
   accentColor?: string;
   fontFamily?: string;
   welcomeMessage?: string;
+  themeConfig?: any;
 }) {
   const userId = cookies().get('userId')?.value;
   if (!userId) throw new Error('Non authentifié');

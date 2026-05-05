@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { 
   ShoppingCart, ShoppingBag, TrendingUp, AlertTriangle, Coffee, ArrowRight, Package, 
   Layers, Users, Zap, ArrowUpRight, User, Wallet, Truck, Boxes, FileText, 
-  Settings, Activity, LayoutGrid 
+  Settings, Activity, LayoutGrid, Star 
 } from 'lucide-react';
 
 import { redirect } from 'next/navigation';
@@ -104,6 +104,34 @@ export default async function AdminDashboardPage() {
           <h1 style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-1px' }}>Bonjour, {store.name} 👋</h1>
           <p style={{ fontSize: '15px', color: '#64748B', marginTop: '6px', fontWeight: 500 }}>Voici l'état de performance de votre établissement aujourd'hui.</p>
         </div>
+
+        {/* Marketplace Preview Banner */}
+        <Link href="/marketplace" style={{ 
+          flex: 1, 
+          maxWidth: '500px',
+          background: 'linear-gradient(135deg, #E31E24 0%, #991B1B 100%)', 
+          borderRadius: '20px', 
+          padding: '20px 24px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          textDecoration: 'none',
+          color: '#fff',
+          boxShadow: '0 10px 25px rgba(227, 30, 36, 0.2)',
+          border: '1px solid rgba(255,255,255,0.1)'
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <Star size={16} fill="#fff" />
+              <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nouveau Design</span>
+            </div>
+            <div style={{ fontSize: '18px', fontWeight: 900 }}>Aperçu Marketplace B2B</div>
+            <div style={{ fontSize: '13px', opacity: 0.9, marginTop: '2px' }}>Style Premium Made-in-China activé</div>
+          </div>
+          <div style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ArrowRight size={20} />
+          </div>
+        </Link>
         <div style={{ display: 'flex', gap: '12px' }}>
           <Link href="/admin/metrics" className="btn" style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid #E2E8F0', color: '#1E293B', fontWeight: 700 }}>
              <TrendingUp size={16} /> Analyser

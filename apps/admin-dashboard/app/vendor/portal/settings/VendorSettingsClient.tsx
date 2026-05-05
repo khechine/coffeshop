@@ -5,6 +5,19 @@ import { Building2, Save, CheckCircle2, Briefcase, MapPin, Crosshair, Package, U
 import { updateVendorSectorsAction, updateVendorProfileAction, updateVendorCustomizationAction, updateVendorPasswordAction } from '../../../actions';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 import { tunisianData } from '../../../marketplace/lib/tunisiaData';
+import dynamic from 'next/dynamic';
+
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+import 'react-quill/dist/quill.snow.css';
+
+const quillModules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+    ['link', 'clean']
+  ],
+};
 
 import 'leaflet/dist/leaflet.css';
 
@@ -30,6 +43,12 @@ export default function VendorSettingsClient({
     accentColor: portalData.customization?.accentColor || '#F43F5E',
     fontFamily: portalData.customization?.fontFamily || 'Inter',
     welcomeMessage: portalData.customization?.welcomeMessage || '',
+    themeConfig: portalData.customization?.themeConfig || {
+      aboutUs: '',
+      solutions: '',
+      discover: '',
+      contactUs: ''
+    },
   });
 
   const handleSaveCustomization = () => {
@@ -423,17 +442,65 @@ export default function VendorSettingsClient({
                    </div>
                 </div>
 
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 quill-container">
                    <label className={labelClass}>Message de Bienvenue (Slogan)</label>
-                   <div className="relative">
-                      <MessageSquare className="absolute left-4 top-4 text-slate-300" size={18} />
-                      <textarea 
-                        className={`${inputClass} pl-12 min-h-[100px] resize-none`}
-                        placeholder="Ex: Le meilleur du café en Tunisie livré chez vous..."
-                        value={customForm.welcomeMessage}
-                        onChange={e => setCustomForm(f => ({ ...f, welcomeMessage: e.target.value }))}
-                      />
-                   </div>
+                   <ReactQuill 
+                      key="quill-welcome"
+                      theme="snow"
+                      modules={quillModules}
+                      value={customForm.welcomeMessage || ''}
+                      onChange={val => setCustomForm(f => ({ ...f, welcomeMessage: val }))}
+                      style={{ height: '150px', marginBottom: '50px' }}
+                      placeholder="Ex: Le meilleur du café en Tunisie livré chez vous..."
+                   />
+                </div>
+
+                {/* Rubriques Personnalisées */}
+                <div className="md:col-span-2 grid grid-cols-1 gap-10">
+                  <div className="quill-container">
+                    <label className={labelClass}>Section "About Us"</label>
+                    <ReactQuill 
+                      key="quill-about"
+                      theme="snow"
+                      modules={quillModules}
+                      value={customForm.themeConfig?.aboutUs || ''}
+                      onChange={val => setCustomForm(f => ({ ...f, themeConfig: { ...f.themeConfig, aboutUs: val } }))}
+                      style={{ height: '250px', marginBottom: '50px' }}
+                    />
+                  </div>
+                  <div className="quill-container">
+                    <label className={labelClass}>Section "Solutions"</label>
+                    <ReactQuill 
+                      key="quill-solutions"
+                      theme="snow"
+                      modules={quillModules}
+                      value={customForm.themeConfig?.solutions || ''}
+                      onChange={val => setCustomForm(f => ({ ...f, themeConfig: { ...f.themeConfig, solutions: val } }))}
+                      style={{ height: '250px', marginBottom: '50px' }}
+                    />
+                  </div>
+                  <div className="quill-container">
+                    <label className={labelClass}>Section "Discover"</label>
+                    <ReactQuill 
+                      key="quill-discover"
+                      theme="snow"
+                      modules={quillModules}
+                      value={customForm.themeConfig?.discover || ''}
+                      onChange={val => setCustomForm(f => ({ ...f, themeConfig: { ...f.themeConfig, discover: val } }))}
+                      style={{ height: '250px', marginBottom: '50px' }}
+                    />
+                  </div>
+                  <div className="quill-container">
+                    <label className={labelClass}>Section "Contact Us"</label>
+                    <ReactQuill 
+                      key="quill-contact"
+                      theme="snow"
+                      modules={quillModules}
+                      value={customForm.themeConfig?.contactUs || ''}
+                      onChange={val => setCustomForm(f => ({ ...f, themeConfig: { ...f.themeConfig, contactUs: val } }))}
+                      style={{ height: '250px', marginBottom: '50px' }}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -480,9 +547,16 @@ export default function VendorSettingsClient({
                   <p className="text-[10px] text-slate-400 font-bold uppercase mt-2">L’email ne peut pas être modifié directement. Contactez l’administrateur si nécessaire.</p>
                 </div>
               )}
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 quill-container">
                 <label className={labelClass}>Bio / Présentation de l’entreprise</label>
-                <textarea className={`${inputClass} min-h-[120px] resize-none py-4`} value={profileForm.description} onChange={e => setProfileForm(f => ({ ...f, description: e.target.value }))} />
+                <ReactQuill 
+                  key="quill-bio"
+                  theme="snow"
+                  modules={quillModules}
+                  value={profileForm.description}
+                  onChange={val => setProfileForm(f => ({ ...f, description: val }))}
+                  style={{ height: '200px', marginBottom: '50px' }}
+                />
               </div>
               <div>
                 <label className={labelClass}>Contact Téléphone</label>
@@ -736,6 +810,30 @@ export default function VendorSettingsClient({
           </div>
         </div>
       )}
+      <style jsx global>{`
+        .quill-container .ql-toolbar {
+          border-top-left-radius: 12px;
+          border-top-right-radius: 12px;
+          border-color: #E2E8F0;
+          background: #F8FAFC;
+          border-bottom: none;
+        }
+        /* Suppress potential double toolbars from Quill/Next.js hydration mismatch */
+        .quill-container .ql-toolbar + .ql-toolbar {
+          display: none !important;
+        }
+        .quill-container .ql-container {
+          border-bottom-left-radius: 12px;
+          border-bottom-right-radius: 12px;
+          border-color: #E2E8F0;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          background: #fff;
+        }
+        .quill-container .ql-editor {
+          min-height: 200px;
+        }
+      `}</style>
     </div>
   );
 }

@@ -8,6 +8,18 @@ import {
   ExternalLink, ChevronRight, Search, LayoutGrid, X
 } from 'lucide-react';
 import { updateVendorCustomerAction, createVendorCampaignAction, getAvailableStoresAction, addVendorCustomerAction } from '../../../actions';
+import dynamic from 'next/dynamic';
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+import 'react-quill/dist/quill.snow.css';
+
+const quillModules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+    ['link', 'clean']
+  ],
+};
 
 interface VendorCrmClientProps {
   initialCustomers: any[];
@@ -294,14 +306,14 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 quill-container">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Message</label>
-                <textarea 
-                  rows={6}
+                <ReactQuill 
+                  theme="snow"
+                  modules={quillModules}
                   value={campaignForm.content}
-                  onChange={e => setCampaignForm(f => ({ ...f, content: e.target.value }))}
-                  placeholder="Écrivez votre message ici..."
-                  className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500/20 font-bold text-slate-900"
+                  onChange={val => setCampaignForm(f => ({ ...f, content: val }))}
+                  style={{ height: '200px', marginBottom: '50px' }}
                 />
               </div>
 
@@ -488,6 +500,29 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns }: 
           </div>
         </div>
       )}
+      <style jsx global>{`
+        .quill-container .ql-toolbar {
+          border-top-left-radius: 12px;
+          border-top-right-radius: 12px;
+          border-color: #E2E8F0;
+          background: #F8FAFC;
+          border-bottom: none;
+        }
+        .quill-container .ql-toolbar + .ql-toolbar {
+          display: none !important;
+        }
+        .quill-container .ql-container {
+          border-bottom-left-radius: 12px;
+          border-bottom-right-radius: 12px;
+          border-color: #E2E8F0;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          background: #fff;
+        }
+        .quill-container .ql-editor {
+          min-height: 150px;
+        }
+      `}</style>
     </div>
   );
 }

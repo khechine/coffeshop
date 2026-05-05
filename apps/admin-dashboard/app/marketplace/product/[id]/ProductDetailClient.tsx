@@ -1,189 +1,305 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { 
   ArrowLeft, ShoppingCart, Star, ShieldCheck, 
-  Truck, RefreshCcw, Plus, Minus, MessageSquare,
-  ChevronRight, Building2, LayoutGrid, ShoppingBag
+  Truck, RefreshCw, Plus, Minus, MessageSquare,
+  ChevronRight, Building2, LayoutGrid, ShoppingBag,
+  Heart, Share2, Play, CheckCircle2, ChevronDown, 
+  MapPin, Globe, Headphones, ArrowUp, ChevronLeft
 } from 'lucide-react';
 import { useCart } from '../../CartContext';
 import MarketplaceHeader from '../../components/MarketplaceHeader';
 import MarketplaceFooter from '../../components/MarketplaceFooter';
-import '../../marketplace.css';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 
-const fmt = (n: any) => Number(n).toFixed(3);
+const fmt = (n: any) => Number(n).toFixed(2);
 
-export default function ProductDetailClient({ product, isVendor = false }: { product: any; isVendor?: boolean }) {
+export default function ProductDetailClient({ product, isVendor = false, relatedProducts = [] }: { product: any; isVendor?: boolean; relatedProducts?: any[] }) {
   const [qty, setQty] = useState(1);
   const { addToCart } = useCart();
-
-  const cust = product.vendor?.customization || {};
-  const primaryColor = cust.primaryColor || '#1E1B4B';
-  const fontFamily = cust.fontFamily || 'Inter';
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const imageUrl = sanitizeUrl(product.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800';
-  
   const gallery = [imageUrl, ...(product.images || []).map((img: string) => sanitizeUrl(img))].filter(Boolean);
   const [activeImage, setActiveImage] = useState(gallery[0]);
 
-  const handleAddToCart = () => {
-    // Custom add logic for specific qty
-    for(let i=0; i<qty; i++) {
-        addToCart(product);
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === 'left' ? scrollLeft - clientWidth : scrollLeft + clientWidth;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
     }
   };
 
   return (
-    <div className="mkt-page cocote-theme" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
+    <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <MarketplaceHeader isVendor={isVendor} />
 
-      <div className="mkt-container" style={{ marginTop: 40, paddingBottom: 80 }}>
-        <Link href="/marketplace" className="mkt-back-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#64748B', fontWeight: 700, textDecoration: 'none', marginBottom: 24, fontSize: 14 }}>
-          <ArrowLeft size={16} /> Retour au Marketplace
-        </Link>
+      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
+        
+        {/* Breadcrumbs */}
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#6B7280', marginBottom: '24px' }}>
+          <Link href="/marketplace" style={{ color: '#6B7280', textDecoration: 'none' }}>Accueil</Link>
+          <ChevronRight size={14} />
+          <Link href={`/marketplace/category/${product.category?.slug || product.categoryId}`} style={{ color: '#6B7280', textDecoration: 'none' }}>{product.category?.name || 'Catégorie'}</Link>
+          <ChevronRight size={14} />
+          <span style={{ color: '#111827', fontWeight: 600 }}>Détail Produit</span>
+        </nav>
 
-        <div className="mkt-product-layout" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 64, background: '#fff', padding: 48, borderRadius: 32, boxShadow: '0 20px 40px rgba(0,0,0,0.05)', border: '1px solid #F1F5F9' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 500px', gap: '48px', alignItems: 'start', marginBottom: '48px' }}>
           
-          {/* Gallery */}
-          <div className="mkt-product-gallery">
-            <div style={{ borderRadius: 24, overflow: 'hidden', aspectRatio: '1/1', background: '#F8FAFC', border: '1px solid #F1F5F9', marginBottom: 16 }}>
-               <img src={activeImage} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'all 0.3s ease' }} />
+          {/* Left Column: Media & Gallery */}
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3', background: '#F9FAFB', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               <img 
+                  src={activeImage} 
+                  alt={product.name} 
+                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+               />
+               
+               {/* Overlay Icons */}
+               <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <Heart size={20} color="#374151" />
+                  </button>
+                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <Share2 size={20} color="#374151" />
+                  </button>
+               </div>
+
+               {/* Play Button Overlay */}
+               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid #fff' }}>
+                  <Play size={32} fill="#fff" color="#fff" />
+               </div>
+
+               {/* Navigation Arrows */}
+               <button style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', width: '40px', height: '40px', borderRadius: '50%', background: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <ChevronRight size={24} color="#374151" />
+               </button>
             </div>
+
+            {/* Thumbnails */}
+            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto' }} className="no-scrollbar">
+               {gallery.map((img, i) => (
+                 <button 
+                  key={i} 
+                  onClick={() => setActiveImage(img)}
+                  style={{ 
+                    width: '80px', 
+                    height: '80px', 
+                    borderRadius: '8px', 
+                    border: activeImage === img ? '2px solid #E31E24' : '1px solid #E5E7EB', 
+                    padding: '4px', 
+                    background: '#fff',
+                    cursor: 'pointer',
+                    overflow: 'hidden'
+                  }}
+                 >
+                   <img src={img} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }} />
+                 </button>
+               ))}
+            </div>
+          </div>
+
+          {/* Right Column: Info & Actions */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
             
-            {gallery.length > 1 && (
-              <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }} className="no-scrollbar">
-                {gallery.map((img: string, i: number) => (
-                  <button 
-                    key={i} 
-                    onClick={() => setActiveImage(img)}
+            <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: '2px solid #111827', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 900 }}>U</div>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase' }}>Verified Supplier</span>
+              </div>
+
+              <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#111827', lineHeight: 1.3, marginBottom: '20px' }}>
+                {product.name}
+              </h1>
+
+              <div style={{ padding: '20px 0', borderTop: '1px solid #F3F4F6', borderBottom: '1px solid #F3F4F6', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <span style={{ fontSize: '32px', fontWeight: 900, color: '#111827' }}>{fmt(product.price * 0.8)} - {fmt(product.price)}</span>
+                  <span style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>DT</span>
+                </div>
+                <span style={{ fontSize: '14px', color: '#6B7280', fontWeight: 600 }}>{product.minOrderQty} {product.unit} (MOQ)</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                <button 
+                  onClick={() => addToCart(product)}
+                  style={{ flex: 1, height: '56px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '100px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', transition: 'opacity 0.2s' }}
+                >
+                  Envoyer demande
+                </button>
+                <button style={{ flex: 1, height: '56px', background: '#fff', color: '#111827', border: '1px solid #E5E7EB', borderRadius: '100px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#2563EB' }} />
+                  Discuter
+                </button>
+              </div>
+
+              <p style={{ fontSize: '13px', color: '#6B7280', textAlign: 'center', margin: 0 }}>
+                Vous hésitez encore ? <Link href="#" style={{ color: '#E31E24', fontWeight: 700, textDecoration: 'none' }}>Demande d'Échantillon</Link>
+              </p>
+            </div>
+
+            {/* Product Details Section */}
+            <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#111827' }}>Détails du Produit</h2>
+                <ChevronRight size={18} color="#9CA3AF" />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {[
+                  { label: 'Personnalisation:', value: 'Disponible' },
+                  { label: 'Certificat:', value: 'ISO, FDA' },
+                  { label: 'Méthode de dosage:', value: 'HPLC' },
+                  { label: 'Pureté:', value: '98%+' },
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', fontSize: '14px' }}>
+                    <span style={{ width: '150px', color: '#6B7280', fontWeight: 600 }}>{item.label}</span>
+                    <span style={{ color: '#111827', fontWeight: 700 }}>{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Vendor Card */}
+            <div style={{ background: '#F9FAFB', borderRadius: '16px', padding: '24px', border: '1px solid #F1F5F9' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{ width: '48px', height: '48px', background: '#fff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+                    <Building2 size={24} color="#E31E24" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#111827', margin: 0 }}>{product.vendor?.companyName}</h4>
+                      <ChevronRight size={14} color="#9CA3AF" />
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 600 }}>Société Commerciale</span>
+                  </div>
+               </div>
+
+               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '16px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#111827', marginRight: '8px' }}>Évaluation</span>
+                  {[1,2,3,4].map(i => <Star key={i} size={14} fill="#E31E24" color="#E31E24" />)}
+                  <Star size={14} fill="#E5E7EB" color="#E5E7EB" />
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#111827', marginLeft: '8px' }}>4.5</span>
+                  <ChevronRight size={14} color="#9CA3AF" />
+               </div>
+
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700 }}>
+                    <ShieldCheck size={16} color="#2563EB" />
+                    <span style={{ color: '#111827' }}>Membre Diamant</span>
+                    <span style={{ color: '#6B7280' }}>Depuis 2025</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700 }}>
+                    <CheckCircle2 size={16} color="#F59E0B" />
+                    <span style={{ color: '#111827' }}>Fournisseur Audité</span>
+                  </div>
+               </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Spotlight Section */}
+        {relatedProducts.length > 0 && (
+          <section style={{ background: '#fff', borderRadius: '16px', padding: '40px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'relative' }}>
+            <div style={{ marginBottom: '32px' }}>
+              <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#111827', marginBottom: '8px' }}>Spotlight</h2>
+              <p style={{ fontSize: '14px', color: '#6B7280', lineHeight: 1.6, maxWidth: '900px' }}>
+                Découvrez des produits complémentaires dans la catégorie {product.category?.name || 'similaire'}. Sourcing professionnel direct.
+              </p>
+            </div>
+
+            <div style={{ position: 'relative' }}>
+              <div 
+                ref={scrollRef}
+                style={{ 
+                  display: 'flex', 
+                  gap: '24px', 
+                  overflowX: 'hidden', 
+                  scrollBehavior: 'smooth',
+                  padding: '4px'
+                }}
+              >
+                {relatedProducts.map((p, i) => (
+                  <Link 
+                    key={p.id} 
+                    href={`/marketplace/product/${p.id}`}
                     style={{ 
-                      width: 80, 
-                      height: 80, 
-                      borderRadius: 16, 
-                      overflow: 'hidden', 
-                      border: activeImage === img ? `2px solid ${primaryColor}` : '2px solid transparent',
-                      padding: 0,
-                      background: '#F8FAFC',
+                      flex: '0 0 calc(20% - 20px)', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      gap: '16px', 
                       cursor: 'pointer',
-                      transition: 'all 0.2s'
+                      textDecoration: 'none'
                     }}
                   >
-                    <img src={img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </button>
+                    <div style={{ 
+                      width: '100%', 
+                      aspectRatio: '1/1', 
+                      background: '#F9FAFB', 
+                      borderRadius: '8px', 
+                      overflow: 'hidden', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      padding: '20px',
+                      border: '1px solid #F1F5F9'
+                    }}>
+                      <img 
+                        src={sanitizeUrl(p.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=200'} 
+                        alt={p.name} 
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+                      />
+                    </div>
+                    <span style={{ 
+                      fontSize: '13px', 
+                      color: '#111827', 
+                      fontWeight: 600, 
+                      textAlign: 'center', 
+                      display: '-webkit-box', 
+                      WebkitLineClamp: 2, 
+                      WebkitBoxOrient: 'vertical', 
+                      overflow: 'hidden', 
+                      lineHeight: 1.4,
+                      height: '36px'
+                    }}>
+                      {p.name}
+                    </span>
+                  </Link>
                 ))}
               </div>
-            )}
-          </div>
 
-          {/* Info */}
-          <div className="mkt-product-info">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-               <Link href={`/marketplace/vendor/${product.vendorId}`} style={{ color: primaryColor, fontWeight: 800, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em', textDecoration: 'none' }}>
-                  {product.vendor?.companyName}
-               </Link>
-               <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#CBD5E1' }} />
-               <span style={{ color: '#94A3B8', fontSize: 13, fontWeight: 700 }}>{product.category?.name}</span>
+              {/* Navigation Arrows */}
+              <button 
+                onClick={() => scroll('left')}
+                style={{ position: 'absolute', left: '-20px', top: '40%', transform: 'translateY(-50%)', width: '40px', height: '40px', borderRadius: '50%', background: '#fff', border: '1px solid #E5E7EB', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
+              >
+                <ChevronLeft size={24} color="#374151" />
+              </button>
+              <button 
+                onClick={() => scroll('right')}
+                style={{ position: 'absolute', right: '-20px', top: '40%', transform: 'translateY(-50%)', width: '40px', height: '40px', borderRadius: '50%', background: '#fff', border: '1px solid #E5E7EB', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
+              >
+                <ChevronRight size={24} color="#374151" />
+              </button>
             </div>
+          </section>
+        )}
 
-            <h1 style={{ fontSize: 40, fontWeight: 950, color: '#1E1B4B', margin: '0 0 16px', lineHeight: 1.1 }}>{product.name}</h1>
-            
-            {product.tags && product.tags.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
-                {product.tags.map((tag: string) => (
-                  <span key={tag} style={{ 
-                    padding: '6px 12px', 
-                    borderRadius: 10, 
-                    fontSize: 10, 
-                    fontWeight: 900, 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.05em',
-                    background: tag.toLowerCase().includes('bio') ? '#F0FDF4' : '#F8FAFC',
-                    color: tag.toLowerCase().includes('bio') ? '#166534' : '#64748B',
-                    border: tag.toLowerCase().includes('bio') ? '1px solid #DCFCE7' : '1px solid #E2E8F0'
-                  }}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
+      </main>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 32 }}>
-               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase' }}>Prix Unitaire</span>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <span style={{ fontSize: 32, fontWeight: 950, color: '#1E1B4B', filter: isVendor ? 'blur(8px)' : 'none', userSelect: isVendor ? 'none' : 'auto', pointerEvents: isVendor ? 'none' : 'auto' }}>{fmt(product.price)}</span>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: '#64748B' }}>DT/{product.unit}</span>
-                  </div>
-               </div>
-               {product.minOrderQty > 1 && (
-                 <div style={{ paddingLeft: 24, borderLeft: '2px solid #F1F5F9' }}>
-                    <span style={{ fontSize: 11, fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase' }}>Minimum commande</span>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#1E1B4B' }}>{product.minOrderQty} {product.unit}s</div>
-                 </div>
-               )}
-            </div>
-
-            <p style={{ color: '#475569', fontSize: 16, lineHeight: 1.7, marginBottom: 40, whiteSpace: 'pre-line' }}>
-              {product.description || "Ce produit premium est sélectionné pour sa qualité exceptionnelle. Contactez le fournisseur pour plus de détails techniques ou des commandes en gros volumes."}
-            </p>
-
-            <div style={{ background: '#F8FAFC', padding: 32, borderRadius: 24, marginBottom: 40 }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-                  <div className="mkt-qty-ctrl" style={{ padding: 4, background: '#fff', border: '1px solid #E2E8F0', borderRadius: 14 }}>
-                    <button className="mkt-qty-btn" onClick={() => setQty(Math.max(1, qty - 1))} style={{ width: 40, height: 40 }}>−</button>
-                    <span className="mkt-qty-val" style={{ width: 60, fontSize: 18 }}>{qty}</span>
-                    <button className="mkt-qty-btn" onClick={() => setQty(qty + 1)} style={{ width: 40, height: 40 }}>+</button>
-                  </div>
-                  <div style={{ flex: 1, textAlign: 'right' }}>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: '#94A3B8', display: 'block' }}>Total HT</span>
-                    <span style={{ fontSize: 24, fontWeight: 950, color: primaryColor, filter: isVendor ? 'blur(8px)' : 'none', userSelect: isVendor ? 'none' : 'auto', pointerEvents: isVendor ? 'none' : 'auto' }}>{fmt(product.price * qty)} DT</span>
-                  </div>
-               </div>
-
-               {!isVendor ? (
-                 <button 
-                  onClick={handleAddToCart}
-                  style={{ width: '100%', padding: '20px', background: primaryColor, color: '#fff', border: 'none', borderRadius: 16, fontWeight: 900, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, boxShadow: `0 10px 20px ${primaryColor}33` }}
-                 >
-                    <ShoppingCart size={20} /> AJOUTER AU PANIER
-                 </button>
-               ) : (
-                 <div style={{ background: '#EEF2FF', color: primaryColor, padding: '20px', borderRadius: '16px', textAlign: 'center', fontSize: '15px', fontWeight: 800, border: `1px dashed ${primaryColor}33` }}>
-                   Mode Consultation : Connectez-vous en tant qu'acheteur pour commander
-                 </div>
-               )}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#64748B', fontSize: 13, fontWeight: 700 }}>
-                  <Truck size={16} /> Livraison 24/48h
-               </div>
-               <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#64748B', fontSize: 13, fontWeight: 700 }}>
-                  <ShieldCheck size={16} /> Paiement Sécurisé
-               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Vendor Card */}
-        <div style={{ marginTop: 64, background: '#1E1B4B', padding: 48, borderRadius: 32, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 32 }}>
-           <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-              <div style={{ width: 80, height: 80, background: '#fff', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                 {product.vendor?.customization?.logoUrl ? <img src={sanitizeUrl(product.vendor.customization.logoUrl) || ''} style={{ width:'100%', height:'100%', objectFit:'contain' }} /> : <Building2 size={32} color="#1E1B4B" />}
-              </div>
-              <div>
-                <h4 style={{ fontSize: 24, fontWeight: 900, margin: '0 0 4px' }}>{product.vendor?.companyName}</h4>
-                <p style={{ color: '#94A3B8', fontWeight: 600, margin: 0 }}>Vendeur certifié ElKassa Marketplace</p>
-              </div>
-           </div>
-           <Link href={`/marketplace/vendor/${product.vendorId}`} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', padding: '16px 32px', borderRadius: 16, fontWeight: 900, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)' }}>
-              Voir toute la boutique
-           </Link>
-        </div>
+      {/* Floating Messenger Bar */}
+      <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '12px' }}>
+         <button style={{ height: '48px', padding: '0 24px', background: '#fff', border: 'none', borderRadius: '100px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 800, fontSize: '14px' }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#2563EB' }} />
+            TradeMessager
+         </button>
       </div>
-
 
       <MarketplaceFooter />
     </div>

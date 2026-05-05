@@ -5,353 +5,121 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ShoppingBag, Search, LayoutGrid, ShoppingCart, 
-  MapPin, ChevronRight, X, Menu, User, ArrowRight
+  MapPin, ChevronRight, X, Menu, User, ArrowRight,
+  ChevronDown, Globe, HelpCircle, Smartphone, Languages,
+  MessageSquare
 } from 'lucide-react';
 import { useCart } from '../CartContext';
 import CartDrawer from '../CartDrawer';
 
-const tunisianCities = [
-  "Tunis", "Ariana", "Ben Arous", "Manouba", "Nabeul", "Zaghouan", "Bizerte",
-  "Béja", "Jendouba", "Le Kef", "Siliana", "Kairouan", "Kasserine", "Sidi Bouzid",
-  "Sousse", "Monastir", "Mahdia", "Sfax", "Gafsa", "Tozeur", "Kebili", "Gabès",
-  "Medenine", "Tataouine"
-];
-
-export default function MarketplaceHeader({ isVendor = false, categories = [] }: { isVendor?: boolean; categories?: any[] }) {
+export default function MarketplaceHeader({ isVendor = false }: { isVendor?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentRadius = parseInt(searchParams.get('radius') || '500');
-  const currentLocation = searchParams.get('loc') || 'Tunis';
-
-  const [locModalOpen, setLocModalOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-
   const { cartCount } = useCart();
+  const [cartOpen, setCartOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const [searchScope, setSearchScope] = useState(searchParams.get('scope') || 'PRODUCT');
 
-  const handleLocSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const loc = formData.get('loc') as string;
-    const radius = formData.get('radius') as string;
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('loc', loc);
-    params.set('radius', radius);
-    router.push(`/marketplace?${params.toString()}`);
-    setLocModalOpen(false);
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!searchQuery.trim()) return;
+    router.push(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}&scope=${searchScope}`);
   };
 
   return (
     <>
-      <div className="mkt-cocote-topbar desktop-only">
-        <div className="mkt-container mkt-cocote-topbar-inner">
-          <div className="mkt-cocote-loc-trigger" onClick={() => setLocModalOpen(true)}>
-             <MapPin size={14} />
-             <span>Votre position : <strong>{currentLocation}</strong> (Rayon {currentRadius}km)</span>
-             <ChevronRight size={12} />
-          </div>
-          <div className="mkt-cocote-topbar-links">
-             <Link href="/marketplace/vendors">Devenir Vendeur</Link>
-             <Link href="/marketplace/about">Le concept Proximité</Link>
-          </div>
-        </div>
-      </div>
-
-      <header className="mkt-cocote-header">
-        <div className="mkt-container mkt-cocote-header-inner">
-          {/* Mobile Menu Toggle */}
-          <button className="mkt-mobile-toggle mobile-only" onClick={() => setIsMobileMenuOpen(true)}>
-            <Menu size={24} />
-          </button>
-
-          {/* Logo */}
-          <Link href="/marketplace" className="mkt-cocote-logo">
-            <div className="mkt-cocote-logo-icon">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" />
-                <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            ElKassa <span>Marketplace</span>
-          </Link>
-
-          {/* Search - Desktop */}
-          <div className="desktop-only" style={{ flex: 1, maxWidth: '600px', display: 'flex', alignItems: 'center', background: '#F8FAFC', borderRadius: '100px', border: '1px solid #E2E8F0', padding: '4px 8px', margin: '0 auto', height: '48px' }}>
-            <div style={{ padding: '0 12px', borderRight: '1px solid #CBD5E1', height: '24px', display: 'flex', alignItems: 'center' }}>
-               <select id="mkt-search-type" defaultValue={searchParams.get('type') || 'all'} className="bg-transparent border-none outline-none text-xs font-bold text-slate-600 cursor-pointer" style={{ appearance: 'none', paddingRight: '12px', background: 'url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%2364748B\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E") no-repeat right center / 16px' }}>
-                 <option value="all">Tout</option>
-                 <option value="products">Produits</option>
-                 <option value="vendors">Vendeurs</option>
-                 <option value="offers">Offres</option>
-                 <option value="zones">Zones</option>
-               </select>
-            </div>
-            <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', height: '100%' }}>
-              <Search size={18} style={{ position: 'absolute', left: 16, color: '#94A3B8' }} />
-              <input
-                type="text"
-                className="bg-transparent border-none outline-none text-sm w-full text-slate-800"
-                style={{ padding: '0 16px 0 44px', height: '100%' }}
-                placeholder="Rechercher un produit, vendeur..."
-                defaultValue={searchParams.get('search') || ''}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const val = (e.target as HTMLInputElement).value;
-                    const typeEl = document.getElementById('mkt-search-type') as HTMLSelectElement;
-                    const params = new URLSearchParams(searchParams.toString());
-                    if (val) params.set('search', val);
-                    else params.delete('search');
-                    if (typeEl && typeEl.value !== 'all') params.set('type', typeEl.value);
-                    else params.delete('type');
-                    window.location.href = `/marketplace?${params.toString()}`;
-                  }
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="mkt-cocote-header-actions">
-            {/* Mobile Search Toggle */}
-            <button className="mkt-cocote-action-btn mobile-only" onClick={() => setIsSearchOpen(!isSearchOpen)}>
-              <Search size={20} />
-            </button>
-
-            <Link href={isVendor ? "/vendor/dashboard" : "/admin"} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: '#F8FAFC', color: '#1E293B', borderRadius: '12px', fontSize: 14, fontWeight: 800, textDecoration: 'none', border: '1px solid #E2E8F0' }} className="desktop-only hover:bg-white hover:shadow-sm transition-all">
-              <LayoutGrid size={18} /> <span>Dashboard</span>
-            </Link>
-
-            {!isVendor && (
-              <button className="mkt-cocote-cart-btn" onClick={() => setCartOpen(true)}>
-                <ShoppingCart size={20} />
-                <span className="mkt-cocote-cart-text desktop-only">Panier</span>
-                {cartCount > 0 && <span className="mkt-cocote-cart-badge">{cartCount}</span>}
-              </button>
-            )}
-
-            <button className="mkt-cocote-action-btn">
-              <User size={20} />
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Search Bar Expansion */}
-        {isSearchOpen && (
-          <div className="mkt-mobile-search-expansion mobile-only">
-            <div className="mkt-container">
-               <div className="mkt-cocote-search-wrap visible">
-                  <Search size={18} className="mkt-search-icon-abs" />
-                  <input
-                    type="text"
-                    autoFocus
-                    className="mkt-cocote-search-input"
-                    placeholder="Rechercher..."
-                    defaultValue={searchParams.get('search') || ''}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        const val = (e.target as HTMLInputElement).value;
-                        const params = new URLSearchParams(searchParams.toString());
-                        if (val) params.set('search', val);
-                        else params.delete('search');
-                        window.location.href = `/marketplace?${params.toString()}`;
-                      }
-                    }}
-                  />
-               </div>
-            </div>
-          </div>
-        )}
-      </header>
-      
-      <div className="mkt-catmenu desktop-only">
-        <div className="mkt-container mkt-catmenu-inner">
-           <Link 
-             href="/marketplace" 
-             className={`mkt-catmenu-item ${!searchParams.get('category') && !searchParams.get('id') ? 'active' : ''}`}
-           >
-             Tout voir
-           </Link>
-           
-           {categories.map((cat: any) => (
-             <div key={cat.id} className="mkt-megamenu-trigger group">
-                <Link 
-                  href={`/marketplace/category/${cat.slug || cat.id}`} 
-                  className={`mkt-catmenu-item ${searchParams.get('id') === cat.id ? 'active' : ''}`}
-                  style={{ '--cat-color': cat.color || '#6366F1' } as any}
-                >
-                  {cat.name}
-                </Link>
-                {cat.children?.length > 0 && <MegaMenuPanel rootCategory={cat} />}
-             </div>
-           ))}
-         </div>
-       </div>
-
-      {/* ── Mobile Sidebar Drawer ── */}
-      {isMobileMenuOpen && (
-        <>
-          <div className="mkt-mobile-overlay" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="mkt-mobile-drawer">
-             <div className="mkt-drawer-header">
-                <span className="mkt-drawer-title">ElKassa Marketplace</span>
-                <button className="mkt-drawer-close" onClick={() => setIsMobileMenuOpen(false)}>
-                  <X size={24} />
-                </button>
-             </div>
-             
-             <div className="mkt-drawer-content">
-                <div className="mkt-drawer-section">
-                   <h4 className="mkt-drawer-section-title">Catégories</h4>
-                   <div className="mkt-drawer-categories">
-                      {categories.map((cat: any) => (
-                        <div key={cat.id} className="mkt-drawer-cat-item">
-                           <Link 
-                             href={`/marketplace/category/${cat.slug || cat.id}`} 
-                             className="mkt-drawer-cat-link"
-                             onClick={() => setIsMobileMenuOpen(false)}
-                           >
-                             <span className="mkt-drawer-cat-icon">{cat.icon || '📦'}</span>
-                             {cat.name}
-                           </Link>
-                           {cat.children?.length > 0 && (
-                             <div className="mkt-drawer-sublist">
-                                {cat.children.map((sub: any) => (
-                                  <Link 
-                                    key={sub.id} 
-                                    href={`/marketplace/category/${sub.slug || sub.id}`}
-                                    className="mkt-drawer-sublink"
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                  >
-                                    {sub.name}
-                                  </Link>
-                                ))}
-                             </div>
-                           )}
-                        </div>
-                      ))}
-                   </div>
-                </div>
-
-                <div className="mkt-drawer-section">
-                   <h4 className="mkt-drawer-section-title">Compte & Infos</h4>
-                   <Link href="/vendor/register" className="mkt-drawer-link">Devenir Vendeur</Link>
-                   <Link href="/marketplace/cart" className="mkt-drawer-link">Mon Panier</Link>
-                   <Link href="/login" className="mkt-drawer-link">Se Connecter</Link>
-                </div>
-             </div>
-          </div>
-        </>
-      )}
-
-      {/* ── Location Modal ── */}
-      {locModalOpen && (
-        <div className="mkt-modal-backdrop" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)', zIndex: 9999 }} onClick={() => setLocModalOpen(false)}>
-          <div className="mkt-modal mkt-cocote-loc-modal" style={{ width: '90%', maxWidth: '540px', padding: '48px 32px', borderRadius: '24px', background: '#fff', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: 'none', position: 'relative' }} onClick={e=>e.stopPropagation()}>
-            <button className="mkt-modal-close" style={{ top: '24px', right: '24px', background: '#F8FAFC', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748B' }} onClick={() => setLocModalOpen(false)}><X size={20} /></button>
-            
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ width: '64px', height: '64px', background: '#EEF2FF', color: '#6366F1', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                <MapPin size={32} />
-              </div>
-
-              <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#0F172A', marginBottom: '12px' }}>Où souhaitez-vous chercher ?</h3>
-              <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, marginBottom: '32px' }}>
-                Votre position actuelle : <strong style={{ color: '#6366F1' }}>{currentLocation}</strong> (Rayon {currentRadius}km)
-              </p>
+      <header style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, zIndex: 1000 }}>
+        {/* Top Slim Bar */}
+        <div style={{ background: '#F9FAFB', borderBottom: '1px solid #F1F5F9', padding: '6px 24px' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#6B7280' }}>
+            <div style={{ display: 'flex', gap: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>Français <ChevronDown size={12} /></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>DT (TND) <ChevronDown size={12} /></div>
             </div>
             
-            <form className="mkt-cocote-loc-form" onSubmit={handleLocSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-               <div>
-                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Choisir votre ville</label>
-                 <div style={{ position: 'relative' }}>
-                   <select name="loc" className="mkt-cocote-input" style={{ width: '100%', padding: '16px 20px', borderRadius: '12px', border: '2px solid #F1F5F9', fontSize: '16px', fontWeight: 600, color: '#1E293B', appearance: 'none', background: '#F8FAFC' }} defaultValue={currentLocation}>
-                     {tunisianCities.map(c => <option key={c} value={c}>{c}</option>)}
-                   </select>
-                   <ChevronRight size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%) rotate(90deg)', color: '#94A3B8', pointerEvents: 'none' }} />
-                 </div>
-               </div>
-               
-               <div>
-                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Rayon de recherche : <span style={{ color: '#6366F1' }}>{currentRadius} km</span></label>
-                 <div className="mkt-cocote-radius-slider">
-                   <input name="radius" type="range" min="5" max="500" step="5" defaultValue={currentRadius} style={{ width: '100%', height: '8px', background: '#EEF2FF', borderRadius: '10px', appearance: 'none', cursor: 'pointer' }} className="accent-indigo-600" />
-                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8' }}>5KM</span>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8' }}>500KM</span>
-                   </div>
-                 </div>
-               </div>
-               
-               <button type="submit" className="mkt-cocote-btn-primary" style={{ width: '100%', padding: '18px', borderRadius: '14px', background: '#111827', color: '#fff', fontSize: '16px', fontWeight: 800, border: 'none', cursor: 'pointer', transition: 'all 0.2s', marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                 Valider ma position <ArrowRight size={18} />
-               </button>
-            </form>
+            <div style={{ display: 'flex', gap: '24px', fontWeight: 600 }}>
+              <span style={{ cursor: 'pointer' }}>Aide</span>
+              <span style={{ cursor: 'pointer' }}>Applications</span>
+              <span style={{ cursor: 'pointer' }}>Vendre sur ElKassa</span>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Cart Drawer */}
-      {!isVendor && cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
-    </>
-  );
-}
-
-function MegaMenuPanel({ rootCategory }: { rootCategory: any }) {
-  const [activeSubId, setActiveSubId] = useState<string | null>(rootCategory.children?.[0]?.id || null);
-  
-  const activeSub = rootCategory.children.find((s: any) => s.id === activeSubId) || rootCategory.children[0];
-
-  return (
-    <div className="mkt-megamenu-panel">
-      <div className="mkt-mega-v2-inner">
-        {/* Zone 1: Navigation (Subcategories) */}
-        <div className="mkt-mega-v2-nav mkt-custom-scrollbar">
-          {rootCategory.children.map((sub: any) => (
-            <div 
-              key={sub.id} 
-              className={`mkt-mega-v2-nav-item ${activeSubId === sub.id ? 'active' : ''}`}
-              onMouseEnter={() => setActiveSubId(sub.id)}
-            >
-              {sub.name}
-              <ChevronRight size={14} className={activeSubId === sub.id ? 'opacity-100' : 'opacity-0'} />
-            </div>
-          ))}
-        </div>
-
-        {/* Zone 2: Content Grid (Grandchildren) */}
-        <div className="mkt-mega-v2-content">
-          <div className="mkt-mega-v2-grid">
-            {activeSub?.children?.map((gchild: any) => (
-              <Link key={gchild.id} href={`/marketplace/category/${gchild.slug || gchild.id}`} className="mkt-mega-v2-link">
-                {gchild.name}
+        {/* Main Header Area */}
+        <div style={{ padding: '16px 24px' }}>
+           <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '40px' }}>
+              {/* Logo */}
+              <Link href="/marketplace" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: 44, height: 44, background: '#E31E24', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                  <ShoppingBag size={28} strokeWidth={2.5} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '22px', fontWeight: 900, color: '#111827', letterSpacing: '-1.2px', lineHeight: 1 }}>ElKassa Marketplace</span>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#E31E24', letterSpacing: '0.1em' }}>المنصة التونسية للمحترفين</span>
+                </div>
               </Link>
-            ))}
-            {(!activeSub?.children || activeSub.children.length === 0) && (
-              <div className="text-slate-400 italic text-sm py-4">
-                Aucune sous-catégorie spécifique trouvée.
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Zone 3: Featured Image / Brand */}
-        <div className="mkt-mega-v2-featured">
-          <div className="mkt-mega-v2-featured-img">
-            <img 
-              src={activeSub?.image || rootCategory.image || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=800'} 
-              alt={activeSub?.name} 
-            />
-          </div>
-          <h4 className="mkt-mega-v2-featured-title">{activeSub?.name || rootCategory.name}</h4>
-          <p className="mkt-mega-v2-featured-desc">
-            Explorez notre sélection professionnelle pour {activeSub?.name || rootCategory.name.toLowerCase()}.
-          </p>
-          <Link href={`/marketplace/category/${activeSub?.slug || activeSub?.id || rootCategory.slug || rootCategory.id}`} className="mkt-mega-v2-featured-btn">
-            Découvrir la collection <ChevronRight size={14} />
-          </Link>
+              {/* Search Bar */}
+              <form 
+                onSubmit={handleSearch}
+                style={{ flex: 1, display: 'flex', maxWidth: '800px', border: '3px solid #E31E24', borderRadius: '100px', overflow: 'hidden', height: '48px', background: '#fff' }}
+              >
+                <select 
+                  value={searchScope}
+                  onChange={(e) => setSearchScope(e.target.value)}
+                  style={{ padding: '0 20px', background: '#F9FAFB', borderRight: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', border: 'none', fontWeight: 700, fontSize: '13px', outline: 'none' }}
+                >
+                  <option value="PRODUCT">Produits</option>
+                  <option value="VENDOR">Fournisseurs</option>
+                  <option value="CATEGORY">Catégories</option>
+                </select>
+                <input 
+                  type="text" 
+                  placeholder="Quel produit cherchez-vous ?" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ flex: 1, border: 'none', outline: 'none', padding: '0 20px', fontSize: '15px', fontWeight: 500 }}
+                />
+                <button 
+                  type="submit"
+                  style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '0 28px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'opacity 0.2s' }}
+                >
+                  <Search size={22} />
+                </button>
+              </form>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#E31E24' }}>
+                  <MessageSquare size={24} />
+                  <span style={{ fontSize: '11px', fontWeight: 800, marginTop: '2px' }}>RFQ</span>
+                </div>
+                
+                {!isVendor && (
+                  <div 
+                    onClick={() => setCartOpen(true)}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151', position: 'relative' }}
+                  >
+                    <ShoppingCart size={24} />
+                    <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Panier</span>
+                    {cartCount > 0 && (
+                      <span style={{ position: 'absolute', top: -5, right: -2, background: '#E31E24', color: '#fff', fontSize: '9px', width: 16, height: 16, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, border: '2px solid #fff' }}>
+                        {cartCount}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <Link href="/admin" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151' }}>
+                  <User size={24} />
+                  <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Compte</span>
+                </Link>
+              </div>
+           </div>
         </div>
-      </div>
-    </div>
+      </header>
+
+      {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
+    </>
   );
 }
