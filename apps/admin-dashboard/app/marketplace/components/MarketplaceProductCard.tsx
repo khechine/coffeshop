@@ -40,6 +40,38 @@ export default function MarketplaceProductCard({ product, isVendor = false }: Ma
           <Heart size={16} color="#6B7280" />
         </button>
 
+        {/* Eco Badge */}
+        {product.vendor?.isEcoResponsible && (
+          <div style={{ 
+            position: 'absolute', top: '12px', left: '12px', 
+            background: '#DCFCE7', color: '#166534', 
+            padding: '4px 10px', borderRadius: '100px', 
+            fontSize: '11px', fontWeight: 800, 
+            display: 'flex', alignItems: 'center', gap: '4px', 
+            zIndex: 2, border: '1px solid #BBF7D0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+          }}>
+            🌱 Éco-responsable
+          </div>
+        )}
+
+        {/* Tunisia Badge */}
+        {product.tags?.some((t: string) => t.includes('Tunis') || t.includes('🇹🇳')) && (
+          <div style={{ 
+            position: 'absolute', 
+            top: product.vendor?.isEcoResponsible ? '44px' : '12px', 
+            left: '12px', 
+            background: '#FFF1F2', color: '#E31E24', 
+            padding: '4px 10px', borderRadius: '100px', 
+            fontSize: '11px', fontWeight: 800, 
+            display: 'flex', alignItems: 'center', gap: '4px', 
+            zIndex: 2, border: '1px solid #FECACA',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+          }}>
+            🇹🇳 Produit Tunisien
+          </div>
+        )}
+
         {/* Media Overlays */}
         <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '2px 8px', borderRadius: '100px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 700 }}>
           <Play size={10} fill="#fff" /> 1/6
@@ -98,15 +130,27 @@ export default function MarketplaceProductCard({ product, isVendor = false }: Ma
 
         {/* Supplier Info */}
         <div style={{ paddingTop: '12px', borderTop: '1px solid #F3F4F6' }}>
-          <Link 
-            href={`/marketplace/vendor/${product.vendorId}`}
-            style={{ fontSize: '13px', color: '#111827', fontWeight: 700, textDecoration: 'underline', display: 'block', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-          >
-            {product.vendor?.companyName || 'Supplier Co., Ltd'}
-          </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-             <img src="https://img.made-in-china.com/2f0j00fSvaGZlKEnbe/Audited-Supplier.jpg" alt="Audited" style={{ height: '14px' }} />
-             <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB' }}>Audited</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <Link 
+              href={`/marketplace/vendor/${product.vendorId}`}
+              style={{ fontSize: '13px', color: '#111827', fontWeight: 700, textDecoration: 'underline', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}
+            >
+              {product.vendor?.companyName || 'Supplier Co., Ltd'}
+            </Link>
+            {product.distance !== null && (
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#E31E24', background: '#FEF2F2', padding: '2px 6px', borderRadius: '4px' }}>
+                {product.distance < 1 ? '< 1 km' : `${Math.round(product.distance)} km`}
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+               <img src="https://img.made-in-china.com/2f0j00fSvaGZlKEnbe/Audited-Supplier.jpg" alt="Audited" style={{ height: '14px' }} />
+               <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB' }}>Audited</span>
+             </div>
+             {product.vendor?.city && (
+               <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 600 }}>• {product.vendor.city}</span>
+             )}
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -11,19 +11,40 @@ import {
 } from 'lucide-react';
 import { useCart } from '../CartContext';
 import CartDrawer from '../CartDrawer';
+import MarketplaceRFQModal from './MarketplaceRFQModal';
 
-export default function MarketplaceHeader({ isVendor = false }: { isVendor?: boolean }) {
+export default function MarketplaceHeader({ isVendor = false, store }: { isVendor?: boolean, store?: any }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { cartCount } = useCart();
   const [cartOpen, setCartOpen] = useState(false);
+  const [rfqOpen, setRfqOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [searchScope, setSearchScope] = useState(searchParams.get('scope') || 'PRODUCT');
+  const [radius, setRadius] = useState(searchParams.get('radius') || 'all');
+
+  // Load radius from cookie on mount if not in URL
+  useEffect(() => {
+    if (!searchParams.get('radius')) {
+      const cookieVal = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('mkt_radius='))
+        ?.split('=')[1];
+      if (cookieVal) setRadius(cookieVal);
+    }
+  }, [searchParams]);
+
+  // Persist radius in cookie for server-side awareness across pages
+  useEffect(() => {
+    if (radius) {
+      document.cookie = `mkt_radius=${radius}; path=/; max-age=31536000`;
+    }
+  }, [radius]);
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!searchQuery.trim()) return;
-    router.push(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}&scope=${searchScope}`);
+    router.push(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}&scope=${searchScope}&radius=${radius}`);
   };
 
   return (
@@ -32,7 +53,14 @@ export default function MarketplaceHeader({ isVendor = false }: { isVendor?: boo
         {/* Top Slim Bar */}
         <div style={{ background: '#F9FAFB', borderBottom: '1px solid #F1F5F9', padding: '6px 24px' }}>
           <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#6B7280' }}>
-            <div style={{ display: 'flex', gap: '20px' }}>
+            <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#E31E24', fontWeight: 700 }}>
+                <MapPin size={14} />
+                <span>Rayon : {radius === 'all' ? 'Tunisie entière' : `${radius} km`}</span>
+                <span style={{ color: '#9CA3AF', fontWeight: 400, marginLeft: '8px' }}>
+                  | Position : {store ? `${store.name} (${store.city || 'Position GPS'})` : 'Position boutique non définie'}
+                </span>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>Français <ChevronDown size={12} /></div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>DT (TND) <ChevronDown size={12} /></div>
             </div>
@@ -67,11 +95,30 @@ export default function MarketplaceHeader({ isVendor = false }: { isVendor?: boo
                 <select 
                   value={searchScope}
                   onChange={(e) => setSearchScope(e.target.value)}
-                  style={{ padding: '0 20px', background: '#F9FAFB', borderRight: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', border: 'none', fontWeight: 700, fontSize: '13px', outline: 'none' }}
+                  style={{ padding: '0 15px', background: '#F9FAFB', borderRight: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', border: 'none', fontWeight: 700, fontSize: '13px', outline: 'none' }}
                 >
                   <option value="PRODUCT">Produits</option>
                   <option value="VENDOR">Fournisseurs</option>
                   <option value="CATEGORY">Catégories</option>
+                </select>
+                <select 
+                  value={radius}
+                  onChange={(e) => {
+                    const newRadius = e.target.value;
+                    setRadius(newRadius);
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set('radius', newRadius);
+                    router.push(`/marketplace?${params.toString()}`);
+                  }}
+                  style={{ padding: '0 15px', background: '#fff', borderRight: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', border: 'none', fontWeight: 600, fontSize: '13px', outline: 'none', color: '#6B7280' }}
+                >
+                  <option value="all">Toute la Tunisie</option>
+                  <option value="5">Rayon 5 km</option>
+                  <option value="10">Rayon 10 km</option>
+                  <option value="25">Rayon 25 km</option>
+                  <option value="50">Rayon 50 km</option>
+                  <option value="100">Rayon 100 km</option>
+                  <option value="500">Rayon 500 km</option>
                 </select>
                 <input 
                   type="text" 
@@ -90,7 +137,10 @@ export default function MarketplaceHeader({ isVendor = false }: { isVendor?: boo
 
               {/* Actions */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#E31E24' }}>
+                <div 
+                  onClick={() => setRfqOpen(true)}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#E31E24' }}
+                >
                   <MessageSquare size={24} />
                   <span style={{ fontSize: '11px', fontWeight: 800, marginTop: '2px' }}>RFQ</span>
                 </div>
@@ -120,6 +170,7 @@ export default function MarketplaceHeader({ isVendor = false }: { isVendor?: boo
       </header>
 
       {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
+      {rfqOpen && <MarketplaceRFQModal onClose={() => setRfqOpen(false)} />}
     </>
   );
 }

@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export default async function CategoryPage({ params, searchParams }: { params: { id: string }, searchParams: any }) {
   const { id } = params;
   const sParams = await searchParams;
-  const radius = sParams.radius ? parseInt(sParams.radius) : 500;
+  const radius = sParams.radius && sParams.radius !== 'all' ? parseInt(sParams.radius) : undefined;
   const store = await getStore();
   const user = await getUser();
   const isVendor = user?.role === 'VENDOR';
@@ -81,6 +81,7 @@ export default async function CategoryPage({ params, searchParams }: { params: {
       allProducts={serializedData.allProducts}
       banners={serializedData.banners || []}
       isVendor={isVendor}
+      store={store}
     />
   );
 }

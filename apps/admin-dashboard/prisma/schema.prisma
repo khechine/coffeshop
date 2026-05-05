@@ -133,6 +133,7 @@ model Store {
   categories     Category[]
   customers      Customer[]
   specialOrders  SpecialOrder[]
+  rfqs           MarketplaceRFQ[]
   zReports       ZReport[]
 
   activityPoleId String?
@@ -584,6 +585,7 @@ model VendorProfile {
   phone       String?
   lat         Float?
   lng         Float?
+  isEcoResponsible Boolean @default(false)
 
   status      String   @default("PENDING")
   createdAt   DateTime @default(now())
@@ -594,6 +596,7 @@ model VendorProfile {
   vendorProducts VendorProduct[]
   orders         SupplierOrder[]
   stockItems     StockItem[]
+  quotes         MarketplaceQuote[]
 }
 
 model CourierProfile {
@@ -744,4 +747,33 @@ model SpecialOrder {
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model MarketplaceRFQ {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id])
+  title       String
+  category    String?
+  description String?
+  quantity    Decimal?
+  budget      Decimal?
+  deadline    DateTime?
+  status      String   @default("OPEN") // OPEN, CLOSED, FULFILLED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  quotes      MarketplaceQuote[]
+}
+
+model MarketplaceQuote {
+  id          String         @id @default(cuid())
+  rfqId       String
+  rfq         MarketplaceRFQ @relation(fields: [rfqId], references: [id])
+  vendorId    String
+  vendor      VendorProfile  @relation(fields: [vendorId], references: [id])
+  price       Decimal
+  notes       String?
+  status      String         @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 }

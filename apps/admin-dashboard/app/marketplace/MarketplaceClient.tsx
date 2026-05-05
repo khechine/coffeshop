@@ -15,6 +15,12 @@ import {
 import MarketplaceProductCard from './components/MarketplaceProductCard';
 import MarketplaceHeader from './components/MarketplaceHeader';
 import MarketplaceFooter from './components/MarketplaceFooter';
+import MarketplaceRFQModal from './components/MarketplaceRFQModal';
+
+const normalize = (str: string) => {
+  if (!str) return '';
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+};
 
 /* --- UI Components --- */
 const BannerBadge = ({ children, color = '#E31E24' }: any) => (
@@ -34,17 +40,25 @@ const BannerBadge = ({ children, color = '#E31E24' }: any) => (
 
 
 export default function MarketplaceClient({ initialData, store }: { initialData: any; store?: any }) {
+  const [rfqOpen, setRfqOpen] = useState(false);
   const { categories = [], products = [], banners = [] } = initialData || {};
   const [searchQuery, setSearchQuery] = useState('');
   const [searchScope, setSearchScope] = useState('PRODUCT');
   const [shuffledTags, setShuffledTags] = useState<string[]>([]);
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
+  
+  // Advanced Filters State
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [minRating, setMinRating] = useState<number>(0);
+
   const router = useRouter();
 
   // URL State
   const searchParams = useSearchParams();
   const urlSearch = searchParams.get('search');
   const urlScope = searchParams.get('scope') || 'PRODUCT';
+  const urlRadius = searchParams.get('radius') || 'all';
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -52,24 +66,26 @@ export default function MarketplaceClient({ initialData, store }: { initialData:
     router.push(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}&scope=${searchScope}`);
   };
 
-  const filteredResults = useMemo(() => {
-    if (!urlSearch) return null;
-    const q = urlSearch.toLowerCase();
+  const searchData = useMemo(() => {
+    if (!urlSearch) return { results: [], totalFound: 0, outsideRadius: 0 };
+    const q = normalize(urlSearch);
+    
+    // 500km is treated as National (Infinity) to avoid confusion with null distances
+    const maxD = (urlRadius === 'all' || urlRadius === '500') ? Infinity : parseFloat(urlRadius);
 
+    let allMatches = [];
     if (urlScope === 'PRODUCT') {
-      return products.filter((p: any) => 
-        p.name.toLowerCase().includes(q) || 
-        p.description?.toLowerCase().includes(q) ||
-        p.vendor?.companyName?.toLowerCase().includes(q)
+      allMatches = products.filter((p: any) => 
+        normalize(p.name).includes(q) || 
+        normalize(p.description || '').includes(q) ||
+        normalize(p.vendor?.companyName || '').includes(q)
       );
-    }
-    if (urlScope === 'VENDOR') {
+    } else if (urlScope === 'VENDOR') {
       const vendors = Array.from(new Set(products.map((p: any) => p.vendor?.id)))
         .map(id => products.find((p: any) => p.vendor?.id === id)?.vendor)
         .filter(Boolean);
-      return vendors.filter((v: any) => v.companyName.toLowerCase().includes(q));
-    }
-    if (urlScope === 'CATEGORY') {
+      allMatches = vendors.filter((v: any) => normalize(v.companyName).includes(q));
+    } else if (urlScope === 'CATEGORY') {
       const allCats: any[] = [];
       const traverse = (cats: any[]) => {
         cats.forEach(c => {
@@ -78,10 +94,25 @@ export default function MarketplaceClient({ initialData, store }: { initialData:
         });
       };
       traverse(categories);
-      return allCats.filter((c: any) => c.name.toLowerCase().includes(q));
+      allMatches = allCats.filter((c: any) => normalize(c.name).includes(q));
     }
-    return [];
-  }, [urlSearch, urlScope, products, categories]);
+
+    const filtered = allMatches.filter((item: any) => {
+      const distMatch = maxD === Infinity || (item.distance !== null && item.distance <= maxD);
+      const priceMatch = (minPrice === '' || item.price >= parseFloat(minPrice)) && 
+                         (maxPrice === '' || item.price <= parseFloat(maxPrice));
+      const ratingMatch = minRating === 0 || (item.vendor?.ratings?.overallAvg >= minRating);
+      
+      return distMatch && priceMatch && ratingMatch;
+    });
+
+    return {
+      results: filtered,
+      totalFound: allMatches.length,
+      outsideRadius: allMatches.length - filtered.length,
+      allMatches // For similarity suggestions
+    };
+  }, [urlSearch, urlScope, urlRadius, products, categories, minPrice, maxPrice, minRating]);
 
   const marketplaceSegments = [
     { 
@@ -174,7 +205,14 @@ export default function MarketplaceClient({ initialData, store }: { initialData:
     setShuffledTags(shuffled);
   }, [categories]);
 
-  const historyProducts = products.length > 0 ? products.slice(0, 7) : [];
+  // Proximity Filtered Data
+  const maxD = (urlRadius === 'all' || urlRadius === '500') ? Infinity : parseFloat(urlRadius);
+  const filteredProducts = useMemo(() => 
+    products.filter((p: any) => maxD === Infinity || (p.distance !== null && p.distance <= maxD)),
+    [products, maxD]
+  );
+  
+  const historyProducts = filteredProducts.length > 0 ? filteredProducts.slice(0, 7) : [];
 
   const perspectives = [
     { 
@@ -210,76 +248,223 @@ export default function MarketplaceClient({ initialData, store }: { initialData:
   return (
     <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', scrollBehavior: 'smooth' }}>
       
-      <MarketplaceHeader />
+      <MarketplaceHeader store={store} />
 
       {/* Main Layout */}
       <main style={{ maxWidth: '1400px', margin: '24px auto', padding: '0 24px' }}>
         
         {urlSearch ? (
           <div style={{ minHeight: '60vh' }}>
-            <div style={{ marginBottom: '32px' }}>
-              <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#111827' }}>
-                Résultats pour "{urlSearch}" 
-                <span style={{ color: '#6B7280', fontSize: '16px', fontWeight: 600, marginLeft: '12px' }}>
-                  ({filteredResults?.length || 0} {urlScope.toLowerCase()}s trouvés)
+            <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <div>
+                <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: 0 }}>
+                  Résultats pour "{urlSearch}" 
+                </h1>
+                <div style={{ height: '4px', width: '60px', background: '#E31E24', marginTop: '12px', borderRadius: '10px' }} />
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ color: '#111827', fontSize: '18px', fontWeight: 900 }}>
+                  {searchData.results.length} {urlScope.toLowerCase()}s
                 </span>
-              </h1>
-              <div style={{ height: '4px', width: '60px', background: '#E31E24', marginTop: '8px', borderRadius: '10px' }} />
+                {searchData.outsideRadius > 0 && (
+                  <div style={{ color: '#E31E24', fontSize: '13px', fontWeight: 700, marginTop: '4px' }}>
+                    + {searchData.outsideRadius} hors de votre rayon ({urlRadius} km)
+                  </div>
+                )}
+              </div>
             </div>
 
-            {filteredResults && filteredResults.length > 0 ? (
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: urlScope === 'PRODUCT' ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)', 
-                gap: '24px' 
-              }}>
-                {urlScope === 'PRODUCT' && filteredResults.map((p: any) => (
-                  <MarketplaceProductCard key={p.id} product={p} />
-                ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '32px', alignItems: 'start' }}>
+               {/* Sidebar Filters */}
+               <aside style={{ background: '#fff', borderRadius: '20px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'sticky', top: '100px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', color: '#111827' }}>
+                    <Menu size={20} />
+                    <h2 style={{ fontSize: '18px', fontWeight: 900 }}>Filtres</h2>
+                  </div>
 
-                {urlScope === 'VENDOR' && filteredResults.map((v: any) => (
-                  <Link 
-                    key={v.id} 
-                    href={`/marketplace/vendor/${v.id}`}
-                    style={{ background: '#fff', borderRadius: '16px', padding: '24px', border: '1px solid #F1F5F9', textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}
-                  >
-                    <div style={{ width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', border: '1px solid #E5E7EB' }}>
-                      <img src={v.logoUrl || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=200'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#111827', margin: 0 }}>{v.companyName}</h3>
-                      <p style={{ fontSize: '13px', color: '#6B7280', margin: '4px 0' }}>{v.city}, {v.sector}</p>
-                    </div>
-                    <button style={{ background: '#F3F4F6', color: '#111827', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '12px' }}>Voir la boutique</button>
-                  </Link>
-                ))}
+                  {/* Distance Filter */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#111827', marginBottom: '16px' }}>Distance</h4>
+                    <select 
+                      value={urlRadius}
+                      onChange={(e) => {
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.set('radius', e.target.value);
+                        router.push(`/marketplace?${params.toString()}`);
+                      }}
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #E5E7EB', fontSize: '13px', fontWeight: 600, outline: 'none' }}
+                    >
+                      <option value="all">Toute la Tunisie</option>
+                      <option value="5">Rayon 5 km</option>
+                      <option value="10">Rayon 10 km</option>
+                      <option value="25">Rayon 25 km</option>
+                      <option value="50">Rayon 50 km</option>
+                      <option value="100">Rayon 100 km</option>
+                      <option value="500">Rayon 500 km</option>
+                    </select>
+                  </div>
 
-                {urlScope === 'CATEGORY' && filteredResults.map((c: any) => (
-                  <Link 
-                    key={c.id} 
-                    href={`/marketplace/category/${c.id}`}
-                    style={{ background: '#fff', borderRadius: '16px', padding: '24px', border: '1px solid #F1F5F9', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '16px' }}
-                  >
-                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E31E24' }}>
-                      <Grid size={24} />
+                  {/* Price Filter */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#111827', marginBottom: '16px' }}>Prix (DT)</h4>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input 
+                        type="number" 
+                        placeholder="Min" 
+                        value={minPrice}
+                        onChange={(e) => setMinPrice(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E5E7EB', fontSize: '13px', outline: 'none' }}
+                      />
+                      <span style={{ color: '#9CA3AF' }}>-</span>
+                      <input 
+                        type="number" 
+                        placeholder="Max" 
+                        value={maxPrice}
+                        onChange={(e) => setMaxPrice(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E5E7EB', fontSize: '13px', outline: 'none' }}
+                      />
                     </div>
-                    <span style={{ fontSize: '16px', fontWeight: 800, color: '#111827' }}>{c.name}</span>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '100px 0', background: '#fff', borderRadius: '24px', border: '2px dashed #E5E7EB' }}>
-                <Search size={64} color="#D1D5DB" style={{ marginBottom: '24px' }} />
-                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#4B5563' }}>Désolé, aucun résultat trouvé</h3>
-                <p style={{ color: '#9CA3AF', marginTop: '8px' }}>Essayez d'autres mots clés ou une autre catégorie de recherche.</p>
-                <button 
-                  onClick={() => router.push('/marketplace')}
-                  style={{ marginTop: '24px', background: '#E31E24', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}
-                >
-                  Retour à l'accueil
-                </button>
-              </div>
-            )}
+                  </div>
+
+                  {/* Rating Filter */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#111827', marginBottom: '16px' }}>Note Fournisseur</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {[4, 3, 2].map((stars) => (
+                        <label key={stars} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#4B5563' }}>
+                          <input 
+                            type="radio" 
+                            name="rating" 
+                            checked={minRating === stars}
+                            onChange={() => setMinRating(stars)}
+                            style={{ accentColor: '#E31E24' }} 
+                          />
+                          <div style={{ display: 'flex', gap: '2px' }}>
+                            {[...Array(5)].map((_, i) => (
+                              <Star key={i} size={14} fill={i < stars ? "#F59E0B" : "none"} color={i < stars ? "#F59E0B" : "#D1D5DB"} />
+                            ))}
+                          </div>
+                          <span>& plus</span>
+                        </label>
+                      ))}
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#4B5563' }}>
+                        <input 
+                          type="radio" 
+                          name="rating" 
+                          checked={minRating === 0}
+                          onChange={() => setMinRating(0)}
+                          style={{ accentColor: '#E31E24' }} 
+                        />
+                        Toutes les notes
+                      </label>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => { setMinPrice(''); setMaxPrice(''); setMinRating(0); }}
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #E5E7EB', background: 'transparent', color: '#111827', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}
+                  >
+                    Réinitialiser
+                  </button>
+               </aside>
+
+               {/* Results Area */}
+               <section>
+                {searchData.results.length > 0 ? (
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: urlScope === 'PRODUCT' ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', 
+                    gap: '24px' 
+                  }}>
+                    {urlScope === 'PRODUCT' && searchData.results.map((p: any) => (
+                      <MarketplaceProductCard key={p.id} product={p} />
+                    ))}
+
+                    {urlScope === 'VENDOR' && searchData.results.map((v: any) => (
+                      <Link 
+                        key={v.id} 
+                        href={`/marketplace/vendor/${v.id}`}
+                        style={{ background: '#fff', borderRadius: '16px', padding: '24px', border: '1px solid #F1F5F9', textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px', transition: 'all 0.2s' }}
+                        className="vendor-card"
+                      >
+                        <div style={{ width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', border: '1px solid #E5E7EB' }}>
+                          <img src={v.logoUrl || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=200'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                        <div>
+                          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#111827', margin: 0 }}>{v.companyName}</h3>
+                          <p style={{ fontSize: '13px', color: '#6B7280', margin: '4px 0' }}>{v.city}, {v.sector}</p>
+                        </div>
+                        <button style={{ background: '#F3F4F6', color: '#111827', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '12px' }}>Voir la boutique</button>
+                      </Link>
+                    ))}
+
+                    {urlScope === 'CATEGORY' && searchData.results.map((c: any) => (
+                      <Link 
+                        key={c.id} 
+                        href={`/marketplace/category/${c.id}`}
+                        style={{ background: '#fff', borderRadius: '16px', padding: '24px', border: '1px solid #F1F5F9', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '16px', transition: 'all 0.2s' }}
+                        className="cat-card"
+                      >
+                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E31E24' }}>
+                          <Grid size={24} />
+                        </div>
+                        <span style={{ fontSize: '16px', fontWeight: 800, color: '#111827' }}>{c.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '100px 20px', background: '#fff', borderRadius: '24px', border: '2px dashed #E5E7EB' }}>
+                    <div style={{ width: '80px', height: '80px', background: '#F9FAFB', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                      <Search size={40} color="#D1D5DB" />
+                    </div>
+                    <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#111827' }}>Aucun résultat exact</h3>
+                    <p style={{ color: '#6B7280', marginTop: '8px', maxWidth: '400px', margin: '8px auto 0', lineHeight: 1.6 }}>
+                      Ajustez vos filtres ou élargissez votre rayon de recherche pour voir plus de résultats.
+                      {searchData.outsideRadius > 0 && (
+                        <span style={{ display: 'block', marginTop: '12px', color: '#E31E24', fontWeight: 700 }}>
+                          Note : {searchData.outsideRadius} résultats existent en dehors de votre rayon de {urlRadius} km.
+                        </span>
+                      )}
+                    </p>
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '32px' }}>
+                      <button 
+                        onClick={() => { setMinPrice(''); setMaxPrice(''); setMinRating(0); }}
+                        style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '14px 28px', borderRadius: '100px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        Réinitialiser les filtres
+                      </button>
+                      {searchData.outsideRadius > 0 && (
+                        <button 
+                          onClick={() => {
+                            const params = new URLSearchParams(searchParams.toString());
+                            params.set('radius', 'all');
+                            router.push(`/marketplace?${params.toString()}`);
+                          }}
+                          style={{ background: '#fff', border: '1px solid #E5E7EB', color: '#111827', padding: '14px 28px', borderRadius: '100px', fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          Élargir le rayon (National)
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Similar Products Suggestions */}
+                {searchData.allMatches.length > searchData.results.length && (
+                  <div style={{ marginTop: '64px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                      <Zap size={24} color="#E31E24" fill="#E31E24" />
+                      <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#111827' }}>Produits similaires (Plus loin)</h2>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+                      {searchData.allMatches.filter((m: any) => !searchData.results.includes(m)).slice(0, 8).map((p: any) => (
+                        <MarketplaceProductCard key={p.id} product={p} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+               </section>
+            </div>
           </div>
         ) : (
           <>
@@ -467,7 +652,7 @@ export default function MarketplaceClient({ initialData, store }: { initialData:
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '24px' }}>
-                  {products.length > 0 ? products.slice(0, 10).map((p: any) => (
+                  {filteredProducts.length > 0 ? filteredProducts.slice(0, 10).map((p: any) => (
                     <MarketplaceProductCard key={p.id} product={p} />
                   )) : (
                     [1,2,3,4,5,6,7,8,9,10].map(i => (
@@ -483,26 +668,28 @@ export default function MarketplaceClient({ initialData, store }: { initialData:
 
               {/* Special Categories / Collections */}
               <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
-                <div style={{ background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)', borderRadius: '24px', padding: '40px', position: 'relative', overflow: 'hidden' }}>
+                <Link href="/marketplace/tunisia" style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)', borderRadius: '24px', padding: '40px', position: 'relative', overflow: 'hidden', display: 'block' }}>
                   <div style={{ position: 'relative', zIndex: 1 }}>
-                    <span style={{ color: '#E31E24', fontWeight: 800, fontSize: '14px' }}>PROMOS FLASH</span>
-                    <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', margin: '12px 0' }}>Jusqu'à -40% sur le packaging</h2>
-                    <button style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 800, marginTop: '20px', cursor: 'pointer' }}>
-                      Découvrir
-                    </button>
+                    <span style={{ color: '#E31E24', fontWeight: 800, fontSize: '14px' }}>MADE IN TUNISIA</span>
+                    <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', margin: '12px 0' }}>Soutenons nos producteurs locaux</h2>
+                    <div style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 800, marginTop: '20px', cursor: 'pointer', display: 'inline-block' }}>
+                      Explorer
+                    </div>
                   </div>
-                  <div style={{ position: 'absolute', right: '-20px', bottom: '-20px', width: '200px', height: '200px', background: '#fff', borderRadius: '50%', opacity: 0.5 }} />
-                </div>
-                <div style={{ background: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)', borderRadius: '24px', padding: '40px', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', right: '20px', top: '10px', bottom: '10px', width: '120px', opacity: 0.8, pointerEvents: 'none' }}>
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Flag_map_of_Tunisia.svg" style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="Tunisia Map" />
+                  </div>
+                </Link>
+                <Link href="/marketplace/eco" style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)', borderRadius: '24px', padding: '40px', position: 'relative', overflow: 'hidden', display: 'block' }}>
                    <div style={{ position: 'relative', zIndex: 1 }}>
                     <span style={{ color: '#10B981', fontWeight: 800, fontSize: '14px' }}>BIO & LOCAL</span>
                     <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', margin: '12px 0' }}>Sourcing Responsable Tunisie</h2>
-                    <button style={{ background: '#10B981', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 800, marginTop: '20px', cursor: 'pointer' }}>
+                    <div style={{ background: '#10B981', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 800, marginTop: '20px', cursor: 'pointer', display: 'inline-block' }}>
                       Explorer
-                    </button>
+                    </div>
                   </div>
                   <div style={{ position: 'absolute', right: '-20px', bottom: '-20px', width: '200px', height: '200px', background: '#fff', borderRadius: '50%', opacity: 0.5 }} />
-                </div>
+                </Link>
               </section>
 
               {/* Basé sur votre Navigation */}
@@ -693,7 +880,7 @@ export default function MarketplaceClient({ initialData, store }: { initialData:
       {/* Floating Buttons */}
       <div style={{ position: 'fixed', right: '30px', bottom: '30px', display: 'flex', flexDirection: 'column', gap: '12px', zIndex: 1000 }}>
          <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', overflow: 'hidden', border: '1px solid #F1F5F9' }}>
-           <button style={{ width: '60px', height: '60px', border: 'none', background: '#fff', borderBottom: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', cursor: 'pointer' }}>
+           <button onClick={() => setRfqOpen(true)} style={{ width: '60px', height: '60px', border: 'none', background: '#fff', borderBottom: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', cursor: 'pointer' }}>
               <MessageSquare size={20} color="#E31E24" />
               <span style={{ fontSize: '10px', fontWeight: 800 }}>RFQ</span>
            </button>
@@ -710,6 +897,7 @@ export default function MarketplaceClient({ initialData, store }: { initialData:
          </div>
       </div>
 
+      {rfqOpen && <MarketplaceRFQModal onClose={() => setRfqOpen(false)} />}
     </div>
   );
 }

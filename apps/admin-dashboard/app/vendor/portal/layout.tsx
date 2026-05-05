@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Package, Truck, LayoutDashboard, Settings, LogOut, ShoppingBag, Sun, Moon, ChevronLeft, BarChart3, Wallet, Users } from 'lucide-react';
+import { Package, Truck, LayoutDashboard, Settings, LogOut, ShoppingBag, Sun, Moon, ChevronLeft, BarChart3, Wallet, Users, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import VendorAlertBar from './VendorAlertBar';
@@ -36,6 +36,7 @@ export default function VendorPortalLayout({ children }: { children: React.React
     { id: 'sales', label: 'Ventes', icon: BarChart3, href: '/vendor/portal/sales' },
     { id: 'catalog', label: 'Catalogue', icon: Package, href: '/vendor/portal/catalog' },
     { id: 'orders', label: 'Commandes', icon: ShoppingBag, href: '/vendor/portal/orders' },
+    { id: 'rfq', label: 'Demandes (RFQ)', icon: MessageSquare, href: '/vendor/portal/rfq' },
     { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, href: '/marketplace' },
     { id: 'profile', label: 'Profil', icon: Settings, href: '/vendor/portal/settings' },
   ];

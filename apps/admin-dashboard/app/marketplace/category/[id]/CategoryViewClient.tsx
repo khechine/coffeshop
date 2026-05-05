@@ -17,7 +17,7 @@ import { sanitizeUrl } from '../../../lib/imageUtils';
 const fmt = (n: any) => Number(n).toFixed(2);
 
 
-export default function CategoryViewClient({ category, products = [], allCategories = [], allProducts = [], banners = [], isVendor = false }: any) {
+export default function CategoryViewClient({ category, products = [], allCategories = [], allProducts = [], banners = [], isVendor = false, store }: any) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { addToCart } = useCart();
@@ -41,7 +41,7 @@ export default function CategoryViewClient({ category, products = [], allCategor
 
   return (
     <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <MarketplaceHeader isVendor={isVendor} categories={allCategories} />
+      <MarketplaceHeader isVendor={isVendor} store={store} />
 
       <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
         

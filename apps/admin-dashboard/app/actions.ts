@@ -8,6 +8,14 @@ import { Prisma } from '@prisma/client';
 import crypto from 'crypto';
 
 // ── Helpers (Updated for phone field) ──────────────────────────
+export async function getVendorProfile() {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) return null;
+  return await (prisma as any).vendorProfile.findUnique({
+    where: { userId }
+  });
+}
+
 export async function getStore() {
   const userId = cookies().get('userId')?.value;
   if (!userId) return null;
@@ -1079,7 +1087,19 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-export async function getMarketplaceData(userLat?: number, userLng?: number, radius: number = 500) {
+export async function getMarketplaceData(userLat?: number, userLng?: number, radius?: number, ecoOnly: boolean = false, tunisiaOnly: boolean = false) {
+  // If radius is not provided, try to get it from cookies
+  let activeRadius = radius;
+  if (activeRadius === undefined) {
+    const cookieRadius = cookies().get('mkt_radius')?.value;
+    if (cookieRadius && cookieRadius !== 'all') {
+      const parsed = parseInt(cookieRadius);
+      if (!isNaN(parsed)) activeRadius = parsed;
+    }
+  }
+  // Default fallback if still undefined
+  if (activeRadius === undefined) activeRadius = 500;
+
   const hasWalletModel = !!(prisma as any).vendorWallet;
   let activeVendorIds: Set<string> | null = null;
 
@@ -1169,6 +1189,20 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
     ])
   );
 
+  const productWhere: any = {};
+  const bundleWhere: any = {};
+  
+  if (ecoOnly) {
+    productWhere.vendor = { isEcoResponsible: true };
+    bundleWhere.vendor = { isEcoResponsible: true };
+  }
+  
+  if (tunisiaOnly) {
+    productWhere.tags = { hasSome: ['Tunisie', '🇹🇳 Produit Tunisien'] };
+    // Bundles don't have tags, so we might filter by vendor address or just skip
+    // For now, let's keep bundleWhere simple or skip tunisiaOnly for bundles if no tags
+  }
+
   const [categories, featuredRaw, flashSalesRaw, productsRaw, bundlesRaw, bannersRaw] = await Promise.all([
     (prisma as any).marketplaceCategory.findMany({ 
       where: { parentId: null },
@@ -1181,7 +1215,7 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
       } 
     }),
     (prisma as any).vendorProduct.findMany({
-      where: { isFeatured: true },
+      where: { ...productWhere, isFeatured: true },
       include: { 
         vendor: { include: { customization: true } }, 
         productStandard: true,
@@ -1190,7 +1224,7 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
       orderBy: { createdAt: 'desc' }
     }),
     (prisma as any).vendorProduct.findMany({
-      where: { isFlashSale: true },
+      where: { ...productWhere, isFlashSale: true },
       include: { 
         vendor: true, 
         productStandard: true,
@@ -1199,6 +1233,7 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
       orderBy: { createdAt: 'desc' }
     }),
     (prisma as any).vendorProduct.findMany({
+      where: { ...productWhere },
       include: { 
         vendor: true, 
         productStandard: true,
@@ -1207,7 +1242,7 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
       orderBy: { createdAt: 'desc' }
     }),
     (prisma as any).mktBundle.findMany({
-      where: { isActive: true },
+      where: { ...bundleWhere, isActive: true },
       include: {
         vendor: true,
         items: { include: { vendorProduct: { include: { productStandard: true } } } }
@@ -1314,10 +1349,11 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
   let bundles = filterByWallet(bundlesRaw).map(mapBundle);
 
   // Filter by distance if radius is specified and user coords are available
-  if (userLat && userLng && radius) {
+  // Treat 500km+ as National (no filter)
+  if (userLat && userLng && activeRadius && activeRadius < 500) {
     const filterByDistance = (item: any) => {
       if (item.distance === null) return false;
-      return item.distance <= radius;
+      return item.distance <= activeRadius;
     };
     products = products.filter(filterByDistance);
     bundles = bundles.filter(filterByDistance);
@@ -1351,6 +1387,75 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
     })),
     banners: bannersRaw || []
   };
+}
+
+export async function createMarketplaceRFQ(data: {
+  title: string;
+  category: string;
+  description: string;
+  quantity: number;
+  budget?: number;
+  deadline?: string;
+}) {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  return await (prisma as any).marketplaceRFQ.create({
+    data: {
+      storeId: store.id,
+      title: data.title,
+      category: data.category,
+      description: data.description,
+      quantity: data.quantity,
+      budget: data.budget,
+      deadline: data.deadline ? new Date(data.deadline) : null,
+    }
+  });
+}
+
+export async function getMarketplaceRFQs(vendorId?: string) {
+  const where: any = {};
+  
+  if (vendorId) {
+    const vendor = await (prisma as any).vendorProfile.findUnique({
+      where: { id: vendorId },
+      include: { mktSectors: true }
+    });
+    
+    if (vendor && vendor.mktSectors.length > 0) {
+      const sectorNames = vendor.mktSectors.map((s: any) => s.name);
+      where.category = { in: sectorNames };
+    }
+  }
+
+  return await (prisma as any).marketplaceRFQ.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      store: {
+        select: { name: true, city: true }
+      },
+      quotes: {
+        include: { vendor: true }
+      }
+    }
+  });
+}
+
+export async function submitMarketplaceQuote(data: {
+  rfqId: string;
+  vendorId: string;
+  price: number;
+  notes?: string;
+}) {
+  return await (prisma as any).marketplaceQuote.create({
+    data: {
+      rfqId: data.rfqId,
+      vendorId: data.vendorId,
+      price: data.price,
+      notes: data.notes,
+    }
+  });
 }
 
 
