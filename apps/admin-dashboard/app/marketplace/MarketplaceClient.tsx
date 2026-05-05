@@ -10,12 +10,13 @@ import {
   Users, ArrowRight, Grid, Camera, Star,
   CheckCircle2, Globe, Rocket, Heart, ShoppingCart,
   Target, ShieldAlert, Zap, Headphones, ArrowUp,
-  FileText, Calendar
+  FileText, Calendar, Leaf
 } from 'lucide-react';
 import MarketplaceProductCard from './components/MarketplaceProductCard';
 import MarketplaceHeader from './components/MarketplaceHeader';
 import MarketplaceFooter from './components/MarketplaceFooter';
 import MarketplaceRFQModal from './components/MarketplaceRFQModal';
+import MarketplaceMobile from './components/MarketplaceMobile';
 
 const normalize = (str: string) => {
   if (!str) return '';
@@ -39,12 +40,21 @@ const BannerBadge = ({ children, color = '#E31E24' }: any) => (
 );
 
 
-export default function MarketplaceClient({ initialData, store }: { initialData: any; store?: any }) {
+export default function MarketplaceClient({ initialData, store, blogPosts = [] }: { initialData: any; store?: any; blogPosts?: any[] }) {
   const [rfqOpen, setRfqOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const { categories = [], products = [], banners = [] } = initialData || {};
   const [searchQuery, setSearchQuery] = useState('');
   const [searchScope, setSearchScope] = useState('PRODUCT');
   const [shuffledTags, setShuffledTags] = useState<string[]>([]);
+  const [homeTab, setHomeTab] = useState('Top Ventes');
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
   
   // Advanced Filters State
@@ -214,36 +224,26 @@ export default function MarketplaceClient({ initialData, store }: { initialData:
   
   const historyProducts = filteredProducts.length > 0 ? filteredProducts.slice(0, 7) : [];
 
-  const perspectives = [
-    { 
-      id: 1, 
-      title: "Quels sont les avantages des pilotes de moteur pour répondre aux besoin...", 
-      author: "Kaylee Watson", 
-      date: "05/05/2026",
-      image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=200"
-    },
-    { 
-      id: 2, 
-      title: "3 façons d'équilibrer le coût et la fonctionnalité lors du choix d'une...", 
-      author: "Jadyn Moyer", 
-      date: "05/05/2026",
-      image: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=200"
-    },
-    { 
-      id: 3, 
-      title: "Ai-je besoin d'un HDD et d'un SSD ?", 
-      author: "Ramon Beasley", 
-      date: "05/05/2026",
-      image: "https://images.unsplash.com/photo-1544244015-0cd4b3ffc6b0?w=200"
-    },
-    { 
-      id: 4, 
-      title: "Conception de bijoux plaqués or : un guide complet pour répondre aux...", 
-      author: "Joshua Price", 
-      date: "05/05/2026",
-      image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=200"
-    }
-  ];
+  // blog posts from DB or fallback
+  const perspectives = blogPosts.length > 0
+    ? blogPosts.map((p: any, i: number) => ({
+        id: p.id,
+        title: p.title,
+        author: p.author,
+        date: p.publishedAt ? new Date(p.publishedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
+        image: p.coverImage || `https://images.unsplash.com/photo-${['1518770660439-4636190af475','1523170335258-f5ed11844a49','1544244015-0cd4b3ffc6b0','1515562141207-7a88fb7ce338'][i % 4]}?w=200`,
+        slug: p.slug,
+      }))
+    : [
+        { id: 1, title: "Quels sont les avantages des pilotes de moteur pour répondre aux besoin...", author: "Kaylee Watson", date: "05/05/2026", image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=200", slug: null },
+        { id: 2, title: "3 façons d'équilibrer le coût et la fonctionnalité lors du choix d'une...", author: "Jadyn Moyer", date: "05/05/2026", image: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=200", slug: null },
+        { id: 3, title: "Ai-je besoin d'un HDD et d'un SSD ?", author: "Ramon Beasley", date: "05/05/2026", image: "https://images.unsplash.com/photo-1544244015-0cd4b3ffc6b0?w=200", slug: null },
+        { id: 4, title: "Conception de bijoux plaqués or : guide complet...", author: "Joshua Price", date: "05/05/2026", image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=200", slug: null },
+      ];
+
+  if (isMobile) {
+    return <MarketplaceMobile initialData={initialData} store={store} setRfqOpen={setRfqOpen} />;
+  }
 
   return (
     <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', scrollBehavior: 'smooth' }}>
@@ -646,49 +646,77 @@ export default function MarketplaceClient({ initialData, store }: { initialData:
                     <div style={{ height: '4px', width: '60px', background: '#E31E24', marginTop: '8px', borderRadius: '10px' }} />
                   </div>
                   <div style={{ display: 'flex', gap: '12px' }}>
-                     <button style={{ padding: '8px 20px', borderRadius: '100px', background: '#fff', border: '1px solid #E5E7EB', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>Nouveautés</button>
-                     <button style={{ padding: '8px 20px', borderRadius: '100px', background: '#E31E24', border: 'none', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>Top Ventes</button>
+                     {['Nouveautés', 'Top Ventes'].map(tab => (
+                       <button 
+                        key={tab}
+                        onClick={() => setHomeTab(tab)}
+                        style={{ 
+                          padding: '8px 24px', borderRadius: '100px', 
+                          background: homeTab === tab ? '#E31E24' : '#fff', 
+                          border: homeTab === tab ? 'none' : '1px solid #E5E7EB', 
+                          color: homeTab === tab ? '#fff' : '#6B7280', 
+                          fontSize: '14px', fontWeight: 800, cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                       >
+                         {tab}
+                       </button>
+                     ))}
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '24px' }}>
-                  {filteredProducts.length > 0 ? filteredProducts.slice(0, 10).map((p: any) => (
+                  {(homeTab === 'Nouveautés' ? [...products].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : products).slice(0, 10).map((p: any) => (
                     <MarketplaceProductCard key={p.id} product={p} />
-                  )) : (
-                    [1,2,3,4,5,6,7,8,9,10].map(i => (
-                      <div key={i} style={{ height: '350px', background: '#fff', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', opacity: 0.5 }}>
-                        <div style={{ flex: 1, background: '#F3F4F6', borderRadius: '8px' }} />
-                        <div style={{ height: '20px', background: '#F3F4F6', borderRadius: '4px', width: '80%' }} />
-                        <div style={{ height: '20px', background: '#F3F4F6', borderRadius: '4px', width: '40%' }} />
-                      </div>
-                    ))
-                  )}
+                  ))}
                 </div>
               </section>
 
               {/* Special Categories / Collections */}
               <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
-                <Link href="/marketplace/tunisia" style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)', borderRadius: '24px', padding: '40px', position: 'relative', overflow: 'hidden', display: 'block' }}>
-                  <div style={{ position: 'relative', zIndex: 1 }}>
-                    <span style={{ color: '#E31E24', fontWeight: 800, fontSize: '14px' }}>MADE IN TUNISIA</span>
-                    <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', margin: '12px 0' }}>Soutenons nos producteurs locaux</h2>
-                    <div style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 800, marginTop: '20px', cursor: 'pointer', display: 'inline-block' }}>
-                      Explorer
+                <Link href="/marketplace/tunisia" style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)', borderRadius: '24px', padding: '40px', position: 'relative', overflow: 'hidden', display: 'block', minHeight: '200px' }}>
+                  {/* Tunisia Map - local asset */}
+                  <img
+                    src="/tunisia-flag-map.png"
+                    alt="Tunisia Flag Map"
+                    style={{ 
+                      position: 'absolute', right: '-10px', top: '50%', transform: 'translateY(-50%)',
+                      height: '130%', width: 'auto', opacity: 0.25,
+                      pointerEvents: 'none',
+                      filter: 'drop-shadow(0 4px 12px rgba(227,30,36,0.2))'
+                    }}
+                  />
+                  <div style={{ position: 'relative', zIndex: 1, maxWidth: '60%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '20px' }}>🇹🇳</span>
+                      <span style={{ color: '#E31E24', fontWeight: 800, fontSize: '14px', letterSpacing: '0.05em' }}>MADE IN TUNISIA</span>
                     </div>
-                  </div>
-                  <div style={{ position: 'absolute', right: '20px', top: '10px', bottom: '10px', width: '120px', opacity: 0.8, pointerEvents: 'none' }}>
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Flag_map_of_Tunisia.svg" style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="Tunisia Map" />
+                    <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: '0 0 8px', lineHeight: 1.2 }}>Soutenons nos producteurs locaux</h2>
+                    <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '20px' }}>Découvrez des produits authentiques, fabriqués en Tunisie par des artisans et producteurs locaux.</p>
+                    <div style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', display: 'inline-block' }}>
+                      Explorer →
+                    </div>
                   </div>
                 </Link>
-                <Link href="/marketplace/eco" style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)', borderRadius: '24px', padding: '40px', position: 'relative', overflow: 'hidden', display: 'block' }}>
-                   <div style={{ position: 'relative', zIndex: 1 }}>
-                    <span style={{ color: '#10B981', fontWeight: 800, fontSize: '14px' }}>BIO & LOCAL</span>
-                    <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', margin: '12px 0' }}>Sourcing Responsable Tunisie</h2>
-                    <div style={{ background: '#10B981', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 800, marginTop: '20px', cursor: 'pointer', display: 'inline-block' }}>
-                      Explorer
+
+                <Link href="/marketplace/eco" style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)', borderRadius: '24px', padding: '40px', position: 'relative', overflow: 'hidden', display: 'block', minHeight: '200px' }}>
+                  <div style={{ position: 'absolute', right: '-10px', bottom: '-30px', color: '#10B981', opacity: 0.15 }}>
+                    <Leaf size={220} strokeWidth={0.8} />
+                  </div>
+                  <div style={{ position: 'absolute', right: '60px', top: '20px', color: '#10B981', opacity: 0.2, transform: 'rotate(20deg)' }}>
+                    <Leaf size={60} strokeWidth={1} />
+                  </div>
+                  <div style={{ position: 'relative', zIndex: 1, maxWidth: '65%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '20px' }}>🌱</span>
+                      <span style={{ color: '#10B981', fontWeight: 800, fontSize: '14px', letterSpacing: '0.05em' }}>BIO & LOCAL</span>
+                    </div>
+                    <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: '0 0 8px', lineHeight: 1.2 }}>Sourcing Responsable Tunisie</h2>
+                    <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '20px' }}>Produits bio, éco-responsables et cultivés localement pour un approvisionnement durable.</p>
+                    <div style={{ background: '#10B981', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', display: 'inline-block' }}>
+                      Explorer →
                     </div>
                   </div>
-                  <div style={{ position: 'absolute', right: '-20px', bottom: '-20px', width: '200px', height: '200px', background: '#fff', borderRadius: '50%', opacity: 0.5 }} />
                 </Link>
               </section>
 
@@ -793,27 +821,27 @@ export default function MarketplaceClient({ initialData, store }: { initialData:
               <section>
                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                     <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#111827' }}>Perspectives Commerciales</h2>
-                    <button style={{ background: 'transparent', border: 'none', fontSize: '14px', fontWeight: 700, color: '#6B7280', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Link href="/marketplace/blog" style={{ background: 'transparent', border: 'none', fontSize: '14px', fontWeight: 700, color: '#6B7280', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}>
                       Voir plus <ChevronRight size={16} />
-                    </button>
+                    </Link>
                  </div>
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
-                    {perspectives.map((item) => (
-                      <div key={item.id} style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #F1F5F9', transition: 'transform 0.3s' }}>
-                        <div style={{ height: '160px', overflow: 'hidden', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <img src={item.image} alt={item.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                        </div>
-                        <div style={{ padding: '20px' }}>
-                          <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#111827', marginBottom: '16px', lineHeight: 1.4, height: '44px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                            {item.title}
-                          </h3>
-                          <div style={{ fontSize: '12px', color: '#9CA3AF', fontWeight: 500 }}>
-                            Par {item.author} {item.date}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                 </div>
+                     {blogPosts.slice(0, 4).map((item: any) => (
+                       <Link key={item.id} href={item.slug ? `/marketplace/blog/${item.slug}` : '#'} style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #F1F5F9', transition: 'transform 0.3s', textDecoration: 'none', display: 'block' }}>
+                         <div style={{ height: '160px', overflow: 'hidden', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                           <img src={item.image} alt={item.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                         </div>
+                         <div style={{ padding: '20px' }}>
+                           <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#111827', marginBottom: '16px', lineHeight: 1.4, height: '44px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                             {item.title}
+                           </h3>
+                           <div style={{ fontSize: '12px', color: '#9CA3AF', fontWeight: 500 }}>
+                             Par {item.author} · {item.date}
+                           </div>
+                         </div>
+                       </Link>
+                     ))}
+                  </div>
               </section>
 
               {/* Produits Populaires Section */}

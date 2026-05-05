@@ -1413,6 +1413,27 @@ export async function createMarketplaceRFQ(data: {
   });
 }
 
+export async function getMarketplaceSectors() {
+  return await (prisma as any).mktCategory.findMany({
+    orderBy: { sortOrder: 'asc' }
+  });
+}
+
+export async function getStoreRFQs() {
+  const store = await getStore();
+  if (!store) return [];
+  
+  return await (prisma as any).marketplaceRFQ.findMany({
+    where: { storeId: store.id },
+    include: { 
+      quotes: { 
+        include: { vendor: true } 
+      } 
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+}
+
 export async function getMarketplaceRFQs(vendorId?: string) {
   const where: any = {};
   
@@ -1422,7 +1443,9 @@ export async function getMarketplaceRFQs(vendorId?: string) {
       include: { mktSectors: true }
     });
     
-    if (vendor && vendor.mktSectors.length > 0) {
+    // Si le vendeur a coché beaucoup de secteurs (ex: plus de 5), 
+    // on considère qu'il veut voir toutes les opportunités.
+    if (vendor && vendor.mktSectors.length > 0 && vendor.mktSectors.length < 8) {
       const sectorNames = vendor.mktSectors.map((s: any) => s.name);
       where.category = { in: sectorNames };
     }
@@ -5049,5 +5072,57 @@ export async function seedMarketplaceDataAction() {
     }
   }
 
+  return { success: true };
+}
+
+// ─── Blog / Perspectives Commerciales ─────────────────────────────────────
+
+export async function getBlogPosts(publishedOnly = true) {
+  'use server';
+  return prisma.marketplaceBlogPost.findMany({
+    where: publishedOnly ? { isPublished: true } : {},
+    orderBy: { publishedAt: 'desc' },
+  });
+}
+
+export async function getBlogPost(slug: string) {
+  'use server';
+  return prisma.marketplaceBlogPost.findUnique({ where: { slug } });
+}
+
+export async function createBlogPost(data: {
+  title: string; slug: string; excerpt?: string; content: string;
+  coverImage?: string; author: string; category?: string;
+  tags?: string[]; isPublished?: boolean;
+}) {
+  'use server';
+  const { tags = [], isPublished = false, ...rest } = data;
+  const post = await prisma.marketplaceBlogPost.create({
+    data: { ...rest, tags, isPublished, publishedAt: isPublished ? new Date() : null },
+  });
+  return { success: true, post };
+}
+
+export async function updateBlogPost(id: string, data: {
+  title?: string; excerpt?: string; content?: string; coverImage?: string;
+  author?: string; category?: string; tags?: string[]; isPublished?: boolean;
+}) {
+  'use server';
+  const { isPublished, ...rest } = data;
+  const existing = await prisma.marketplaceBlogPost.findUnique({ where: { id } });
+  const post = await prisma.marketplaceBlogPost.update({
+    where: { id },
+    data: {
+      ...rest,
+      ...(isPublished !== undefined ? { isPublished } : {}),
+      publishedAt: isPublished && !existing?.publishedAt ? new Date() : existing?.publishedAt,
+    },
+  });
+  return { success: true, post };
+}
+
+export async function deleteBlogPost(id: string) {
+  'use server';
+  await prisma.marketplaceBlogPost.delete({ where: { id } });
   return { success: true };
 }

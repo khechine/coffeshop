@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 import { X, Send, Package, Target, Calendar, Info } from 'lucide-react';
-import { createMarketplaceRFQ } from '../../actions';
+import { createMarketplaceRFQ, getMarketplaceSectors } from '../../actions';
 
 export default function MarketplaceRFQModal({ onClose }: { onClose: () => void }) {
+  const [sectors, setSectors] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     category: '',
@@ -15,6 +16,10 @@ export default function MarketplaceRFQModal({ onClose }: { onClose: () => void }
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  React.useEffect(() => {
+    getMarketplaceSectors().then(setSectors);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,11 +88,9 @@ export default function MarketplaceRFQModal({ onClose }: { onClose: () => void }
                 style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E5E7EB', outline: 'none', fontSize: '14px', background: '#fff' }}
               >
                 <option value="">Sélectionner</option>
-                <option value="Cafe">Café</option>
-                <option value="Sucre">Sucre / Edulcorants</option>
-                <option value="Lait">Lait & Produits Laitiers</option>
-                <option value="Packaging">Packaging</option>
-                <option value="Machine">Machines & Equipements</option>
+                {sectors.map((s: any) => (
+                  <option key={s.id} value={s.name}>{s.name}</option>
+                ))}
               </select>
             </div>
 

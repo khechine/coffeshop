@@ -10,8 +10,8 @@
  * - null/undefined → null (caller should provide a fallback)
  * - External URLs (https://images.unsplash.com/...) → keep as-is
  */
-export function sanitizeUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
+export function sanitizeUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
 
   // Base64 data URLs — pass through unchanged
   if (url.startsWith('data:')) return url;

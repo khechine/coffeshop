@@ -7,7 +7,7 @@ import {
   ShoppingBag, Search, LayoutGrid, ShoppingCart, 
   MapPin, ChevronRight, X, Menu, User, ArrowRight,
   ChevronDown, Globe, HelpCircle, Smartphone, Languages,
-  MessageSquare
+  MessageSquare, Target
 } from 'lucide-react';
 import { useCart } from '../CartContext';
 import CartDrawer from '../CartDrawer';
@@ -137,6 +137,14 @@ export default function MarketplaceHeader({ isVendor = false, store }: { isVendo
 
               {/* Actions */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                <Link 
+                  href="/marketplace/my-requests"
+                  style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151' }}
+                >
+                  <Target size={24} />
+                  <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Mes Demandes</span>
+                </Link>
+
                 <div 
                   onClick={() => setRfqOpen(true)}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#E31E24' }}

@@ -36,6 +36,13 @@ enum StockStatus {
   DISCONTINUED
 }
 
+enum IndustryType {
+  COFFEE_SHOP
+  BAKERY
+  PASTRY_SHOP
+  PASTRY_PRO
+}
+
 enum TagType {
   GENERAL
   BRAND
@@ -67,7 +74,9 @@ model User {
   takenSales    Sale[] @relation("takenBy")
   preparedSales Sale[] @relation("preparedBy")
   sessionLogs   StaffSessionLog[]
+  cashSessions  CashSession[] @relation("BaristaSessions")
   specialOrders SpecialOrder[] @relation("takenBy")
+  loginLogs     UserLoginLog[]
 }
 
 model StaffSessionLog {
@@ -77,6 +86,19 @@ model StaffSessionLog {
   storeId   String
   action    String   // LOGIN, LOGOUT
   createdAt DateTime @default(now())
+}
+
+model UserLoginLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ip        String?
+  userAgent String?
+  device    String?  // Mobile, Desktop, Tablet
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Expense {
@@ -97,9 +119,14 @@ model Store {
   subdomain String?  @unique
   address   String?
   city      String?
+  governorate String?
   phone     String?
   lat       Float?
   lng       Float?
+  
+  industry      IndustryType @default(COFFEE_SHOP)
+  businessType  String?      @default("STORE") // STORE, INDEPENDENT
+
   
   loyaltyEarnRate   Decimal?   @default(1)    // Earn rate: Points earned per 1 DT spent
   loyaltyRedeemRate Decimal?   @default(100)  // Redeem rate: Points required to get 1 DT discount
@@ -114,6 +141,7 @@ model Store {
   isFiscalEnabled Boolean  @default(false)
   currentFiscalSequence Int @default(0) // Compteur atomique pour la numérotation NACEF
   fiscalSecret    String?  // Secret de signature spécifique à la boutique
+  preferredSearchRadius Int? @default(50) // Rayon de recherche marketplace par défaut (km)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -128,24 +156,50 @@ model Store {
   expenses       Expense[]
   subscription   Subscription?
   tables         StoreTable[]
-  zones          StoreZone[]
   terminals      PosTerminal[]
   categories     Category[]
   customers      Customer[]
   specialOrders  SpecialOrder[]
-  rfqs           MarketplaceRFQ[]
   zReports       ZReport[]
+  zones          StoreZone[]
+  cashSessions   CashSession[]
+  rfqs           MarketplaceRFQ[]
+  vendorRatings  VendorRating[]
+
 
   activityPoleId String?
 
   activityPole   ActivityPole? @relation(fields: [activityPoleId], references: [id])
+
+  // Anti-leakage tracking
+  vendorInteractions     VendorInteraction[]     @relation("StoreInteractions")
+  vendorRelationships    StoreVendorRelationship[] @relation("StoreRelationships")
+
+  // Franchise & Premium
+  vendorCustomers        VendorCustomer[]
+
+  // Third-party Integrations
+  erpIntegration         ErpIntegration?
+}
+
+model ErpIntegration {
+  id          String   @id @default(cuid())
+  storeId     String   @unique
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  baseUrl     String
+  apiKey      String
+  apiSecret   String
+  isActive    Boolean  @default(true)
+  lastSyncAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model StoreZone {
   id        String   @id @default(cuid())
   name      String
   storeId   String
-  store     Store    @relation(fields: [storeId], references: [id])
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   tables    StoreTable[]
   createdAt DateTime @default(now())
 }
@@ -156,16 +210,16 @@ model StoreTable {
   capacity  Int      @default(2)
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id])
-
   zoneId    String?
   zone      StoreZone? @relation(fields: [zoneId], references: [id])
-
+  
+  // Floor Plan
   posX      Float?   @default(0)
   posY      Float?   @default(0)
-  shape     String?  @default("CIRCLE") // CIRCLE, SQUARE
-  width     Int?     @default(60)
-  height    Int?     @default(60)
-
+  shape     String?  @default("SQUARE") // SQUARE, ROUND
+  width     Float?   @default(60)
+  height    Float?   @default(60)
+  
   createdAt DateTime @default(now())
 }
 
@@ -224,6 +278,45 @@ model ActivityPole {
 // ============================================
 // MARKETPLACE CATEGORIES SYSTEM
 // ============================================
+
+model MarketplaceBanner {
+  id          String   @id @default(cuid())
+  title       String
+  subtitle    String?
+  buttonText  String?
+  buttonLink  String?
+  imageUrl    String
+  position    String   @default("HERO") // HERO, SIDEBAR_1, SIDEBAR_2, ADS_1, ADS_2, BRAND
+  bgColor     String?  @default("#1E1B4B")
+  badgeText   String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([position])
+  @@index([isActive])
+}
+
+model MarketplaceCategory {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String?  @unique
+  icon        String?
+  image       String?
+  color       String?
+  description String?
+  sortOrder   Int      @default(0)
+
+  parentId    String?
+  parent      MarketplaceCategory?  @relation("MarketplaceCategoryHierarchy", fields: [parentId], references: [id])
+  children    MarketplaceCategory[] @relation("MarketplaceCategoryHierarchy")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([parentId])
+}
 
 model MktCategory {
   id          String   @id @default(cuid())
@@ -329,7 +422,9 @@ model VendorProduct {
   // Données spécifiques vendeur
   price           Decimal
   minOrderQty     Decimal  @default(1)
+  stockQuantity   Decimal  @default(0)
   stockStatus     StockStatus @default(IN_STOCK)
+  stockThreshold  Decimal  @default(5)
   
   // Offre
   isFeatured      Boolean  @default(false)
@@ -339,6 +434,7 @@ model VendorProduct {
   flashEnd        DateTime?
   
   image           String?
+  images          String[] @default([])
   description     String?
   
   // Tags (libres)
@@ -351,16 +447,196 @@ model VendorProduct {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
+  bundleItems     MktBundleItem[]
+  
+  // Franchise POS Stocks
+  posStocks       VendorPosStock[]
+  
+  // Catégories Internes (Collections)
+  collections     VendorCollection[]
+  
   @@unique([productStandardId, vendorId])
   @@index([vendorId])
   @@index([stockStatus])
   @@index([categoryId])
 }
 
+model MktBundle {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  price           Decimal
+  discountPercent Int?     // Optionnel: pour afficher l'économie
+  image           String?
+  images          String[] @default([])
+  
+  vendorId        String
+  vendor          VendorProfile @relation(fields: [vendorId], references: [id])
+  
+  items           MktBundleItem[]
+  
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([vendorId])
+}
+
+model VendorWallet {
+  id        String   @id @default(cuid())
+  vendorId  String   @unique
+  vendor    VendorProfile @relation(fields: [vendorId], references: [id])
+  balance   Decimal  @default(0)
+  currency  String   @default("DT")
+  status    String   @default("ACTIVE") // ACTIVE, SUSPENDED
+  updatedAt DateTime @updatedAt
+  
+  transactions WalletTransaction[]
+}
+
+model WalletTransaction {
+  id           String   @id @default(cuid())
+  walletId     String
+  wallet       VendorWallet @relation(fields: [walletId], references: [id])
+  amount       Decimal  // positive for credit, negative for debit
+  type         String   // DEPOSIT, COMMISSION, WITHDRAWAL, PENALTY, REFUND
+  description  String?
+  settlementId String?  @unique
+  settlement   MarketplaceSettlement? @relation(fields: [settlementId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([walletId])
+}
+
+model MarketplaceSettlement {
+  id              String   @id @default(cuid())
+  orderId         String   @unique
+  order           SupplierOrder @relation(fields: [orderId], references: [id])
+  
+  commissionAmount Decimal
+  
+  vendorApproved     Boolean @default(false)
+  superadminApproved Boolean @default(false)
+  
+  isProcessed      Boolean @default(false)
+  processedAt      DateTime?
+  
+  transaction      WalletTransaction?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// ANTI-LEAKAGE TRACKING — Phase 2
+// ============================================
+
+// Every touchpoint between a CoffeeShop and a Vendor is logged here.
+// This is both an audit trail and the foundation for BehaviorScoring.
+model VendorInteraction {
+  id        String   @id @default(cuid())
+
+  storeId   String
+  store     Store    @relation("StoreInteractions", fields: [storeId], references: [id])
+
+  vendorId  String
+  vendor    VendorProfile @relation("VendorInteractions", fields: [vendorId], references: [id])
+
+  // Type of interaction
+  type      String
+  // VIEW_PROFILE | VIEW_PRODUCT | SEND_MESSAGE | REQUEST_QUOTE | PLACE_ORDER | VIEW_CATALOG
+
+  // Optional contextual data
+  metadata  Json?
+  // { productId, duration, source: 'search'|'featured'|'recommendation', sessionId }
+
+  createdAt DateTime @default(now())
+
+  @@index([storeId, vendorId])
+  @@index([storeId])
+  @@index([vendorId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// Formal relationship between a CoffeeShop and a Vendor.
+// Status lifecycle: DISCOVERED → CONTACTED → ORDERED → ACTIVE → CHURNED
+// discoveredAt is the legal proof the relationship started on-platform.
+model StoreVendorRelationship {
+  id              String   @id @default(cuid())
+
+  storeId         String
+  store           Store    @relation("StoreRelationships", fields: [storeId], references: [id])
+
+  vendorId        String
+  vendor          VendorProfile @relation("VendorRelationships", fields: [vendorId], references: [id])
+
+  // Lifecycle status
+  status          String   @default("DISCOVERED")
+  // DISCOVERED | CONTACTED | ORDERED | ACTIVE | CHURNED | SUSPENDED
+
+  // Key timestamps (immutable once set — legal proof)
+  discoveredAt    DateTime @default(now())
+  firstContactAt  DateTime?
+  firstOrderAt    DateTime?
+  lastOrderAt     DateTime?
+  lastActivityAt  DateTime?
+
+  // Aggregated metrics (updated on each interaction/order)
+  totalInteractions Int    @default(0)
+  totalOrders       Int    @default(0)
+  totalRevenue      Decimal @default(0)
+
+  // BehaviorScoring — 0 (safe) to 100 (high leakage risk)
+  leakageRiskScore  Int    @default(0)
+
+  // Flags
+  isFlagged         Boolean @default(false)  // Manually flagged by superadmin
+  flagReason        String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([storeId, vendorId])
+  @@index([leakageRiskScore])
+  @@index([status])
+  @@index([isFlagged])
+}
+model WalletDepositRequest {
+  id          String   @id @default(cuid())
+  vendorId    String
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id])
+  amount      Decimal
+  proofImage  String?  // URL to the uploaded proof
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  adminNotes  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([vendorId])
+}
+
+model MktBundleItem {
+  id              String   @id @default(cuid())
+  bundleId        String
+  bundle          MktBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  
+  vendorProductId String
+  vendorProduct   VendorProduct @relation(fields: [vendorProductId], references: [id])
+  
+  quantity        Decimal
+  
+  createdAt       DateTime @default(now())
+
+  @@index([bundleId])
+  @@index([vendorProductId])
+}
+
 model Category {
   id        String    @id @default(cuid())
   name      String
   color     String?   @default("#6366F1") // Couleur pour le POS
+  icon      String?
   storeId   String?
   store     Store?    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   products  Product[]
@@ -377,6 +653,7 @@ model Category {
 model Product {
   id         String   @id @default(cuid())
   name       String
+  nameAr     String?
   price      Decimal
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
@@ -392,6 +669,8 @@ model Product {
   sales     SaleItem[]
   unitId     String?
   unit       GlobalUnit? @relation(fields: [unitId], references: [id])
+  icon       String?
+  image      String?
   active     Boolean  @default(true)
   canBeTakeaway Boolean @default(true)
   createdAt DateTime   @default(now())
@@ -582,6 +861,7 @@ model VendorProfile {
   description String?
   address     String?
   city        String?
+  governorate String?
   phone       String?
   lat         Float?
   lng         Float?
@@ -594,9 +874,40 @@ model VendorProfile {
   mktSectors    MktCategory[]  @relation("VendorSectors")
 
   vendorProducts VendorProduct[]
+  bundles        MktBundle[]
   orders         SupplierOrder[]
   stockItems     StockItem[]
   quotes         MarketplaceQuote[]
+  
+  wallet         VendorWallet?
+  
+  // Commission Management
+  commissionRuleId String?
+  commissionRule   CommissionRule? @relation(fields: [commissionRuleId], references: [id])
+  
+  commissionRate Decimal @default(0.01) // Legacy / Manual Override
+  commissionTiers Json?  // Format: [{ minAmount: number, rate: number }]
+  
+  depositRequests WalletDepositRequest[]
+
+
+  // Anti-leakage tracking
+  interactions   VendorInteraction[]     @relation("VendorInteractions")
+  relationships  StoreVendorRelationship[] @relation("VendorRelationships")
+
+  // Billing & Marketplace Safeguards
+  gracePeriodEndsAt   DateTime?
+  lastBillingAlertAt  DateTime?
+
+  ratings        VendorRating[]
+
+  // Franchise & Premium Pack
+  isPremium      Boolean @default(false)
+  posList        VendorPos[]
+  customization  VendorCustomization?
+  customers      VendorCustomer[]
+  campaigns      VendorCampaign[]
+  collections    VendorCollection[]
 }
 
 model CourierProfile {
@@ -611,6 +922,18 @@ model CourierProfile {
   createdAt   DateTime        @default(now())
 }
 
+model CommissionRule {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  baseRate    Decimal  @default(0.01)
+  tiers       Json?    // Array of { minAmount: number, rate: number }
+  isDefault   Boolean  @default(false)
+  vendors     VendorProfile[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 enum OrderStatus {
   PENDING
   CONFIRMED
@@ -618,6 +941,7 @@ enum OrderStatus {
   DELIVERED
   CANCELLED
   PAID
+  STOCKED
 }
 
 model Supplier {
@@ -651,6 +975,13 @@ model SupplierOrder {
   courier       CourierProfile? @relation(fields: [courierId], references: [id])
   needsDelivery Boolean           @default(false)
   items         SupplierOrderItem[]
+  settlement    MarketplaceSettlement?
+  rating        VendorRating?
+  
+  // Franchise POS routing
+  vendorPosId   String?
+  vendorPos     VendorPos? @relation(fields: [vendorPosId], references: [id])
+
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 }
@@ -664,6 +995,8 @@ model SupplierOrderItem {
   name        String? // Name of product if not linked to stockItem
   quantity    Decimal
   price       Decimal
+  mktBundleId String?
+  mktProductId String?
 }
 model GlobalUnit {
   id        String      @id @default(cuid())
@@ -749,6 +1082,136 @@ model SpecialOrder {
   updatedAt       DateTime @updatedAt
 }
 
+model CashSession {
+  id              String   @id @default(cuid())
+  storeId         String
+  store           Store    @relation(fields: [storeId], references: [id])
+  baristaId       String
+  barista         User     @relation("BaristaSessions", fields: [baristaId], references: [id])
+  openingBalance  Decimal
+  closingBalance  Decimal?
+  expectedBalance Decimal?
+  totalSales      Decimal? @default(0)
+  status          String   @default("OPEN") // OPEN, CLOSED
+  openedAt        DateTime @default(now())
+  closedAt        DateTime?
+  notes           String?
+
+  @@index([storeId])
+  @@index([baristaId])
+}
+
+model VendorRating {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  order     SupplierOrder @relation(fields: [orderId], references: [id])
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  vendorId  String
+  vendor    VendorProfile @relation(fields: [vendorId], references: [id])
+
+  speedScore       Int // 1-5
+  qualityScore     Int // 1-5
+  reliabilityScore Int // 1-5
+  deliveryScore    Int // 1-5
+  comment          String?
+  
+  // Multiboutique granular scoring
+  vendorPosId      String?
+  vendorPos        VendorPos? @relation(fields: [vendorPosId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([storeId, vendorId, orderId])
+}
+
+// ============================================
+// VENDOR FRANCHISE & PREMIUM PACK
+// ============================================
+
+model VendorPos {
+  id          String   @id @default(cuid())
+  vendorId    String
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id])
+  name        String
+  address     String?
+  city        String?
+  phone       String?
+  lat         Float?
+  lng         Float?
+  isActive    Boolean @default(true)
+  
+  orders      SupplierOrder[]
+  stockItems  VendorPosStock[]
+  ratings     VendorRating[]
+  
+  createdAt   DateTime @default(now())
+}
+
+model VendorPosStock {
+  id              String   @id @default(cuid())
+  vendorPosId     String
+  vendorPos       VendorPos @relation(fields: [vendorPosId], references: [id])
+  vendorProductId String
+  vendorProduct   VendorProduct @relation(fields: [vendorProductId], references: [id])
+  quantity        Decimal @default(0)
+  
+  @@unique([vendorPosId, vendorProductId])
+}
+
+model VendorCustomization {
+  id           String   @id @default(cuid())
+  vendorId     String   @unique
+  vendor       VendorProfile @relation(fields: [vendorId], references: [id])
+  logoUrl        String?
+  bannerUrl      String?
+  primaryColor   String?  @default("#6366F1")
+  secondaryColor String?  @default("#1E293B")
+  accentColor    String?  @default("#F43F5E")
+  fontFamily     String?  @default("Inter")
+  welcomeMessage String?
+  themeConfig    Json?    
+}
+
+model VendorCustomer {
+  id          String   @id @default(cuid())
+  vendorId    String
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id])
+  storeId     String   
+  store       Store    @relation(fields: [storeId], references: [id])
+  
+  category    String?  @default("REGULAR") // VIP, REGULAR, CHURN_RISK
+  tags        String[]
+  totalSpent  Decimal  @default(0)
+  orderCount  Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([vendorId, storeId])
+}
+
+model VendorCampaign {
+  id             String   @id @default(cuid())
+  vendorId       String
+  vendor         VendorProfile @relation(fields: [vendorId], references: [id])
+  title          String
+  content        String
+  targetCategory String?  
+  status         String   @default("DRAFT") // DRAFT, SENT
+  createdAt      DateTime @default(now())
+}
+
+model VendorCollection {
+  id        String   @id @default(cuid())
+  name      String
+  vendorId  String
+  vendor    VendorProfile @relation(fields: [vendorId], references: [id])
+  products  VendorProduct[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model MarketplaceRFQ {
   id          String   @id @default(cuid())
   storeId     String
@@ -776,4 +1239,20 @@ model MarketplaceQuote {
   status      String         @default("PENDING") // PENDING, ACCEPTED, REJECTED
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+}
+
+model MarketplaceBlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String
+  coverImage  String?
+  author      String
+  category    String   @default("Perspectives Commerciales")
+  tags        String[]
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
