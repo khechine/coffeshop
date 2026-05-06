@@ -71,12 +71,42 @@ export default function CategoryViewClient({ category, products = [], allCategor
           </aside>
 
           {/* Subcategory Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1px', background: '#E5E7EB', border: '1px solid #E5E7EB', borderRadius: '4px', overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
             {subcategories.map((sub: any) => (
-              <Link key={sub.id} href={`/marketplace/category/${sub.id}`} style={{ background: '#fff', padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', textDecoration: 'none' }} className="hover-shadow-inner">
-                <div style={{ minHeight: '64px' }}><span style={{ fontSize: '15px', fontWeight: 600, color: '#374151' }}>{sub.name}</span></div>
-                <div style={{ width: '100%', aspectRatio: '4/3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src={sanitizeUrl(sub.image) || ''} alt={sub.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+              <Link 
+                key={sub.id} 
+                href={`/marketplace/category/${sub.id}`} 
+                style={{ 
+                  background: '#fff', 
+                  borderRadius: '16px', 
+                  overflow: 'hidden', 
+                  border: '1px solid #E5E7EB', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  textDecoration: 'none', 
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                }} 
+                className="category-card-premium"
+              >
+                <div style={{ width: '100%', aspectRatio: '16/10', overflow: 'hidden', background: '#F1F5F9' }}>
+                  <img 
+                    src={sanitizeUrl(sub.image) || 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=400'} 
+                    alt={sub.name} 
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'cover', 
+                      transition: 'transform 0.5s ease' 
+                    }} 
+                    className="category-img"
+                  />
+                </div>
+                <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#111827' }}>{sub.name}</span>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ChevronRight size={14} color="#94A3B8" />
+                  </div>
                 </div>
               </Link>
             ))}
@@ -140,6 +170,16 @@ export default function CategoryViewClient({ category, products = [], allCategor
         .hover-shadow-inner:hover { box-shadow: inset 0 0 0 1px #111827; z-index: 10; }
         .hover-shadow-premium:hover { box-shadow: 0 12px 24px rgba(0,0,0,0.1); transform: translateY(-4px); border-color: #D1D5DB; }
         .hover-accent:hover { color: var(--hover-color, #E31E24) !important; }
+        
+        .category-card-premium:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          border-color: #111827;
+        }
+        
+        .category-card-premium:hover .category-img {
+          transform: scale(1.1);
+        }
       `}</style>
     </div>
   );
