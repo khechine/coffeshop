@@ -3,11 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import MarketplaceHeader from '../components/MarketplaceHeader';
 import MarketplaceFooter from '../components/MarketplaceFooter';
-import { Target, Clock, MessageCircle, FileText, ChevronRight, User, CheckCircle2 } from 'lucide-react';
+import { Target, Clock, MessageCircle, FileText, ChevronRight, User, CheckCircle2, AlertCircle } from 'lucide-react';
+import { acceptMarketplaceQuoteAction } from '../../actions';
 
 export default function MyRequestsClient({ rfqs, store }: any) {
   const [selectedRfq, setSelectedRfq] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
+  const [loadingQuoteId, setLoadingQuoteId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -16,6 +18,29 @@ export default function MyRequestsClient({ rfqs, store }: any) {
   const formatDate = (date: any) => {
     if (!mounted) return '';
     return new Date(date).toLocaleDateString();
+  };
+
+  const handleAcceptQuote = async (quoteId: string) => {
+    if (!confirm("Voulez-vous vraiment accepter cette offre ? Le vendeur sera notifié.")) return;
+    setLoadingQuoteId(quoteId);
+    try {
+      await acceptMarketplaceQuoteAction(quoteId);
+      alert('Offre acceptée avec succès !');
+      // Update local state to reflect accepted status
+      if (selectedRfq) {
+        setSelectedRfq({
+          ...selectedRfq,
+          status: 'FULFILLED',
+          quotes: selectedRfq.quotes.map((q: any) => 
+            q.id === quoteId ? { ...q, status: 'ACCEPTED' } : { ...q, status: 'REJECTED' }
+          )
+        });
+      }
+    } catch (err: any) {
+      alert(err.message || "Erreur lors de l'acceptation de l'offre.");
+    } finally {
+      setLoadingQuoteId(null);
+    }
   };
 
   return (
@@ -112,30 +137,50 @@ export default function MyRequestsClient({ rfqs, store }: any) {
                     </div>
                   ) : (
                     selectedRfq.quotes.map((quote: any) => (
-                      <div key={quote.id} style={{ padding: '20px', borderRadius: '16px', border: '1px solid #E5E7EB', position: 'relative' }}>
+                      <div key={quote.id} style={{ 
+                        padding: '20px', 
+                        borderRadius: '16px', 
+                        border: `2px solid ${quote.status === 'ACCEPTED' ? '#16A34A' : '#E5E7EB'}`, 
+                        position: 'relative',
+                        background: quote.status === 'ACCEPTED' ? '#F0FDF4' : '#fff',
+                        opacity: quote.status === 'REJECTED' ? 0.6 : 1
+                      }}>
+                        {quote.status === 'ACCEPTED' && (
+                          <div style={{ position: 'absolute', top: -12, right: 20, background: '#16A34A', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <CheckCircle2 size={14} /> Offre Acceptée
+                          </div>
+                        )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '40px', height: '40px', background: '#F3F4F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <User size={20} color="#6B7280" />
+                            <div style={{ width: '40px', height: '40px', background: quote.status === 'ACCEPTED' ? '#DCFCE7' : '#F3F4F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <User size={20} color={quote.status === 'ACCEPTED' ? '#16A34A' : '#6B7280'} />
                             </div>
                             <div>
-                              <div style={{ fontWeight: 800, color: '#111827' }}>{quote.vendor.companyName}</div>
-                              <div style={{ fontSize: '12px', color: '#6B7280' }}>{quote.vendor.city} • {formatDate(quote.createdAt)}</div>
+                              <div style={{ fontWeight: 800, color: '#111827' }}>{quote.vendor?.companyName || 'Fournisseur inconnu'}</div>
+                              <div style={{ fontSize: '12px', color: '#6B7280' }}>{quote.vendor?.city || 'Lieu inconnu'} • {formatDate(quote.createdAt)}</div>
                             </div>
                           </div>
                           <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '20px', fontWeight: 900, color: '#16A34A' }}>{Number(quote.price).toFixed(2)} DT</div>
+                            <div style={{ fontSize: '20px', fontWeight: 900, color: quote.status === 'ACCEPTED' ? '#16A34A' : '#E31E24' }}>{Number(quote.price).toFixed(2)} DT</div>
                           </div>
                         </div>
                         {quote.notes && (
-                          <div style={{ background: '#F9FAFB', padding: '12px', borderRadius: '8px', fontSize: '14px', color: '#4B5563', marginBottom: '16px' }}>
+                          <div style={{ background: quote.status === 'ACCEPTED' ? '#DCFCE7' : '#F9FAFB', padding: '12px', borderRadius: '8px', fontSize: '14px', color: '#4B5563', marginBottom: '16px' }}>
                             "{quote.notes}"
                           </div>
                         )}
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                          <button style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#111827', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}>Accepter l'offre</button>
-                          <button style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #E5E7EB', background: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}>Discuter</button>
-                        </div>
+                        {quote.status !== 'ACCEPTED' && quote.status !== 'REJECTED' && selectedRfq.status !== 'FULFILLED' && (
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            <button 
+                              onClick={() => handleAcceptQuote(quote.id)}
+                              disabled={loadingQuoteId === quote.id}
+                              style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#111827', color: '#fff', border: 'none', fontWeight: 700, cursor: loadingQuoteId === quote.id ? 'wait' : 'pointer', fontSize: '13px', opacity: loadingQuoteId === quote.id ? 0.7 : 1 }}
+                            >
+                              {loadingQuoteId === quote.id ? 'Acceptation...' : "Accepter l'offre"}
+                            </button>
+                            <button style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #E5E7EB', background: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}>Discuter</button>
+                          </div>
+                        )}
                       </div>
                     ))
                   )}
