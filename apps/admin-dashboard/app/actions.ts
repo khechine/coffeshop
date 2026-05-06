@@ -1697,7 +1697,7 @@ export async function resolveCategoryProposal(id: string, action: 'approve' | 'r
   revalidatePath('/vendor/portal/catalog');
 }
 
-export async function updateMarketplaceCategoryAction(id: string, data: { name?: string; icon?: string; image?: string; color?: string; parentId?: string }) {
+export async function updateMarketplaceCategoryAction(id: string, data: { name?: string; icon?: string; image?: string; color?: string; parentId?: string; groupTitle?: string }) {
   const cookieStore = cookies();
   const userId = cookieStore.get('userId')?.value;
 
@@ -1715,6 +1715,7 @@ export async function updateMarketplaceCategoryAction(id: string, data: { name?:
       icon: data.icon?.trim(),
       image: data.image?.trim(),
       color: data.color?.trim(),
+      groupTitle: data.groupTitle?.trim(),
       parentId: data.parentId || null,
     }
   });
@@ -1873,7 +1874,7 @@ export async function deleteMarketplaceBannerAction(id: string) {
   revalidatePath('/marketplace');
 }
 
-export async function createMarketplaceCategoryAction(data: { name: string; icon?: string; image?: string; color?: string; parentId?: string }) {
+export async function createMarketplaceCategoryAction(data: { name: string; icon?: string; image?: string; color?: string; parentId?: string; groupTitle?: string }) {
 
   const cookieStore = cookies();
   const userId = cookieStore.get('userId')?.value;
@@ -1892,6 +1893,7 @@ export async function createMarketplaceCategoryAction(data: { name: string; icon
       icon: data.icon,
       image: data.image,
       color: data.color,
+      groupTitle: data.groupTitle,
       parentId: data.parentId || null,
     }
   });

@@ -21,13 +21,13 @@ type Category = {
   image?: string | null;
   color?: string | null;
   parentId?: string | null;
+  groupTitle?: string | null;
   children?: Category[];
   _count?: {
     products: number;
     children: number;
   };
 };
-
 
 export default function CategoryManagementClient({
   categoryTree,
@@ -42,6 +42,7 @@ export default function CategoryManagementClient({
   const [editImage, setEditImage] = useState('');
   const [editColor, setEditColor] = useState('');
   const [editParentId, setEditParentId] = useState('');
+  const [editGroupTitle, setEditGroupTitle] = useState('');
   
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState('');
@@ -49,10 +50,10 @@ export default function CategoryManagementClient({
   const [newImage, setNewImage] = useState('');
   const [newColor, setNewColor] = useState('#6366F1');
   const [newParentId, setNewParentId] = useState('');
+  const [newGroupTitle, setNewGroupTitle] = useState('');
 
   const [migratingSubId, setMigratingSubId] = useState<string | null>(null);
   const [targetCategoryId, setTargetCategoryId] = useState('');
-
 
   const startEditing = (cat: Category) => {
     setEditingId(cat.id);
@@ -61,6 +62,7 @@ export default function CategoryManagementClient({
     setEditImage(cat.image || '');
     setEditColor(cat.color || '');
     setEditParentId(cat.parentId || '');
+    setEditGroupTitle(cat.groupTitle || '');
   };
 
   const handleUpload = async (file: File, isEditing = false) => {
@@ -95,7 +97,8 @@ export default function CategoryManagementClient({
           icon: editIcon,
           image: editImage,
           color: editColor,
-          parentId: editParentId || undefined
+          parentId: editParentId || undefined,
+          groupTitle: editGroupTitle || undefined
         });
         setEditingId(null);
         window.location.reload();
@@ -124,7 +127,8 @@ export default function CategoryManagementClient({
           icon: newIcon,
           image: newImage,
           color: newColor,
-          parentId: newParentId || undefined
+          parentId: newParentId || undefined,
+          groupTitle: newGroupTitle || undefined
         });
         setIsCreating(false);
         setNewName('');
@@ -132,6 +136,7 @@ export default function CategoryManagementClient({
         setNewImage('');
         setNewColor('#6366F1');
         setNewParentId('');
+        setNewGroupTitle('');
         window.location.reload();
       } catch (err: any) {
         alert(err.message);
@@ -230,6 +235,16 @@ export default function CategoryManagementClient({
                 className="w-full h-[46px] p-1 rounded-2xl bg-white dark:bg-slate-950 border-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Groupe Mega Menu</label>
+              <input 
+                type="text" 
+                value={newGroupTitle} 
+                onChange={e => setNewGroupTitle(e.target.value)}
+                placeholder="Ex: Équipements"
+                className="w-full px-5 py-3 rounded-2xl bg-white dark:bg-slate-950 border-none font-bold text-sm focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
             <div className="space-y-2 md:col-span-2 lg:col-span-1">
               <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Catégorie Parente</label>
               <select 
@@ -286,9 +301,11 @@ export default function CategoryManagementClient({
                           <input type="file" className="hidden" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0], true)} />
                         </label>
                       </div>
+                      <input value={editGroupTitle} onChange={e => setEditGroupTitle(e.target.value)} className="w-[140px] px-4 py-2 bg-white dark:bg-slate-800 rounded-xl font-bold" placeholder="Groupe Menu" />
                       <input type="color" value={editColor} onChange={e => setEditColor(e.target.value)} className="w-12 h-10 p-1 bg-white dark:bg-slate-800 rounded-xl" />
                       <button onClick={handleUpdate} className="p-2 bg-emerald-600 text-white rounded-xl"><Save size={18} /></button>
                       <button onClick={() => setEditingId(null)} className="p-2 bg-slate-200 dark:bg-slate-700 rounded-xl"><X size={18} /></button>
+
                     </div>
                   ) : (
                     <>

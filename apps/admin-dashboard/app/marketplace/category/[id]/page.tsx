@@ -18,21 +18,26 @@ export default async function CategoryPage({ params, searchParams }: { params: {
     radius
   );
   
-  // 1. Find category or subcategory
-  let category = data.categories.find((c: any) => c.id === id || c.slug === id);
+  // 1. Find category or subcategory recursively
+  let category = null;
   let isChild = false;
   let isVirtual = false;
 
-  if (!category) {
-    for (const root of data.categories) {
-      const child = (root.children || []).find((s: any) => s.id === id || s.slug === id);
-      if (child) {
-        category = child;
-        isChild = true;
-        break;
+  const findCategory = (cats: any[], depth: number = 0): any => {
+    for (const c of cats) {
+      if (c.id === id || c.slug === id) {
+        if (depth > 0) isChild = true;
+        return c;
+      }
+      if (c.children && c.children.length > 0) {
+        const found = findCategory(c.children, depth + 1);
+        if (found) return found;
       }
     }
-  }
+    return null;
+  };
+
+  category = findCategory(data.categories);
 
   // Fallback: Virtual Category (Keyword based)
   if (!category) {

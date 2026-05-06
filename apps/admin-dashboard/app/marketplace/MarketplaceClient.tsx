@@ -128,73 +128,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
     };
   }, [urlSearch, urlScope, urlRadius, products, categories, minPrice, maxPrice, minRating]);
 
-  const marketplaceSegments = [
-    { 
-      id: 'matieres-premieres', 
-      name: 'Matières Premières',
-      subcategories: [
-        { name: 'Café Vert', items: ['Robusta', 'Arabica', 'Mélanges Spéciaux'] },
-        { name: 'Sucre & Édulcorants', items: ['Sucre Blanc', 'Sucre Roux', 'Stevia', 'Sirops de base'] },
-        { name: 'Boulangerie & Pâtisserie', items: ['Farine', 'Levure', 'Améliorants', 'Chocolat de couverture'] },
-        { name: 'Produits Laitiers', items: ['Lait UHT', 'Crème Liquide', 'Beurre', 'Fromage'] }
-      ]
-    },
-    { 
-      id: 'semi-finis', 
-      name: 'Produits Semi-Finis',
-      subcategories: [
-        { name: 'Bases & Mixes', items: ['Base Glace', 'Mix Gaufre', 'Mix Crêpe'] },
-        { name: 'Garnitures', items: ['Toppings', 'Coulis de fruits', 'Nappages'] },
-        { name: 'Surgelés', items: ['Pâtes à pain', 'Viennoiseries prêtes à cuire'] }
-      ]
-    },
-    { 
-      id: 'produits-finis', 
-      name: 'Produits Finis (B2B / Revente)',
-      subcategories: [
-        { name: 'Boissons Chaudes', items: ['Café Torréfié', 'Thé Premium', 'Tisanes', 'Chocolat en poudre'] },
-        { name: 'Boissons Froides', items: ['Eaux Minérales', 'Jus de fruits', 'Sodas', 'Energy Drinks'] },
-        { name: 'Snacking', items: ['Biscuits', 'Fruits Secs', 'Confiseries'] }
-      ]
-    },
-    { 
-      id: 'equipements', 
-      name: 'Équipements & Matériel',
-      subcategories: [
-        { name: 'Barista & Café', items: ['Machines Espresso', 'Moulins', 'Accessoires Barista'] },
-        { name: 'Cuisine & Cuisson', items: ['Fours', 'Plaques', 'Toasters', 'Friteuses'] },
-        { name: 'Froid & Conservation', items: ['Réfrigérateurs', 'Congélateurs', 'Machines à Glaçons'] },
-        { name: 'Mobilier', items: ['Tables', 'Chaises', 'Comptoirs'] }
-      ]
-    },
-    { 
-      id: 'emballages', 
-      name: 'Emballages',
-      subcategories: [
-        { name: 'Vente à emporter', items: ['Gobelets Carton', 'Porte-gobelets', 'Couvercles'] },
-        { name: 'Boîtages', items: ['Boîtes Pâtisserie', 'Boîtes Burger', 'Sacs Papier'] },
-        { name: 'Consommables', items: ['Serviettes', 'Pailles Papier', 'Couverts'] }
-      ]
-    },
-    { 
-      id: 'hygiene', 
-      name: 'Hygiène & Nettoyage',
-      subcategories: [
-        { name: 'Entretien Cuisine', items: ['Dégraissants', 'Produits Lave-vaisselle', 'Liquide vaisselle'] },
-        { name: 'Désinfection', items: ['Gel Hydroalcoolique', 'Désinfectant surfaces'] },
-        { name: 'Matériel', items: ['Gants', 'Chiffons microfibres', 'Balais'] }
-      ]
-    },
-    { 
-      id: 'services', 
-      name: 'Services',
-      subcategories: [
-        { name: 'Technique', items: ['Maintenance Équipements', 'Installation', 'Réparation'] },
-        { name: 'Conseil', items: ['Formation Barista', 'Audit Hygiène', 'Design Menu'] },
-        { name: 'Digital', items: ['Systèmes POS', 'Logiciels Gestion Stock'] }
-      ]
-    }
-  ];
+  const marketplaceSegments = categories;
 
   const heroBanner = banners.find((b: any) => b.position === 'HERO') || {
     title: 'Achats Intelligents : Affaires Prêtes',
@@ -252,7 +186,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
   return (
     <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', scrollBehavior: 'smooth' }}>
       
-      <MarketplaceHeader isVendor={isVendor} store={store} />
+      <MarketplaceHeader isVendor={isVendor} store={store} allCategories={categories} />
 
       {/* Main Layout */}
       <main style={{ maxWidth: '1400px', margin: '24px auto', padding: '0 24px' }}>

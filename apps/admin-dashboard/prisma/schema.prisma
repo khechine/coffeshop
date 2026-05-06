@@ -306,6 +306,7 @@ model MarketplaceCategory {
   image       String?
   color       String?
   description String?
+  groupTitle  String?
   sortOrder   Int      @default(0)
 
   parentId    String?

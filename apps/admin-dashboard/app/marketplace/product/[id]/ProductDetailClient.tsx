@@ -16,7 +16,7 @@ import { sanitizeUrl } from '../../../lib/imageUtils';
 
 const fmt = (n: any) => Number(n).toFixed(2);
 
-export default function ProductDetailClient({ product, isVendor = false, relatedProducts = [] }: { product: any; isVendor?: boolean; relatedProducts?: any[] }) {
+export default function ProductDetailClient({ product, isVendor = false, relatedProducts = [], allCategories = [] }: { product: any; isVendor?: boolean; relatedProducts?: any[]; allCategories?: any[] }) {
   const [qty, setQty] = useState(1);
   const { addToCart } = useCart();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -35,7 +35,7 @@ export default function ProductDetailClient({ product, isVendor = false, related
 
   return (
     <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <MarketplaceHeader isVendor={isVendor} />
+      <MarketplaceHeader isVendor={isVendor} allCategories={allCategories} />
 
       <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
         

@@ -13,7 +13,16 @@ import { useCart } from '../CartContext';
 import CartDrawer from '../CartDrawer';
 import MarketplaceRFQModal from './MarketplaceRFQModal';
 
-export default function MarketplaceHeader({ isVendor = false, store, minimal = false }: { isVendor?: boolean, store?: any, minimal?: boolean }) {
+export default function MarketplaceHeader({ isVendor = false, store, minimal = false, allCategories = [] }: { isVendor?: boolean, store?: any, minimal?: boolean, allCategories?: any[] }) {
+  const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
+  
+  const groupedCategories = allCategories.reduce((acc: any, cat: any) => {
+    const group = cat.groupTitle || 'Autres Catégories';
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(cat);
+    return acc;
+  }, {});
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const { cartCount } = useCart();
@@ -60,6 +69,73 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
                 <span style={{ color: '#9CA3AF', fontWeight: 400, marginLeft: '8px' }} className="pos-detail">
                   | Position : {store ? `${store.name} (${store.city || 'Position GPS'})` : 'Position boutique non définie'}
                 </span>
+              </div>
+              <div 
+                onMouseEnter={() => setIsMegaMenuOpen(true)}
+                onMouseLeave={() => setIsMegaMenuOpen(false)}
+                style={{ position: 'relative' }}
+              >
+                <Link 
+                  href="/marketplace/categories" 
+                  style={{ color: '#6B7280', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }} 
+                  className="top-link"
+                >
+                  <LayoutGrid size={14} /> Catégories
+                </Link>
+
+                {isMegaMenuOpen && !minimal && allCategories.length > 0 && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '100%', 
+                    left: 0, 
+                    width: '900px', 
+                    background: '#fff', 
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', 
+                    borderRadius: '0 0 16px 16px', 
+                    border: '1px solid #E5E7EB',
+                    zIndex: 2000,
+                    padding: '32px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '40px'
+                  }}>
+                    {Object.entries(groupedCategories).map(([groupName, cats]: [string, any]) => (
+                      <div key={groupName} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <h3 style={{ fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9CA3AF', borderBottom: '1px solid #F3F4F6', paddingBottom: '8px' }}>
+                          {groupName}
+                        </h3>
+                        {cats.map((cat: any) => (
+                          <div key={cat.id}>
+                            <Link 
+                              href={`/marketplace/category/${cat.slug || cat.id}`}
+                              style={{ fontSize: '15px', fontWeight: 900, color: '#111827', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}
+                            >
+                              <span style={{ color: cat.color || '#E31E24' }}>{cat.icon || '•'}</span>
+                              {cat.name}
+                            </Link>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {(cat.children || []).slice(0, 6).map((sub: any) => (
+                                <Link 
+                                  key={sub.id} 
+                                  href={`/marketplace/category/${sub.slug || sub.id}`}
+                                  style={{ fontSize: '13px', color: '#6B7280', textDecoration: 'none', fontWeight: 600 }}
+                                  className="hover-red-link"
+                                >
+                                  {sub.name}
+                                </Link>
+                              ))}
+                              {(cat.children || []).length > 6 && (
+                                <Link href={`/marketplace/category/${cat.slug || cat.id}`} style={{ fontSize: '12px', color: '#E31E24', fontWeight: 700, textDecoration: 'none', marginTop: '4px' }}>
+                                  Voir tout...
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }} className="top-link">Français <ChevronDown size={12} /></div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }} className="top-link">DT (TND) <ChevronDown size={12} /></div>

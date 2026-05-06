@@ -41,7 +41,7 @@ export default function CategoryViewClient({ category, products = [], allCategor
 
   return (
     <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <MarketplaceHeader isVendor={isVendor} store={store} />
+      <MarketplaceHeader isVendor={isVendor} store={store} allCategories={allCategories} />
 
       <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
         
@@ -52,6 +52,35 @@ export default function CategoryViewClient({ category, products = [], allCategor
           <ChevronRight size={12} />
           <span style={{ color: '#111827', fontWeight: 600 }}>{category.name}</span>
         </nav>
+
+        {/* Category Hero Banner */}
+        <div style={{ 
+          width: '100%', 
+          height: '240px', 
+          borderRadius: '24px', 
+          marginBottom: '32px', 
+          position: 'relative', 
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '48px',
+          background: category.color || '#111827'
+        }}>
+          {category.image && (
+            <img 
+              src={sanitizeUrl(category.image)} 
+              alt={category.name} 
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.4 }} 
+            />
+          )}
+          <div style={{ position: 'relative', zIndex: 10, color: '#fff', maxWidth: '600px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+              {category.icon && <span style={{ fontSize: '32px', background: 'rgba(255,255,255,0.2)', width: '64px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px' }}>{category.icon}</span>}
+              <h1 style={{ fontSize: '42px', fontWeight: 900, margin: 0, lineHeight: 1.1 }}>{category.name}</h1>
+            </div>
+            {category.description && <p style={{ fontSize: '16px', fontWeight: 500, opacity: 0.9 }}>{category.description}</p>}
+          </div>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '24px', marginBottom: '48px' }}>
           
@@ -149,10 +178,10 @@ export default function CategoryViewClient({ category, products = [], allCategor
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: '#F3F4F6' }}>
                 {(rel.children || []).slice(0, 8).map((child: any) => (
-                  <Link key={child.id} href={`/marketplace/category/${child.id}`} style={{ background: '#fff', padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', textDecoration: 'none' }} className="hover-shadow-inner">
-                    <div style={{ minHeight: '48px' }}><span style={{ fontSize: '14px', fontWeight: 700, color: '#374151' }}>{child.name}</span></div>
-                    <div style={{ width: '100%', aspectRatio: '4/3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <img src={sanitizeUrl(child.image) || ''} alt={child.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                  <Link key={child.id} href={`/marketplace/category/${child.id}`} style={{ background: '#fff', padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', textDecoration: 'none' }} className="hover-shadow-inner category-card-premium">
+                    <div style={{ minHeight: '48px', position: 'relative', zIndex: 10 }}><span style={{ fontSize: '14px', fontWeight: 700, color: '#374151' }}>{child.name}</span></div>
+                    <div style={{ width: '100%', aspectRatio: '16/10', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '8px' }}>
+                      <img src={sanitizeUrl(child.image) || 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=400'} alt={child.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} className="category-img" />
                     </div>
                   </Link>
                 ))}
