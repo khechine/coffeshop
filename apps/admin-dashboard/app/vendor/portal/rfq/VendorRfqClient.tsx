@@ -13,6 +13,8 @@ export default function VendorRfqClient({ rfqs, vendorId }: { rfqs: any[], vendo
 
   // Check if a quote already exists for the selected RFQ
   const existingQuote = selectedRfq?.quotes?.find((q: any) => q.vendorId === vendorId);
+  const acceptedQuote = selectedRfq?.quotes?.find((q: any) => q.status === 'ACCEPTED');
+
 
   const handleSendQuote = async () => {
     if (!quotePrice || existingQuote) return;
@@ -92,8 +94,18 @@ export default function VendorRfqClient({ rfqs, vendorId }: { rfqs: any[], vendo
                     <span className="block text-sm font-black text-slate-900 dark:text-white">{rfq.quantity} unité(s)</span>
                     {rfq.budget && <span className="text-xs font-bold text-emerald-500">Budget: {rfq.budget} DT</span>}
                     {hasQuote && (
-                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 rounded text-[10px] font-black uppercase">
-                        Déjà répondu
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                        rfq.quotes.find((q: any) => q.vendorId === vendorId).status === 'REJECTED' 
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' 
+                          : rfq.quotes.find((q: any) => q.vendorId === vendorId).status === 'ACCEPTED'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                          : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
+                      }`}>
+                        {rfq.quotes.find((q: any) => q.vendorId === vendorId).status === 'REJECTED' 
+                          ? 'Refusé' 
+                          : rfq.quotes.find((q: any) => q.vendorId === vendorId).status === 'ACCEPTED'
+                          ? 'Accepté'
+                          : 'Déjà répondu'}
                       </span>
                     )}
                   </div>
@@ -167,8 +179,26 @@ export default function VendorRfqClient({ rfqs, vendorId }: { rfqs: any[], vendo
               </div>
 
               {success || existingQuote ? (
-                <div className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl flex items-center justify-center gap-2 font-black">
-                  <Check size={20} /> {existingQuote ? 'Proposition déjà envoyée' : 'Devis envoyé avec succès !'}
+                <div className={`p-4 rounded-2xl flex flex-col gap-2 font-black ${
+                  existingQuote?.status === 'REJECTED' 
+                    ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400' 
+                    : existingQuote?.status === 'ACCEPTED'
+                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <Check size={20} /> 
+                    {existingQuote?.status === 'REJECTED' 
+                      ? 'Offre refusée' 
+                      : existingQuote?.status === 'ACCEPTED'
+                      ? 'Offre acceptée !'
+                      : existingQuote ? 'Proposition en cours d\'examen' : 'Devis envoyé avec succès !'}
+                  </div>
+                  {existingQuote?.status === 'REJECTED' && acceptedQuote && (
+                    <div className="text-sm opacity-80 flex items-center gap-2 mt-1 bg-white/50 dark:bg-black/20 p-2 rounded-lg">
+                      <Target size={14} /> Offre acceptée pour un autre fournisseur au prix de : {Number(acceptedQuote.price).toFixed(2)} DT
+                    </div>
+                  )}
                 </div>
               ) : (
                 <button 
@@ -182,7 +212,11 @@ export default function VendorRfqClient({ rfqs, vendorId }: { rfqs: any[], vendo
               
               <div className="mt-6 flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-[11px] text-blue-600 dark:text-blue-400 font-bold">
                 <Info size={14} className="shrink-0" />
-                {existingQuote ? 'Cette proposition est en cours d\'examen par l\'acheteur.' : 'L\'acheteur sera immédiatement notifié de votre proposition.'}
+                {existingQuote?.status === 'REJECTED' 
+                  ? 'Cette requête a été clôturée.'
+                  : existingQuote?.status === 'ACCEPTED'
+                  ? 'Félicitations, vous avez remporté cette demande !'
+                  : existingQuote ? 'L\'acheteur est en train d\'analyser les offres.' : 'L\'acheteur sera immédiatement notifié de votre proposition.'}
               </div>
             </div>
           ) : (
