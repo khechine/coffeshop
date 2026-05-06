@@ -450,6 +450,7 @@ model VendorProduct {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
+  tradeMessages   TradeMessage[]
   bundleItems     MktBundleItem[]
   
   // Franchise POS Stocks
