@@ -1449,8 +1449,6 @@ export async function getMarketplaceRFQs(vendorId?: string) {
       include: { mktSectors: true }
     });
     
-    // Si le vendeur a coché beaucoup de secteurs (ex: plus de 5), 
-    // on considère qu'il veut voir toutes les opportunités.
     if (vendor && vendor.mktSectors.length > 0 && vendor.mktSectors.length < 8) {
       const sectorNames = vendor.mktSectors.map((s: any) => s.name);
       where.category = { in: sectorNames };
@@ -1465,6 +1463,7 @@ export async function getMarketplaceRFQs(vendorId?: string) {
         select: { name: true, city: true }
       },
       quotes: {
+        where: vendorId ? { vendorId: vendorId } : undefined,
         include: { vendor: true }
       }
     }
@@ -1477,7 +1476,19 @@ export async function submitMarketplaceQuote(data: {
   price: number;
   notes?: string;
 }) {
-  return await (prisma as any).marketplaceQuote.create({
+  // Prevent duplicate quotes
+  const existing = await (prisma as any).marketplaceQuote.findFirst({
+    where: {
+      rfqId: data.rfqId,
+      vendorId: data.vendorId
+    }
+  });
+
+  if (existing) {
+    throw new Error('Vous avez déjà envoyé une proposition pour cette demande.');
+  }
+
+  const quote = await (prisma as any).marketplaceQuote.create({
     data: {
       rfqId: data.rfqId,
       vendorId: data.vendorId,
@@ -1485,6 +1496,11 @@ export async function submitMarketplaceQuote(data: {
       notes: data.notes,
     }
   });
+
+  revalidatePath('/vendor/portal/rfq');
+  revalidatePath('/marketplace/my-requests');
+  
+  return quote;
 }
 
 

@@ -1,12 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MarketplaceHeader from '../components/MarketplaceHeader';
 import MarketplaceFooter from '../components/MarketplaceFooter';
 import { Target, Clock, MessageCircle, FileText, ChevronRight, User, CheckCircle2 } from 'lucide-react';
 
 export default function MyRequestsClient({ rfqs, store }: any) {
   const [selectedRfq, setSelectedRfq] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const formatDate = (date: any) => {
+    if (!mounted) return '';
+    return new Date(date).toLocaleDateString();
+  };
 
   return (
     <div style={{ background: '#F9FAFB', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -54,7 +64,7 @@ export default function MyRequestsClient({ rfqs, store }: any) {
                     }}>
                       {rfq.status === 'OPEN' ? 'En cours' : 'Clôturé'}
                     </span>
-                    <span style={{ fontSize: '12px', color: '#6B7280' }}>{new Date(rfq.createdAt).toLocaleDateString()}</span>
+                    <span style={{ fontSize: '12px', color: '#6B7280' }}>{formatDate(rfq.createdAt)}</span>
                   </div>
                   <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#111827', margin: '0 0 8px' }}>{rfq.title}</h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: '#6B7280' }}>
@@ -88,7 +98,7 @@ export default function MyRequestsClient({ rfqs, store }: any) {
                     </div>
                     <div style={{ background: '#F9FAFB', padding: '12px', borderRadius: '12px' }}>
                       <span style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase' }}>Échéance</span>
-                      <span style={{ fontSize: '15px', fontWeight: 800, color: '#111827' }}>{selectedRfq.deadline ? new Date(selectedRfq.deadline).toLocaleDateString() : 'ASAP'}</span>
+                      <span style={{ fontSize: '15px', fontWeight: 800, color: '#111827' }}>{selectedRfq.deadline ? formatDate(selectedRfq.deadline) : 'ASAP'}</span>
                     </div>
                   </div>
                 </div>
@@ -110,7 +120,7 @@ export default function MyRequestsClient({ rfqs, store }: any) {
                             </div>
                             <div>
                               <div style={{ fontWeight: 800, color: '#111827' }}>{quote.vendor.companyName}</div>
-                              <div style={{ fontSize: '12px', color: '#6B7280' }}>{quote.vendor.city} • {new Date(quote.createdAt).toLocaleDateString()}</div>
+                              <div style={{ fontSize: '12px', color: '#6B7280' }}>{quote.vendor.city} • {formatDate(quote.createdAt)}</div>
                             </div>
                           </div>
                           <div style={{ textAlign: 'right' }}>

@@ -11,8 +11,11 @@ export default function VendorRfqClient({ rfqs, vendorId }: { rfqs: any[], vendo
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // Check if a quote already exists for the selected RFQ
+  const existingQuote = selectedRfq?.quotes?.find((q: any) => q.vendorId === vendorId);
+
   const handleSendQuote = async () => {
-    if (!quotePrice) return;
+    if (!quotePrice || existingQuote) return;
     setLoading(true);
     try {
       await submitMarketplaceQuote({
@@ -24,13 +27,12 @@ export default function VendorRfqClient({ rfqs, vendorId }: { rfqs: any[], vendo
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
-        setSelectedRfq(null);
-        setQuotePrice('');
-        setQuoteNotes('');
+        // We don't reset selectedRfq here anymore to let the vendor see their confirmed quote
+        // window.location.reload(); // Simple way to refresh data for now
       }, 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Erreur lors de l\'envoi du devis');
+      alert(error.message || 'Erreur lors de l\'envoi du devis');
     } finally {
       setLoading(false);
     }
@@ -58,51 +60,72 @@ export default function VendorRfqClient({ rfqs, vendorId }: { rfqs: any[], vendo
                 Dès qu'un client postera une demande dans vos secteurs d'activité, elle apparaîtra ici.
               </p>
             </div>
-          ) : rfqs.map((rfq) => (
-            <div 
-              key={rfq.id}
-              onClick={() => setSelectedRfq(rfq)}
-              className={`bg-white dark:bg-slate-900 rounded-3xl p-6 border-2 transition-all cursor-pointer hover:shadow-xl hover:shadow-blue-500/5 ${selectedRfq?.id === rfq.id ? 'border-blue-600' : 'border-transparent shadow-sm'}`}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-xs font-black uppercase tracking-wider">
-                    {rfq.category}
-                  </span>
-                  <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                    <Calendar size={12} /> {new Date(rfq.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="block text-sm font-black text-slate-900 dark:text-white">{rfq.quantity} unité(s)</span>
-                  {rfq.budget && <span className="text-xs font-bold text-emerald-500">Budget: {rfq.budget} DT</span>}
-                </div>
-              </div>
-
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{rfq.title}</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-2 mb-6">{rfq.description}</p>
-
-              <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold">
-                    {rfq.store?.name?.charAt(0)}
+          ) : rfqs.map((rfq) => {
+            const hasQuote = rfq.quotes?.some((q: any) => q.vendorId === vendorId);
+            return (
+              <div 
+                key={rfq.id}
+                onClick={() => {
+                  setSelectedRfq(rfq);
+                  setSuccess(false);
+                  if (hasQuote) {
+                    const q = rfq.quotes.find((q: any) => q.vendorId === vendorId);
+                    setQuotePrice(q.price.toString());
+                    setQuoteNotes(q.notes || '');
+                  } else {
+                    setQuotePrice('');
+                    setQuoteNotes('');
+                  }
+                }}
+                className={`bg-white dark:bg-slate-900 rounded-3xl p-6 border-2 transition-all cursor-pointer hover:shadow-xl hover:shadow-blue-500/5 ${selectedRfq?.id === rfq.id ? 'border-blue-600' : 'border-transparent shadow-sm'}`}
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-xs font-black uppercase tracking-wider">
+                      {rfq.category}
+                    </span>
+                    <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                      <Calendar size={12} /> {new Date(rfq.createdAt).toLocaleDateString()}
+                    </span>
                   </div>
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{rfq.store?.name}</span>
-                  <span className="text-xs text-slate-400 flex items-center gap-1"><MapPin size={10} /> {rfq.store?.city}</span>
+                  <div className="text-right flex flex-col items-end gap-1">
+                    <span className="block text-sm font-black text-slate-900 dark:text-white">{rfq.quantity} unité(s)</span>
+                    {rfq.budget && <span className="text-xs font-bold text-emerald-500">Budget: {rfq.budget} DT</span>}
+                    {hasQuote && (
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 rounded text-[10px] font-black uppercase">
+                        Déjà répondu
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-blue-600 font-bold text-sm">
-                  Voir Détails <ChevronRight size={16} />
+
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{rfq.title}</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-2 mb-6">{rfq.description}</p>
+
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold">
+                      {rfq.store?.name?.charAt(0)}
+                    </div>
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{rfq.store?.name}</span>
+                    <span className="text-xs text-slate-400 flex items-center gap-1"><MapPin size={10} /> {rfq.store?.city}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-blue-600 font-bold text-sm">
+                    Voir Détails <ChevronRight size={16} />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Detail & Quote Panel */}
         <div className="lg:col-span-1">
           {selectedRfq ? (
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-xl sticky top-24">
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-6">Proposer une Offre</h2>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-6">
+                {existingQuote ? 'Votre Proposition' : 'Proposer une Offre'}
+              </h2>
               
               <div className="space-y-6 mb-8">
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
@@ -123,7 +146,8 @@ export default function VendorRfqClient({ rfqs, vendorId }: { rfqs: any[], vendo
                       placeholder="0.000"
                       value={quotePrice}
                       onChange={e => setQuotePrice(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-lg font-black focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                      disabled={!!existingQuote}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-lg font-black focus:ring-2 focus:ring-blue-500 transition-all outline-none disabled:opacity-70"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-slate-400">DT</span>
                   </div>
@@ -136,14 +160,15 @@ export default function VendorRfqClient({ rfqs, vendorId }: { rfqs: any[], vendo
                     rows={4}
                     value={quoteNotes}
                     onChange={e => setQuoteNotes(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-blue-500 transition-all outline-none resize-none"
+                    disabled={!!existingQuote}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-blue-500 transition-all outline-none resize-none disabled:opacity-70"
                   />
                 </div>
               </div>
 
-              {success ? (
+              {success || existingQuote ? (
                 <div className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl flex items-center justify-center gap-2 font-black">
-                  <Check size={20} /> Devis envoyé avec succès !
+                  <Check size={20} /> {existingQuote ? 'Proposition déjà envoyée' : 'Devis envoyé avec succès !'}
                 </div>
               ) : (
                 <button 
@@ -157,7 +182,7 @@ export default function VendorRfqClient({ rfqs, vendorId }: { rfqs: any[], vendo
               
               <div className="mt-6 flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-[11px] text-blue-600 dark:text-blue-400 font-bold">
                 <Info size={14} className="shrink-0" />
-                L'acheteur sera immédiatement notifié de votre proposition.
+                {existingQuote ? 'Cette proposition est en cours d\'examen par l\'acheteur.' : 'L\'acheteur sera immédiatement notifié de votre proposition.'}
               </div>
             </div>
           ) : (
