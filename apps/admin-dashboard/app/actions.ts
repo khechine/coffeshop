@@ -5246,14 +5246,15 @@ export async function acceptMarketplaceQuoteAction(quoteId: string) {
   const storeId = cookieStore.get('storeId')?.value;
   if (!storeId) throw new Error('Store session required to accept RFQ');
 
-  const quote = await (prisma as any).marketplaceQuote.findUnique({
-    where: { id: quoteId },
-    include: { rfq: true, vendor: true }
-  });
+  try {
+    const quote = await (prisma as any).marketplaceQuote.findUnique({
+      where: { id: quoteId },
+      include: { rfq: true, vendor: true }
+    });
 
-  if (!quote) throw new Error('Quote not found');
-  if (quote.rfq.storeId !== storeId) throw new Error('Not authorized to accept this RFQ');
-  if (quote.status === 'ACCEPTED') throw new Error('Quote already accepted');
+    if (!quote) return { success: false, error: 'Quote not found' };
+    if (quote.rfq.storeId !== storeId) return { success: false, error: 'Not authorized to accept this RFQ' };
+    if (quote.status === 'ACCEPTED') return { success: false, error: 'Quote already accepted' };
 
   // Fetch config for commission rate
   const config = await (prisma as any).marketplaceConfig.findUnique({ where: { id: "default" } });
@@ -5264,13 +5265,13 @@ export async function acceptMarketplaceQuoteAction(quoteId: string) {
   const totalAmount = price * qty;
   const commissionAmount = (totalAmount * rate) / 100;
 
-  // Check vendor wallet
-  const wallet = await (prisma as any).vendorWallet.findUnique({ where: { vendorId: quote.vendorId } });
-  if (!wallet) throw new Error('Vendor wallet not found');
-  
-  if (Number(wallet.balance) < commissionAmount) {
-    throw new Error("Le vendeur n'a pas assez de fonds dans son wallet pour couvrir la commission de cette offre.");
-  }
+    // Check vendor wallet
+    const wallet = await (prisma as any).vendorWallet.findUnique({ where: { vendorId: quote.vendorId } });
+    if (!wallet) return { success: false, error: 'Vendor wallet not found' };
+    
+    if (Number(wallet.balance) < commissionAmount) {
+      return { success: false, error: "Le vendeur n'a pas assez de fonds dans son wallet pour couvrir la commission de cette offre." };
+    }
 
   // Deduct from wallet
   await (prisma as any).vendorWallet.update({
@@ -5305,13 +5306,17 @@ export async function acceptMarketplaceQuoteAction(quoteId: string) {
     data: { status: 'FULFILLED' }
   });
 
-  // Reject all other quotes
-  await (prisma as any).marketplaceQuote.updateMany({
-    where: { rfqId: quote.rfqId, id: { not: quoteId } },
-    data: { status: 'REJECTED' }
-  });
+    // Reject all other quotes
+    await (prisma as any).marketplaceQuote.updateMany({
+      where: { rfqId: quote.rfqId, id: { not: quoteId } },
+      data: { status: 'REJECTED' }
+    });
 
-  return { success: true };
+    return { success: true };
+  } catch (error: any) {
+    console.error('acceptMarketplaceQuoteAction Error:', error);
+    return { success: false, error: error.message || "Une erreur est survenue lors de l'acceptation de l'offre." };
+  }
 }
 
 export async function getMarketplaceConfig() {

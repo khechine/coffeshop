@@ -24,7 +24,12 @@ export default function MyRequestsClient({ rfqs, store }: any) {
     if (!confirm("Voulez-vous vraiment accepter cette offre ? Le vendeur sera notifié.")) return;
     setLoadingQuoteId(quoteId);
     try {
-      await acceptMarketplaceQuoteAction(quoteId);
+      const result = await acceptMarketplaceQuoteAction(quoteId);
+      if (!result.success) {
+        alert(result.error || "Erreur lors de l'acceptation de l'offre.");
+        return;
+      }
+      
       alert('Offre acceptée avec succès !');
       // Update local state to reflect accepted status
       if (selectedRfq) {
