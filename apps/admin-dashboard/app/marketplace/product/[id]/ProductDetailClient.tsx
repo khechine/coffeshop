@@ -117,11 +117,19 @@ export default function ProductDetailClient({ product, isVendor = false, related
               </h1>
 
               <div style={{ padding: '20px 0', borderTop: '1px solid #F3F4F6', borderBottom: '1px solid #F3F4F6', marginBottom: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                  <span style={{ fontSize: '32px', fontWeight: 900, color: '#111827' }}>{fmt(product.price * 0.8)} - {fmt(product.price)}</span>
-                  <span style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>DT</span>
-                </div>
-                <span style={{ fontSize: '14px', color: '#6B7280', fontWeight: 600 }}>{product.minOrderQty} {product.unit} (MOQ)</span>
+                {!isVendor ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                      <span style={{ fontSize: '32px', fontWeight: 900, color: '#111827' }}>{fmt(product.price * 0.8)} - {fmt(product.price)}</span>
+                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>DT</span>
+                    </div>
+                    <span style={{ fontSize: '14px', color: '#6B7280', fontWeight: 600 }}>{product.minOrderQty} {product.unit} (MOQ)</span>
+                  </>
+                ) : (
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#E31E24' }}>
+                    Prix sur demande
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>

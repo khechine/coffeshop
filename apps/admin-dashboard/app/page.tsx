@@ -28,7 +28,7 @@ export default function HomePage() {
   useEffect(() => {
     if (user) {
       if (user.role === 'VENDOR') {
-        window.location.href = '/vendor/dashboard';
+        window.location.href = '/vendor/portal';
       } else if (user.role === 'SUPERADMIN') {
         window.location.href = '/superadmin';
       } else {
@@ -47,7 +47,7 @@ export default function HomePage() {
     <CartProvider>
       <div style={{ background: '#fff', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', scrollBehavior: 'smooth' }}>
         
-        <MarketplaceHeader />
+        <MarketplaceHeader minimal={true} />
 
       {/* ── HERO SECTION ── */}
       <section style={{ 

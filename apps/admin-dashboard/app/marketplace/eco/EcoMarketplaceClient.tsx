@@ -6,12 +6,14 @@ import MarketplaceFooter from '../components/MarketplaceFooter';
 import MarketplaceProductCard from '../components/MarketplaceProductCard';
 import { Leaf, Sprout, ShieldCheck, Globe, ArrowRight } from 'lucide-react';
 
-export default function EcoMarketplaceClient({ initialData, store }: any) {
+export default function EcoMarketplaceClient({ initialData, store, user }: any) {
   const { products = [] } = initialData || {};
+  const isVendor = user?.role === 'VENDOR';
+  const hidePrices = isVendor;
 
   return (
     <div style={{ background: '#F0F9F4', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <MarketplaceHeader store={store} />
+      <MarketplaceHeader store={store} isVendor={isVendor} />
 
       {/* Eco Hero */}
       <div style={{ 
@@ -68,7 +70,11 @@ export default function EcoMarketplaceClient({ initialData, store }: any) {
             gap: '32px' 
           }}>
             {products.map((p: any) => (
-              <MarketplaceProductCard key={p.id} product={p} />
+              <MarketplaceProductCard 
+                key={p.id} 
+                product={p} 
+                hidePrice={hidePrices}
+              />
             ))}
           </div>
         )}

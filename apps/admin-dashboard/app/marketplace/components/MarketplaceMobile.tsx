@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { sanitizeUrl } from '../../lib/imageUtils';
 
-export default function MarketplaceMobile({ initialData, store, setRfqOpen, blogPosts = [] }: any) {
+export default function MarketplaceMobile({ initialData, store, setRfqOpen, blogPosts = [], isVendor = false, hidePrices = false }: any) {
   const router = useRouter();
   const { categories = [], products = [], banners = [] } = initialData || {};
 
@@ -204,7 +204,7 @@ export default function MarketplaceMobile({ initialData, store, setRfqOpen, blog
                 <div style={{ width: '100%', height: '70px', background: '#F9FAFB', borderRadius: '8px', padding: '4px', marginBottom: '4px' }}>
                   <img src={sanitizeUrl(p.image ?? undefined)} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="pop" />
                 </div>
-                <div style={{ fontSize: '10px', fontWeight: 800 }}>{Number(p.price).toFixed(0)} DT</div>
+                <div style={{ fontSize: '10px', fontWeight: 800 }}>{!hidePrices ? `${Number(p.price).toFixed(0)} DT` : 'P.S.D'}</div>
               </div>
             ))}
           </div>
@@ -273,7 +273,11 @@ export default function MarketplaceMobile({ initialData, store, setRfqOpen, blog
                  <h4 style={{ fontSize: '12px', fontWeight: 600, color: '#333', margin: '0 0 8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '32px' }}>
                    {p.name}
                  </h4>
-                 <div style={{ fontSize: '14px', fontWeight: 900, color: '#111827' }}>{Number(p.price).toFixed(2)} DT</div>
+                 {!hidePrices ? (
+                   <div style={{ fontSize: '14px', fontWeight: 900, color: '#111827' }}>{Number(p.price).toFixed(2)} DT</div>
+                 ) : (
+                   <div style={{ fontSize: '12px', fontWeight: 800, color: '#E31E24' }}>Prix sur demande</div>
+                 )}
                  <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>{p.minOrderQty} {p.unit || 'Units'}</div>
                </div>
             </Link>

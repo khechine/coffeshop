@@ -6,12 +6,14 @@ import MarketplaceFooter from '../components/MarketplaceFooter';
 import MarketplaceProductCard from '../components/MarketplaceProductCard';
 import { Heart, Star, Flag, MapPin, ArrowRight } from 'lucide-react';
 
-export default function TunisiaMarketplaceClient({ initialData, store }: any) {
+export default function TunisiaMarketplaceClient({ initialData, store, user }: any) {
   const { products = [] } = initialData || {};
+  const isVendor = user?.role === 'VENDOR';
+  const hidePrices = isVendor;
 
   return (
     <div style={{ background: '#FFF5F5', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <MarketplaceHeader store={store} />
+      <MarketplaceHeader store={store} isVendor={isVendor} />
 
       {/* Tunisia Hero */}
       <div style={{ 
@@ -68,7 +70,11 @@ export default function TunisiaMarketplaceClient({ initialData, store }: any) {
             gap: '32px' 
           }}>
             {products.map((p: any) => (
-              <MarketplaceProductCard key={p.id} product={p} />
+              <MarketplaceProductCard 
+                key={p.id} 
+                product={p} 
+                hidePrice={hidePrices}
+              />
             ))}
           </div>
         )}

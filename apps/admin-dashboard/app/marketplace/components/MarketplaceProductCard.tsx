@@ -10,9 +10,10 @@ const fmt = (n: any) => Number(n).toFixed(2);
 interface MarketplaceProductCardProps {
   product: any;
   isVendor?: boolean;
+  hidePrice?: boolean;
 }
 
-export default function MarketplaceProductCard({ product, isVendor = false }: MarketplaceProductCardProps) {
+export default function MarketplaceProductCard({ product, isVendor = false, hidePrice = false }: MarketplaceProductCardProps) {
   return (
     <div 
       style={{ 
@@ -101,13 +102,21 @@ export default function MarketplaceProductCard({ product, isVendor = false }: Ma
         </Link>
 
         <div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-            <span style={{ fontSize: '20px', fontWeight: 900, color: '#111827' }}>{fmt(product.price)} DT</span>
-            <span style={{ fontSize: '14px', color: '#6B7280', fontWeight: 600 }}>/ {product.unit || 'Pièce'}</span>
-          </div>
-          <div style={{ fontSize: '14px', color: '#111827', fontWeight: 600, marginTop: '4px' }}>
-            {product.minOrderQty} {product.unit || 'Pièces'} (MOQ)
-          </div>
+          {!hidePrice ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                <span style={{ fontSize: '20px', fontWeight: 900, color: '#111827' }}>{fmt(product.price)} DT</span>
+                <span style={{ fontSize: '14px', color: '#6B7280', fontWeight: 600 }}>/ {product.unit || 'Pièce'}</span>
+              </div>
+              <div style={{ fontSize: '14px', color: '#111827', fontWeight: 600, marginTop: '4px' }}>
+                {product.minOrderQty} {product.unit || 'Pièces'} (MOQ)
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: '14px', color: '#E31E24', fontWeight: 800, padding: '8px 0' }}>
+              Prix sur demande
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}

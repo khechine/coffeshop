@@ -1,11 +1,11 @@
-import { getMarketplaceData, getStore } from '../../actions';
+import { getMarketplaceData, getUserContext } from '../../actions';
 import TunisiaMarketplaceClient from './TunisiaMarketplaceClient';
 
 export default async function TunisiaMarketplacePage() {
-  const store = await getStore();
+  const user = await getUserContext();
   const initialData = await getMarketplaceData(undefined, undefined, undefined, false, true);
 
   return (
-    <TunisiaMarketplaceClient initialData={initialData} store={store} />
+    <TunisiaMarketplaceClient initialData={initialData} store={user?.store} user={user} />
   );
 }

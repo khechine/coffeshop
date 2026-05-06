@@ -161,7 +161,7 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: '#E5E7EB' }}>
                        {items.slice(0, 8).map(p => (
                          <div key={p.id} style={{ background: '#fff', padding: '20px' }}>
-                           <MarketplaceProductCard product={p} isVendor={isVendor} />
+                           <MarketplaceProductCard product={p} isVendor={isVendor} hidePrice={isVendor} />
                          </div>
                        ))}
                     </div>
@@ -173,7 +173,7 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
 
          {activeTab === 'Products' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px' }}>
-               {products.map(p => <MarketplaceProductCard key={p.id} product={p} isVendor={isVendor} />)}
+               {products.map(p => <MarketplaceProductCard key={p.id} product={p} isVendor={isVendor} hidePrice={isVendor} />)}
             </div>
          )}
 

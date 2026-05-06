@@ -95,7 +95,11 @@ export default function CategoryViewClient({ category, products = [], allCategor
            <div ref={scrollRef} style={{ display: 'flex', gap: '20px', overflowX: 'hidden', scrollBehavior: 'smooth', padding: '4px' }}>
               {products.map((p: any) => (
                 <div key={p.id} style={{ flex: '0 0 calc(25% - 15px)' }}>
-                  <MarketplaceProductCard product={p} isVendor={isVendor} />
+                  <MarketplaceProductCard 
+                    product={p} 
+                    isVendor={isVendor} 
+                    hidePrice={isVendor}
+                  />
                 </div>
               ))}
            </div>

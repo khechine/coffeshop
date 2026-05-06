@@ -1647,7 +1647,31 @@ export async function getUser() {
   return null;
 }
 
-// ── Admin: approve or reject a proposed subcategory ───────────────────────────
+export async function getUserContext() {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) return null;
+
+  const user = await (prisma as any).user.findUnique({
+    where: { id: userId },
+    include: {
+      store: {
+        include: {
+          subscription: { include: { plan: true } },
+          erpIntegration: true
+        }
+      },
+      vendorProfile: true
+    }
+  });
+
+  if (!user) return null;
+
+  // Add marketplace access flag
+  const userObj = JSON.parse(JSON.stringify(user));
+  userObj.hasMarketplace = true; // Simplified for now
+  
+  return userObj;
+}
 export async function resolveCategoryProposal(id: string, action: 'approve' | 'reject', newName?: string, newCategoryId?: string) {
   const cookieStore = cookies();
   const userId = cookieStore.get('userId')?.value;

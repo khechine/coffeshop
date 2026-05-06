@@ -40,7 +40,9 @@ const BannerBadge = ({ children, color = '#E31E24' }: any) => (
 );
 
 
-export default function MarketplaceClient({ initialData, store, blogPosts = [] }: { initialData: any; store?: any; blogPosts?: any[] }) {
+export default function MarketplaceClient({ initialData, store, blogPosts = [], user }: { initialData: any; store?: any; blogPosts?: any[]; user?: any }) {
+  const isVendor = user?.role === 'VENDOR';
+  const hidePrices = isVendor;
   const [rfqOpen, setRfqOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -242,13 +244,13 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [] }
       ];
 
   if (isMobile) {
-    return <MarketplaceMobile initialData={initialData} store={store} setRfqOpen={setRfqOpen} />;
+    return <MarketplaceMobile initialData={initialData} store={store} setRfqOpen={setRfqOpen} blogPosts={blogPosts} isVendor={isVendor} hidePrices={hidePrices} />;
   }
 
   return (
     <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', scrollBehavior: 'smooth' }}>
       
-      <MarketplaceHeader store={store} />
+      <MarketplaceHeader isVendor={isVendor} store={store} />
 
       {/* Main Layout */}
       <main style={{ maxWidth: '1400px', margin: '24px auto', padding: '0 24px' }}>
@@ -377,7 +379,11 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [] }
                     gap: '24px' 
                   }}>
                     {urlScope === 'PRODUCT' && searchData.results.map((p: any) => (
-                      <MarketplaceProductCard key={p.id} product={p} />
+                      <MarketplaceProductCard 
+                        key={p.id} 
+                        product={p} 
+                        hidePrice={hidePrices}
+                      />
                     ))}
 
                     {urlScope === 'VENDOR' && searchData.results.map((v: any) => (
@@ -458,7 +464,11 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [] }
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
                       {searchData.allMatches.filter((m: any) => !searchData.results.includes(m)).slice(0, 8).map((p: any) => (
-                        <MarketplaceProductCard key={p.id} product={p} />
+                        <MarketplaceProductCard 
+                          key={p.id} 
+                          product={p} 
+                          hidePrice={hidePrices}
+                        />
                       ))}
                     </div>
                   </div>
@@ -667,7 +677,11 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [] }
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '24px' }}>
                   {(homeTab === 'Nouveautés' ? [...products].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : products).slice(0, 10).map((p: any) => (
-                    <MarketplaceProductCard key={p.id} product={p} />
+                    <MarketplaceProductCard 
+                      key={p.id} 
+                      product={p} 
+                      hidePrice={hidePrices}
+                    />
                   ))}
                 </div>
               </section>

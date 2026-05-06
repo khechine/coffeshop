@@ -123,10 +123,9 @@ export default async function AdminDashboardPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <Star size={16} fill="#fff" />
-              <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nouveau Design</span>
+              <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Aperçu Marketplace B2B</span>
             </div>
-            <div style={{ fontSize: '18px', fontWeight: 900 }}>Aperçu Marketplace B2B</div>
-            <div style={{ fontSize: '13px', opacity: 0.9, marginTop: '2px' }}>Style Premium Made-in-China activé</div>
+            <div style={{ fontSize: '18px', fontWeight: 900 }}>Accès Grossistes Direct</div>
           </div>
           <div style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <ArrowRight size={20} />

@@ -13,7 +13,7 @@ import { useCart } from '../CartContext';
 import CartDrawer from '../CartDrawer';
 import MarketplaceRFQModal from './MarketplaceRFQModal';
 
-export default function MarketplaceHeader({ isVendor = false, store }: { isVendor?: boolean, store?: any }) {
+export default function MarketplaceHeader({ isVendor = false, store, minimal = false }: { isVendor?: boolean, store?: any, minimal?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { cartCount } = useCart();
@@ -50,132 +50,162 @@ export default function MarketplaceHeader({ isVendor = false, store }: { isVendo
   return (
     <>
       <header style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, zIndex: 1000 }}>
-        {/* Top Slim Bar */}
-        <div style={{ background: '#F9FAFB', borderBottom: '1px solid #F1F5F9', padding: '6px 24px' }}>
+        {/* Top Slim Bar - Hidden on mobile */}
+        <div className="top-bar" style={{ background: '#F9FAFB', borderBottom: '1px solid #F1F5F9', padding: '6px 24px' }}>
           <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#6B7280' }}>
             <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#E31E24', fontWeight: 700 }}>
                 <MapPin size={14} />
                 <span>Rayon : {radius === 'all' ? 'Tunisie entière' : `${radius} km`}</span>
-                <span style={{ color: '#9CA3AF', fontWeight: 400, marginLeft: '8px' }}>
+                <span style={{ color: '#9CA3AF', fontWeight: 400, marginLeft: '8px' }} className="pos-detail">
                   | Position : {store ? `${store.name} (${store.city || 'Position GPS'})` : 'Position boutique non définie'}
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>Français <ChevronDown size={12} /></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>DT (TND) <ChevronDown size={12} /></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }} className="top-link">Français <ChevronDown size={12} /></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }} className="top-link">DT (TND) <ChevronDown size={12} /></div>
             </div>
             
-            <div style={{ display: 'flex', gap: '24px', fontWeight: 600 }}>
+            <div style={{ display: 'flex', gap: '24px', fontWeight: 600 }} className="top-links">
               <span style={{ cursor: 'pointer' }}>Aide</span>
               <span style={{ cursor: 'pointer' }}>Applications</span>
-              <span style={{ cursor: 'pointer' }}>Vendre sur ElKassa</span>
+              <Link href={isVendor ? "/vendor/portal" : "/marketplace/vendors"} style={{ color: '#6B7280', textDecoration: 'none' }} className="top-link">
+                {isVendor ? 'Centre Vendeur' : 'Vendre sur ElKassa'}
+              </Link>
             </div>
           </div>
         </div>
 
         {/* Main Header Area */}
-        <div style={{ padding: '16px 24px' }}>
-           <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '40px' }}>
+        <div style={{ padding: '16px 24px' }} className="main-header">
+           <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '40px' }} className="header-flex">
               {/* Logo */}
-              <Link href="/marketplace" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: 44, height: 44, background: '#E31E24', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+              <Link href={minimal ? "/" : "/marketplace"} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }} className="logo-container">
+                <div style={{ width: 44, height: 44, background: '#E31E24', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }} className="logo-box">
                   <ShoppingBag size={28} strokeWidth={2.5} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }} className="logo-text">
                   <span style={{ fontSize: '22px', fontWeight: 900, color: '#111827', letterSpacing: '-1.2px', lineHeight: 1 }}>ElKassa Marketplace</span>
                   <span style={{ fontSize: '10px', fontWeight: 800, color: '#E31E24', letterSpacing: '0.1em' }}>المنصة التونسية للمحترفين</span>
                 </div>
               </Link>
 
               {/* Search Bar */}
-              <form 
-                onSubmit={handleSearch}
-                style={{ flex: 1, display: 'flex', maxWidth: '800px', border: '3px solid #E31E24', borderRadius: '100px', overflow: 'hidden', height: '48px', background: '#fff' }}
-              >
-                <select 
-                  value={searchScope}
-                  onChange={(e) => setSearchScope(e.target.value)}
-                  style={{ padding: '0 15px', background: '#F9FAFB', borderRight: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', border: 'none', fontWeight: 700, fontSize: '13px', outline: 'none' }}
+              {!minimal && (
+                <form 
+                  onSubmit={handleSearch}
+                  className="search-form"
+                  style={{ flex: 1, display: 'flex', maxWidth: '800px', border: '3px solid #E31E24', borderRadius: '100px', overflow: 'hidden', height: '48px', background: '#fff' }}
                 >
-                  <option value="PRODUCT">Produits</option>
-                  <option value="VENDOR">Fournisseurs</option>
-                  <option value="CATEGORY">Catégories</option>
-                </select>
-                <select 
-                  value={radius}
-                  onChange={(e) => {
-                    const newRadius = e.target.value;
-                    setRadius(newRadius);
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.set('radius', newRadius);
-                    router.push(`/marketplace?${params.toString()}`);
-                  }}
-                  style={{ padding: '0 15px', background: '#fff', borderRight: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', border: 'none', fontWeight: 600, fontSize: '13px', outline: 'none', color: '#6B7280' }}
-                >
-                  <option value="all">Toute la Tunisie</option>
-                  <option value="5">Rayon 5 km</option>
-                  <option value="10">Rayon 10 km</option>
-                  <option value="25">Rayon 25 km</option>
-                  <option value="50">Rayon 50 km</option>
-                  <option value="100">Rayon 100 km</option>
-                  <option value="500">Rayon 500 km</option>
-                </select>
-                <input 
-                  type="text" 
-                  placeholder="Quel produit cherchez-vous ?" 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ flex: 1, border: 'none', outline: 'none', padding: '0 20px', fontSize: '15px', fontWeight: 500 }}
-                />
-                <button 
-                  type="submit"
-                  style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '0 28px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'opacity 0.2s' }}
-                >
-                  <Search size={22} />
-                </button>
-              </form>
-
-              {/* Actions */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-                <Link 
-                  href="/marketplace/my-requests"
-                  style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151' }}
-                >
-                  <Target size={24} />
-                  <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Mes Demandes</span>
-                </Link>
-
-                <div 
-                  onClick={() => setRfqOpen(true)}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#E31E24' }}
-                >
-                  <MessageSquare size={24} />
-                  <span style={{ fontSize: '11px', fontWeight: 800, marginTop: '2px' }}>RFQ</span>
-                </div>
-                
-                {!isVendor && (
-                  <div 
-                    onClick={() => setCartOpen(true)}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151', position: 'relative' }}
+                  <select 
+                    value={searchScope}
+                    onChange={(e) => setSearchScope(e.target.value)}
+                    style={{ padding: '0 15px', background: '#F9FAFB', borderRight: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', border: 'none', fontWeight: 700, fontSize: '13px', outline: 'none' }}
                   >
-                    <ShoppingCart size={24} />
-                    <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Panier</span>
-                    {cartCount > 0 && (
-                      <span style={{ position: 'absolute', top: -5, right: -2, background: '#E31E24', color: '#fff', fontSize: '9px', width: 16, height: 16, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, border: '2px solid #fff' }}>
-                        {cartCount}
-                      </span>
-                    )}
-                  </div>
-                )}
+                    <option value="PRODUCT">Produits</option>
+                    <option value="VENDOR">Fournisseurs</option>
+                    <option value="CATEGORY">Catégories</option>
+                  </select>
+                  <select 
+                    value={radius}
+                    onChange={(e) => {
+                      const newRadius = e.target.value;
+                      setRadius(newRadius);
+                      const params = new URLSearchParams(searchParams.toString());
+                      params.set('radius', newRadius);
+                      router.push(`/marketplace?${params.toString()}`);
+                    }}
+                    style={{ padding: '0 15px', background: '#fff', borderRight: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', border: 'none', fontWeight: 600, fontSize: '13px', outline: 'none', color: '#6B7280' }}
+                  >
+                    <option value="all">Toute la Tunisie</option>
+                    <option value="5">Rayon 5 km</option>
+                    <option value="10">Rayon 10 km</option>
+                    <option value="25">Rayon 25 km</option>
+                    <option value="50">Rayon 50 km</option>
+                    <option value="100">Rayon 100 km</option>
+                    <option value="500">Rayon 500 km</option>
+                  </select>
+                  <input 
+                    type="text" 
+                    placeholder="Quel produit cherchez-vous ?" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{ flex: 1, border: 'none', outline: 'none', padding: '0 20px', fontSize: '15px', fontWeight: 500 }}
+                  />
+                  <button 
+                    type="submit"
+                    style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '0 28px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'opacity 0.2s' }}
+                  >
+                    <Search size={22} />
+                  </button>
+                </form>
+              )}
+              {minimal && <div style={{ flex: 1 }} className="spacer" />}
 
-                <Link href="/admin" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151' }}>
-                  <User size={24} />
-                  <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Compte</span>
-                </Link>
-              </div>
+               {/* Actions */}
+               <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }} className="actions-container">
+                 {!minimal && (
+                   <>
+                     <Link 
+                       href={isVendor ? "/vendor/portal/rfq" : "/marketplace/my-requests"}
+                       className="action-item"
+                       style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151' }}
+                     >
+                       <Target size={24} />
+                       <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>{isVendor ? 'Demandes B2B' : 'Mes Demandes'}</span>
+                     </Link>
+
+                     <div 
+                       onClick={() => setRfqOpen(true)}
+                       className="action-item"
+                       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#E31E24' }}
+                     >
+                       <MessageSquare size={24} />
+                       <span style={{ fontSize: '11px', fontWeight: 800, marginTop: '2px' }}>RFQ</span>
+                     </div>
+                     
+                     {!isVendor && (
+                       <div 
+                         onClick={() => setCartOpen(true)}
+                         className="action-item"
+                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151', position: 'relative' }}
+                       >
+                         <ShoppingCart size={24} />
+                         <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Panier</span>
+                         {cartCount > 0 && (
+                           <span style={{ position: 'absolute', top: -5, right: -2, background: '#E31E24', color: '#fff', fontSize: '9px', width: 16, height: 16, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, border: '2px solid #fff' }}>
+                             {cartCount}
+                           </span>
+                         )}
+                       </div>
+                     )}
+                   </>
+                 )}
+
+                 <Link 
+                   href={isVendor ? "/vendor/portal" : (minimal ? "/login" : "/admin")} 
+                   className="action-item" 
+                   style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151' }}
+                 >
+                   <User size={24} />
+                   <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>{minimal && !isVendor ? 'Connexion' : 'Compte'}</span>
+                 </Link>
+               </div>
            </div>
         </div>
       </header>
+
+      <style jsx>{`
+        @media (max-width: 768px) {
+          .top-bar { display: none !important; }
+          .main-header { padding: 12px 16px !important; }
+          .header-flex { gap: 12px !important; justify-content: space-between; }
+          .logo-text { display: none !important; }
+          .search-form { display: none !important; }
+          .actions-container { gap: 16px !important; }
+          .pos-detail { display: none !important; }
+          .spacer { display: none !important; }
+        }
+      `}</style>
 
       {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
       {rfqOpen && <MarketplaceRFQModal onClose={() => setRfqOpen(false)} />}
