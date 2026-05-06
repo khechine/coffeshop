@@ -6,6 +6,9 @@ import { getStore } from './actions';
 export const metadata = {
   title: 'ElKassa Patisserie B2B — Dashboard',
   description: 'Plateforme SaaS B2B pour la gestion de pâtisseries et commerces',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default async function Layout({ children }: { children: React.ReactNode }) {

@@ -71,6 +71,8 @@ export default function MarketplaceRFQModal({ onClose }: { onClose: () => void }
             <div style={{ gridColumn: 'span 2' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#374151', marginBottom: '8px' }}>Titre de la demande</label>
               <input 
+                id="rfq-title"
+                name="title"
                 required
                 type="text" 
                 placeholder="Ex: 50kg de café Arabica Premium"
@@ -83,6 +85,8 @@ export default function MarketplaceRFQModal({ onClose }: { onClose: () => void }
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#374151', marginBottom: '8px' }}>Catégorie</label>
               <select 
+                id="rfq-category"
+                name="category"
                 value={formData.category}
                 onChange={e => setFormData({ ...formData, category: e.target.value })}
                 style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E5E7EB', outline: 'none', fontSize: '14px', background: '#fff' }}
@@ -97,6 +101,8 @@ export default function MarketplaceRFQModal({ onClose }: { onClose: () => void }
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#374151', marginBottom: '8px' }}>Quantité</label>
               <input 
+                id="rfq-quantity"
+                name="quantity"
                 required
                 type="number" 
                 min="1"
@@ -109,6 +115,8 @@ export default function MarketplaceRFQModal({ onClose }: { onClose: () => void }
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#374151', marginBottom: '8px' }}>Budget estimé (DT)</label>
               <input 
+                id="rfq-budget"
+                name="budget"
                 type="number" 
                 placeholder="Optionnel"
                 value={formData.budget}
@@ -120,6 +128,8 @@ export default function MarketplaceRFQModal({ onClose }: { onClose: () => void }
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#374151', marginBottom: '8px' }}>Date limite souhaitée</label>
               <input 
+                id="rfq-deadline"
+                name="deadline"
                 type="date" 
                 value={formData.deadline}
                 onChange={e => setFormData({ ...formData, deadline: e.target.value })}
@@ -130,6 +140,8 @@ export default function MarketplaceRFQModal({ onClose }: { onClose: () => void }
             <div style={{ gridColumn: 'span 2' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#374151', marginBottom: '8px' }}>Description détaillée</label>
               <textarea 
+                id="rfq-description"
+                name="description"
                 required
                 rows={4}
                 placeholder="Spécifiez les caractéristiques techniques, la provenance, le conditionnement..."

@@ -173,6 +173,8 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
                   style={{ flex: 1, display: 'flex', maxWidth: '800px', border: '3px solid #E31E24', borderRadius: '100px', overflow: 'hidden', height: '48px', background: '#fff' }}
                 >
                   <select 
+                    id="search-scope-select"
+                    name="scope"
                     value={searchScope}
                     onChange={(e) => setSearchScope(e.target.value)}
                     style={{ padding: '0 15px', background: '#F9FAFB', borderRight: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', border: 'none', fontWeight: 700, fontSize: '13px', outline: 'none' }}
@@ -182,6 +184,8 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
                     <option value="CATEGORY">Catégories</option>
                   </select>
                   <select 
+                    id="search-radius-select"
+                    name="radius"
                     value={radius}
                     onChange={(e) => {
                       const newRadius = e.target.value;
@@ -201,6 +205,8 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
                     <option value="500">Rayon 500 km</option>
                   </select>
                   <input 
+                    id="marketplace-search-input"
+                    name="q"
                     type="text" 
                     placeholder="Quel produit cherchez-vous ?" 
                     value={searchQuery}
