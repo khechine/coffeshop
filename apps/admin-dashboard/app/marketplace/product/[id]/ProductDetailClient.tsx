@@ -7,12 +7,14 @@ import {
   Truck, RefreshCw, Plus, Minus, MessageSquare,
   ChevronRight, Building2, LayoutGrid, ShoppingBag,
   Heart, Share2, Play, CheckCircle2, ChevronDown, 
-  MapPin, Globe, Headphones, ArrowUp, ChevronLeft
+  MapPin, Globe, Headphones, ArrowUp, ChevronLeft, X
 } from 'lucide-react';
 import { useCart } from '../../CartContext';
 import MarketplaceHeader from '../../components/MarketplaceHeader';
 import MarketplaceFooter from '../../components/MarketplaceFooter';
 import { sanitizeUrl } from '../../../lib/imageUtils';
+import { sendTradeMessageAction } from '../../../actions';
+
 
 const fmt = (n: any) => Number(n).toFixed(2);
 
@@ -24,6 +26,31 @@ export default function ProductDetailClient({ product, isVendor = false, related
   const imageUrl = sanitizeUrl(product.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800';
   const gallery = [imageUrl, ...(product.images || []).map((img: string) => sanitizeUrl(img))].filter(Boolean);
   const [activeImage, setActiveImage] = useState(gallery[0]);
+
+  const [tradeMessagerOpen, setTradeMessagerOpen] = useState(false);
+  const [tradeMessage, setTradeMessage] = useState('');
+  const [isSendingMsg, setIsSendingMsg] = useState(false);
+
+  const handleSendTradeMessage = async () => {
+    if (!tradeMessage.trim()) return;
+    setIsSendingMsg(true);
+    try {
+      const res = await sendTradeMessageAction({
+        receiverId: product.vendor?.userId || '',
+        productId: product.id,
+        content: tradeMessage
+      });
+      if (res.success) {
+        alert("Message envoyé ! Les coordonnées personnelles ont été masquées selon nos conditions.");
+        setTradeMessagerOpen(false);
+        setTradeMessage('');
+      }
+    } catch (e: any) {
+      alert("Erreur lors de l'envoi du message : " + e.message);
+    } finally {
+      setIsSendingMsg(false);
+    }
+  };
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -367,9 +394,42 @@ export default function ProductDetailClient({ product, isVendor = false, related
       </main>
 
       {/* Floating Messenger Bar */}
-      <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '12px' }}>
-         <button style={{ height: '48px', padding: '0 24px', background: '#fff', border: 'none', borderRadius: '100px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 800, fontSize: '14px' }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#2563EB' }} />
+      <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '16px' }}>
+         {tradeMessagerOpen && (
+           <div style={{ width: '380px', background: '#fff', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' }}>
+             <div style={{ background: '#111827', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                 <MessageSquare size={18} />
+                 <span style={{ fontWeight: 800 }}>TradeMessager</span>
+               </div>
+               <button onClick={() => setTradeMessagerOpen(false)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer' }}><X size={18} /></button>
+             </div>
+             <div style={{ padding: '20px', flex: 1, background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+               <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '16px', background: '#FEF2F2', padding: '12px', borderRadius: '8px', border: '1px solid #FEE2E2' }}>
+                 <strong style={{ color: '#E31E24' }}>Sécurité B2B :</strong> Les numéros de téléphone et adresses emails sont automatiquement filtrés pour garantir la sécurité des transactions sur la plateforme.
+               </div>
+               <p style={{ fontSize: '14px', fontWeight: 600, color: '#374151', margin: '0 0 8px 0' }}>Sujet : {product.name}</p>
+               <p style={{ fontSize: '12px', color: '#6B7280', margin: 0 }}>Vendeur : {product.vendor?.name}</p>
+             </div>
+             <div style={{ padding: '16px', background: '#fff' }}>
+               <textarea 
+                 value={tradeMessage}
+                 onChange={e => setTradeMessage(e.target.value)}
+                 placeholder="Posez vos questions techniques, demandez un devis sur-mesure..."
+                 style={{ width: '100%', height: '100px', padding: '12px', borderRadius: '12px', border: '1px solid #E5E7EB', fontSize: '14px', resize: 'none', outline: 'none' }}
+               />
+               <button 
+                 onClick={handleSendTradeMessage}
+                 disabled={isSendingMsg || !tradeMessage.trim()}
+                 style={{ width: '100%', padding: '12px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 800, marginTop: '12px', cursor: isSendingMsg || !tradeMessage.trim() ? 'not-allowed' : 'pointer', opacity: isSendingMsg || !tradeMessage.trim() ? 0.5 : 1 }}
+               >
+                 {isSendingMsg ? 'Envoi...' : 'Envoyer le message'}
+               </button>
+             </div>
+           </div>
+         )}
+         <button onClick={() => setTradeMessagerOpen(!tradeMessagerOpen)} style={{ height: '48px', padding: '0 24px', background: '#111827', color: '#fff', border: 'none', borderRadius: '100px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 800, fontSize: '14px' }}>
+            <MessageSquare size={16} />
             TradeMessager
          </button>
       </div>

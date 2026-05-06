@@ -13,6 +13,8 @@ import MarketplaceHeader from '../../components/MarketplaceHeader';
 import MarketplaceFooter from '../../components/MarketplaceFooter';
 import MarketplaceProductCard from '../../components/MarketplaceProductCard';
 import { sanitizeUrl } from '../../../lib/imageUtils';
+import { sendTradeMessageAction } from '../../../actions';
+
 
 const fmt = (n: any) => Number(n).toFixed(2);
 
@@ -22,6 +24,30 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
   const [activeCollection, setActiveCollection] = useState<Record<string, string>>({});
   const { addToCart } = useCart();
   
+  const [tradeMessagerOpen, setTradeMessagerOpen] = useState(false);
+  const [tradeMessage, setTradeMessage] = useState('');
+  const [isSendingMsg, setIsSendingMsg] = useState(false);
+
+  const handleSendTradeMessage = async () => {
+    if (!tradeMessage.trim()) return;
+    setIsSendingMsg(true);
+    try {
+      const res = await sendTradeMessageAction({
+        receiverId: vendor.userId,
+        content: tradeMessage
+      });
+      if (res.success) {
+        alert("Message envoyé ! Les coordonnées personnelles ont été masquées selon nos conditions.");
+        setTradeMessagerOpen(false);
+        setTradeMessage('');
+      }
+    } catch (e: any) {
+      alert("Erreur lors de l'envoi du message : " + e.message);
+    } finally {
+      setIsSendingMsg(false);
+    }
+  };
+
   const isPremium = vendor.isPremium;
   const cust = vendor.customization || {};
   const primaryColor = isPremium ? (cust.primaryColor || '#E31E24') : '#111827';
@@ -30,7 +56,7 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
   const logoUrl = sanitizeUrl(cust.logoUrl);
   const bannerUrl = sanitizeUrl(cust.bannerUrl) || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600';
 
-  const products = vendor.vendorProducts.map((vp: any) => ({
+  const products = (vendor.vendorProducts || []).map((vp: any) => ({
     id: vp.id,
     name: vp.name || vp.productStandard?.name,
     price: vp.price,
@@ -117,19 +143,52 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: '#2563EB' }}>
                     <ShieldCheck size={14} /> Diamond Member
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                     <img src="https://img.made-in-china.com/2f0j00fSvaGZlKEnbe/Audited-Supplier.jpg" alt="Audited" style={{ height: '14px' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#FEF2F2', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, color: '#E31E24' }}>
+                     AUDITÉ
                   </div>
                   <div style={{ display: 'flex', gap: '2px' }}>
                      {[1,2,3,4].map(i => <Star key={i} size={12} fill="#F59E0B" color="#F59E0B" />)}
                   </div>
                </div>
             </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '12px', position: 'relative' }}>
                <button style={{ height: '32px', padding: '0 16px', border: `1px solid ${primaryColor}`, color: primaryColor, borderRadius: '4px', background: 'transparent', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>Send Inquiry</button>
-               <button style={{ height: '32px', padding: '0 16px', border: 'none', color: '#fff', borderRadius: '100px', background: '#2563EB', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                 <MessageCircle size={14} /> Chat Now
+               <button onClick={() => setTradeMessagerOpen(!tradeMessagerOpen)} style={{ height: '32px', padding: '0 16px', border: 'none', color: '#fff', borderRadius: '100px', background: '#2563EB', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                 <MessageCircle size={14} /> TradeMessager
                </button>
+               
+               {tradeMessagerOpen && (
+                 <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', zIndex: 1000, width: '380px', background: '#fff', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' }}>
+                   <div style={{ background: '#111827', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                       <MessageCircle size={18} />
+                       <span style={{ fontWeight: 800 }}>TradeMessager</span>
+                     </div>
+                     <button onClick={() => setTradeMessagerOpen(false)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer' }}><X size={18} /></button>
+                   </div>
+                   <div style={{ padding: '20px', flex: 1, background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+                     <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '16px', background: '#FEF2F2', padding: '12px', borderRadius: '8px', border: '1px solid #FEE2E2' }}>
+                       <strong style={{ color: '#E31E24' }}>Sécurité B2B :</strong> Les numéros de téléphone et adresses emails sont automatiquement filtrés pour garantir la sécurité des transactions sur la plateforme.
+                     </div>
+                     <p style={{ fontSize: '14px', fontWeight: 600, color: '#374151', margin: 0 }}>Vendeur : {vendor.companyName}</p>
+                   </div>
+                   <div style={{ padding: '16px', background: '#fff' }}>
+                     <textarea 
+                       value={tradeMessage}
+                       onChange={e => setTradeMessage(e.target.value)}
+                       placeholder="Posez vos questions techniques, demandez un devis sur-mesure..."
+                       style={{ width: '100%', height: '100px', padding: '12px', borderRadius: '12px', border: '1px solid #E5E7EB', fontSize: '14px', resize: 'none', outline: 'none' }}
+                     />
+                     <button 
+                       onClick={handleSendTradeMessage}
+                       disabled={isSendingMsg || !tradeMessage.trim()}
+                       style={{ width: '100%', padding: '12px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 800, marginTop: '12px', cursor: isSendingMsg || !tradeMessage.trim() ? 'not-allowed' : 'pointer', opacity: isSendingMsg || !tradeMessage.trim() ? 0.5 : 1 }}
+                     >
+                       {isSendingMsg ? 'Envoi...' : 'Envoyer le message'}
+                     </button>
+                   </div>
+                 </div>
+               )}
             </div>
          </div>
       </div>

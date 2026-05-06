@@ -1400,6 +1400,11 @@ export async function createMarketplaceRFQ(data: {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
 
+  const config = await (prisma as any).marketplaceConfig.findUnique({ where: { id: "default" } });
+  const hours = config?.rfqExpirationHours || 48;
+  const expiresAt = new Date();
+  expiresAt.setHours(expiresAt.getHours() + hours);
+
   return await (prisma as any).marketplaceRFQ.create({
     data: {
       storeId: store.id,
@@ -1409,6 +1414,7 @@ export async function createMarketplaceRFQ(data: {
       quantity: data.quantity,
       budget: data.budget,
       deadline: data.deadline ? new Date(data.deadline) : null,
+      expiresAt: expiresAt,
     }
   });
 }
@@ -5149,6 +5155,145 @@ export async function updateBlogPost(id: string, data: {
 
 export async function deleteBlogPost(id: string) {
   'use server';
-  await prisma.marketplaceBlogPost.delete({ where: { id } });
+  await (prisma as any).marketplaceBlogPost.delete({ where: { id } });
+  return { success: true };
+}
+
+// ─── TradeMessager ──────────────────────────────────────────────────────
+
+export async function sendTradeMessageAction(data: { receiverId: string; productId?: string; content: string }) {
+  'use server';
+  const cookieStore = cookies();
+  const userId = cookieStore.get('userId')?.value;
+
+  if (!userId) {
+    throw new Error('Session expirée.');
+  }
+
+  // Basic filtering for personal info (emails, phones)
+  const phoneRegex = /(?:\+?216|00216)?[234579]\d{7}/g;
+  const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/g;
+
+  let isFiltered = false;
+  let filteredContent = data.content;
+
+  if (phoneRegex.test(data.content) || emailRegex.test(data.content)) {
+    isFiltered = true;
+    filteredContent = data.content.replace(phoneRegex, '[TÉLÉPHONE MASQUÉ]').replace(emailRegex, '[EMAIL MASQUÉ]');
+  }
+
+  const message = await (prisma as any).tradeMessage.create({
+    data: {
+      senderId: userId,
+      receiverId: data.receiverId,
+      productId: data.productId,
+      content: data.content,
+      isFiltered,
+      filteredContent
+    }
+  });
+
+  return { success: true, message };
+}
+
+export async function getTradeMessagesAction(otherUserId: string) {
+  'use server';
+  const cookieStore = cookies();
+  const userId = cookieStore.get('userId')?.value;
+
+  if (!userId) {
+    throw new Error('Session expirée.');
+  }
+
+  const messages = await (prisma as any).tradeMessage.findMany({
+    where: {
+      OR: [
+        { senderId: userId, receiverId: otherUserId },
+        { senderId: otherUserId, receiverId: userId }
+      ]
+    },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      product: { select: { name: true, image: true, id: true } },
+      sender: { select: { name: true, role: true } }
+    }
+  });
+
+  return messages;
+}
+
+// ─── RFQ Acceptation & Commission ─────────────────────────────────────────
+
+export async function acceptMarketplaceQuoteAction(quoteId: string) {
+  'use server';
+  const cookieStore = cookies();
+  const storeId = cookieStore.get('storeId')?.value;
+  if (!storeId) throw new Error('Store session required to accept RFQ');
+
+  const quote = await (prisma as any).marketplaceQuote.findUnique({
+    where: { id: quoteId },
+    include: { rfq: true, vendor: true }
+  });
+
+  if (!quote) throw new Error('Quote not found');
+  if (quote.rfq.storeId !== storeId) throw new Error('Not authorized to accept this RFQ');
+  if (quote.status === 'ACCEPTED') throw new Error('Quote already accepted');
+
+  // Fetch config for commission rate
+  const config = await (prisma as any).marketplaceConfig.findUnique({ where: { id: "default" } });
+  const rate = Number(config?.rfqCommissionRate || 2.5);
+  
+  const price = Number(quote.price);
+  const qty = Number(quote.rfq.quantity || 1);
+  const totalAmount = price * qty;
+  const commissionAmount = (totalAmount * rate) / 100;
+
+  // Check vendor wallet
+  const wallet = await (prisma as any).vendorWallet.findUnique({ where: { vendorId: quote.vendorId } });
+  if (!wallet) throw new Error('Vendor wallet not found');
+  
+  if (Number(wallet.balance) < commissionAmount) {
+    throw new Error("Le vendeur n'a pas assez de fonds dans son wallet pour couvrir la commission de cette offre.");
+  }
+
+  // Deduct from wallet
+  await (prisma as any).vendorWallet.update({
+    where: { id: wallet.id },
+    data: { balance: { decrement: commissionAmount } }
+  });
+
+  // Log transaction
+  await (prisma as any).walletTransaction.create({
+    data: {
+      walletId: wallet.id,
+      amount: -commissionAmount,
+      type: 'FEE',
+      description: `Commission RFQ (Taux: ${rate}%) - ${quote.rfq.title}`,
+      status: 'COMPLETED'
+    }
+  });
+
+  // Update Quote and RFQ
+  await (prisma as any).marketplaceQuote.update({
+    where: { id: quoteId },
+    data: {
+      status: 'ACCEPTED',
+      commissionRate: rate,
+      commissionAmount: commissionAmount,
+      commissionDeducted: true
+    }
+  });
+
+  await (prisma as any).marketplaceRFQ.update({
+    where: { id: quote.rfqId },
+    data: { status: 'FULFILLED' }
+  });
+
+  // Reject all other quotes
+  await (prisma as any).marketplaceQuote.updateMany({
+    where: { rfqId: quote.rfqId, id: { not: quoteId } },
+    data: { status: 'REJECTED' }
+  });
+
   return { success: true };
 }
