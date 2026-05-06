@@ -5313,3 +5313,46 @@ export async function acceptMarketplaceQuoteAction(quoteId: string) {
 
   return { success: true };
 }
+
+export async function getMarketplaceConfig() {
+  let config = await (prisma as any).marketplaceConfig.findUnique({
+    where: { id: "default" }
+  });
+  
+  if (!config) {
+    config = await (prisma as any).marketplaceConfig.create({
+      data: {
+        id: "default",
+        rfqExpirationHours: 48,
+        rfqCommissionRate: 2.5
+      }
+    });
+  }
+  
+  return JSON.parse(JSON.stringify(config));
+}
+
+export async function updateMarketplaceConfig(data: { rfqExpirationHours?: number, rfqCommissionRate?: number }) {
+  const cookieStore = cookies();
+  const userId = cookieStore.get('userId')?.value;
+  if (!userId) throw new Error('Non autorisé');
+  
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  const config = await (prisma as any).marketplaceConfig.upsert({
+    where: { id: "default" },
+    update: {
+      rfqExpirationHours: data.rfqExpirationHours,
+      rfqCommissionRate: data.rfqCommissionRate
+    },
+    create: {
+      id: "default",
+      rfqExpirationHours: data.rfqExpirationHours || 48,
+      rfqCommissionRate: data.rfqCommissionRate || 2.5
+    }
+  });
+
+  revalidatePath('/superadmin/marketplace');
+  return JSON.parse(JSON.stringify(config));
+}
