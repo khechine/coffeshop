@@ -171,8 +171,8 @@ export default function ProductDetailClient({ product, isVendor = false, related
                 >
                   {isVendor ? 'Contacter Vendeur' : 'Ajouter au Panier'}
                 </button>
-                <button style={{ flex: 1, height: '56px', background: '#fff', color: '#111827', border: '1px solid #E5E7EB', borderRadius: '100px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#2563EB' }} />
+                <button style={{ flex: 1, height: '56px', background: '#fff', color: '#111827', border: '2px solid #F1F5F9', borderRadius: '100px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
+                  <MessageSquare size={18} className="text-indigo-600" />
                   Discuter
                 </button>
               </div>

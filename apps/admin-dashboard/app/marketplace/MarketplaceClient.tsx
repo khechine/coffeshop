@@ -869,7 +869,8 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                       </div>
                       <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', marginBottom: '16px' }}>TradeMessager</h3>
                       <p style={{ fontSize: '15px', color: '#6B7280', lineHeight: 1.6, marginBottom: '32px', minHeight: '80px' }}>
-                        En tant que logiciel de messagerie instantanée, il permet de communiquer de manière aussi succincte, efficace et efficace que possible.
+                        Communiquez en toute sécurité avec les fournisseurs pour valider vos stocks et spécificités techniques. 
+                        Négociez vos conditions de sourcing sans partager vos coordonnées personnelles.
                       </p>
                       <button style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', fontSize: '14px', fontWeight: 700, color: '#111827', cursor: 'pointer' }}>
                         Voir plus <ArrowRight size={16} />
