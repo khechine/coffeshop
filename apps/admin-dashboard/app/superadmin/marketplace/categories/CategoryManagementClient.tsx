@@ -230,6 +230,19 @@ export default function CategoryManagementClient({
                 className="w-full h-[46px] p-1 rounded-2xl bg-white dark:bg-slate-950 border-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
+            <div className="space-y-2 md:col-span-2 lg:col-span-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Catégorie Parente</label>
+              <select 
+                value={newParentId}
+                onChange={e => setNewParentId(e.target.value)}
+                className="w-full px-5 py-3 rounded-2xl bg-white dark:bg-slate-950 border-none font-bold text-sm focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">-- Aucune (Racine) --</option>
+                {categoryTree.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="mt-8 flex justify-end gap-4">
             <button onClick={() => setIsCreating(false)} className="px-6 py-3 text-slate-400 font-black text-sm uppercase">Annuler</button>
@@ -321,7 +334,12 @@ export default function CategoryManagementClient({
                       </div>
                     ) : (
                       <>
-                        <div className="flex-1 flex items-center gap-2">
+                        <div className="flex-1 flex items-center gap-4">
+                          {child.image && (
+                            <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 dark:border-slate-800 shrink-0">
+                              <img src={child.image} className="w-full h-full object-cover" alt="" />
+                            </div>
+                          )}
                           <span className="text-sm font-black text-slate-600 dark:text-slate-400">{child.name}</span>
                         </div>
                         {migratingSubId === child.id ? (

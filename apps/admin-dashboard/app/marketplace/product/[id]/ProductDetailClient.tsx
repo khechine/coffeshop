@@ -45,7 +45,9 @@ export default function ProductDetailClient({ product, isVendor = false, related
           <ChevronRight size={14} />
           <Link href={`/marketplace/category/${product.category?.slug || product.categoryId}`} style={{ color: '#6B7280', textDecoration: 'none' }}>{product.category?.name || 'Catégorie'}</Link>
           <ChevronRight size={14} />
-          <span style={{ color: '#111827', fontWeight: 600 }}>Détail Produit</span>
+          <span style={{ color: '#111827', fontWeight: 600, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {product.name}
+          </span>
         </nav>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 500px', gap: '48px', alignItems: 'start', marginBottom: '48px' }}>
@@ -132,12 +134,42 @@ export default function ProductDetailClient({ product, isVendor = false, related
                 )}
               </div>
 
+              {!isVendor && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', background: '#F9FAFB', padding: '12px 20px', borderRadius: '12px', width: 'fit-content' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#6B7280' }}>Quantité:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                     <button 
+                      onClick={() => setQty(Math.max(1, qty - 1))}
+                      style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #E5E7EB', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                     >
+                       <Minus size={16} />
+                     </button>
+                     <span style={{ fontSize: '18px', fontWeight: 800, color: '#111827', minWidth: '20px', textAlign: 'center' }}>{qty}</span>
+                     <button 
+                      onClick={() => setQty(qty + 1)}
+                      style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #E5E7EB', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                     >
+                       <Plus size={16} />
+                     </button>
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
                 <button 
-                  onClick={() => addToCart(product)}
+                  onClick={() => {
+                    addToCart(product, qty);
+                    const btn = document.getElementById('add-to-cart-btn');
+                    if (btn) {
+                      const oldText = btn.innerText;
+                      btn.innerText = 'Ajouté !';
+                      setTimeout(() => { btn.innerText = oldText; }, 2000);
+                    }
+                  }}
+                  id="add-to-cart-btn"
                   style={{ flex: 1, height: '56px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '100px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', transition: 'opacity 0.2s' }}
                 >
-                  Envoyer demande
+                  {isVendor ? 'Contacter Vendeur' : 'Ajouter au Panier'}
                 </button>
                 <button style={{ flex: 1, height: '56px', background: '#fff', color: '#111827', border: '1px solid #E5E7EB', borderRadius: '100px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#2563EB' }} />
@@ -151,26 +183,31 @@ export default function ProductDetailClient({ product, isVendor = false, related
             </div>
 
             {/* Product Details Section */}
-            <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#111827' }}>Détails du Produit</h2>
-                <ChevronRight size={18} color="#9CA3AF" />
-              </div>
+            {(product.description || product.specifications) && (
+              <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                  <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#111827' }}>Détails du Produit</h2>
+                  <ChevronRight size={18} color="#9CA3AF" />
+                </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {[
-                  { label: 'Personnalisation:', value: 'Disponible' },
-                  { label: 'Certificat:', value: 'ISO, FDA' },
-                  { label: 'Méthode de dosage:', value: 'HPLC' },
-                  { label: 'Pureté:', value: '98%+' },
-                ].map((item, i) => (
-                  <div key={i} style={{ display: 'flex', fontSize: '14px' }}>
-                    <span style={{ width: '150px', color: '#6B7280', fontWeight: 600 }}>{item.label}</span>
-                    <span style={{ color: '#111827', fontWeight: 700 }}>{item.value}</span>
+                {product.description && (
+                  <div style={{ fontSize: '14px', color: '#4B5563', lineHeight: 1.6, marginBottom: '24px' }}>
+                    {product.description}
                   </div>
-                ))}
+                )}
+
+                {product.specifications && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {Object.entries(product.specifications).map(([key, value]: any) => (
+                      <div key={key} style={{ display: 'flex', fontSize: '14px' }}>
+                        <span style={{ width: '150px', color: '#6B7280', fontWeight: 600 }}>{key}:</span>
+                        <span style={{ color: '#111827', fontWeight: 700 }}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
+            )}
 
             {/* Vendor Card */}
             <div style={{ background: '#F9FAFB', borderRadius: '16px', padding: '24px', border: '1px solid #F1F5F9' }}>
@@ -227,57 +264,85 @@ export default function ProductDetailClient({ product, isVendor = false, related
                 style={{ 
                   display: 'flex', 
                   gap: '24px', 
-                  overflowX: 'hidden', 
+                  overflowX: 'auto', 
                   scrollBehavior: 'smooth',
-                  padding: '4px'
+                  padding: '12px 4px',
+                  scrollbarWidth: 'none',
                 }}
+                className="no-scrollbar"
               >
                 {relatedProducts.map((p, i) => (
                   <Link 
                     key={p.id} 
                     href={`/marketplace/product/${p.id}`}
                     style={{ 
-                      flex: '0 0 calc(20% - 20px)', 
+                      flex: '0 0 240px', 
                       display: 'flex', 
                       flexDirection: 'column', 
-                      alignItems: 'center', 
                       gap: '16px', 
                       cursor: 'pointer',
-                      textDecoration: 'none'
+                      textDecoration: 'none',
+                      background: '#fff',
+                      padding: '16px',
+                      borderRadius: '16px',
+                      border: '1px solid #F1F5F9',
+                      transition: 'all 0.3s'
                     }}
+                    className="hover-shadow-premium"
                   >
                     <div style={{ 
                       width: '100%', 
                       aspectRatio: '1/1', 
                       background: '#F9FAFB', 
-                      borderRadius: '8px', 
+                      borderRadius: '12px', 
                       overflow: 'hidden', 
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center', 
-                      padding: '20px',
-                      border: '1px solid #F1F5F9'
+                      padding: '12px'
                     }}>
                       <img 
                         src={sanitizeUrl(p.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=200'} 
-                        alt={p.name} 
-                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+                        alt={p.name || ''} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                       />
                     </div>
-                    <span style={{ 
-                      fontSize: '13px', 
-                      color: '#111827', 
-                      fontWeight: 600, 
-                      textAlign: 'center', 
-                      display: '-webkit-box', 
-                      WebkitLineClamp: 2, 
-                      WebkitBoxOrient: 'vertical', 
-                      overflow: 'hidden', 
-                      lineHeight: 1.4,
-                      height: '36px'
-                    }}>
-                      {p.name}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {p.category?.name || 'Catégorie'}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: '#FEF2F2', padding: '2px 6px', borderRadius: '4px' }}>
+                          <Star size={10} fill="#E31E24" color="#E31E24" />
+                          <span style={{ fontSize: '10px', fontWeight: 800, color: '#E31E24' }}>4.8</span>
+                        </div>
+                      </div>
+                      <span style={{ 
+                        fontSize: '14px', 
+                        color: '#111827', 
+                        fontWeight: 700, 
+                        display: '-webkit-box', 
+                        WebkitLineClamp: 2, 
+                        WebkitBoxOrient: 'vertical', 
+                        overflow: 'hidden', 
+                        lineHeight: 1.3,
+                        minHeight: '36px'
+                      }}>
+                        {(p.name || '').split(' - ')[0].split(' #')[0] || 'Produit'}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px', marginBottom: '4px' }}>
+                        <Building2 size={12} color="#94A3B8" />
+                        <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>{p.vendor?.companyName || 'Vendeur Premium'}</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '16px', fontWeight: 900, color: '#111827' }}>
+                          {isVendor ? 'Prix sur demande' : `${fmt(p.price)} DT`}
+                        </span>
+                        <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>
+                          {p.minOrderQty} {p.unit || 'pièce'}(s) (MOQ)
+                        </span>
+                      </div>
+                    </div>
                   </Link>
                 ))}
               </div>
@@ -310,6 +375,21 @@ export default function ProductDetailClient({ product, isVendor = false, related
       </div>
 
       <MarketplaceFooter />
+
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .hover-shadow-premium:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          border-color: #E31E24 !important;
+        }
+      `}</style>
     </div>
   );
 }

@@ -144,24 +144,24 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
               href={`/marketplace/vendor/${product.vendorId}`}
               style={{ fontSize: '13px', color: '#111827', fontWeight: 700, textDecoration: 'underline', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}
             >
-              {product.vendor?.companyName || 'Supplier Co., Ltd'}
-            </Link>
-            {product.distance !== null && (
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#E31E24', background: '#FEF2F2', padding: '2px 6px', borderRadius: '4px' }}>
-                {product.distance < 1 ? '< 1 km' : `${Math.round(product.distance)} km`}
-              </span>
-            )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-               <img src="https://img.made-in-china.com/2f0j00fSvaGZlKEnbe/Audited-Supplier.jpg" alt="Audited" style={{ height: '14px' }} />
-               <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB' }}>Audited</span>
-             </div>
-             {product.vendor?.city && (
-               <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 600 }}>• {product.vendor.city}</span>
-             )}
-          </div>
+            {product.vendor?.companyName}
+          </Link>
+          {product.distance !== null && product.distance !== undefined && !isNaN(Number(product.distance)) && Number(product.distance) > 0 && (
+            <span style={{ fontSize: '11px', fontWeight: 800, color: '#E31E24', background: '#FEF2F2', padding: '2px 6px', borderRadius: '4px' }}>
+              {Number(product.distance) < 1 ? '< 1 km' : `${Math.round(Number(product.distance))} km`}
+            </span>
+          )}
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+             <img src="https://img.made-in-china.com/2f0j00fSvaGZlKEnbe/Audited-Supplier.jpg" alt="Audited" style={{ height: '14px' }} />
+             <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB' }}>Vérifié</span>
+           </div>
+           {product.vendor?.city && (
+             <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 600 }}>• {product.vendor.city}</span>
+           )}
+        </div>
+      </div>
       </div>
 
       <style jsx>{`

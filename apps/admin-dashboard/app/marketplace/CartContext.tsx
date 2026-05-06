@@ -18,7 +18,7 @@ interface CartItem {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: any) => void;
+  addToCart: (product: any, quantity?: number) => void;
   updateQty: (id: string, delta: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
@@ -60,10 +60,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cart, isLoaded]);
 
-  const addToCart = (p: any) => {
+  const addToCart = (p: any, q: number = 1) => {
     setCart(prev => {
       const ex = prev.find(i => i.id === p.id);
-      if (ex) return prev.map(i => i.id === p.id ? { ...i, quantity: i.quantity + 1 } : i);
+      if (ex) return prev.map(i => i.id === p.id ? { ...i, quantity: i.quantity + q } : i);
       
       const vendorInfo = p.vendor || p.vendorInfo;
       return [...prev, { 
@@ -72,7 +72,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         price: Number(p.price), 
         image: p.image, 
         unit: p.unit,
-        quantity: 1, 
+        quantity: q, 
         vendor: vendorInfo ? { id: vendorInfo.id, companyName: vendorInfo.companyName } : undefined
       }];
     });

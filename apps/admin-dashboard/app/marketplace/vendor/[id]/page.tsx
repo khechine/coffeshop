@@ -21,7 +21,13 @@ export default async function VendorStorefrontPage({ params }: { params: { id: s
     }
   });
 
-  const allCategories = await (prisma as any).marketplaceCategory.findMany();
+  const [mktCats, legacyCats, internalCats] = await Promise.all([
+    (prisma as any).marketplaceCategory.findMany(),
+    (prisma as any).mktCategory.findMany(),
+    (prisma as any).category.findMany()
+  ]);
+
+  const allCategories = [...mktCats, ...legacyCats, ...internalCats];
 
   if (!vendor) return notFound();
 

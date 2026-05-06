@@ -10,13 +10,14 @@ import {
   Users, ArrowRight, Grid, Camera, Star,
   CheckCircle2, Globe, Rocket, Heart, ShoppingCart,
   Target, ShieldAlert, Zap, Headphones, ArrowUp,
-  FileText, Calendar, Leaf
+  FileText, Calendar, Leaf, MapPin, Award
 } from 'lucide-react';
 import MarketplaceProductCard from './components/MarketplaceProductCard';
 import MarketplaceHeader from './components/MarketplaceHeader';
 import MarketplaceFooter from './components/MarketplaceFooter';
 import MarketplaceRFQModal from './components/MarketplaceRFQModal';
 import MarketplaceMobile from './components/MarketplaceMobile';
+import MarketplaceReferralModal from './components/MarketplaceReferralModal';
 
 const normalize = (str: string) => {
   if (!str) return '';
@@ -58,6 +59,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
   const [shuffledTags, setShuffledTags] = useState<string[]>([]);
   const [homeTab, setHomeTab] = useState('Top Ventes');
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
+  const [showReferralModal, setShowReferralModal] = useState(false);
   
   // Advanced Filters State
   const [minPrice, setMinPrice] = useState<string>('');
@@ -607,21 +609,42 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div style={{ background: '#fff', borderRadius: '20px', padding: '24px', flex: 1, border: '1px solid #E31E24', borderLeftWidth: '6px' }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#111827', marginBottom: '12px' }}>Service Sécurisé</h3>
-                      <p style={{ fontSize: '13px', color: '#6B7280', lineHeight: 1.5, marginBottom: '20px' }}>Protection complète de vos paiements et garantie de conformité des produits.</p>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                         {[1,2,3].map(i => <div key={i} style={{ width: '40px', height: '40px', background: '#F3F4F6', borderRadius: '8px' }} />)}
+                      <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#111827', marginBottom: '12px' }}>Sourcing Garanti</h3>
+                      <p style={{ fontSize: '13px', color: '#6B7280', lineHeight: 1.5, marginBottom: '20px' }}>Accès exclusif à des fournisseurs vérifiés et accompagnement personnalisé pour vos achats B2B.</p>
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                         <div style={{ width: '40px', height: '40px', background: '#FEF2F2', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E31E24' }}>
+                           <ShieldCheck size={24} />
+                         </div>
+                         <div style={{ width: '40px', height: '40px', background: '#F0F9FF', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284C7' }}>
+                           <CheckCircle2 size={24} />
+                         </div>
+                         <div style={{ width: '40px', height: '40px', background: '#F0FDF4', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16A34A' }}>
+                           <Award size={24} />
+                         </div>
                       </div>
                     </div>
-                    <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)', borderRadius: '20px', padding: '24px', color: '#fff', flex: 1 }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '12px' }}>RFQ Express</h3>
-                      <p style={{ fontSize: '13px', opacity: 0.8, lineHeight: 1.5, marginBottom: '20px' }}>Dites-nous ce dont vous avez besoin et recevez des devis en moins de 24h.</p>
-                      <button style={{ width: '100%', background: '#fff', color: '#1E1B4B', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}>
-                        Demander Devis
+                    <div style={{ background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)', borderRadius: '20px', padding: '24px', color: '#fff', flex: 1, position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ position: 'absolute', right: '-10px', top: '-10px', opacity: 0.2 }}>
+                         <Users size={80} />
+                      </div>
+                      <h3 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '12px', position: 'relative' }}>Parrainez un Pro</h3>
+                      <p style={{ fontSize: '13px', opacity: 0.9, lineHeight: 1.5, marginBottom: '20px', position: 'relative' }}>Invitez un confrère sur ElKassa et profitez d'avantages exclusifs sur vos prochaines commandes.</p>
+                      <button 
+                        onClick={() => setShowReferralModal(true)}
+                        style={{ width: '100%', background: '#fff', color: '#4F46E5', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', position: 'relative' }}
+                      >
+                        Inviter maintenant
                       </button>
                     </div>
                   </div>
                 </div>
+
+                {showReferralModal && (
+                  <MarketplaceReferralModal 
+                    onClose={() => setShowReferralModal(false)} 
+                    userEmail={isVendor ? "vendeur@elkassa.tn" : "client@elkassa.tn"} // Fallback placeholder
+                  />
+                )}
 
                 {/* Trusted Suppliers / Features */}
                 <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
@@ -738,50 +761,74 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
               {historyProducts.length > 0 && (
                 <section>
                   <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', marginBottom: '24px' }}>Basé sur votre Navigation</h2>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '20px' }}>
-                    {historyProducts.map((p: any) => (
-                      <Link 
-                        key={p.id} 
-                        href={`/marketplace/product/${p.id}`}
-                        style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textDecoration: 'none' }}
-                      >
-                        <div style={{ 
-                          width: '140px', 
-                          height: '140px', 
-                          borderRadius: '50%', 
-                          overflow: 'hidden', 
-                          background: '#fff', 
-                          boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
-                          border: '1px solid #F1F5F9',
-                          transition: 'transform 0.3s',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  <div style={{ display: 'flex', gap: '24px', overflowX: 'auto', paddingBottom: '16px', scrollbarWidth: 'none' }}>
+                    {Array.from(new Map(historyProducts.map((p: any) => [p.id, p])).values()).map((p: any) => {
+                      const cleanName = p.name.split(' - ')[0].split(' #')[0];
+                      return (
+                        <Link 
+                          key={p.id} 
+                          href={`/marketplace/product/${p.id}`}
+                          style={{ flex: '0 0 auto', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textDecoration: 'none', width: '160px' }}
                         >
-                          <img 
-                            src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=200'} 
-                            alt={p.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                        </div>
-                        <span style={{ 
-                          fontSize: '13px', 
-                          fontWeight: 700, 
-                          color: '#1F2937', 
-                          maxWidth: '130px', 
-                          display: '-webkit-box', 
-                          WebkitLineClamp: 2, 
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          lineHeight: 1.3
-                        }}>
-                          {p.name}
-                        </span>
-                      </Link>
-                    ))}
+                          <div style={{ 
+                            width: '120px', 
+                            height: '120px', 
+                            borderRadius: '50%', 
+                            overflow: 'hidden', 
+                            background: '#fff', 
+                            boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
+                            border: '1px solid #F1F5F9',
+                            transition: 'all 0.3s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                            e.currentTarget.style.borderColor = '#E31E24';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.borderColor = '#F1F5F9';
+                          }}
+                          >
+                            <img 
+                              src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=200'} 
+                              alt={p.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span style={{ 
+                              fontSize: '13px', 
+                              fontWeight: 800, 
+                              color: '#1F2937', 
+                              maxWidth: '140px', 
+                              display: '-webkit-box', 
+                              WebkitLineClamp: 1, 
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              lineHeight: 1.3
+                            }}>
+                              {cleanName}
+                            </span>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: hidePrices ? '#E31E24' : '#111827' }}>
+                              {hidePrices ? 'Prix sur demande' : `${Number(p.price).toFixed(2)} DT`}
+                            </span>
+                            {!hidePrices && (
+                              <div style={{ fontSize: '10px', color: '#6B7280', fontWeight: 600 }}>
+                                {p.minOrderQty} {p.unit || 'Pièce'}(s) (MOQ)
+                              </div>
+                            )}
+                            {p.vendor?.city && (
+                              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'center' }}>
+                                <MapPin size={8} /> {p.vendor.city}
+                              </div>
+                            )}
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </div>
                 </section>
               )}

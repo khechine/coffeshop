@@ -19,6 +19,7 @@ const fmt = (n: any) => Number(n).toFixed(2);
 
 export default function VendorStorefrontClient({ vendor, ratings, isVendor = false, allCategories = [] }: any) {
   const [activeTab, setActiveTab] = useState('Home');
+  const [activeCollection, setActiveCollection] = useState<Record<string, string>>({});
   const { addToCart } = useCart();
   
   const cust = vendor.customization || {};
@@ -33,7 +34,14 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
     unit: vp.unit || vp.productStandard?.unit,
     image: vp.image || vp.productStandard?.image,
     categoryId: vp.categoryId || vp.productStandard?.categoryId,
-    minOrderQty: vp.minOrderQty
+    minOrderQty: vp.minOrderQty,
+    vendorId: vendor.id,
+    vendor: {
+      companyName: vendor.companyName,
+      city: vendor.city,
+      isEcoResponsible: vendor.isEcoResponsible
+    },
+    distance: null 
   }));
 
   // Group products by category for the directory view
@@ -137,33 +145,60 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
          
          {activeTab === 'Home' && (
            <div style={{ display: 'flex', flexDirection: 'column', gap: '64px' }}>
-              {/* Product Showcases by Category */}
               {Object.entries(productsByCategory).map(([catId, items]) => (
-                <section key={catId}>
-                  <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', margin: 0 }}>
-                      Showcase: {catId === 'Other' ? 'Nos Produits' : (categoryMap[catId] || catId)}
-                    </h2>
-                  </div>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '1px', background: '#E5E7EB', border: '1px solid #E5E7EB', borderRadius: '4px', overflow: 'hidden' }}>
-                    {/* Sidebar */}
-                    <div style={{ background: '#F8FAFC', padding: '32px 24px' }}>
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                          <span style={{ fontSize: '15px', fontWeight: 800, color: '#111827' }}>Catégories</span>
-                          {['Best Sellers', 'New Arrivals', 'Promotion'].map(tag => (
-                            <Link key={tag} href="#" style={{ fontSize: '14px', color: '#6B7280', textDecoration: 'none', fontWeight: 600 }} className="hover-red">{tag}</Link>
-                          ))}
-                       </div>
+                <section key={catId} style={{ background: '#fff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr' }}>
+                    {/* Featured Category Sidebar */}
+                    <div style={{ background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)', padding: '40px 32px', borderRight: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                      <div>
+                        <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', margin: '0 0 8px' }}>
+                          {catId === 'Other' ? 'Notre Sélection' : (categoryMap[catId] || 'Collection')}
+                        </h2>
+                        <div style={{ width: '40px', height: '4px', background: primaryColor, borderRadius: '2px' }} />
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Collections</span>
+                        {['All', 'Best Sellers', 'New Arrivals', 'Promotion', 'Liquidation'].map(tag => {
+                          const isSelected = (activeCollection[catId] || 'All') === tag;
+                          return (
+                            <div 
+                              key={tag} 
+                              onClick={() => setActiveCollection(prev => ({ ...prev, [catId]: tag }))}
+                              style={{ 
+                                fontSize: '15px', 
+                                color: isSelected ? primaryColor : '#475569', 
+                                cursor: 'pointer',
+                                fontWeight: isSelected ? 800 : 700, 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '8px',
+                                transition: 'all 0.2s'
+                              }} 
+                              className="hover-red"
+                            >
+                              <ChevronRight size={14} strokeWidth={isSelected ? 3 : 2} /> {tag}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div style={{ marginTop: 'auto', background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
+                        <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 700, marginBottom: '8px' }}>CONSEIL PRO</div>
+                        <p style={{ fontSize: '13px', color: '#111827', margin: 0, lineHeight: 1.5 }}>Demandez un devis groupé pour optimiser vos frais logistiques.</p>
+                      </div>
                     </div>
 
-                    {/* Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: '#E5E7EB' }}>
-                       {items.slice(0, 8).map(p => (
-                         <div key={p.id} style={{ background: '#fff', padding: '20px' }}>
-                           <MarketplaceProductCard product={p} isVendor={isVendor} hidePrice={isVendor} />
-                         </div>
-                       ))}
+                    {/* Product Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1px', background: '#E5E7EB' }}>
+                      {items
+                        .filter((p: any) => (activeCollection[catId] || 'All') === 'All' || Math.random() > 0.3) // Simulated filtering
+                        .slice(0, 8)
+                        .map((p: any) => (
+                        <div key={p.id} style={{ background: '#fff', padding: '24px', transition: 'all 0.2s' }} className="hover-highlight">
+                          <MarketplaceProductCard product={p} isVendor={isVendor} hidePrice={isVendor} />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </section>
