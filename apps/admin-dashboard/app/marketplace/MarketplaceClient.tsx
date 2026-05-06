@@ -470,13 +470,13 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                     gridTemplateColumns: 'repeat(3, 1fr)',
                     gap: '30px'
                   }}>
-                    {marketplaceSegments.find(s => s.id === hoveredSegment)?.subcategories.map((sub: any, idx: number) => (
+                    {marketplaceSegments.find((s: any) => s.id === hoveredSegment)?.subcategories?.map((sub: any, idx: number) => (
                       <div key={idx}>
                         <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#111827', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           {sub.name} <ArrowRight size={12} />
                         </h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {sub.items.map((item: string, i: number) => (
+                          {sub.items?.map((item: string, i: number) => (
                             <Link 
                               key={i} 
                               href={`/marketplace/category/${item.toLowerCase().replace(/\s+/g, '-')}`}

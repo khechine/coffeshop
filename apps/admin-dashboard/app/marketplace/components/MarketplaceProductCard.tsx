@@ -147,11 +147,9 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
           </Link>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-               <img src="https://img.made-in-china.com/2f0j00fSvaGZlKEnbe/Audited-Supplier.jpg" alt="Audited" style={{ height: '14px' }} />
-               <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB' }}>Audited</span>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#FEF2F2', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, color: '#E31E24' }}>
+               AUDITÉ
              </div>
-             <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB' }}>Vérifié</span>
              
              {product.vendor?.isPremium && (
                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', padding: '2px 8px', borderRadius: '4px', border: '1px solid #BFDBFE' }}>
