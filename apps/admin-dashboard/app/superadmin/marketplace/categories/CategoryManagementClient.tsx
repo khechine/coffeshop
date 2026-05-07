@@ -330,66 +330,102 @@ export default function CategoryManagementClient({
                 </div>
               </div>
 
-              {/* Subcategories List */}
-              <div className="px-8 bg-white dark:bg-slate-900 divide-y divide-slate-50 dark:divide-slate-800/50">
-                {root.children?.map((child: any) => (
-                  <div key={child.id} className="flex items-center gap-4 py-4 group">
-                    <ChevronRight size={14} className="text-slate-200 dark:text-slate-700 shrink-0" />
-                    
-                    {editingId === child.id ? (
-                      <div className="flex-1 flex gap-4 items-center">
-                        <input value={editName} onChange={e => setEditName(e.target.value)} className="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm font-bold" />
-                        <div className="flex gap-2">
-                           <input value={editImage} onChange={e => setEditImage(e.target.value)} className="px-4 py-2 bg-slate-50 dark:bg-slate-950 rounded-xl text-xs font-bold w-40" placeholder="Image URL" />
-                           <label className="cursor-pointer p-2 bg-white dark:bg-slate-950 text-indigo-600 rounded-xl border border-dashed border-indigo-200 hover:bg-indigo-50 transition-colors">
-                              <Upload size={14} />
-                              <input type="file" className="hidden" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0], true)} />
-                           </label>
-                        </div>
-                        <button onClick={handleUpdate} className="p-2 bg-indigo-600 text-white rounded-xl"><Save size={16} /></button>
-                        <button onClick={() => setEditingId(null)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl"><X size={16} /></button>
+              {/* Subcategories List — grouped by groupTitle */}
+              <div className="px-8 bg-white dark:bg-slate-900">
+                {(() => {
+                  const children = root.children || [];
+                  if (children.length === 0 && !editingId) {
+                    return (
+                      <div className="py-4 text-xs text-slate-300 italic flex items-center gap-2">
+                        <Info size={12} /> Aucune sous-catégorie pour le moment
                       </div>
-                    ) : (
-                      <>
-                        <div className="flex-1 flex items-center gap-4">
-                          {child.image && (
-                            <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 dark:border-slate-800 shrink-0">
-                              <img src={child.image} className="w-full h-full object-cover" alt="" />
-                            </div>
-                          )}
-                          <span className="text-sm font-black text-slate-600 dark:text-slate-400">{child.name}</span>
-                        </div>
-                        {migratingSubId === child.id ? (
-                          <div className="flex items-center gap-2">
-                            <select 
-                              value={targetCategoryId}
-                              onChange={e => setTargetCategoryId(e.target.value)}
-                              className="text-xs bg-slate-100 dark:bg-slate-800 rounded-lg px-2 py-1"
-                            >
-                              <option value="">Choisir...</option>
-                              {categoryTree.map((c: any) => (
-                                <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                              ))}
-                            </select>
-                            <button onClick={handleMigrate} className="p-1.5 bg-indigo-600 text-white rounded-lg"><ArrowRightCircle size={14} /></button>
-                            <button onClick={() => setMigratingSubId(null)} className="p-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg"><X size={14} /></button>
+                    );
+                  }
+                  
+                  // Group children by groupTitle for visual display
+                  const grouped: Record<string, any[]> = {};
+                  children.forEach((child: any) => {
+                    const group = child.groupTitle || '(Sans groupe)';
+                    if (!grouped[group]) grouped[group] = [];
+                    grouped[group].push(child);
+                  });
+
+                  return Object.entries(grouped).map(([groupName, groupChildren]: [string, any[]]) => (
+                    <div key={groupName} className="py-3">
+                      {/* Group header */}
+                      <div className="flex items-center gap-2 mb-2 px-1">
+                        <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                        <span className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.15em]">
+                          Groupe Mega Menu : {groupName}
+                        </span>
+                        <div className="flex-1 h-px bg-indigo-100 dark:bg-indigo-900/30" />
+                      </div>
+                      
+                      {/* Items in this group */}
+                      <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                        {groupChildren.map((child: any) => (
+                          <div key={child.id} className="flex items-center gap-4 py-3 group pl-4">
+                            <ChevronRight size={14} className="text-slate-200 dark:text-slate-700 shrink-0" />
+                            
+                            {editingId === child.id ? (
+                              <div className="flex-1 flex flex-wrap gap-3 items-center">
+                                <input value={editName} onChange={e => setEditName(e.target.value)} className="flex-1 min-w-[150px] px-4 py-2 bg-slate-50 dark:bg-slate-950 rounded-xl text-sm font-bold" placeholder="Nom" />
+                                <input value={editGroupTitle} onChange={e => setEditGroupTitle(e.target.value)} className="w-[160px] px-4 py-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl text-xs font-bold border border-indigo-200 dark:border-indigo-800" placeholder="Groupe Menu (ex: Équipements)" />
+                                <div className="flex gap-2">
+                                   <input value={editImage} onChange={e => setEditImage(e.target.value)} className="px-4 py-2 bg-slate-50 dark:bg-slate-950 rounded-xl text-xs font-bold w-36" placeholder="Image URL" />
+                                   <label className="cursor-pointer p-2 bg-white dark:bg-slate-950 text-indigo-600 rounded-xl border border-dashed border-indigo-200 hover:bg-indigo-50 transition-colors">
+                                      <Upload size={14} />
+                                      <input type="file" className="hidden" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0], true)} />
+                                   </label>
+                                </div>
+                                <button onClick={handleUpdate} className="p-2 bg-indigo-600 text-white rounded-xl"><Save size={16} /></button>
+                                <button onClick={() => setEditingId(null)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl"><X size={16} /></button>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex-1 flex items-center gap-4">
+                                  {child.image && (
+                                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 dark:border-slate-800 shrink-0">
+                                      <img src={child.image} className="w-full h-full object-cover" alt="" />
+                                    </div>
+                                  )}
+                                  <span className="text-sm font-black text-slate-600 dark:text-slate-400">{child.name}</span>
+                                  {child.groupTitle && (
+                                    <span className="text-[10px] font-bold text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                      {child.groupTitle}
+                                    </span>
+                                  )}
+                                </div>
+                                {migratingSubId === child.id ? (
+                                  <div className="flex items-center gap-2">
+                                    <select 
+                                      value={targetCategoryId}
+                                      onChange={e => setTargetCategoryId(e.target.value)}
+                                      className="text-xs bg-slate-100 dark:bg-slate-800 rounded-lg px-2 py-1"
+                                    >
+                                      <option value="">Choisir...</option>
+                                      {categoryTree.map((c: any) => (
+                                        <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                                      ))}
+                                    </select>
+                                    <button onClick={handleMigrate} className="p-1.5 bg-indigo-600 text-white rounded-lg"><ArrowRightCircle size={14} /></button>
+                                    <button onClick={() => setMigratingSubId(null)} className="p-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg"><X size={14} /></button>
+                                  </div>
+                                ) : (
+                                  <div className="flex gap-2 text-slate-300">
+                                    <button onClick={() => startMigrating(child.id)} title="Migrer vers une autre catégorie" className="p-2 hover:text-indigo-600 transition-colors"><ArrowRightCircle size={14} /></button>
+                                    <button onClick={() => startEditing(child)} title="Editer" className="p-2 hover:text-indigo-600 transition-colors"><Pencil size={14} /></button>
+                                    <button onClick={() => handleDelete(child.id)} title="Supprimer" className="p-2 hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
+                                  </div>
+                                )}
+                              </>
+                            )}
                           </div>
-                        ) : (
-                          <div className="flex gap-2 text-slate-300">
-                            <button onClick={() => startMigrating(child.id)} title="Migrer vers une autre catégorie" className="p-2 hover:text-indigo-600 transition-colors"><ArrowRightCircle size={14} /></button>
-                            <button onClick={() => startEditing(child)} title="Editer" className="p-2 hover:text-indigo-600 transition-colors"><Pencil size={14} /></button>
-                            <button onClick={() => handleDelete(child.id)} title="Supprimer" className="p-2 hover:text-rose-500 transition-colors"><Trash2 size={14} /></button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                ))}
-                {(!root.children || root.children.length === 0) && !editingId && (
-                  <div className="py-4 text-xs text-slate-300 italic flex items-center gap-2">
-                    <Info size={12} /> Aucune sous-catégorie pour le moment
-                  </div>
-                )}
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
           ))}

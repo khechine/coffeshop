@@ -452,46 +452,91 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                   ))}
                 </div>
 
-                {/* Mega Menu Overlay */}
-                {hoveredSegment && (
-                  <div style={{ 
-                    position: 'absolute', 
-                    left: '280px', 
-                    top: 0, 
-                    width: '720px', 
-                    minHeight: '100%', 
-                    background: '#fff', 
-                    boxShadow: '20px 0 40px rgba(0,0,0,0.1)', 
-                    zIndex: 50, 
-                    borderRadius: '0 16px 16px 0',
-                    borderLeft: '1px solid #F1F5F9',
-                    padding: '30px',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: '30px'
-                  }}>
-                    {marketplaceSegments.find((s: any) => s.id === hoveredSegment)?.subcategories?.map((sub: any, idx: number) => (
-                      <div key={idx}>
-                        <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#111827', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {sub.name} <ArrowRight size={12} />
-                        </h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {sub.items?.map((item: string, i: number) => (
-                            <Link 
-                              key={i} 
-                              href={`/marketplace/category/${item.toLowerCase().replace(/\s+/g, '-')}`}
-                              style={{ fontSize: '13px', color: '#6B7280', fontWeight: 500, cursor: 'pointer', transition: 'color 0.2s', textDecoration: 'none' }} 
-                              onMouseEnter={e => e.currentTarget.style.color = '#E31E24'} 
-                              onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}
-                            >
-                              {item}
-                            </Link>
-                          ))}
-                        </div>
+                {/* Mega Menu Overlay — Alibaba-style grouped subcategories */}
+                {hoveredSegment && (() => {
+                  const hoveredCat = marketplaceSegments.find((s: any) => s.id === hoveredSegment);
+                  const children = hoveredCat?.children || [];
+                  
+                  // Group children by groupTitle
+                  const grouped: Record<string, any[]> = {};
+                  children.forEach((child: any) => {
+                    const group = child.groupTitle || 'Autres';
+                    if (!grouped[group]) grouped[group] = [];
+                    grouped[group].push(child);
+                  });
+                  const groupEntries = Object.entries(grouped);
+
+                  if (children.length === 0) return (
+                    <div style={{ 
+                      position: 'absolute', left: '280px', top: 0, width: '400px', minHeight: '200px',
+                      background: '#fff', boxShadow: '20px 0 40px rgba(0,0,0,0.1)', zIndex: 50, 
+                      borderRadius: '0 16px 16px 0', borderLeft: '1px solid #F1F5F9', padding: '40px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px'
+                    }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 12, background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                        {hoveredCat?.icon || '📦'}
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#9CA3AF' }}>Aucune sous-catégorie</span>
+                      <Link 
+                        href={`/marketplace/category/${hoveredCat?.slug || hoveredCat?.id}`}
+                        style={{ fontSize: '13px', color: '#E31E24', fontWeight: 800, textDecoration: 'none' }}
+                      >
+                        Voir la catégorie →
+                      </Link>
+                    </div>
+                  );
+
+                  return (
+                    <div style={{ 
+                      position: 'absolute', left: '280px', top: 0, width: '720px', minHeight: '100%',
+                      background: '#fff', boxShadow: '20px 0 40px rgba(0,0,0,0.1)', zIndex: 50, 
+                      borderRadius: '0 16px 16px 0', borderLeft: '1px solid #F1F5F9', padding: '28px 32px',
+                    }}>
+                      {/* Category title bar */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid #F3F4F6' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#111827', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                          <span style={{ color: hoveredCat?.color || '#E31E24' }}>{hoveredCat?.icon || '•'}</span>
+                          {hoveredCat?.name}
+                        </h3>
+                        <Link 
+                          href={`/marketplace/category/${hoveredCat?.slug || hoveredCat?.id}`}
+                          style={{ fontSize: '12px', color: '#E31E24', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          Tout voir <ArrowRight size={12} />
+                        </Link>
+                      </div>
+
+                      {/* Grouped subcategories grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '28px', alignItems: 'start' }}>
+                        {groupEntries.map(([groupName, items]: [string, any[]]) => (
+                          <div key={groupName}>
+                            <h4 style={{ 
+                              fontSize: '13px', fontWeight: 900, color: '#111827', marginBottom: '14px', 
+                              textTransform: 'uppercase', letterSpacing: '0.04em',
+                              paddingBottom: '8px', borderBottom: '2px solid #E31E24',
+                              display: 'inline-block'
+                            }}>
+                              {groupName}
+                            </h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {items.map((child: any) => (
+                                <Link 
+                                  key={child.id} 
+                                  href={`/marketplace/category/${child.slug || child.id}`}
+                                  style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600, cursor: 'pointer', transition: 'color 0.15s', textDecoration: 'none', lineHeight: 1.3 }} 
+                                  onMouseEnter={e => e.currentTarget.style.color = '#E31E24'} 
+                                  onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}
+                                >
+                                  {child.name}
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #F3F4F6' }}>
                   <button style={{ 
