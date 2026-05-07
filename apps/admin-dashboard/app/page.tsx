@@ -47,37 +47,47 @@ export default function HomePage() {
   }, [user]);
 
   if (loading) return null;
-
-  // If user exists, we are already redirecting. 
-  // If not, we show this premium landing page.
   if (user) return null;
+
+  const sectionPadding = isMobile ? '60px 20px' : '120px 24px';
+  const headingSize = isMobile ? '36px' : '72px';
+  const subHeadingSize = isMobile ? '28px' : '48px';
 
   return (
     <CartProvider>
-      <div style={{ background: '#fff', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', scrollBehavior: 'smooth' }}>
+      <div style={{ background: '#fff', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', scrollBehavior: 'smooth', overflowX: 'hidden' }}>
         
         <MarketplaceHeader minimal={true} />
 
       {/* ── HERO SECTION ── */}
       <section style={{ 
         position: 'relative', 
-        padding: '100px 0', 
+        padding: isMobile ? '60px 0' : '100px 0', 
         background: 'linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)',
         overflow: 'hidden'
       }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '60px', alignItems: 'center' }}>
-          <div style={{ zIndex: 1 }}>
+        <div style={{ 
+          maxWidth: '1400px', 
+          margin: '0 auto', 
+          padding: '0 24px', 
+          display: 'flex', 
+          flexDirection: isMobile ? 'column' : 'row', 
+          gap: isMobile ? '40px' : '60px', 
+          alignItems: 'center',
+          textAlign: isMobile ? 'center' : 'left'
+        }}>
+          <div style={{ zIndex: 1, flex: 1.2 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#FEF2F2', padding: '8px 16px', borderRadius: '100px', color: '#E31E24', fontWeight: 800, fontSize: '13px', marginBottom: '24px' }}>
               <Zap size={16} fill="#E31E24" /> NOUVELLE GÉNÉRATION B2B
             </div>
-            <h1 style={{ fontSize: '72px', fontWeight: 950, color: '#111827', lineHeight: 1, letterSpacing: '-3px', marginBottom: '24px' }}>
+            <h1 style={{ fontSize: headingSize, fontWeight: 950, color: '#111827', lineHeight: 1.1, letterSpacing: '-2px', marginBottom: '24px' }}>
               Le commerce B2B <br/> 
               <span style={{ color: '#E31E24' }}>réinventé</span> en Tunisie.
             </h1>
-            <p style={{ fontSize: '20px', color: '#4B5563', lineHeight: 1.6, marginBottom: '40px', maxWidth: '600px', fontWeight: 500 }}>
+            <p style={{ fontSize: isMobile ? '16px' : '20px', color: '#4B5563', lineHeight: 1.6, marginBottom: '40px', maxWidth: isMobile ? '100%' : '600px', fontWeight: 500, margin: isMobile ? '0 auto 40px' : '0 0 40px' }}>
               ElKassa connecte les fournisseurs vérifiés aux professionnels les plus exigeants. Une plateforme robuste pour sourcer, négocier et gérer vos achats en toute confiance.
             </p>
-            <div style={{ display: 'flex', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '16px', justifyContent: isMobile ? 'center' : 'flex-start' }}>
               <Link href="/register" style={{ 
                 background: '#E31E24', 
                 color: '#fff', 
@@ -87,11 +97,8 @@ export default function HomePage() {
                 fontSize: '18px', 
                 textDecoration: 'none',
                 boxShadow: '0 20px 40px rgba(227, 30, 36, 0.2)',
-                transition: 'transform 0.2s'
-              }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-              >
+                textAlign: 'center'
+              }}>
                 Commencer gratuitement
               </Link>
               <Link href="/marketplace" style={{ 
@@ -102,109 +109,102 @@ export default function HomePage() {
                 fontWeight: 800, 
                 fontSize: '18px', 
                 textDecoration: 'none',
-                border: '2px solid #E5E7EB'
+                border: '2px solid #E5E7EB',
+                textAlign: 'center'
               }}>
-                Explorer la Marketplace
+                Marketplace
               </Link>
             </div>
             
-            <div style={{ marginTop: '48px', display: 'flex', alignItems: 'center', gap: '32px' }}>
+            <div style={{ marginTop: '48px', display: 'flex', alignItems: 'center', gap: isMobile ? '20px' : '32px', justifyContent: isMobile ? 'center' : 'flex-start', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '24px', fontWeight: 900, color: '#111827' }}>1500+</span>
-                <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600 }}>Fournisseurs</span>
+                <span style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: '#111827' }}>1500+</span>
+                <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 600 }}>Fournisseurs</span>
               </div>
               <div style={{ width: '1px', height: '32px', background: '#E5E7EB' }} />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '24px', fontWeight: 900, color: '#111827' }}>50k+</span>
-                <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600 }}>Produits B2B</span>
+                <span style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: '#111827' }}>50k+</span>
+                <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 600 }}>Produits B2B</span>
               </div>
-              <div style={{ width: '1px', height: '32px', background: '#E5E7EB' }} />
+              {!isMobile && <div style={{ width: '1px', height: '32px', background: '#E5E7EB' }} />}
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '24px', fontWeight: 900, color: '#111827' }}>98%</span>
-                <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600 }}>Satisfaction</span>
+                <span style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: '#111827' }}>98%</span>
+                <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 600 }}>Satisfaction</span>
               </div>
             </div>
           </div>
           
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', flex: 0.8, width: '100%', maxWidth: '500px' }}>
              <div style={{ 
                background: '#fff', 
-               borderRadius: '32px', 
-               padding: '12px', 
+               borderRadius: isMobile ? '20px' : '32px', 
+               padding: '8px', 
                boxShadow: '0 40px 80px rgba(0,0,0,0.1)',
-               transform: 'perspective(1000px) rotateY(-5deg) rotateX(5deg)',
+               transform: isMobile ? 'none' : 'perspective(1000px) rotateY(-5deg) rotateX(5deg)',
                border: '1px solid #F1F5F9'
              }}>
                <img 
                  src="https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&q=80" 
-                 style={{ width: '100%', borderRadius: '24px', display: 'block' }}
+                 style={{ width: '100%', borderRadius: isMobile ? '16px' : '24px', display: 'block' }}
                  alt="Dashboard Preview"
                />
              </div>
-             {/* Floating UI elements */}
-             <div style={{ position: 'absolute', top: '20px', left: '-40px', background: '#fff', padding: '16px', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.05)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div style={{ width: 40, height: 40, background: '#10B981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                   <Check size={20} strokeWidth={3} />
-                </div>
-                <div>
-                   <div style={{ fontSize: '12px', fontWeight: 800, color: '#111827' }}>Paiement Sécurisé</div>
-                   <div style={{ fontSize: '10px', color: '#6B7280' }}>Garantie de livraison</div>
-                </div>
-             </div>
+             {!isMobile && (
+               <div style={{ position: 'absolute', top: '20px', left: '-40px', background: '#fff', padding: '16px', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.05)', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <div style={{ width: 40, height: 40, background: '#10B981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                     <Check size={20} strokeWidth={3} />
+                  </div>
+                  <div>
+                     <div style={{ fontSize: '12px', fontWeight: 800, color: '#111827' }}>Paiement Sécurisé</div>
+                     <div style={{ fontSize: '10px', color: '#6B7280' }}>Garantie de livraison</div>
+                  </div>
+               </div>
+             )}
           </div>
         </div>
       </section>
 
       {/* ── LOGO CLOUD (Trust) ── */}
-      <section style={{ padding: '60px 0', borderBottom: '1px solid #F1F5F9' }}>
+      <section style={{ padding: isMobile ? '40px 0' : '60px 0', borderBottom: '1px solid #F1F5F9' }}>
          <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', textAlign: 'center' }}>
-            <p style={{ fontSize: '14px', fontWeight: 700, color: '#9CA3AF', marginBottom: '32px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>ILS NOUS FONT CONFIANCE</p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '80px', flexWrap: 'wrap', opacity: 0.5 }}>
-               {['Coca-Cola', 'Danone', 'Nestlé', 'Tunisie Telecom', 'SFBT'].map(brand => (
-                 <span key={brand} style={{ fontSize: '24px', fontWeight: 900, color: '#111827', letterSpacing: '-1px' }}>{brand}</span>
+            <p style={{ fontSize: '12px', fontWeight: 700, color: '#9CA3AF', marginBottom: isMobile ? '24px' : '32px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>ILS NOUS FONT CONFIANCE</p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: isMobile ? '32px' : '80px', flexWrap: 'wrap', opacity: 0.5 }}>
+               {['Coca-Cola', 'Danone', 'Nestlé', 'SFBT'].map(brand => (
+                 <span key={brand} style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 900, color: '#111827', letterSpacing: '-1px' }}>{brand}</span>
                ))}
             </div>
          </div>
       </section>
 
       {/* ── FEATURES SECTION ── */}
-      <section style={{ padding: '120px 0' }}>
+      <section style={{ padding: sectionPadding }}>
          <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px' }}>
-            <div style={{ textAlign: 'center', marginBottom: '80px' }}>
-               <h2 style={{ fontSize: '48px', fontWeight: 950, color: '#111827', letterSpacing: '-2px', marginBottom: '16px' }}>Une plateforme, des possibilités infinies.</h2>
-               <p style={{ fontSize: '18px', color: '#6B7280', maxWidth: '600px', margin: '0 auto', fontWeight: 500 }}>Tout ce dont vous avez besoin pour digitaliser vos opérations B2B, que vous soyez acheteur ou vendeur.</p>
+            <div style={{ textAlign: 'center', marginBottom: isMobile ? '40px' : '80px' }}>
+               <h2 style={{ fontSize: subHeadingSize, fontWeight: 950, color: '#111827', letterSpacing: '-1.5px', marginBottom: '16px', lineHeight: 1.2 }}>Une plateforme, <br/> des possibilités infinies.</h2>
+               <p style={{ fontSize: '16px', color: '#6B7280', maxWidth: '600px', margin: '0 auto', fontWeight: 500 }}>Tout ce dont vous avez besoin pour digitaliser vos opérations B2B.</p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '24px' }}>
                {[
-                 { icon: Search, title: 'Recherche Intelligente', desc: 'Filtrez par catégorie, fournisseur, ville ou proximité géographique.' },
-                 { icon: MessageSquare, title: 'RFQ & Négociation', desc: 'Demandez des devis personnalisés et négociez en direct avec les vendeurs.' },
-                 { icon: ShieldCheck, title: 'Vérification Pro', desc: 'Chaque fournisseur est audité pour garantir la fiabilité et la qualité.' },
-                 { icon: Smartphone, title: 'Mobile First', desc: 'Gérez vos commandes et vos stocks depuis votre smartphone n\'importe où.' },
-                 { icon: LayoutGrid, title: 'Gestion de Stock', desc: 'Inventaire automatisé et alertes de stock bas en temps réel.' },
-                 { icon: Globe, title: 'Réseau National', sub: 'Livraison partout en Tunisie avec suivi logistique intégré.' },
+                 { icon: Search, title: 'Recherche Intelligente', desc: 'Filtrez par catégorie, fournisseur ou proximité.' },
+                 { icon: MessageSquare, title: 'RFQ & Négociation', desc: 'Demandez des devis et négociez en direct.' },
+                 { icon: ShieldCheck, title: 'Vérification Pro', desc: 'Fournisseurs audités pour garantir la fiabilité.' },
+                 { icon: Smartphone, title: 'Mobile First', desc: 'Gérez tout depuis votre smartphone.' },
+                 { icon: LayoutGrid, title: 'Gestion de Stock', desc: 'Inventaire automatisé et alertes.' },
+                 { icon: Globe, title: 'Réseau National', desc: 'Livraison partout en Tunisie.' },
                ].map((feat, i) => (
                  <div key={i} style={{ 
                    background: '#fff', 
-                   padding: '40px', 
-                   borderRadius: '24px', 
+                   padding: isMobile ? '24px' : '40px', 
+                   borderRadius: '20px', 
                    border: '1px solid #F1F5F9',
                    transition: 'all 0.3s'
-                 }}
-                 onMouseEnter={e => {
-                   e.currentTarget.style.borderColor = '#E31E24';
-                   e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.05)';
-                 }}
-                 onMouseLeave={e => {
-                   e.currentTarget.style.borderColor = '#F1F5F9';
-                   e.currentTarget.style.boxShadow = 'none';
-                 }}
-                 >
-                    <div style={{ width: '56px', height: '56px', background: '#FEF2F2', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E31E24', marginBottom: '24px' }}>
-                       <feat.icon size={28} />
+                 }}>
+                    <div style={{ width: '48px', height: '48px', background: '#FEF2F2', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E31E24', marginBottom: '20px' }}>
+                       <feat.icon size={24} />
                     </div>
-                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#111827', marginBottom: '16px' }}>{feat.title}</h3>
-                    <p style={{ fontSize: '15px', color: '#6B7280', lineHeight: 1.6 }}>{feat.desc}</p>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>{feat.title}</h3>
+                    <p style={{ fontSize: '14px', color: '#6B7280', lineHeight: 1.6 }}>{feat.desc}</p>
                  </div>
                ))}
             </div>
@@ -212,95 +212,97 @@ export default function HomePage() {
       </section>
 
       {/* ── ADVANTAGES SECTION ── */}
-      <section style={{ padding: '100px 0', background: '#111827', color: '#fff', borderRadius: '60px', margin: '0 24px' }}>
+      <section style={{ padding: isMobile ? '40px 10px' : '100px 0', background: '#111827', color: '#fff', borderRadius: isMobile ? '0' : '60px', margin: isMobile ? '0' : '0 24px' }}>
          <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '80px', alignItems: 'center' }}>
-               <div>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '40px' : '80px', alignItems: 'center' }}>
+               <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
                   <div style={{ color: '#E31E24', fontWeight: 800, fontSize: '14px', marginBottom: '16px', letterSpacing: '0.1em' }}>POUR LES VENDEURS</div>
-                  <h2 style={{ fontSize: '42px', fontWeight: 900, marginBottom: '32px', lineHeight: 1.1 }}>Accélérez votre croissance <br/> digitale sans effort.</h2>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <h2 style={{ fontSize: isMobile ? '28px' : '42px', fontWeight: 900, marginBottom: '24px', lineHeight: 1.2 }}>Accélérez votre croissance digitale sans effort.</h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: isMobile ? 'center' : 'flex-start' }}>
                      {[
-                       'Visibilité massive auprès de milliers d\'acheteurs pro.',
-                       'Tableau de bord de gestion des commandes intuitif.',
-                       'Outils CRM intégrés pour fidéliser vos clients.',
-                       'Paiements sécurisés et garantis par la plateforme.',
-                       'Rapports d\'analyse de performance en temps réel.'
+                       'Visibilité massive auprès des acheteurs pro.',
+                       'Tableau de bord de gestion intuitif.',
+                       'Paiements sécurisés et garantis.',
+                       'Analyses de performance en temps réel.'
                      ].map((item, i) => (
-                       <div key={i} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                          <div style={{ width: '24px', height: '24px', background: '#E31E24', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                             <Check size={14} strokeWidth={4} />
+                       <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center', textAlign: 'left' }}>
+                          <div style={{ width: '20px', height: '20px', background: '#E31E24', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                             <Check size={12} strokeWidth={4} />
                           </div>
-                          <span style={{ fontSize: '16px', fontWeight: 600 }}>{item}</span>
+                          <span style={{ fontSize: '14px', fontWeight: 600 }}>{item}</span>
                        </div>
                      ))}
                   </div>
-                  <button style={{ marginTop: '48px', background: '#E31E24', color: '#fff', border: 'none', padding: '16px 36px', borderRadius: '100px', fontWeight: 800, cursor: 'pointer' }}>Créer ma boutique pro</button>
+                  <button style={{ marginTop: '32px', background: '#E31E24', color: '#fff', border: 'none', padding: '14px 32px', borderRadius: '100px', fontWeight: 800, cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}>Créer ma boutique</button>
                </div>
-               <div style={{ position: 'relative' }}>
-                  <img 
-                    src="https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800&q=80" 
-                    style={{ width: '100%', borderRadius: '40px', filter: 'grayscale(0.2)' }}
-                    alt="Vendor advantage"
-                  />
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(17,24,39,0.8), transparent)', borderRadius: '40px' }} />
-               </div>
+               {!isMobile && (
+                <div style={{ flex: 1, position: 'relative' }}>
+                    <img 
+                      src="https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800&q=80" 
+                      style={{ width: '100%', borderRadius: '40px', filter: 'grayscale(0.2)' }}
+                      alt="Vendor advantage"
+                    />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(17,24,39,0.8), transparent)', borderRadius: '40px' }} />
+                </div>
+               )}
             </div>
 
-            <div style={{ height: '120px' }} />
+            <div style={{ height: isMobile ? '60px' : '120px' }} />
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '80px', alignItems: 'center' }}>
-               <div style={{ order: 2 }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column-reverse' : 'row', gap: isMobile ? '40px' : '80px', alignItems: 'center' }}>
+               {!isMobile && (
+                 <div style={{ flex: 1, position: 'relative' }}>
+                    <img 
+                      src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&q=80" 
+                      style={{ width: '100%', borderRadius: '40px', filter: 'grayscale(0.2)' }}
+                      alt="Buyer advantage"
+                    />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(17,24,39,0.8), transparent)', borderRadius: '40px' }} />
+                 </div>
+               )}
+               <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
                   <div style={{ color: '#E31E24', fontWeight: 800, fontSize: '14px', marginBottom: '16px', letterSpacing: '0.1em' }}>POUR LES ACHETEURS</div>
-                  <h2 style={{ fontSize: '42px', fontWeight: 900, marginBottom: '32px', lineHeight: 1.1 }}>Trouvez les meilleurs <br/> produits, au meilleur prix.</h2>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <h2 style={{ fontSize: isMobile ? '28px' : '42px', fontWeight: 900, marginBottom: '24px', lineHeight: 1.2 }}>Trouvez les meilleurs produits, au meilleur prix.</h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: isMobile ? 'center' : 'flex-start' }}>
                      {[
-                       'Accès direct aux prix de gros sans intermédiaires.',
-                       'Filtres de recherche avancés (stock, ville, vérification).',
-                       'Système de devis (RFQ) ultra-rapide.',
-                       'Protection acheteur sur toutes les transactions.',
-                       'Suivi centralisé de tous vos fournisseurs.'
+                       'Accès direct aux prix de gros.',
+                       'Filtres de recherche avancés.',
+                       'Système de devis (RFQ) rapide.',
+                       'Suivi centralisé des fournisseurs.'
                      ].map((item, i) => (
-                       <div key={i} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                          <div style={{ width: '24px', height: '24px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827' }}>
-                             <Check size={14} strokeWidth={4} />
+                       <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center', textAlign: 'left' }}>
+                          <div style={{ width: '20px', height: '20px', background: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827', flexShrink: 0 }}>
+                             <Check size={12} strokeWidth={4} />
                           </div>
-                          <span style={{ fontSize: '16px', fontWeight: 600 }}>{item}</span>
+                          <span style={{ fontSize: '14px', fontWeight: 600 }}>{item}</span>
                        </div>
                      ))}
                   </div>
-                  <button style={{ marginTop: '48px', background: '#fff', color: '#111827', border: 'none', padding: '16px 36px', borderRadius: '100px', fontWeight: 800, cursor: 'pointer' }}>Lancer un sourcing</button>
-               </div>
-               <div style={{ position: 'relative', order: 1 }}>
-                  <img 
-                    src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&q=80" 
-                    style={{ width: '100%', borderRadius: '40px', filter: 'grayscale(0.2)' }}
-                    alt="Buyer advantage"
-                  />
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(17,24,39,0.8), transparent)', borderRadius: '40px' }} />
+                  <button style={{ marginTop: '32px', background: '#fff', color: '#111827', border: 'none', padding: '14px 32px', borderRadius: '100px', fontWeight: 800, cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}>Lancer un sourcing</button>
                </div>
             </div>
          </div>
       </section>
 
       {/* ── PREMIUM FEATURES SECTION ── */}
-      <section style={{ padding: isMobile ? '60px 0' : '120px 0', background: '#F8FAFC' }}>
+      <section style={{ padding: sectionPadding, background: '#F8FAFC' }}>
          <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px' }}>
-            <div style={{ textAlign: 'center', marginBottom: isMobile ? '48px' : '80px' }}>
+            <div style={{ textAlign: 'center', marginBottom: isMobile ? '40px' : '80px' }}>
                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#FEF2F2', padding: '6px 12px', borderRadius: '100px', color: '#E31E24', fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>
                  <Star size={14} fill="#E31E24" /> Solutions Premium
                </div>
-               <h2 style={{ fontSize: isMobile ? '32px' : '48px', fontWeight: 950, color: '#111827', letterSpacing: '-2px', marginBottom: '16px', lineHeight: 1.1 }}>Dominez votre secteur avec nos outils Premium.</h2>
-               <p style={{ fontSize: '18px', color: '#6B7280', maxWidth: '600px', margin: '0 auto', fontWeight: 500 }}>Des fonctionnalités exclusives pour les leaders du marché B2B.</p>
+               <h2 style={{ fontSize: subHeadingSize, fontWeight: 950, color: '#111827', letterSpacing: '-2px', marginBottom: '16px', lineHeight: 1.1 }}>Dominez votre secteur <br/> avec nos outils Premium.</h2>
+               <p style={{ fontSize: '16px', color: '#6B7280', maxWidth: '600px', margin: '0 auto', fontWeight: 500 }}>Des fonctionnalités exclusives pour les leaders.</p>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '24px' }}>
                {[
-                 { icon: Layout, title: "Vitrine Branding", desc: "Personnalisez vos couleurs, bannières et logos pour une identité forte.", color: "#E31E24" },
-                 { icon: Zap, title: "Intelligence Prédictive", desc: "Soyez alerté quand vos clients de proximité manquent de stock.", color: "#F59E0B" },
-                 { icon: MapPin, title: "Gestion Franchises", desc: "Gérez vos points de vente sur une carte interactive localisée.", color: "#3B82F6" },
-                 { icon: Package, title: "Boost Bundles", desc: "Mettez en avant vos packs promotionnels en haut de la marketplace.", color: "#10B981" },
-                 { icon: MessageSquare, title: "TradeMessager Pro", desc: "Messagerie sécurisée avec filtrage automatique des données sensibles.", color: "#8B5CF6" },
-                 { icon: ShieldCheck, title: "Audit & Badge", desc: "Gagnez en crédibilité avec le badge 'Vendeur Audité & Premium'.", color: "#111827" }
+                 { icon: Layout, title: "Vitrine Branding", desc: "Personnalisez vos couleurs, bannières et logos.", color: "#E31E24" },
+                 { icon: Zap, title: "Intelligence Prédictive", desc: "Soyez alerté quand vos clients manquent de stock.", color: "#F59E0B" },
+                 { icon: MapPin, title: "Gestion Franchises", desc: "Gérez vos points de vente sur une carte interactive.", color: "#3B82F6" },
+                 { icon: Package, title: "Boost Bundles", desc: "Mettez en avant vos packs promotionnels.", color: "#10B981" },
+                 { icon: MessageSquare, title: "TradeMessager Pro", desc: "Messagerie sécurisée avec filtrage automatique.", color: "#8B5CF6" },
+                 { icon: ShieldCheck, title: "Audit & Badge", desc: "Gagnez en crédibilité avec le badge Premium.", color: "#111827" }
                ].map((f, i) => (
                  <div key={i} style={{ 
                    background: '#fff', 
@@ -311,25 +313,25 @@ export default function HomePage() {
                    transition: 'all 0.3s'
                  }}>
                     <div style={{ 
-                      width: '48px', 
-                      height: '48px', 
-                      borderRadius: '12px', 
+                      width: '40px', 
+                      height: '40px', 
+                      borderRadius: '10px', 
                       background: '#F8FAFC', 
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center', 
                       color: f.color,
-                      marginBottom: '20px'
+                      marginBottom: '16px'
                     }}>
-                       <f.icon size={24} />
+                       <f.icon size={20} />
                     </div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>{f.title}</h3>
-                    <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.6, fontWeight: 500 }}>{f.desc}</p>
+                    <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#111827', marginBottom: '8px' }}>{f.title}</h3>
+                    <p style={{ fontSize: '13px', color: '#64748B', lineHeight: 1.6, fontWeight: 500 }}>{f.desc}</p>
                  </div>
                ))}
             </div>
             
-            <div style={{ textAlign: 'center', marginTop: '64px' }}>
+            <div style={{ textAlign: 'center', marginTop: isMobile ? '40px' : '64px' }}>
                <Link href="/vendor/premium" style={{ 
                  display: 'inline-flex', 
                  alignItems: 'center', 
@@ -337,7 +339,7 @@ export default function HomePage() {
                  color: '#E31E24', 
                  fontWeight: 800, 
                  textDecoration: 'none',
-                 fontSize: '16px'
+                 fontSize: '15px'
                }}>
                  Découvrir tous les avantages Premium <ArrowRight size={18} />
                </Link>
@@ -346,45 +348,45 @@ export default function HomePage() {
       </section>
 
       {/* ── PRICING SECTION (Packs) ── */}
-      <section style={{ padding: '120px 0' }}>
+      <section style={{ padding: sectionPadding }}>
          <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px' }}>
-            <div style={{ textAlign: 'center', marginBottom: '80px' }}>
-               <h2 style={{ fontSize: '48px', fontWeight: 950, color: '#111827', letterSpacing: '-2px', marginBottom: '16px' }}>Choisissez votre plan de croissance.</h2>
-               <p style={{ fontSize: '18px', color: '#6B7280', maxWidth: '600px', margin: '0 auto', fontWeight: 500 }}>Des options flexibles adaptées à la taille de votre entreprise.</p>
+            <div style={{ textAlign: 'center', marginBottom: isMobile ? '48px' : '80px' }}>
+               <h2 style={{ fontSize: subHeadingSize, fontWeight: 950, color: '#111827', letterSpacing: '-1.5px', marginBottom: '16px', lineHeight: 1.1 }}>Choisissez votre plan <br/> de croissance.</h2>
+               <p style={{ fontSize: '16px', color: '#6B7280', maxWidth: '600px', margin: '0 auto', fontWeight: 500 }}>Des options flexibles adaptées à votre taille.</p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
                {[
-                 { name: 'RACHMA', price: 'Gratuit', color: '#10B981', tagline: 'Petits commerces', features: ['Gestion produits', 'Stock basique', 'Historique ventes'] },
-                 { name: 'STARTER', price: '29 DT', color: '#3B82F6', tagline: 'Démarrez pro', features: ['Mode POS Premium', 'Conformité fiscale', 'Rapports Z'] },
-                 { name: 'PRO', price: '79 DT', color: '#8B5CF6', tagline: 'Le pack complet', features: ['Accès Marketplace B2B', 'Multi-caisses', 'Fidélité client'], highlight: true },
-                 { name: 'ENTERPRISE', price: 'Sur devis', color: '#F59E0B', tagline: 'Chaînes & Grands comptes', features: ['Multi-boutiques illimité', 'API personnalisée', 'Support VIP'] },
+                 { name: 'RACHMA', price: 'Gratuit', color: '#10B981', tagline: 'Petits commerces', features: ['Gestion produits', 'Stock basique'] },
+                 { name: 'STARTER', price: '29 DT', color: '#3B82F6', tagline: 'Démarrez pro', features: ['Mode POS Premium', 'Conformité fiscale'] },
+                 { name: 'PRO', price: '79 DT', color: '#8B5CF6', tagline: 'Le pack complet', features: ['Accès Marketplace B2B', 'Fidélité client'], highlight: true },
+                 { name: 'ENTERPRISE', price: 'Sur devis', color: '#F59E0B', tagline: 'Grands comptes', features: ['Multi-boutiques', 'Support VIP'] },
                ].map((plan, i) => (
                  <div key={i} style={{ 
                    background: '#fff', 
-                   padding: '40px', 
-                   borderRadius: '32px', 
+                   padding: '32px', 
+                   borderRadius: '24px', 
                    border: plan.highlight ? '3px solid #E31E24' : '1px solid #E5E7EB',
                    position: 'relative',
                    display: 'flex',
                    flexDirection: 'column',
                    justifyContent: 'space-between',
-                   transform: plan.highlight ? 'scale(1.05)' : 'none',
+                   transform: (plan.highlight && !isMobile) ? 'scale(1.05)' : 'none',
                    zIndex: plan.highlight ? 2 : 1,
-                   boxShadow: plan.highlight ? '0 30px 60px rgba(0,0,0,0.1)' : 'none'
+                   boxShadow: plan.highlight ? '0 20px 40px rgba(0,0,0,0.1)' : 'none'
                  }}>
                     {plan.highlight && (
-                      <div style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', background: '#E31E24', color: '#fff', padding: '4px 16px', borderRadius: '100px', fontSize: '12px', fontWeight: 800 }}>RECOMMANDÉ</div>
+                      <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', background: '#E31E24', color: '#fff', padding: '4px 12px', borderRadius: '100px', fontSize: '11px', fontWeight: 800 }}>RECOMMANDÉ</div>
                     )}
                     <div>
-                       <div style={{ color: plan.color, fontWeight: 900, fontSize: '14px', textTransform: 'uppercase', marginBottom: '12px' }}>{plan.name}</div>
-                       <div style={{ fontSize: '36px', fontWeight: 950, color: '#111827', marginBottom: '8px' }}>{plan.price}</div>
-                       <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '32px', fontWeight: 600 }}>{plan.tagline}</div>
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '40px' }}>
+                       <div style={{ color: plan.color, fontWeight: 900, fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px' }}>{plan.name}</div>
+                       <div style={{ fontSize: '32px', fontWeight: 950, color: '#111827', marginBottom: '4px' }}>{plan.price}</div>
+                       <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '24px', fontWeight: 600 }}>{plan.tagline}</div>
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
                           {plan.features.map((f, j) => (
-                            <div key={j} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', color: '#4B5563', fontWeight: 500 }}>
-                               <CheckCircle2 size={16} color={plan.color} /> {f}
-                            </div>
+                            <div key={j} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#4B5563', fontWeight: 500 }}>
+                               <CheckCircle2 size={14} color={plan.color} /> {f}
+                             </div>
                           ))}
                        </div>
                     </div>
@@ -397,7 +399,7 @@ export default function HomePage() {
                       color: plan.highlight ? '#fff' : '#111827', 
                       fontWeight: 800, 
                       cursor: 'pointer' 
-                    }}>Choisir ce plan</button>
+                    }}>Choisir</button>
                  </div>
                ))}
             </div>
@@ -405,13 +407,13 @@ export default function HomePage() {
       </section>
 
       {/* ── CTA SECTION ── */}
-      <section style={{ padding: '100px 0', textAlign: 'center' }}>
+      <section style={{ padding: isMobile ? '60px 0' : '100px 0', textAlign: 'center' }}>
          <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 24px' }}>
-            <h2 style={{ fontSize: '56px', fontWeight: 950, color: '#111827', letterSpacing: '-3px', lineHeight: 1, marginBottom: '32px' }}>Prêt à passer au niveau supérieur ?</h2>
-            <p style={{ fontSize: '20px', color: '#6B7280', marginBottom: '48px', fontWeight: 500 }}>Inscrivez-vous aujourd'hui et commencez à digitaliser vos échanges commerciaux avec ElKassa.</p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px' }}>
-               <button style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '20px 60px', borderRadius: '100px', fontWeight: 900, fontSize: '18px', cursor: 'pointer', boxShadow: '0 20px 40px rgba(227,30,36,0.2)' }}>S'inscrire maintenant</button>
-               <button style={{ background: 'transparent', border: '2px solid #111827', color: '#111827', padding: '20px 60px', borderRadius: '100px', fontWeight: 900, fontSize: '18px', cursor: 'pointer' }}>Contacter un expert</button>
+            <h2 style={{ fontSize: isMobile ? '36px' : '56px', fontWeight: 950, color: '#111827', letterSpacing: '-2.5px', lineHeight: 1.1, marginBottom: '24px' }}>Prêt à passer au niveau supérieur ?</h2>
+            <p style={{ fontSize: isMobile ? '16px' : '20px', color: '#6B7280', marginBottom: '40px', fontWeight: 500 }}>Inscrivez-vous aujourd'hui sur ElKassa.</p>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', gap: '16px' }}>
+               <button style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '18px 48px', borderRadius: '100px', fontWeight: 900, fontSize: '18px', cursor: 'pointer', boxShadow: '0 20px 40px rgba(227,30,36,0.2)' }}>S'inscrire</button>
+               <button style={{ background: 'transparent', border: '2px solid #111827', color: '#111827', padding: '18px 48px', borderRadius: '100px', fontWeight: 900, fontSize: '18px', cursor: 'pointer' }}>Contacter un expert</button>
             </div>
          </div>
       </section>
