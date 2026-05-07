@@ -17,6 +17,8 @@ import { sendTradeMessageAction } from '../../../actions';
 import { useToast } from '../../../components/Toast';
 
 
+import VendorStorefrontMobile from './VendorStorefrontMobile';
+
 const fmt = (n: any) => Number(n).toFixed(2);
 
 
@@ -26,6 +28,14 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
   const { addToCart } = useCart();
   const { showToast } = useToast();
   
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const [tradeMessagerOpen, setTradeMessagerOpen] = useState(false);
   const [tradeMessage, setTradeMessage] = useState('');
   const [isSendingMsg, setIsSendingMsg] = useState(false);
@@ -178,6 +188,10 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
         <MarketplaceFooter />
       </div>
     );
+  }
+
+  if (isMobile) {
+    return <VendorStorefrontMobile vendor={vendor} products={products} isVendor={isVendor} />;
   }
 
   return (
