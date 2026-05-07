@@ -162,7 +162,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
     };
     traverse(categories);
     
-    const finalNames = names.length > 0 ? names : ["Nouveautés", "Promotions", "Vérifiés", "Stock"];
+    const finalNames = names.length > 0 ? Array.from(new Set(names)) : ["Nouveautés", "Promotions", "Vérifiés", "Stock"];
     const shuffled = [...finalNames].sort(() => Math.random() - 0.5);
     setShuffledTags(shuffled);
   }, [categories]);
@@ -930,7 +930,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                     </Link>
                  </div>
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
-                     {blogPosts.slice(0, 4).map((item: any) => (
+                     {perspectives.slice(0, 4).map((item: any) => (
                        <Link key={item.id} href={item.slug ? `/marketplace/blog/${item.slug}` : '#'} style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #F1F5F9', transition: 'transform 0.3s', textDecoration: 'none', display: 'block' }}>
                          <div style={{ height: '160px', overflow: 'hidden', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                            <img src={item.image} alt={item.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
@@ -955,7 +955,8 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                    display: 'flex', 
                    flexWrap: 'wrap', 
                    gap: '12px', 
-                   lineHeight: '48px'
+                   maxHeight: '144px',
+                   overflow: 'hidden'
                  }}>
                     {(() => {
                       // Build flat lookup: name -> { slug, id }
@@ -1024,10 +1025,10 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
               <MessageSquare size={20} color="#E31E24" />
               <span style={{ fontSize: '10px', fontWeight: 800 }}>RFQ</span>
            </button>
-           <button style={{ width: '60px', height: '60px', border: 'none', background: '#fff', borderBottom: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', cursor: 'pointer' }}>
+           <Link href="/marketplace/help" style={{ width: '60px', height: '60px', border: 'none', background: '#fff', borderBottom: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', cursor: 'pointer', textDecoration: 'none' }}>
               <Headphones size={20} color="#6B7280" />
-              <span style={{ fontSize: '10px', fontWeight: 700 }}>Aide</span>
-           </button>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#111827' }}>Aide</span>
+           </Link>
            <button 
              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
              style={{ width: '60px', height: '60px', border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}

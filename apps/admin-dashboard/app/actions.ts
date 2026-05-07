@@ -1192,8 +1192,32 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
   const productWhere: any = {};
   const bundleWhere: any = {};
   
+  let ecoCategoryIds: string[] = [];
   if (ecoOnly) {
-    productWhere.vendor = { isEcoResponsible: true };
+    try {
+      const ecoCats = await (prisma as any).marketplaceCategory.findMany({
+        where: { 
+          OR: [
+            { name: { contains: 'Bio', mode: 'insensitive' } },
+            { name: { contains: 'Eco', mode: 'insensitive' } },
+            { name: { contains: 'Vert', mode: 'insensitive' } },
+            { name: { contains: 'Naturel', mode: 'insensitive' } },
+            { name: { contains: 'Durable', mode: 'insensitive' } }
+          ]
+        },
+        select: { id: true }
+      });
+      ecoCategoryIds = ecoCats.map((c: any) => c.id);
+    } catch (e) {
+      console.error('Failed to fetch eco categories:', e);
+    }
+
+    productWhere.OR = [
+      { vendor: { isEcoResponsible: true } },
+      { tags: { hasSome: ['Bio', 'Éco-responsable', 'Naturel', '🌱', 'Eco', 'Recyclé'] } },
+      { name: { contains: 'Bio', mode: 'insensitive' } },
+      { categoryId: { in: ecoCategoryIds } }
+    ];
     bundleWhere.vendor = { isEcoResponsible: true };
   }
   
