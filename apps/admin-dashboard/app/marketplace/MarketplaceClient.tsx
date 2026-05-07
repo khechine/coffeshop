@@ -89,11 +89,17 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
 
     let allMatches = [];
     if (urlScope === 'PRODUCT') {
-      allMatches = products.filter((p: any) => 
+      const productMatches = products.filter((p: any) => 
         normalize(p.name).includes(q) || 
         normalize(p.description || '').includes(q) ||
         normalize(p.vendor?.companyName || '').includes(q)
       );
+      const bundleMatches = (initialData.bundles || []).filter((b: any) => 
+        normalize(b.name).includes(q) || 
+        normalize(b.description || '').includes(q) ||
+        normalize(b.vendor?.companyName || '').includes(q)
+      ).map((b: any) => ({ ...b, isBundle: true }));
+      allMatches = [...productMatches, ...bundleMatches];
     } else if (urlScope === 'VENDOR') {
       const vendors = Array.from(new Set(products.map((p: any) => p.vendor?.id)))
         .map(id => products.find((p: any) => p.vendor?.id === id)?.vendor)
@@ -126,7 +132,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
       outsideRadius: allMatches.length - filtered.length,
       allMatches // For similarity suggestions
     };
-  }, [urlSearch, urlScope, urlRadius, products, categories, minPrice, maxPrice, minRating]);
+  }, [urlSearch, urlScope, urlRadius, products, initialData.bundles, categories, minPrice, maxPrice, minRating]);
 
   const marketplaceSegments = categories;
 
@@ -750,6 +756,67 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                   ))}
                 </div>
               </section>
+
+              {/* Packs & Bundles Section */}
+              {initialData.bundles?.length > 0 && (
+                <section style={{ marginBottom: '64px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#E31E24', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+                        <Zap size={14} /> Offres Groupées
+                      </div>
+                      <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', margin: 0 }}>Nos Packs & Bundles</h2>
+                      <p style={{ color: '#64748B', fontSize: '15px', marginTop: '8px', fontWeight: 500 }}>Optimisez vos achats avec nos sélections thématiques</p>
+                    </div>
+                    <Link href="/marketplace/packs" style={{ padding: '12px 24px', borderRadius: '12px', border: '1px solid #E5E7EB', color: '#111827', fontSize: '14px', fontWeight: 800, textDecoration: 'none', transition: 'all 0.2s' }}>
+                      Voir tous les packs
+                    </Link>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
+                    {initialData.bundles.slice(0, 4).map((bundle: any) => (
+                      <Link 
+                        key={bundle.id} 
+                        href={`/marketplace/pack/${bundle.id}`}
+                        style={{ 
+                          background: '#fff', 
+                          borderRadius: '24px', 
+                          border: '1px solid #F1F5F9', 
+                          padding: '24px', 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '20px',
+                          transition: 'all 0.2s',
+                          textDecoration: 'none',
+                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+                        }}
+                      >
+                         <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '16px', overflow: 'hidden', background: '#F8FAFC' }}>
+                            <img src={bundle.image || 'https://images.unsplash.com/photo-1549462220-2a9f5d378278?w=400'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            {bundle.discountPercent && (
+                              <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#E31E24', color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900 }}>
+                                -{bundle.discountPercent}%
+                              </div>
+                            )}
+                         </div>
+                         <div>
+                            <span style={{ fontSize: '11px', fontWeight: 900, color: '#E31E24', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{bundle.vendor?.companyName}</span>
+                            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', margin: '4px 0 8px' }}>{bundle.name}</h3>
+                            <p style={{ fontSize: '13px', color: '#64748B', margin: 0, height: '40px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{bundle.description}</p>
+                         </div>
+                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #F1F5F9' }}>
+                            <div>
+                               <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 700, textDecoration: 'line-through' }}>{((Number(bundle.price) * 100) / (100 - (bundle.discountPercent || 0))).toFixed(2)} DT</span>
+                               <div style={{ fontSize: '20px', fontWeight: 900, color: '#111827' }}>{Number(bundle.price).toFixed(2)} <span style={{ fontSize: '13px' }}>DT</span></div>
+                            </div>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827' }}>
+                               <ArrowRight size={18} />
+                            </div>
+                         </div>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {/* Special Categories / Collections */}
               <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>

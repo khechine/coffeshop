@@ -14,7 +14,7 @@ import MarketplaceFooter from '../../components/MarketplaceFooter';
 import MarketplaceProductCard from '../../components/MarketplaceProductCard';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 import { sendTradeMessageAction } from '../../../actions';
-import { useToast } from '../../components/Toast';
+import { useToast } from '../../../components/Toast';
 
 
 const fmt = (n: any) => Number(n).toFixed(2);
@@ -34,6 +34,7 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
   const [selectedPos, setSelectedPos] = useState<any>(null);
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [stockSearch, setStockSearch] = useState('');
 
   useEffect(() => {
     if (activeTab === 'Franchises' && typeof window !== 'undefined' && mapContainerRef.current && !mapRef.current) {
@@ -47,10 +48,21 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
           attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
+        const vendorLogo = (vendor.customization?.logoUrl) || '/default-vendor.png';
+        const customIcon = L.divIcon({
+          className: 'custom-div-icon',
+          html: `<div style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 3px solid #E31E24; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+                   <img src="${vendorLogo}" style="width: 100%; height: 100%; object-fit: contain;" />
+                 </div>`,
+          iconSize: [40, 40],
+          iconAnchor: [20, 40],
+          popupAnchor: [0, -40]
+        });
+
         const posList = vendor.posList || [];
         posList.forEach((pos: any) => {
           if (pos.lat && pos.lng) {
-            const marker = L.marker([pos.lat, pos.lng]).addTo(map);
+            const marker = L.marker([pos.lat, pos.lng], { icon: customIcon }).addTo(map);
             marker.bindPopup(`<b>${pos.name}</b><br/>${pos.address || ''}`);
           }
         });
@@ -64,7 +76,7 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
       };
       initMap();
     }
-  }, [activeTab, vendor.posList]);
+  }, [activeTab, vendor.posList, vendor.customization?.logoUrl]);
 
   const handleSendTradeMessage = async () => {
     if (!tradeMessage.trim()) return;
@@ -320,53 +332,80 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
          )}
 
          {activeTab === 'Franchises' && (
-           <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '32px', height: '600px' }}>
+           <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '32px', height: '700px' }}>
               <div style={{ background: '#fff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #E5E7EB', position: 'relative' }}>
                  <div ref={mapContainerRef} style={{ width: '100%', height: '100%', zIndex: 1 }} />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', paddingRight: '8px' }}>
-                 <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#111827', margin: '0 0 8px' }}>Nos Points de Vente</h3>
-                 {(vendor.posList || []).map((pos: any) => (
-                   <div 
-                    key={pos.id} 
-                    onClick={() => {
-                      setSelectedPos(pos);
-                      if (mapRef.current && pos.lat && pos.lng) {
-                        mapRef.current.setView([pos.lat, pos.lng], 14);
-                      }
-                    }}
-                    style={{ 
-                      background: selectedPos?.id === pos.id ? '#fff' : 'transparent', 
-                      padding: '20px', 
-                      borderRadius: '20px', 
-                      border: selectedPos?.id === pos.id ? `2px solid ${primaryColor}` : '1px solid #E5E7EB',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                   >
-                     <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#111827', margin: '0 0 4px' }}>{pos.name}</h4>
-                     <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                       <MapPin size={14} /> {pos.address || pos.city || 'Adresse non renseignée'}
-                     </p>
-                     
-                     <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '12px' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Disponibilité Stock</span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                           {vendor.vendorProducts.slice(0, 3).map((vp: any) => {
-                             const stock = pos.stockItems?.find((s: any) => s.vendorProductId === vp.id);
-                             const qty = stock ? Number(stock.quantity) : 0;
-                             return (
-                               <div key={vp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                 <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>{vp.name}</span>
-                                 <span style={{ fontSize: '12px', fontWeight: 800, color: qty > 0 ? '#10B981' : '#EF4444' }}>{qty} {vp.unit}</span>
-                               </div>
-                             );
-                           })}
-                           {vendor.vendorProducts.length > 3 && <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 700 }}>+ {vendor.vendorProducts.length - 3} autres articles</span>}
-                        </div>
-                     </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'hidden' }}>
+                 <div style={{ paddingBottom: '16px', borderBottom: '1px solid #E5E7EB' }}>
+                   <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#111827', margin: '0 0 12px' }}>Points de Vente</h3>
+                   <div style={{ position: 'relative' }}>
+                      <input 
+                        type="text" 
+                        placeholder="Chercher un article en stock..." 
+                        value={stockSearch}
+                        onChange={e => setStockSearch(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: '12px', border: '1px solid #E5E7EB', fontSize: '13px', outline: 'none' }}
+                      />
+                      <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
                    </div>
-                 ))}
+                 </div>
+
+                 <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
+                   {(vendor.posList || []).map((pos: any) => (
+                     <div 
+                      key={pos.id} 
+                      onClick={() => {
+                        setSelectedPos(pos);
+                        if (mapRef.current && pos.lat && pos.lng) {
+                          mapRef.current.setView([pos.lat, pos.lng], 14);
+                        }
+                      }}
+                      style={{ 
+                        background: selectedPos?.id === pos.id ? '#fff' : '#F9FAFB', 
+                        padding: '16px', 
+                        borderRadius: '20px', 
+                        border: selectedPos?.id === pos.id ? `2px solid ${primaryColor}` : '1px solid #E5E7EB',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                     >
+                       <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#111827', margin: '0 0 4px' }}>{pos.name}</h4>
+                       <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                         <MapPin size={12} /> {pos.address || pos.city}
+                       </p>
+                       
+                       <div style={{ background: '#fff', padding: '10px', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                             {(pos.stockItems || [])
+                               .filter((s: any) => {
+                                 const vp = vendor.vendorProducts.find((p: any) => p.id === s.vendorProductId);
+                                 if (!vp) return false;
+                                 if (!stockSearch) return true;
+                                 return vp.name.toLowerCase().includes(stockSearch.toLowerCase());
+                               })
+                               .slice(0, selectedPos?.id === pos.id ? 10 : 3)
+                               .map((s: any) => {
+                                 const vp = vendor.vendorProducts.find((p: any) => p.id === s.vendorProductId);
+                                 const qty = Number(s.quantity);
+                                 return (
+                                   <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                     <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{vp?.name}</span>
+                                     <span style={{ fontSize: '11px', fontWeight: 800, color: qty > 0 ? '#10B981' : '#EF4444' }}>{qty} {vp?.unit}</span>
+                                   </div>
+                                 );
+                               })}
+                             {(!stockSearch && (pos.stockItems?.length || 0) > (selectedPos?.id === pos.id ? 10 : 3)) && (
+                               <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 700, textAlign: 'center', display: 'block', paddingTop: '4px' }}>
+                                 {selectedPos?.id === pos.id ? `+ ${(pos.stockItems?.length || 0) - 10} autres` : `Voir les ${pos.stockItems?.length} articles`}
+                               </span>
+                             )}
+                             {(stockSearch && pos.stockItems?.length === 0) && <span style={{ fontSize: '10px', color: '#94A3B8', textAlign: 'center' }}>Aucun article trouvé</span>}
+                          </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
               </div>
            </div>
          )}
