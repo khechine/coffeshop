@@ -14,6 +14,8 @@ import MarketplaceFooter from '../../components/MarketplaceFooter';
 import MarketplaceProductCard from '../../components/MarketplaceProductCard';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 
+import CategoryMobile from './CategoryMobile';
+
 const fmt = (n: any) => Number(n).toFixed(2);
 
 
@@ -23,6 +25,14 @@ export default function CategoryViewClient({ category, products = [], allCategor
   const { addToCart } = useCart();
   const scrollRef = useRef<HTMLDivElement>(null);
   
+  const [isMobile, setIsMobile] = useState(false);
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const subcategories = category.children || [];
   const hasChildren = subcategories.length > 0;
 
@@ -38,6 +48,17 @@ export default function CategoryViewClient({ category, products = [], allCategor
       scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
     }
   };
+
+  if (isMobile) {
+    return (
+      <CategoryMobile 
+        category={category} 
+        products={products} 
+        subcategories={subcategories} 
+        isVendor={isVendor} 
+      />
+    );
+  }
 
   return (
     <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>

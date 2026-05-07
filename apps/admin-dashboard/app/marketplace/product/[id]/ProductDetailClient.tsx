@@ -16,12 +16,22 @@ import { sanitizeUrl } from '../../../lib/imageUtils';
 import { sendTradeMessageAction } from '../../../actions';
 
 
+import ProductMobile from './ProductMobile';
+
 const fmt = (n: any) => Number(n).toFixed(2);
 
 export default function ProductDetailClient({ product, isVendor = false, relatedProducts = [], allCategories = [] }: { product: any; isVendor?: boolean; relatedProducts?: any[]; allCategories?: any[] }) {
   const [qty, setQty] = useState(1);
   const { addToCart } = useCart();
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const [isMobile, setIsMobile] = useState(false);
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const imageUrl = sanitizeUrl(product.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800';
   const gallery = [imageUrl, ...(product.images || []).map((img: string) => sanitizeUrl(img))].filter(Boolean);
@@ -59,6 +69,10 @@ export default function ProductDetailClient({ product, isVendor = false, related
       scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
     }
   };
+
+  if (isMobile) {
+    return <ProductMobile product={product} isVendor={isVendor} relatedProducts={relatedProducts} />;
+  }
 
   return (
     <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
