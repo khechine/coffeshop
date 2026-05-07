@@ -111,7 +111,7 @@ export default function MarketplaceMobile({ initialData, store, setRfqOpen, blog
                </div>
              ))}
           </div>
-          <Link href="/admin/profile" style={{ color: '#333' }}><User size={24} /></Link>
+          <Link href="/admin/settings" style={{ color: '#333' }}><User size={24} /></Link>
         </div>
         
         <form onSubmit={handleSearch} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -221,11 +221,11 @@ export default function MarketplaceMobile({ initialData, store, setRfqOpen, blog
           {/* Quick Action Grid */}
           <div style={{ background: '#fff', padding: '20px 12px', display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
             {[
-              { icon: <Grid size={24} />, label: 'Catégories', color: '#333', href: '/marketplace?view=categories' },
+              { icon: <Grid size={24} />, label: 'Catégories', color: '#333', href: '/marketplace/categories' },
               { icon: <MessageSquare size={24} />, label: 'RFQ', color: '#E31E24', action: () => setRfqOpen(true) },
               { icon: <ShieldCheck size={24} />, label: 'Vérifié', color: '#059669', href: '/marketplace?filter=verified' },
-              { icon: <Video size={24} />, label: 'Vidéos', color: '#333', href: '/marketplace/videos' },
-              { icon: <Gift size={24} />, label: 'Packs', color: '#D97706', href: '/marketplace/packs' },
+              { icon: <Video size={24} />, label: 'Concept', color: '#333', href: '/marketplace/concept' },
+              { icon: <Gift size={24} />, label: 'Tunisie', color: '#D97706', href: '/marketplace/tunisia' },
             ].map((item, i) => (
               item.href ? (
                 <Link key={i} href={item.href} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '8px', textDecoration: 'none' }}>
@@ -347,15 +347,15 @@ export default function MarketplaceMobile({ initialData, store, setRfqOpen, blog
           <ShoppingBag size={20} />
           <span style={{ fontSize: '10px', fontWeight: 800, marginTop: '4px' }}>Market</span>
         </Link>
-        <Link href="/marketplace/featured" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#666', textDecoration: 'none' }}>
+        <Link href="/marketplace/vendors" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#666', textDecoration: 'none' }}>
           <Star size={20} />
-          <span style={{ fontSize: '10px', fontWeight: 700, marginTop: '4px' }}>Premium</span>
+          <span style={{ fontSize: '10px', fontWeight: 700, marginTop: '4px' }}>Fournisseurs</span>
         </Link>
         <Link href="/marketplace/messages" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#666', textDecoration: 'none' }}>
           <MessageSquare size={20} />
           <span style={{ fontSize: '10px', fontWeight: 700, marginTop: '4px' }}>Chat</span>
         </Link>
-        <Link href="/admin/profile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#666', textDecoration: 'none' }}>
+        <Link href="/admin/settings" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#666', textDecoration: 'none' }}>
           <User size={20} />
           <span style={{ fontSize: '10px', fontWeight: 700, marginTop: '4px' }}>Compte</span>
         </Link>

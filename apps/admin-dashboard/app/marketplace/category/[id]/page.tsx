@@ -4,8 +4,8 @@ import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-export default async function CategoryPage({ params, searchParams }: { params: { id: string }, searchParams: any }) {
-  const { id } = params;
+export default async function CategoryPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<any> }) {
+  const { id } = await params;
   const sParams = await searchParams;
   const radius = sParams.radius && sParams.radius !== 'all' ? parseInt(sParams.radius) : undefined;
   const store = await getStore();

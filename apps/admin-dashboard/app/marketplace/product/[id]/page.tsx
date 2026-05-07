@@ -5,8 +5,9 @@ import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ProductPage({ params }: { params: { id: string } }) {
-   const product = await getMarketplaceProductAction(params.id);
+export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+   const { id } = await params;
+   const product = await getMarketplaceProductAction(id);
    const user = await getUser();
    const isVendor = user?.role === 'VENDOR';
 

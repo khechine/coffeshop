@@ -412,7 +412,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                 )}
 
                 {/* Similar Products Suggestions */}
-                {searchData.allMatches.length > searchData.results.length && (
+                {searchData.allMatches && searchData.allMatches.length > searchData.results.length && (
                   <div style={{ marginTop: '64px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                       <Zap size={24} color="#E31E24" fill="#E31E24" />
@@ -768,15 +768,11 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                       <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', margin: 0 }}>Nos Packs & Bundles</h2>
                       <p style={{ color: '#64748B', fontSize: '15px', marginTop: '8px', fontWeight: 500 }}>Optimisez vos achats avec nos sélections thématiques</p>
                     </div>
-                    <Link href="/marketplace/packs" style={{ padding: '12px 24px', borderRadius: '12px', border: '1px solid #E5E7EB', color: '#111827', fontSize: '14px', fontWeight: 800, textDecoration: 'none', transition: 'all 0.2s' }}>
-                      Voir tous les packs
-                    </Link>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
                     {initialData.bundles.slice(0, 4).map((bundle: any) => (
-                      <Link 
+                      <div 
                         key={bundle.id} 
-                        href={`/marketplace/pack/${bundle.id}`}
                         style={{ 
                           background: '#fff', 
                           borderRadius: '24px', 
@@ -786,7 +782,6 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                           flexDirection: 'column', 
                           gap: '20px',
                           transition: 'all 0.2s',
-                          textDecoration: 'none',
                           boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
                         }}
                       >
@@ -812,7 +807,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                                <ArrowRight size={18} />
                             </div>
                          </div>
-                      </Link>
+                      </div>
                     ))}
                   </div>
                 </section>
