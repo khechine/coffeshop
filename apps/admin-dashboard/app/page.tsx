@@ -6,7 +6,8 @@ import {
   ShoppingBag, Zap, ShieldCheck, Trophy, Globe, Rocket, 
   ArrowRight, CheckCircle2, Star, Building2, Users, 
   LayoutGrid, Search, Menu, MessageSquare, Target, 
-  Headphones, Smartphone, FileText, ChevronDown, Check
+  Headphones, Smartphone, FileText, ChevronDown, Check,
+  Layout, MapPin, Package
 } from 'lucide-react';
 import MarketplaceHeader from './marketplace/components/MarketplaceHeader';
 import MarketplaceFooter from './marketplace/components/MarketplaceFooter';
@@ -15,6 +16,14 @@ import { CartProvider } from './marketplace/CartContext';
 export default function HomePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -269,6 +278,69 @@ export default function HomePage() {
                   />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(17,24,39,0.8), transparent)', borderRadius: '40px' }} />
                </div>
+            </div>
+         </div>
+      </section>
+
+      {/* ── PREMIUM FEATURES SECTION ── */}
+      <section style={{ padding: isMobile ? '60px 0' : '120px 0', background: '#F8FAFC' }}>
+         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px' }}>
+            <div style={{ textAlign: 'center', marginBottom: isMobile ? '48px' : '80px' }}>
+               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#FEF2F2', padding: '6px 12px', borderRadius: '100px', color: '#E31E24', fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>
+                 <Star size={14} fill="#E31E24" /> Solutions Premium
+               </div>
+               <h2 style={{ fontSize: isMobile ? '32px' : '48px', fontWeight: 950, color: '#111827', letterSpacing: '-2px', marginBottom: '16px', lineHeight: 1.1 }}>Dominez votre secteur avec nos outils Premium.</h2>
+               <p style={{ fontSize: '18px', color: '#6B7280', maxWidth: '600px', margin: '0 auto', fontWeight: 500 }}>Des fonctionnalités exclusives pour les leaders du marché B2B.</p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '24px' }}>
+               {[
+                 { icon: Layout, title: "Vitrine Branding", desc: "Personnalisez vos couleurs, bannières et logos pour une identité forte.", color: "#E31E24" },
+                 { icon: Zap, title: "Intelligence Prédictive", desc: "Soyez alerté quand vos clients de proximité manquent de stock.", color: "#F59E0B" },
+                 { icon: MapPin, title: "Gestion Franchises", desc: "Gérez vos points de vente sur une carte interactive localisée.", color: "#3B82F6" },
+                 { icon: Package, title: "Boost Bundles", desc: "Mettez en avant vos packs promotionnels en haut de la marketplace.", color: "#10B981" },
+                 { icon: MessageSquare, title: "TradeMessager Pro", desc: "Messagerie sécurisée avec filtrage automatique des données sensibles.", color: "#8B5CF6" },
+                 { icon: ShieldCheck, title: "Audit & Badge", desc: "Gagnez en crédibilité avec le badge 'Vendeur Audité & Premium'.", color: "#111827" }
+               ].map((f, i) => (
+                 <div key={i} style={{ 
+                   background: '#fff', 
+                   padding: isMobile ? '24px' : '40px', 
+                   borderRadius: isMobile ? '16px' : '24px', 
+                   border: '1px solid #F1F5F9',
+                   boxShadow: '0 10px 30px rgba(0,0,0,0.02)',
+                   transition: 'all 0.3s'
+                 }}>
+                    <div style={{ 
+                      width: '48px', 
+                      height: '48px', 
+                      borderRadius: '12px', 
+                      background: '#F8FAFC', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      color: f.color,
+                      marginBottom: '20px'
+                    }}>
+                       <f.icon size={24} />
+                    </div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#111827', marginBottom: '12px' }}>{f.title}</h3>
+                    <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.6, fontWeight: 500 }}>{f.desc}</p>
+                 </div>
+               ))}
+            </div>
+            
+            <div style={{ textAlign: 'center', marginTop: '64px' }}>
+               <Link href="/vendor/premium" style={{ 
+                 display: 'inline-flex', 
+                 alignItems: 'center', 
+                 gap: '8px', 
+                 color: '#E31E24', 
+                 fontWeight: 800, 
+                 textDecoration: 'none',
+                 fontSize: '16px'
+               }}>
+                 Découvrir tous les avantages Premium <ArrowRight size={18} />
+               </Link>
             </div>
          </div>
       </section>
