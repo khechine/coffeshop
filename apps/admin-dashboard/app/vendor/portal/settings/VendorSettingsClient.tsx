@@ -26,14 +26,30 @@ export default function VendorSettingsClient({
   mktCategories,
   globalUnits,
   userEmail = '',
+  notificationPrefs = { notifyEmailMessages: true, notifyEmailOrders: true, notifyEmailRFQs: true }
 }: {
   portalData: any;
   mktCategories: { id: string; name: string; icon?: string | null }[];
   globalUnits: { id: string; name: string }[];
   userEmail?: string;
+  notificationPrefs?: { notifyEmailMessages: boolean; notifyEmailOrders: boolean; notifyEmailRFQs: boolean };
 }) {
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ show: boolean; message: string } | null>(null);
+
+  const [notifPrefs, setNotifPrefs] = useState(notificationPrefs);
+
+  const handleSaveNotifications = () => {
+    startTransition(async () => {
+      try {
+        const { updateNotificationSettingsAction } = await import('../../../actions');
+        await updateNotificationSettingsAction(notifPrefs);
+        showToast('Préférences de notification mises à jour !');
+      } catch (e: any) {
+        alert(e.message);
+      }
+    });
+  };
 
   const [customForm, setCustomForm] = useState({
     logoUrl: portalData.customization?.logoUrl || '',
@@ -642,7 +658,6 @@ export default function VendorSettingsClient({
                 </div>
               </div>
             </div>
-            
             <div className="pt-6">
               <button 
                 onClick={handleSaveProfile}
@@ -650,6 +665,94 @@ export default function VendorSettingsClient({
                 className="w-full px-8 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-white font-black text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all uppercase tracking-widest disabled:opacity-50"
               >
                 {isPending ? 'Enregistrement...' : 'Sauvegarder les informations'}
+              </button>
+            </div>
+          </div>
+          
+          {/* ── NOTIFICATIONS EMAIL ── */}
+          <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 p-8 md:p-10 rounded-[40px] backdrop-blur-md shadow-sm dark:shadow-none">
+            <div className="flex items-center gap-6 mb-10">
+              <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/50 rounded-[24px] border border-rose-200 dark:border-rose-800 flex items-center justify-center text-rose-500 shadow-inner">
+                <Mail size={28} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white">Notifications Email</h2>
+                <p className="text-slate-500 text-sm font-medium">Choisissez quelles alertes recevoir par email</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-slate-400">
+                    <MessageSquare size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white">Nouveaux Messages</h4>
+                    <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Discussions TradeMessager</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={notifPrefs.notifyEmailMessages} 
+                    onChange={e => setNotifPrefs(p => ({ ...p, notifyEmailMessages: e.target.checked }))}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-rose-500"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-slate-400">
+                    <Package size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white">Nouvelles Commandes</h4>
+                    <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Alertes de ventes panier</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={notifPrefs.notifyEmailOrders} 
+                    onChange={e => setNotifPrefs(p => ({ ...p, notifyEmailOrders: e.target.checked }))}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-rose-500"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-slate-400">
+                    <Mail size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white">Appels d'Offres (RFQ)</h4>
+                    <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Demandes directes et devis</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={notifPrefs.notifyEmailRFQs} 
+                    onChange={e => setNotifPrefs(p => ({ ...p, notifyEmailRFQs: e.target.checked }))}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-rose-500"></div>
+                </label>
+              </div>
+            </div>
+
+            <div className="pt-8">
+              <button 
+                onClick={handleSaveNotifications}
+                disabled={isPending}
+                className="w-full px-8 py-4 rounded-2xl bg-slate-900 dark:bg-slate-800 text-white font-black text-sm hover:bg-slate-800 dark:hover:bg-slate-700 transition-all uppercase tracking-widest disabled:opacity-50"
+              >
+                {isPending ? 'Enregistrement...' : 'Mettre à jour les préférences'}
               </button>
             </div>
           </div>

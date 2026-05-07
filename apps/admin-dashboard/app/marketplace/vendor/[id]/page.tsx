@@ -17,6 +17,12 @@ export default async function VendorStorefrontPage({ params }: { params: { id: s
       ratings: true,
       vendorProducts: {
         include: { productStandard: true }
+      },
+      posList: {
+        where: { isActive: true },
+        include: {
+          stockItems: true
+        }
       }
     }
   });

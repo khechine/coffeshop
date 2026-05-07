@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   ShoppingBag, Search, LayoutGrid, Star, MapPin, 
@@ -27,6 +27,42 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
   const [tradeMessagerOpen, setTradeMessagerOpen] = useState(false);
   const [tradeMessage, setTradeMessage] = useState('');
   const [isSendingMsg, setIsSendingMsg] = useState(false);
+
+  // Franchises / POS state
+  const [selectedPos, setSelectedPos] = useState<any>(null);
+  const mapRef = useRef<any>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (activeTab === 'Franchises' && typeof window !== 'undefined' && mapContainerRef.current && !mapRef.current) {
+      const initMap = async () => {
+        const L = (await import('leaflet')).default;
+        // @ts-ignore
+        import('leaflet/dist/leaflet.css');
+
+        const map = L.map(mapContainerRef.current!).setView([36.80, 10.18], 7);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        const posList = vendor.posList || [];
+        posList.forEach((pos: any) => {
+          if (pos.lat && pos.lng) {
+            const marker = L.marker([pos.lat, pos.lng]).addTo(map);
+            marker.bindPopup(`<b>${pos.name}</b><br/>${pos.address || ''}`);
+          }
+        });
+
+        if (posList.length > 0 && posList[0].lat) {
+            map.setView([posList[0].lat, posList[0].lng], 10);
+            setSelectedPos(posList[0]);
+        }
+
+        mapRef.current = map;
+      };
+      initMap();
+    }
+  }, [activeTab, vendor.posList]);
 
   const handleSendTradeMessage = async () => {
     if (!tradeMessage.trim()) return;
@@ -85,7 +121,7 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
      return { productsByCategory: groups, categoryMap: map };
   }, [products, allCategories]);
 
-  const navItems = isPremium ? ['Home', 'Products', 'About Us', 'Solutions', 'Discover', 'Contact Us'] : ['Tous les Produits', 'À Propos'];
+  const navItems = isPremium ? ['Home', 'Products', 'Franchises', 'About Us', 'Solutions', 'Discover', 'Contact Us'] : ['Tous les Produits', 'À Propos'];
 
   if (!isPremium) {
     return (
@@ -281,8 +317,60 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
            </div>
          )}
 
+         {activeTab === 'Franchises' && (
+           <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '32px', height: '600px' }}>
+              <div style={{ background: '#fff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #E5E7EB', position: 'relative' }}>
+                 <div ref={mapContainerRef} style={{ width: '100%', height: '100%', zIndex: 1 }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', paddingRight: '8px' }}>
+                 <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#111827', margin: '0 0 8px' }}>Nos Points de Vente</h3>
+                 {(vendor.posList || []).map((pos: any) => (
+                   <div 
+                    key={pos.id} 
+                    onClick={() => {
+                      setSelectedPos(pos);
+                      if (mapRef.current && pos.lat && pos.lng) {
+                        mapRef.current.setView([pos.lat, pos.lng], 14);
+                      }
+                    }}
+                    style={{ 
+                      background: selectedPos?.id === pos.id ? '#fff' : 'transparent', 
+                      padding: '20px', 
+                      borderRadius: '20px', 
+                      border: selectedPos?.id === pos.id ? `2px solid ${primaryColor}` : '1px solid #E5E7EB',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                   >
+                     <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#111827', margin: '0 0 4px' }}>{pos.name}</h4>
+                     <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                       <MapPin size={14} /> {pos.address || pos.city || 'Adresse non renseignée'}
+                     </p>
+                     
+                     <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '12px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 900, color: '#94A3B8', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Disponibilité Stock</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                           {vendor.vendorProducts.slice(0, 3).map((vp: any) => {
+                             const stock = pos.stockItems?.find((s: any) => s.vendorProductId === vp.id);
+                             const qty = stock ? Number(stock.quantity) : 0;
+                             return (
+                               <div key={vp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                 <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>{vp.name}</span>
+                                 <span style={{ fontSize: '12px', fontWeight: 800, color: qty > 0 ? '#10B981' : '#EF4444' }}>{qty} {vp.unit}</span>
+                               </div>
+                             );
+                           })}
+                           {vendor.vendorProducts.length > 3 && <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 700 }}>+ {vendor.vendorProducts.length - 3} autres articles</span>}
+                        </div>
+                     </div>
+                   </div>
+                 ))}
+              </div>
+           </div>
+         )}
+
          {activeTab === 'Products' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '24px' }}>
                {products.map((p: any) => <MarketplaceProductCard key={p.id} product={p} isVendor={isVendor} hidePrice={isVendor} />)}
             </div>
          )}

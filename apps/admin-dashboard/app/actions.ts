@@ -6,6 +6,7 @@ import * as bcrypt from 'bcryptjs';
 import { cookies, headers } from 'next/headers';
 import { Prisma } from '@prisma/client';
 import crypto from 'crypto';
+import { sendMarketplaceEmail } from './lib/mail';
 
 // ── Helpers (Updated for phone field) ──────────────────────────
 export async function getVendorProfile() {
@@ -1429,7 +1430,7 @@ export async function createMarketplaceRFQ(data: {
   const expiresAt = new Date();
   expiresAt.setHours(expiresAt.getHours() + hours);
 
-  return await (prisma as any).marketplaceRFQ.create({
+  const rfq = await (prisma as any).marketplaceRFQ.create({
     data: {
       storeId: store.id,
       title: data.title,
@@ -1441,6 +1442,17 @@ export async function createMarketplaceRFQ(data: {
       expiresAt: expiresAt,
     }
   });
+
+  // Notify potential vendors or SuperAdmin
+  await sendTradeNotificationAction({
+    userId: 'SUPERADMIN_ID_OR_LOGIC', // Replace with dynamic logic
+    type: 'RFQ_NEW',
+    title: 'Nouvelle demande d\'offre',
+    content: `Une nouvelle demande RFQ "${data.title}" a été publiée par ${store.name}.`,
+    metadata: { rfqId: rfq.id }
+  });
+
+  return rfq;
 }
 
 export async function getMarketplaceSectors() {
@@ -1520,6 +1532,18 @@ export async function submitMarketplaceQuote(data: {
       notes: data.notes,
     }
   });
+
+  // Notify buyer
+  const rfq = await (prisma as any).marketplaceRFQ.findUnique({ where: { id: data.rfqId }, include: { store: { include: { owner: true } } } });
+  if (rfq?.store?.owner) {
+    await sendTradeNotificationAction({
+      userId: rfq.store.owner.id,
+      type: 'RFQ_QUOTE',
+      title: 'Nouvelle proposition',
+      content: `Un vendeur a soumis une proposition pour votre demande : ${rfq.title}`,
+      metadata: { quoteId: quote.id }
+    });
+  }
 
   revalidatePath('/vendor/portal/rfq');
   revalidatePath('/marketplace/my-requests');
@@ -2060,6 +2084,25 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
     }
   });
 
+  // Notify Vendor via Email & In-app
+  try {
+    const vendorUser = await (prisma as any).user.findFirst({
+      where: { vendorProfile: { id: data.vendorId } },
+      select: { id: true }
+    });
+    if (vendorUser) {
+      await sendTradeNotificationAction({
+        userId: vendorUser.id,
+        type: 'ORDER_UPDATE',
+        title: 'Nouvelle Commande Panier',
+        content: `Vous avez reçu une nouvelle commande de ${store.name} pour un montant de ${data.total} DT.`,
+        metadata: { orderId: order.id }
+      });
+    }
+  } catch (e) {
+    console.error('Order notification failed:', e);
+  }
+
   // Track B2B Customer in Vendor's CRM
   try {
     await (prisma as any).vendorCustomer.upsert({
@@ -2085,6 +2128,7 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
     console.error('Failed to update vendor customer tracking', err);
   }
 
+  revalidatePath('/marketplace/my-orders');
   revalidatePath('/admin/orders');
   return order;
 }
@@ -5269,10 +5313,47 @@ export async function sendTradeNotificationAction(data: {
       }
     });
 
-    // 2. Simulated Email Notification
-    const user = await (prisma as any).user.findUnique({ where: { id: data.userId } });
+    // 2. Email Notification Dispatch
+    const user = await (prisma as any).user.findUnique({ 
+      where: { id: data.userId },
+      select: { 
+        email: true, 
+        name: true,
+        notifyEmailMessages: true,
+        notifyEmailOrders: true,
+        notifyEmailRFQs: true
+      }
+    });
+
     if (user?.email) {
-      console.log(`[EMAIL SIMULATION] To: ${user.email} | Subject: ${data.title} | Content: ${data.content}`);
+      // Check preferences
+      let shouldSend = false;
+      if (data.type === 'MESSAGE' && user.notifyEmailMessages) shouldSend = true;
+      if (data.type === 'ORDER_UPDATE' && user.notifyEmailOrders) shouldSend = true;
+      if ((data.type === 'RFQ_NEW' || data.type === 'RFQ_QUOTE') && user.notifyEmailRFQs) shouldSend = true;
+
+      if (shouldSend) {
+        await sendMarketplaceEmail({
+          to: user.email,
+          subject: `[ElKassa] ${data.title}`,
+          text: `${data.content}\n\nConsultez vos messages sur la plateforme : ${process.env.NEXT_PUBLIC_APP_URL}/marketplace/messages`,
+          html: `
+            <div style="font-family: sans-serif; padding: 20px; color: #1e293b;">
+              <h2 style="color: #e11d48;">${data.title}</h2>
+              <p style="font-size: 16px; line-height: 1.6;">${data.content}</p>
+              <div style="margin-top: 30px;">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL}/marketplace/messages" 
+                   style="background: #e11d48; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+                   Accéder à la plateforme
+                </a>
+              </div>
+              <hr style="margin-top: 40px; border: 0; border-top: 1px solid #e2e8f0;" />
+              <p style="font-size: 12px; color: #64748b;">Ceci est une notification automatique de ElKassa Marketplace.</p>
+              <p style="font-size: 10px; color: #94a3b8; margin-top: 10px;">Vous pouvez modifier vos préférences de notification dans vos paramètres.</p>
+            </div>
+          `
+        });
+      }
     }
 
     revalidatePath('/marketplace');
@@ -5314,6 +5395,54 @@ export async function markNotificationAsReadAction(id: string) {
     revalidatePath('/vendor/portal');
   } catch (error) {
     console.error('markNotificationAsReadAction Error:', error);
+  }
+}
+
+export async function getNotificationSettingsAction() {
+  'use server';
+  const cookieStore = cookies();
+  const userId = cookieStore.get('userId')?.value;
+  if (!userId) return null;
+
+  try {
+    return await (prisma as any).user.findUnique({
+      where: { id: userId },
+      select: {
+        notifyEmailMessages: true,
+        notifyEmailOrders: true,
+        notifyEmailRFQs: true
+      }
+    });
+  } catch (error) {
+    console.error('getNotificationSettingsAction Error:', error);
+    return null;
+  }
+}
+
+export async function updateNotificationSettingsAction(data: {
+  notifyEmailMessages: boolean;
+  notifyEmailOrders: boolean;
+  notifyEmailRFQs: boolean;
+}) {
+  'use server';
+  const cookieStore = cookies();
+  const userId = cookieStore.get('userId')?.value;
+  if (!userId) throw new Error('Session expirée');
+
+  try {
+    const updated = await (prisma as any).user.update({
+      where: { id: userId },
+      data: {
+        notifyEmailMessages: data.notifyEmailMessages,
+        notifyEmailOrders: data.notifyEmailOrders,
+        notifyEmailRFQs: data.notifyEmailRFQs
+      }
+    });
+    revalidatePath('/vendor/portal/settings');
+    return updated;
+  } catch (error) {
+    console.error('updateNotificationSettingsAction Error:', error);
+    throw new Error('Erreur lors de la mise à jour des préférences');
   }
 }
 

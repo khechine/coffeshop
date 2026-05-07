@@ -19,9 +19,26 @@ export default async function VendorSettingsPage() {
     const { cookies } = await import('next/headers');
     const userId = cookies().get('userId')?.value;
     let userEmail = '';
+    let notificationPrefs = { notifyEmailMessages: true, notifyEmailOrders: true, notifyEmailRFQs: true };
     if (userId) {
-      const userRecord = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+      const userRecord = await (prisma as any).user.findUnique({ 
+        where: { id: userId }, 
+        select: { 
+          email: true,
+          notifyEmailMessages: true,
+          notifyEmailOrders: true,
+          notifyEmailRFQs: true
+        } 
+      }) as any;
+      
       userEmail = userRecord?.email || '';
+      if (userRecord) {
+        notificationPrefs = {
+          notifyEmailMessages: userRecord.notifyEmailMessages ?? true,
+          notifyEmailOrders: userRecord.notifyEmailOrders ?? true,
+          notifyEmailRFQs: userRecord.notifyEmailRFQs ?? true
+        };
+      }
     }
 
     return <VendorSettingsClient 
@@ -29,6 +46,7 @@ export default async function VendorSettingsPage() {
       mktCategories={JSON.parse(JSON.stringify(mktCategories))} 
       globalUnits={JSON.parse(JSON.stringify(globalUnits))}
       userEmail={userEmail}
+      notificationPrefs={notificationPrefs}
     />;
   } catch (error: any) {
     console.error("CRITICAL ERROR IN VENDOR SETTINGS PAGE:", error);

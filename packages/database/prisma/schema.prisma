@@ -68,6 +68,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Notification Preferences
+  notifyEmailMessages Boolean @default(true)
+  notifyEmailOrders   Boolean @default(true)
+  notifyEmailRFQs     Boolean @default(true)
+
   vendorProfile  VendorProfile?
   courierProfile CourierProfile?
   paidSales     Sale[] @relation("paidBy")
