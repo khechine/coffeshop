@@ -130,11 +130,25 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
 
   const marketplaceSegments = categories;
 
-  const heroBanner = banners.find((b: any) => b.position === 'HERO') || {
-    title: 'Achats Intelligents : Affaires Prêtes',
-    subtitle: 'Vision Globale, Achats Précis, Efficacité Maximale',
-    imageUrl: '/marketplace_hero_banner.png'
-  };
+  const heroBanners = banners.filter((b: any) => b.position === 'HERO');
+  if (heroBanners.length === 0) {
+    heroBanners.push({
+      title: 'Achats Intelligents : Affaires Prêtes',
+      subtitle: 'Vision Globale, Achats Précis, Efficacité Maximale',
+      imageUrl: '/marketplace_hero_banner.png',
+      badgeText: 'B2B Platform'
+    });
+  }
+
+  const [activeBannerIdx, setActiveBannerIdx] = useState(0);
+
+  useEffect(() => {
+    if (heroBanners.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveBannerIdx(prev => (prev + 1) % heroBanners.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [heroBanners.length]);
 
   useEffect(() => {
     const names: string[] = [];
@@ -557,33 +571,82 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
 
               {/* Hero + Featured Area */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                {/* Hero Section */}
+                {/* Hero Section Carousel */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px' }}>
                   <div style={{ position: 'relative', height: '480px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
-                    <img 
-                      src={heroBanner.imageUrl} 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      alt="Marketplace Hero"
-                    />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.6), transparent)', display: 'flex', alignItems: 'center', padding: '60px' }}>
-                      <div style={{ maxWidth: '450px' }}>
-                        <BannerBadge color="#E31E24">B2B Platform</BannerBadge>
-                        <h1 style={{ fontSize: '48px', fontWeight: 900, color: '#fff', lineHeight: 1.1, margin: '20px 0' }}>
-                          {heroBanner.title}
-                        </h1>
-                        <p style={{ fontSize: '20px', color: 'rgba(255,255,255,0.9)', marginBottom: '32px', fontWeight: 500 }}>
-                          {heroBanner.subtitle}
-                        </p>
-                        <div style={{ display: 'flex', gap: '16px' }}>
-                          <button style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '14px 36px', borderRadius: '100px', fontWeight: 800, fontSize: '16px', cursor: 'pointer' }}>
-                            S'inscrire Gratuitement
-                          </button>
-                          <button style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', padding: '14px 36px', borderRadius: '100px', fontWeight: 800, fontSize: '16px', cursor: 'pointer' }}>
-                            Publier RFQ
-                          </button>
+                    {heroBanners.map((banner: any, idx: number) => (
+                      <div 
+                        key={banner.id || idx}
+                        style={{ 
+                          position: 'absolute', 
+                          inset: 0, 
+                          opacity: activeBannerIdx === idx ? 1 : 0,
+                          visibility: activeBannerIdx === idx ? 'visible' : 'hidden',
+                          transition: 'all 0.8s ease-in-out',
+                          background: banner.bgColor || '#1E1B4B'
+                        }}
+                      >
+                        <img 
+                          src={banner.imageUrl || '/marketplace_hero_banner.png'} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          alt={banner.title}
+                        />
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.6), transparent)', display: 'flex', alignItems: 'center', padding: '60px' }}>
+                          <div style={{ maxWidth: '450px', transform: activeBannerIdx === idx ? 'translateX(0)' : 'translateX(-20px)', opacity: activeBannerIdx === idx ? 1 : 0, transition: 'all 0.6s ease-out 0.2s' }}>
+                            <BannerBadge color={banner.badgeColor || "#E31E24"}>{banner.badgeText || "B2B Platform"}</BannerBadge>
+                            <h1 style={{ fontSize: '48px', fontWeight: 900, color: '#fff', lineHeight: 1.1, margin: '20px 0' }}>
+                              {banner.title}
+                            </h1>
+                            <p style={{ fontSize: '20px', color: 'rgba(255,255,255,0.9)', marginBottom: '32px', fontWeight: 500 }}>
+                              {banner.subtitle}
+                            </p>
+                            <div style={{ display: 'flex', gap: '16px' }}>
+                              <Link href={banner.buttonLink || "/register"} style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '14px 36px', borderRadius: '100px', fontWeight: 800, fontSize: '16px', cursor: 'pointer', textDecoration: 'none' }}>
+                                {banner.buttonText || "S'inscrire Gratuitement"}
+                              </Link>
+                              <button onClick={() => setRfqOpen(true)} style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', padding: '14px 36px', borderRadius: '100px', fontWeight: 800, fontSize: '16px', cursor: 'pointer' }}>
+                                Publier RFQ
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ))}
+
+                    {/* Carousel Controls */}
+                    {heroBanners.length > 1 && (
+                      <>
+                        <button 
+                          onClick={() => setActiveBannerIdx(prev => (prev - 1 + heroBanners.length) % heroBanners.length)}
+                          style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', width: '40px', height: '40px', borderRadius: '50%', color: '#fff', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <ChevronLeft size={24} />
+                        </button>
+                        <button 
+                          onClick={() => setActiveBannerIdx(prev => (prev + 1) % heroBanners.length)}
+                          style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', width: '40px', height: '40px', borderRadius: '50%', color: '#fff', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <ChevronRight size={24} />
+                        </button>
+                        <div style={{ position: 'absolute', bottom: '30px', left: '60px', display: 'flex', gap: '8px', zIndex: 10 }}>
+                          {heroBanners.map((_: any, i: number) => (
+                            <button 
+                              key={i}
+                              onClick={() => setActiveBannerIdx(i)}
+                              style={{ 
+                                width: activeBannerIdx === i ? '24px' : '8px', 
+                                height: '8px', 
+                                borderRadius: '4px', 
+                                background: activeBannerIdx === i ? '#E31E24' : 'rgba(255,255,255,0.4)', 
+                                border: 'none', 
+                                cursor: 'pointer',
+                                transition: 'all 0.3s'
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

@@ -8,7 +8,13 @@ import {
   MessageSquare, Send, Search, User, Box, ShieldCheck, 
   PhoneOff, MailWarning, ArrowLeft, Store
 } from 'lucide-react';
-import { getTradeConversationsAction, getTradeMessagesAction, sendTradeMessageAction } from '../../actions';
+import { 
+  getTradeConversationsAction, 
+  getTradeMessagesAction, 
+  sendTradeMessageAction,
+  getUserNotificationsAction,
+  markNotificationAsReadAction
+} from '../../actions';
 import { sanitizeUrl } from '../../lib/imageUtils';
 
 export default function MyMessagesClient({ store }: any) {
@@ -68,7 +74,6 @@ export default function MyMessagesClient({ store }: any) {
       }
 
       // Mark message notifications as read
-      const { getUserNotificationsAction, markNotificationAsReadAction } = await import('../../actions');
       const notifs = await getUserNotificationsAction();
       const messageNotifs = notifs.filter((n: any) => n.type === 'MESSAGE');
       for (const n of messageNotifs) {

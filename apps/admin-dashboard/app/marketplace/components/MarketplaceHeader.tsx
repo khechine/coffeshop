@@ -215,7 +215,9 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
               <Link href="/marketplace/my-requests" style={{ color: '#4B5563', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }} className="top-link">
                 <Target size={14} /> Mes Demandes
               </Link>
-              <span style={{ cursor: 'pointer' }}>Aide</span>
+              <Link href="/marketplace/help" style={{ color: '#4B5563', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }} className="top-link">
+                Aide
+              </Link>
               <span style={{ cursor: 'pointer' }}>Applications</span>
               <Link href={isVendor ? "/vendor/portal" : "/marketplace/vendors"} style={{ color: '#6B7280', textDecoration: 'none' }} className="top-link">
                 {isVendor ? 'Centre Vendeur' : 'Vendre sur ElKassa'}

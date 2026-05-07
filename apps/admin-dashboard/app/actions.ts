@@ -5233,28 +5233,32 @@ export async function sendTradeNotificationAction(data: {
 }) {
   'use server';
   
-  // 1. Save to Database
-  const notification = await (prisma as any).tradeNotification.create({
-    data: {
-      userId: data.userId,
-      type: data.type,
-      title: data.title,
-      content: data.content,
-      metadata: data.metadata || {}
+  try {
+    // 1. Save to Database
+    const notification = await (prisma as any).tradeNotification.create({
+      data: {
+        userId: data.userId,
+        type: data.type,
+        title: data.title,
+        content: data.content,
+        metadata: data.metadata || {}
+      }
+    });
+
+    // 2. Simulated Email Notification
+    const user = await (prisma as any).user.findUnique({ where: { id: data.userId } });
+    if (user?.email) {
+      console.log(`[EMAIL SIMULATION] To: ${user.email} | Subject: ${data.title} | Content: ${data.content}`);
     }
-  });
 
-  // 2. Simulated Email Notification
-  const user = await (prisma as any).user.findUnique({ where: { id: data.userId } });
-  if (user?.email) {
-    console.log(`[EMAIL SIMULATION] To: ${user.email} | Subject: ${data.title} | Content: ${data.content}`);
-    // In a real app: await sendRealEmail(user.email, data.title, data.content);
+    revalidatePath('/marketplace');
+    revalidatePath('/vendor/portal');
+    
+    return notification;
+  } catch (error) {
+    console.error('sendTradeNotificationAction Error:', error);
+    return null;
   }
-
-  revalidatePath('/marketplace');
-  revalidatePath('/vendor/portal');
-  
-  return notification;
 }
 
 export async function getUserNotificationsAction() {
@@ -5263,21 +5267,30 @@ export async function getUserNotificationsAction() {
   const userId = cookieStore.get('userId')?.value;
   if (!userId) return [];
 
-  return await (prisma as any).tradeNotification.findMany({
-    where: { userId, isRead: false },
-    orderBy: { createdAt: 'desc' },
-    take: 20
-  });
+  try {
+    return await (prisma as any).tradeNotification.findMany({
+      where: { userId, isRead: false },
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    });
+  } catch (error) {
+    console.error('getUserNotificationsAction Error:', error);
+    return [];
+  }
 }
 
 export async function markNotificationAsReadAction(id: string) {
   'use server';
-  await (prisma as any).tradeNotification.update({
-    where: { id },
-    data: { isRead: true }
-  });
-  revalidatePath('/marketplace');
-  revalidatePath('/vendor/portal');
+  try {
+    await (prisma as any).tradeNotification.update({
+      where: { id },
+      data: { isRead: true }
+    });
+    revalidatePath('/marketplace');
+    revalidatePath('/vendor/portal');
+  } catch (error) {
+    console.error('markNotificationAsReadAction Error:', error);
+  }
 }
 
 
