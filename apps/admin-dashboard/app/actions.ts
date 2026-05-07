@@ -5209,6 +5209,9 @@ export async function sendTradeMessageAction(data: { receiverId: string; product
     }
   });
 
+  revalidatePath('/marketplace/messages');
+  revalidatePath('/vendor/portal/messages');
+
   return { success: true, message };
 }
 
@@ -5278,6 +5281,27 @@ export async function getTradeConversationsAction() {
   }
 
   return Array.from(conversationsMap.values());
+}
+
+export async function debugTradeMessagesAction() {
+  'use server';
+  const cookieStore = cookies();
+  const userId = cookieStore.get('userId')?.value;
+  
+  const allMessages = await (prisma as any).tradeMessage.findMany({
+    take: 20,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      sender: { select: { id: true, name: true, email: true } },
+      receiver: { select: { id: true, name: true, email: true } }
+    }
+  });
+
+  return { 
+    currentUserId: userId,
+    messagesCount: allMessages.length,
+    messages: allMessages 
+  };
 }
 
 // ─── RFQ Acceptation & Commission ─────────────────────────────────────────
