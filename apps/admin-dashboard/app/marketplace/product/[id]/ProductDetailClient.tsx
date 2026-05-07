@@ -147,13 +147,36 @@ export default function ProductDetailClient({ product, isVendor = false, related
 
               <div style={{ padding: '20px 0', borderTop: '1px solid #F3F4F6', borderBottom: '1px solid #F3F4F6', marginBottom: '24px' }}>
                 {!isVendor ? (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                      <span style={{ fontSize: '32px', fontWeight: 900, color: '#111827' }}>{fmt(product.price * 0.8)} - {fmt(product.price)}</span>
-                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>DT</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Main Price */}
+                    <div>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>Prix unitaire</span>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                        <span style={{ fontSize: '36px', fontWeight: 900, color: '#E31E24' }}>{fmt(product.discountPrice || product.price)}</span>
+                        <span style={{ fontSize: '18px', fontWeight: 700, color: '#E31E24' }}>DT</span>
+                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#9CA3AF' }}>/ {product.unit || 'unité'}</span>
+                      </div>
                     </div>
-                    <span style={{ fontSize: '14px', color: '#6B7280', fontWeight: 600 }}>{product.minOrderQty} {product.unit} (MOQ)</span>
-                  </>
+
+                    {/* Discount badge if applicable */}
+                    {product.discountPrice && Number(product.discountPrice) < Number(product.price) && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '16px', fontWeight: 600, color: '#9CA3AF', textDecoration: 'line-through' }}>{fmt(product.price)} DT</span>
+                        <span style={{ 
+                          background: '#FEF2F2', color: '#E31E24', fontWeight: 800, fontSize: '12px', 
+                          padding: '4px 10px', borderRadius: '100px'
+                        }}>
+                          -{Math.round((1 - Number(product.discountPrice) / Number(product.price)) * 100)}%
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* MOQ info */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#6B7280', fontWeight: 600, background: '#F9FAFB', padding: '8px 14px', borderRadius: '8px', width: 'fit-content' }}>
+                      <ShoppingCart size={14} />
+                      <span>Commande minimum : <strong style={{ color: '#111827' }}>{product.minOrderQty} {product.unit || 'unité'}(s)</strong></span>
+                    </div>
+                  </div>
                 ) : (
                   <div style={{ fontSize: '18px', fontWeight: 800, color: '#E31E24' }}>
                     Prix sur demande
@@ -198,7 +221,10 @@ export default function ProductDetailClient({ product, isVendor = false, related
                 >
                   {isVendor ? 'Contacter Vendeur' : 'Ajouter au Panier'}
                 </button>
-                <button style={{ flex: 1, height: '56px', background: '#fff', color: '#111827', border: '2px solid #F1F5F9', borderRadius: '100px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
+                <button 
+                  onClick={() => setTradeMessagerOpen(true)}
+                  style={{ flex: 1, height: '56px', background: '#fff', color: '#111827', border: '2px solid #F1F5F9', borderRadius: '100px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
+                >
                   <MessageSquare size={18} className="text-indigo-600" />
                   Discuter
                 </button>

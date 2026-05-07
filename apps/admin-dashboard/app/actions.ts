@@ -5238,6 +5238,48 @@ export async function getTradeMessagesAction(otherUserId: string) {
   return messages;
 }
 
+export async function getTradeConversationsAction() {
+  'use server';
+  const cookieStore = cookies();
+  const userId = cookieStore.get('userId')?.value;
+
+  if (!userId) throw new Error('Session expirée.');
+
+  // Find all messages involving the current user
+  const messages = await (prisma as any).tradeMessage.findMany({
+    where: {
+      OR: [
+        { senderId: userId },
+        { receiverId: userId }
+      ]
+    },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      sender: { select: { id: true, name: true, role: true, image: true } },
+      receiver: { select: { id: true, name: true, role: true, image: true } },
+      product: { select: { id: true, name: true, image: true } }
+    }
+  });
+
+  // Group by "other user"
+  const conversationsMap = new Map<string, any>();
+
+  for (const msg of messages) {
+    const otherUser = msg.senderId === userId ? msg.receiver : msg.sender;
+    if (!otherUser) continue;
+
+    if (!conversationsMap.has(otherUser.id)) {
+      conversationsMap.set(otherUser.id, {
+        otherUser,
+        lastMessage: msg,
+        unreadCount: 0 // Will implement unread status later if needed
+      });
+    }
+  }
+
+  return Array.from(conversationsMap.values());
+}
+
 // ─── RFQ Acceptation & Commission ─────────────────────────────────────────
 
 export async function acceptMarketplaceQuoteAction(quoteId: string) {

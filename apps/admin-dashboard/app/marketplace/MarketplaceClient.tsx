@@ -892,51 +892,59 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                    display: 'flex', 
                    flexWrap: 'wrap', 
                    gap: '12px', 
-                   maxHeight: '150px', 
-                   overflow: 'hidden',
                    lineHeight: '48px'
                  }}>
-                    {shuffledTags.map((tag, i) => (
-                      <div key={i} style={{ 
-                        padding: '0 20px', 
-                        height: '40px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        borderRadius: '100px', 
-                        border: '1px solid #E5E7EB', 
-                        background: '#fff', 
-                        fontSize: '13px', 
-                        fontWeight: 600, 
-                        color: '#374151',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        whiteSpace: 'nowrap'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#E31E24';
-                        e.currentTarget.style.color = '#E31E24';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#E5E7EB';
-                        e.currentTarget.style.color = '#374151';
-                      }}
-                      >
-                        {tag}
-                      </div>
-                    ))}
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '4px', 
-                      fontSize: '13px', 
-                      fontWeight: 700, 
-                      color: '#6B7280', 
-                      cursor: 'pointer',
-                      padding: '0 10px',
-                      height: '40px'
-                    }}>
-                      Plus <ChevronDown size={14} />
-                    </div>
+                    {(() => {
+                      // Build flat lookup: name -> { slug, id }
+                      const catLookup = new Map<string, { slug?: string; id: string }>();
+                      const traverse = (cats: any[]) => {
+                        cats.forEach(cat => {
+                          catLookup.set(cat.name, { slug: cat.slug, id: cat.id });
+                          if (cat.children) traverse(cat.children);
+                        });
+                      };
+                      traverse(categories);
+
+                      return shuffledTags.map((tag, i) => {
+                        const catInfo = catLookup.get(tag);
+                        const href = catInfo 
+                          ? `/marketplace/category/${catInfo.slug || catInfo.id}` 
+                          : `/marketplace?search=${encodeURIComponent(tag)}&scope=CATEGORY`;
+                        
+                        return (
+                          <Link 
+                            key={i} 
+                            href={href}
+                            style={{ 
+                              padding: '0 20px', 
+                              height: '40px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              borderRadius: '100px', 
+                              border: '1px solid #E5E7EB', 
+                              background: '#fff', 
+                              fontSize: '13px', 
+                              fontWeight: 600, 
+                              color: '#374151',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              whiteSpace: 'nowrap',
+                              textDecoration: 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = '#E31E24';
+                              e.currentTarget.style.color = '#E31E24';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = '#E5E7EB';
+                              e.currentTarget.style.color = '#374151';
+                            }}
+                          >
+                            {tag}
+                          </Link>
+                        );
+                      });
+                    })()}
                  </div>
               </section>
             </div>

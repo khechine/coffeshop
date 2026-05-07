@@ -82,63 +82,101 @@ export default function CategoryViewClient({ category, products = [], allCategor
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '24px', marginBottom: '48px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '32px', marginBottom: '64px' }}>
           
-          {/* Sidebar */}
-          <aside style={{ background: '#fff', borderRadius: '8px', overflow: 'hidden', border: '1px solid #E5E7EB', height: 'fit-content' }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid #F3F4F6' }}>
-              <h2 style={{ fontSize: '16px', fontWeight: 800, color: category.color || '#111827', margin: 0 }}>{category.name}</h2>
+          {/* Sidebar with grouping */}
+          <aside style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E7EB', height: 'fit-content', position: 'sticky', top: '100px' }}>
+            <div style={{ padding: '24px', borderBottom: '1px solid #F3F4F6', background: category.color || '#111827', color: '#fff' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 900, margin: 0 }}>{category.name}</h2>
             </div>
-            <div style={{ padding: '8px 0' }}>
-              {subcategories.map((sub: any) => (
-                <Link key={sub.id} href={`/marketplace/category/${sub.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', textDecoration: 'none', color: '#374151' }} className="hover-bg-slate-50">
-                  <span style={{ fontSize: '14px', fontWeight: 700 }}>{sub.name}</span>
-                  <ChevronRight size={14} color="#9CA3AF" />
-                </Link>
-              ))}
+            <div style={{ padding: '12px 0' }}>
+              {(() => {
+                const grouped: Record<string, any[]> = {};
+                subcategories.forEach((child: any) => {
+                  const group = child.groupTitle || 'Autres';
+                  if (!grouped[group]) grouped[group] = [];
+                  grouped[group].push(child);
+                });
+
+                return Object.entries(grouped).map(([groupName, items]) => (
+                  <div key={groupName} style={{ marginBottom: '16px' }}>
+                    <div style={{ padding: '8px 20px', fontSize: '11px', fontWeight: 900, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {groupName}
+                    </div>
+                    {items.map((sub: any) => (
+                      <Link key={sub.id} href={`/marketplace/category/${sub.slug || sub.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', textDecoration: 'none', color: '#374151', transition: 'all 0.2s' }} className="hover-bg-slate-50">
+                        <span style={{ fontSize: '14px', fontWeight: 700 }}>{sub.name}</span>
+                        <ChevronRight size={14} color="#9CA3AF" />
+                      </Link>
+                    ))}
+                  </div>
+                ));
+              })()}
             </div>
           </aside>
 
-          {/* Subcategory Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
-            {subcategories.map((sub: any) => (
-              <Link 
-                key={sub.id} 
-                href={`/marketplace/category/${sub.id}`} 
-                style={{ 
-                  background: '#fff', 
-                  borderRadius: '16px', 
-                  overflow: 'hidden', 
-                  border: '1px solid #E5E7EB', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  textDecoration: 'none', 
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                }} 
-                className="category-card-premium"
-              >
-                <div style={{ width: '100%', aspectRatio: '16/10', overflow: 'hidden', background: '#F1F5F9' }}>
-                  <img 
-                    src={sanitizeUrl(sub.image) || 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=400'} 
-                    alt={sub.name} 
-                    style={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      objectFit: 'cover', 
-                      transition: 'transform 0.5s ease' 
-                    }} 
-                    className="category-img"
-                  />
-                </div>
-                <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
-                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#111827' }}>{sub.name}</span>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ChevronRight size={14} color="#94A3B8" />
+          {/* Subcategory Grid with grouping */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
+            {(() => {
+              const grouped: Record<string, any[]> = {};
+              subcategories.forEach((child: any) => {
+                const group = child.groupTitle || 'Général';
+                if (!grouped[group]) grouped[group] = [];
+                grouped[group].push(child);
+              });
+
+              return Object.entries(grouped).map(([groupName, items]) => (
+                <div key={groupName}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 900, color: '#111827', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                      {groupName}
+                    </h3>
+                    <div style={{ flex: 1, height: '1px', background: '#E5E7EB' }} />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '24px' }}>
+                    {items.map((sub: any) => (
+                      <Link 
+                        key={sub.id} 
+                        href={`/marketplace/category/${sub.slug || sub.id}`} 
+                        style={{ 
+                          background: '#fff', 
+                          borderRadius: '20px', 
+                          overflow: 'hidden', 
+                          border: '1px solid #E5E7EB', 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          textDecoration: 'none', 
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                        }} 
+                        className="category-card-premium"
+                      >
+                        <div style={{ width: '100%', aspectRatio: '16/10', overflow: 'hidden', background: '#F1F5F9' }}>
+                          <img 
+                            src={sanitizeUrl(sub.image) || 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=400'} 
+                            alt={sub.name} 
+                            style={{ 
+                              width: '100%', 
+                              height: '100%', 
+                              objectFit: 'cover', 
+                              transition: 'transform 0.5s ease' 
+                            }} 
+                            className="category-img"
+                          />
+                        </div>
+                        <div style={{ padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+                          <span style={{ fontSize: '15px', fontWeight: 800, color: '#111827' }}>{sub.name}</span>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '12px', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <ChevronRight size={18} color="#94A3B8" />
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
                   </div>
                 </div>
-              </Link>
-            ))}
+              ));
+            })()}
           </div>
         </div>
 

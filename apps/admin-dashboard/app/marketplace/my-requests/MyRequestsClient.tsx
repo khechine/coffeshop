@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import MarketplaceHeader from '../components/MarketplaceHeader';
 import MarketplaceFooter from '../components/MarketplaceFooter';
 import { Target, Clock, MessageCircle, FileText, ChevronRight, User, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -183,7 +184,12 @@ export default function MyRequestsClient({ rfqs, store }: any) {
                             >
                               {loadingQuoteId === quote.id ? 'Acceptation...' : "Accepter l'offre"}
                             </button>
-                            <button style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #E5E7EB', background: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}>Discuter</button>
+                            <Link 
+                              href={`/marketplace/messages?userId=${quote.vendor?.userId}`}
+                              style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #E5E7EB', background: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '13px', textDecoration: 'none', color: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              Discuter
+                            </Link>
                           </div>
                         )}
                       </div>

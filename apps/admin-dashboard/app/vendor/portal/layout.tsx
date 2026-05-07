@@ -31,6 +31,7 @@ export default function VendorPortalLayout({ children }: { children: React.React
   
   const navItems = [
     { id: 'dashboard', label: 'Accueil', icon: LayoutDashboard, href: '/vendor/portal' },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, href: '/vendor/portal/messages' },
     { id: 'crm', label: 'Clients', icon: Users, href: '/vendor/portal/crm' },
     { id: 'wallet', label: 'Portefeuille', icon: Wallet, href: '/vendor/portal/wallet' },
     { id: 'sales', label: 'Ventes', icon: BarChart3, href: '/vendor/portal/sales' },

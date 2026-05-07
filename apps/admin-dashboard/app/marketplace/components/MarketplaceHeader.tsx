@@ -189,6 +189,12 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
             </div>
             
             <div style={{ display: 'flex', gap: '24px', fontWeight: 600 }} className="top-links">
+              <Link href="/marketplace/messages" style={{ color: '#4B5563', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }} className="top-link">
+                <MessageSquare size={14} /> Mes Messages
+              </Link>
+              <Link href="/marketplace/my-requests" style={{ color: '#4B5563', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }} className="top-link">
+                <Target size={14} /> Mes Demandes
+              </Link>
               <span style={{ cursor: 'pointer' }}>Aide</span>
               <span style={{ cursor: 'pointer' }}>Applications</span>
               <Link href={isVendor ? "/vendor/portal" : "/marketplace/vendors"} style={{ color: '#6B7280', textDecoration: 'none' }} className="top-link">

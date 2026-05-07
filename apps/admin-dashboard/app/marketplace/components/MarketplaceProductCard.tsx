@@ -129,12 +129,15 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
               Contact Now
             </Link>
           )}
-          <button style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#374151' }}>
+          <Link 
+            href={`/marketplace/messages?userId=${product.vendor?.userId}`}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#374151', textDecoration: 'none' }}
+          >
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <MessageCircle size={16} />
             </div>
             Chat
-          </button>
+          </Link>
         </div>
 
         {/* Supplier Info */}

@@ -90,35 +90,59 @@ export default function MarketplaceMobile({ initialData, store, setRfqOpen, blog
         </form>
       </header>
 
-      {/* Popular Searches */}
+      {/* Mobile Search Bar — Popular Searches */}
       <div style={{ background: '#fff', padding: '16px 12px', borderBottom: '1px solid #eee' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
            <Flame size={16} color="#E31E24" fill="#E31E24" />
-           <span style={{ fontSize: '13px', fontWeight: 900 }}>Popular Searches</span>
+           <span style={{ fontSize: '13px', fontWeight: 900 }}>Recherches Populaires</span>
         </div>
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-           {['Coffee Beans', 'Espresso Machines', 'Recyclable Cups', 'Local Syrups', 'Latte Art Tools'].map(s => (
-             <div key={s} style={{ padding: '6px 16px', background: '#F3F4F6', borderRadius: '100px', fontSize: '12px', fontWeight: 600, color: '#4B5563', whiteSpace: 'nowrap' }}>{s}</div>
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }} className="no-scrollbar">
+           {(initialData.shuffledTags || ['Café', 'Emballages', 'Machines', 'Sirop', 'Pâtisserie']).slice(0, 8).map((s: string) => (
+             <Link 
+              key={s} 
+              href={`/marketplace?search=${encodeURIComponent(s)}&scope=PRODUCT`}
+              style={{ padding: '6px 16px', background: '#F3F4F6', borderRadius: '100px', fontSize: '12px', fontWeight: 600, color: '#4B5563', whiteSpace: 'nowrap', textDecoration: 'none' }}
+             >
+              {s}
+             </Link>
            ))}
         </div>
       </div>
 
-      {/* Category Tabs */}
-      <div style={{ background: '#fff', padding: '12px 0', overflowX: 'auto', display: 'flex', gap: '20px', borderBottom: '1px solid #eee', whiteSpace: 'nowrap', scrollbarWidth: 'none' }}>
-        {['All', 'Beverages', 'Packaging', 'Equipment', 'Raw Materials', 'Tunisian Pride'].map((cat, i) => (
+      {/* Category Tabs — Dynamic from DB */}
+      <div style={{ background: '#fff', padding: '12px 0', overflowX: 'auto', display: 'flex', gap: '20px', borderBottom: '1px solid #eee', whiteSpace: 'nowrap', scrollbarWidth: 'none' }} className="no-scrollbar">
+        <div 
+          onClick={() => setActiveTab('All')}
+          style={{ 
+            padding: '0 16px', 
+            fontSize: '14px', 
+            fontWeight: activeTab === 'All' ? 800 : 500,
+            color: activeTab === 'All' ? '#E31E24' : '#666',
+            position: 'relative'
+          }}
+        >
+          Tout
+          {activeTab === 'All' && (
+            <div style={{ position: 'absolute', bottom: '-12px', left: '16px', right: '16px', height: '3px', background: '#E31E24', borderRadius: '100px' }} />
+          )}
+        </div>
+        {categories.map((cat: any) => (
           <div 
-            key={i} 
-            onClick={() => setActiveTab(cat)}
+            key={cat.id} 
+            onClick={() => {
+              setActiveTab(cat.name);
+              // Optionnel: router.push(`/marketplace/category/${cat.slug || cat.id}`)
+            }}
             style={{ 
               padding: '0 16px', 
               fontSize: '14px', 
-              fontWeight: activeTab === cat ? 800 : 500,
-              color: activeTab === cat ? '#E31E24' : '#666',
+              fontWeight: activeTab === cat.name ? 800 : 500,
+              color: activeTab === cat.name ? '#E31E24' : '#666',
               position: 'relative'
             }}
           >
-            {cat}
-            {activeTab === cat && (
+            {cat.icon} {cat.name}
+            {activeTab === cat.name && (
               <div style={{ position: 'absolute', bottom: '-12px', left: '16px', right: '16px', height: '3px', background: '#E31E24', borderRadius: '100px' }} />
             )}
           </div>
