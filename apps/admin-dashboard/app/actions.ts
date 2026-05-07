@@ -5238,7 +5238,7 @@ export async function getTradeMessagesAction(otherUserId: string) {
     }
   });
 
-  return messages;
+  return JSON.parse(JSON.stringify(messages));
 }
 
 export async function getTradeConversationsAction() {
@@ -5248,39 +5248,44 @@ export async function getTradeConversationsAction() {
 
   if (!userId) throw new Error('Session expirée.');
 
-  // Find all messages involving the current user
-  const messages = await (prisma as any).tradeMessage.findMany({
-    where: {
-      OR: [
-        { senderId: userId },
-        { receiverId: userId }
-      ]
-    },
-    orderBy: { createdAt: 'desc' },
-    include: {
-      sender: { select: { id: true, name: true, role: true, image: true } },
-      receiver: { select: { id: true, name: true, role: true, image: true } },
-      product: { select: { id: true, name: true, image: true } }
+  try {
+    // Find all messages involving the current user
+    const messages = await (prisma as any).tradeMessage.findMany({
+      where: {
+        OR: [
+          { senderId: userId },
+          { receiverId: userId }
+        ]
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        sender: { select: { id: true, name: true, role: true } },
+        receiver: { select: { id: true, name: true, role: true } },
+        product: { select: { id: true, name: true, image: true } }
+      }
+    });
+
+    // Group by "other user"
+    const conversationsMap = new Map<string, any>();
+
+    for (const msg of messages) {
+      const otherUser = msg.senderId === userId ? msg.receiver : msg.sender;
+      if (!otherUser) continue;
+
+      if (!conversationsMap.has(otherUser.id)) {
+        conversationsMap.set(otherUser.id, {
+          otherUser,
+          lastMessage: msg,
+          unreadCount: 0 
+        });
+      }
     }
-  });
 
-  // Group by "other user"
-  const conversationsMap = new Map<string, any>();
-
-  for (const msg of messages) {
-    const otherUser = msg.senderId === userId ? msg.receiver : msg.sender;
-    if (!otherUser) continue;
-
-    if (!conversationsMap.has(otherUser.id)) {
-      conversationsMap.set(otherUser.id, {
-        otherUser,
-        lastMessage: msg,
-        unreadCount: 0 // Will implement unread status later if needed
-      });
-    }
+    return JSON.parse(JSON.stringify(Array.from(conversationsMap.values())));
+  } catch (error) {
+    console.error('getTradeConversationsAction Error:', error);
+    return [];
   }
-
-  return Array.from(conversationsMap.values());
 }
 
 export async function debugTradeMessagesAction() {
