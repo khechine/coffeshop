@@ -3,19 +3,33 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getUserNotificationsAction } from '../../actions';
 import {
   ShoppingBag, Search, LayoutGrid, ShoppingCart, 
   MapPin, ChevronRight, X, Menu, User, ArrowRight,
   ChevronDown, Globe, HelpCircle, Smartphone, Languages,
-  MessageSquare, Target
+  MessageSquare, Target, Bell
 } from 'lucide-react';
 import { useCart } from '../CartContext';
 import CartDrawer from '../CartDrawer';
 import MarketplaceRFQModal from './MarketplaceRFQModal';
 
 export default function MarketplaceHeader({ isVendor = false, store, minimal = false, allCategories = [] }: { isVendor?: boolean, store?: any, minimal?: boolean, allCategories?: any[] }) {
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
   const [hoveredRootId, setHoveredRootId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchNotifs = async () => {
+      try {
+        const notifs = await getUserNotificationsAction();
+        setNotifications(notifs);
+      } catch (e) {}
+    };
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -190,7 +204,13 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
             
             <div style={{ display: 'flex', gap: '24px', fontWeight: 600 }} className="top-links">
               <Link href="/marketplace/messages" style={{ color: '#4B5563', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }} className="top-link">
-                <MessageSquare size={14} /> Mes Messages
+                <div style={{ position: 'relative', display: 'flex' }}>
+                  <MessageSquare size={14} />
+                  {notifications.length > 0 && (
+                    <span style={{ position: 'absolute', top: '-4px', right: '-4px', width: '6px', height: '6px', backgroundColor: '#DC2626', borderRadius: '50%', border: '1px solid white' }} />
+                  )}
+                </div>
+                Mes Messages
               </Link>
               <Link href="/marketplace/my-requests" style={{ color: '#4B5563', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }} className="top-link">
                 <Target size={14} /> Mes Demandes

@@ -79,6 +79,7 @@ model User {
   loginLogs     UserLoginLog[]
   sentTradeMessages     TradeMessage[] @relation("SentMessages")
   receivedTradeMessages TradeMessage[] @relation("ReceivedMessages")
+  tradeNotifications    TradeNotification[]
 }
 
 model StaffSessionLog {
@@ -1290,4 +1291,18 @@ model TradeMessage {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+model TradeNotification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // MESSAGE, RFQ_NEW, RFQ_QUOTE, ORDER_UPDATE
+  title     String
+  content   String
+  metadata  Json?    // { threadId, productId, rfqId }
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
 }

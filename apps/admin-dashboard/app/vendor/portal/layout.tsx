@@ -28,16 +28,30 @@ export default function VendorPortalLayout({ children }: { children: React.React
       document.documentElement.classList.toggle('dark', newTheme === 'dark');
     }
   };
-  
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchNotifs = async () => {
+      const { getUserNotificationsAction } = await import('../../actions');
+      try {
+        const notifs = await getUserNotificationsAction();
+        setNotifications(notifs);
+      } catch (e) {}
+    };
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const navItems = [
     { id: 'dashboard', label: 'Accueil', icon: LayoutDashboard, href: '/vendor/portal' },
-    { id: 'messages', label: 'Messages', icon: MessageSquare, href: '/vendor/portal/messages' },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, href: '/vendor/portal/messages', badge: notifications.filter(n => n.type === 'MESSAGE').length },
     { id: 'crm', label: 'Clients', icon: Users, href: '/vendor/portal/crm' },
     { id: 'wallet', label: 'Portefeuille', icon: Wallet, href: '/vendor/portal/wallet' },
     { id: 'sales', label: 'Ventes', icon: BarChart3, href: '/vendor/portal/sales' },
     { id: 'catalog', label: 'Catalogue', icon: Package, href: '/vendor/portal/catalog' },
     { id: 'orders', label: 'Commandes', icon: ShoppingBag, href: '/vendor/portal/orders' },
-    { id: 'rfq', label: 'Demandes (RFQ)', icon: MessageSquare, href: '/vendor/portal/rfq' },
+    { id: 'rfq', label: 'Demandes (RFQ)', icon: MessageSquare, href: '/vendor/portal/rfq', badge: notifications.filter(n => n.type === 'RFQ_NEW').length },
     { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, href: '/marketplace' },
     { id: 'profile', label: 'Profil', icon: Settings, href: '/vendor/portal/settings' },
   ];
@@ -98,7 +112,12 @@ export default function VendorPortalLayout({ children }: { children: React.React
                 }`}
               >
                 <item.icon size={18} />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {(item.badge || 0) > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             );
           })}

@@ -5212,8 +5212,74 @@ export async function sendTradeMessageAction(data: { receiverId: string; product
   revalidatePath('/marketplace/messages');
   revalidatePath('/vendor/portal/messages');
 
+  // Trigger Notification
+  await sendTradeNotificationAction({
+    userId: data.receiverId,
+    type: 'MESSAGE',
+    title: 'Nouveau message',
+    content: `Vous avez reçu un message de ${userId === message.senderId ? 'votre interlocuteur' : 'un client'}.`,
+    metadata: { threadId: userId, productId: data.productId }
+  });
+
   return { success: true, message };
 }
+
+export async function sendTradeNotificationAction(data: { 
+  userId: string; 
+  type: 'MESSAGE' | 'RFQ_NEW' | 'RFQ_QUOTE' | 'ORDER_UPDATE'; 
+  title: string; 
+  content: string; 
+  metadata?: any 
+}) {
+  'use server';
+  
+  // 1. Save to Database
+  const notification = await (prisma as any).tradeNotification.create({
+    data: {
+      userId: data.userId,
+      type: data.type,
+      title: data.title,
+      content: data.content,
+      metadata: data.metadata || {}
+    }
+  });
+
+  // 2. Simulated Email Notification
+  const user = await (prisma as any).user.findUnique({ where: { id: data.userId } });
+  if (user?.email) {
+    console.log(`[EMAIL SIMULATION] To: ${user.email} | Subject: ${data.title} | Content: ${data.content}`);
+    // In a real app: await sendRealEmail(user.email, data.title, data.content);
+  }
+
+  revalidatePath('/marketplace');
+  revalidatePath('/vendor/portal');
+  
+  return notification;
+}
+
+export async function getUserNotificationsAction() {
+  'use server';
+  const cookieStore = cookies();
+  const userId = cookieStore.get('userId')?.value;
+  if (!userId) return [];
+
+  return await (prisma as any).tradeNotification.findMany({
+    where: { userId, isRead: false },
+    orderBy: { createdAt: 'desc' },
+    take: 20
+  });
+}
+
+export async function markNotificationAsReadAction(id: string) {
+  'use server';
+  await (prisma as any).tradeNotification.update({
+    where: { id },
+    data: { isRead: true }
+  });
+  revalidatePath('/marketplace');
+  revalidatePath('/vendor/portal');
+}
+
 
 export async function getTradeMessagesAction(otherUserId: string) {
   'use server';

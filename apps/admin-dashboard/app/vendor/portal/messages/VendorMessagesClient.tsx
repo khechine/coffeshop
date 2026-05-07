@@ -31,6 +31,17 @@ export default function VendorMessagesClient() {
     scrollToBottom();
   }, [messages]);
 
+  // Polling for new messages every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadConversations();
+      if (selectedConversation) {
+        loadMessages(selectedConversation.otherUser.id);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [selectedConversation]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -41,6 +52,14 @@ export default function VendorMessagesClient() {
       setConversations(data);
       if (data.length > 0 && !selectedConversation) {
         setSelectedConversation(data[0]);
+      }
+
+      // Mark message notifications as read
+      const { getUserNotificationsAction, markNotificationAsReadAction } = await import('../../../actions');
+      const notifs = await getUserNotificationsAction();
+      const messageNotifs = notifs.filter((n: any) => n.type === 'MESSAGE');
+      for (const n of messageNotifs) {
+        await markNotificationAsReadAction(n.id);
       }
     } catch (e) {
       console.error(e);
