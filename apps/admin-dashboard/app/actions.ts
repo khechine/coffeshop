@@ -5664,3 +5664,78 @@ export async function updateMarketplaceConfig(data: { rfqExpirationHours?: numbe
   revalidatePath('/superadmin/marketplace');
   return JSON.parse(JSON.stringify(config));
 }
+export async function getPredictiveAlertsAction() {
+  const user = await getUserContext();
+  if (user?.role !== 'VENDOR') return [];
+  
+  const vendor = await (prisma as any).vendorProfile.findFirst({
+     where: { userId: user.id },
+     include: { 
+       vendorProducts: { 
+         include: { productStandard: true } 
+       } 
+     }
+  });
+  
+  if (!vendor || !vendor.isPremium) return [];
+
+  // Find nearby stores (clients)
+  const allStores = await (prisma as any).store.findMany({
+    include: { 
+      user: true, 
+      stockItems: true 
+    }
+  });
+
+  const alerts: any[] = [];
+  const vendorProductNames = (vendor.vendorProducts || []).map((vp: any) => 
+    (vp.name || vp.productStandard?.name || '').toLowerCase().trim()
+  ).filter((n: string) => n.length > 2);
+
+  for (const store of allStores) {
+    if (!store.user) continue;
+
+    // Proximity check (50km radius)
+    if (vendor.lat && vendor.lng && store.lat && store.lng) {
+      const dist = calculateDistance(
+        Number(vendor.lat), 
+        Number(vendor.lng), 
+        Number(store.lat), 
+        Number(store.lng)
+      );
+      
+      if (dist > 50) continue;
+
+      for (const item of (store.stockItems || [])) {
+        const qty = Number(item.quantity);
+        const threshold = Number(item.minThreshold) || 10; // Default threshold if not set
+        
+        if (qty <= threshold) {
+          const itemName = item.name.toLowerCase().trim();
+          
+          // Fuzzy name matching
+          const isMatch = vendorProductNames.some((vpName: string) => 
+            itemName.includes(vpName) || vpName.includes(itemName)
+          );
+
+          if (isMatch) {
+            alerts.push({
+              id: `pred-${store.id}-${item.id}`,
+              clientId: store.user.id,
+              clientName: store.user.name || 'Client',
+              productName: item.name,
+              reason: 'STOCK_LOW',
+              currentQty: qty,
+              threshold: threshold,
+              distance: dist.toFixed(1),
+              city: store.city || 'Proximité'
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Deduplicate and limit
+  return alerts.slice(0, 5);
+}

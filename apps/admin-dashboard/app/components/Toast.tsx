@@ -6,15 +6,15 @@ import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 type ToastType = 'success' | 'error' | 'info';
 
 interface ToastContextType {
-  showToast: (message: string, type?: ToastType) => void;
+  showToast: (message: React.ReactNode, type?: ToastType) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = useState<{ id: string; message: string; type: ToastType }[]>([]);
+  const [toasts, setToasts] = useState<{ id: string; message: React.ReactNode; type: ToastType }[]>([]);
 
-  const showToast = (message: string, type: ToastType = 'success') => {
+  const showToast = (message: React.ReactNode, type: ToastType = 'success') => {
     const id = Math.random().toString(36).substr(2, 9);
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
@@ -53,7 +53,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             {t.type === 'error' && <AlertCircle size={20} color="#EF4444" />}
             {t.type === 'info' && <Info size={20} color="#3B82F6" />}
             
-            <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>{t.message}</span>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B', flex: 1 }}>{t.message}</div>
             
             <button 
               onClick={() => setToasts(prev => prev.filter(toast => toast.id !== t.id))}

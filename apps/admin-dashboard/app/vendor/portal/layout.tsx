@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Package, Truck, LayoutDashboard, Settings, LogOut, ShoppingBag, Sun, Moon, ChevronLeft, BarChart3, Wallet, Users, MessageSquare } from 'lucide-react';
+import { Package, Truck, LayoutDashboard, Settings, LogOut, ShoppingBag, Sun, Moon, ChevronLeft, BarChart3, Wallet, Users, MessageSquare, Star } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import VendorAlertBar from './VendorAlertBar';
 import { ToastProvider } from '../../components/Toast';
+import PredictiveAlertsManager from './components/PredictiveAlertsManager';
 
 export default function VendorPortalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -53,6 +54,7 @@ export default function VendorPortalLayout({ children }: { children: React.React
     { id: 'catalog', label: 'Catalogue', icon: Package, href: '/vendor/portal/catalog' },
     { id: 'orders', label: 'Commandes', icon: ShoppingBag, href: '/vendor/portal/orders' },
     { id: 'rfq', label: 'Demandes (RFQ)', icon: MessageSquare, href: '/vendor/portal/rfq', badge: notifications.filter(n => n.type === 'RFQ_NEW').length },
+    { id: 'premium', label: 'Devenir Premium', icon: Star, href: '/vendor/premium' },
     { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, href: '/marketplace' },
     { id: 'profile', label: 'Profil', icon: Settings, href: '/vendor/portal/settings' },
   ];
@@ -146,6 +148,7 @@ export default function VendorPortalLayout({ children }: { children: React.React
         {/* Main Content Area */}
         <main className="flex-1 md:ml-[280px] min-w-0 transition-all duration-300">
           <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
+            <PredictiveAlertsManager />
             <VendorAlertBar />
             {children}
           </div>
