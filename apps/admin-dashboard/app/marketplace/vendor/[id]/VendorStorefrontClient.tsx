@@ -14,6 +14,7 @@ import MarketplaceFooter from '../../components/MarketplaceFooter';
 import MarketplaceProductCard from '../../components/MarketplaceProductCard';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 import { sendTradeMessageAction } from '../../../actions';
+import { useToast } from '../../components/Toast';
 
 
 const fmt = (n: any) => Number(n).toFixed(2);
@@ -23,6 +24,7 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
   const [activeTab, setActiveTab] = useState('Home');
   const [activeCollection, setActiveCollection] = useState<Record<string, string>>({});
   const { addToCart } = useCart();
+  const { showToast } = useToast();
   
   const [tradeMessagerOpen, setTradeMessagerOpen] = useState(false);
   const [tradeMessage, setTradeMessage] = useState('');
@@ -73,12 +75,12 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
         content: tradeMessage
       });
       if (res.success) {
-        alert("Message envoyé ! Les coordonnées personnelles ont été masquées selon nos conditions.");
+        showToast("Message envoyé ! Les coordonnées personnelles ont été masquées selon nos conditions.");
         setTradeMessagerOpen(false);
         setTradeMessage('');
       }
     } catch (e: any) {
-      alert("Erreur lors de l'envoi du message : " + e.message);
+      showToast("Erreur lors de l'envoi du message : " + e.message, 'error');
     } finally {
       setIsSendingMsg(false);
     }
