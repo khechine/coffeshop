@@ -43,6 +43,23 @@ export default async function SuperAdminDashboard() {
     take: 5
   });
 
+  // Critical Alerts Logic
+  const criticalStores = await (prisma as any).store.findMany({
+    where: {
+      OR: [
+        { isRestricted: true },
+        { marketplaceGraceOrders: { gt: 0 } }
+      ]
+    },
+    select: {
+      id: true,
+      name: true,
+      isRestricted: true,
+      marketplaceGraceOrders: true,
+      wallet: { select: { balance: true } }
+    }
+  });
+
   const stats = [
     { label: 'MRR (Abonnements)', value: `${mrr.toFixed(0)} DT`, icon: CreditCard, color: '#4F46E5', trend: 'Revenu Mensuel' },
     { label: 'Commissions B2B', value: `${totalCommissions.toFixed(2)} DT`, icon: TrendingUp, color: '#10B981', trend: 'Total Cumulé' },
@@ -63,6 +80,29 @@ export default async function SuperAdminDashboard() {
            <Link href="/superadmin/vendors" className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:scale-105 transition-all">Valider les Inscriptions</Link>
         </div>
       </div>
+
+      {/* Critical Alerts Bar */}
+      {criticalStores.length > 0 && (
+        <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 p-6 rounded-[32px] flex flex-wrap gap-4 items-center">
+          <div className="w-12 h-12 bg-rose-500 rounded-2xl flex items-center justify-center shadow-lg shadow-rose-500/20">
+            <AlertCircle size={24} color="#FFF" />
+          </div>
+          <div className="flex-1">
+            <h4 className="text-rose-900 dark:text-rose-400 font-black text-lg leading-tight">Attention : {criticalStores.length} boutiques nécessitent une action</h4>
+            <p className="text-rose-600 dark:text-rose-500 text-sm font-medium">Certains comptes sont restreints ou approchent de la limite de grâce.</p>
+          </div>
+          <div className="flex gap-2">
+            {criticalStores.slice(0, 3).map((cs: any) => (
+              <div key={cs.id} className="bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-rose-100 dark:border-rose-800 shadow-sm flex items-center gap-3">
+                 <div className={`w-2 h-2 rounded-full ${cs.isRestricted ? 'bg-rose-600 animate-pulse' : 'bg-amber-500'}`} />
+                 <span className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase">{cs.name}</span>
+                 <span className="text-[10px] font-bold text-rose-500">{Number(cs.wallet?.balance || 0).toFixed(2)} DT</span>
+              </div>
+            ))}
+            <Link href="/superadmin/cafes" className="px-4 py-2 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 transition-all">Gérer tout</Link>
+          </div>
+        </div>
+      )}
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">

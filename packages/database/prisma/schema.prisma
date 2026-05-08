@@ -934,6 +934,21 @@ model VendorProfile {
   customers      VendorCustomer[]
   campaigns      VendorCampaign[]
   collections    VendorCollection[]
+  premiumRequests VendorPremiumRequest[]
+}
+
+model VendorPremiumRequest {
+  id              String   @id @default(cuid())
+  vendorId        String
+  vendor          VendorProfile @relation(fields: [vendorId], references: [id])
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  message         String?
+  phone           String?
+  preferredContact String? // EMAIL, PHONE, WHATSAPP
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([vendorId])
 }
 
 model CourierProfile {

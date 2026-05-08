@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Store, ShieldCheck, MapPin, Package, CreditCard, LogOut, CheckCircle, Truck, Database, Wallet, Menu, X, Cake } from 'lucide-react';
+import { LayoutDashboard, Users, Store, ShieldCheck, MapPin, Package, CreditCard, LogOut, CheckCircle, Truck, Database, Wallet, Menu, X, Cake, Star } from 'lucide-react';
 
 export default function SuperAdminLayoutClient({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -10,6 +10,7 @@ export default function SuperAdminLayoutClient({ children }: { children: React.R
   const sidebarItems = [
     { label: 'Vue d\'ensemble', icon: LayoutDashboard, href: '/superadmin' },
     { label: 'Vendeurs Marketplace', icon: ShieldCheck, href: '/superadmin/vendors', badge: 'Validation' },
+    { label: 'Demandes Premium', icon: Star, href: '/superadmin/vendors/premium', badge: 'Vendeurs' },
     { label: 'Catégories Marketplace', icon: Package, href: '/superadmin/marketplace/categories' },
     { label: 'Pâtisseries & Boulangeries', icon: Cake, href: '/superadmin/patisseries' },
     { label: 'Réseau Coffee Shops', icon: Store, href: '/superadmin/cafes' },

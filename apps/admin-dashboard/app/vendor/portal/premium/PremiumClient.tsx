@@ -1,9 +1,12 @@
 'use client';
 import React from 'react';
-import { Check, Star, Zap, MapPin, MessageCircle, BarChart3, ShieldCheck, ArrowRight, Package, Layout, Globe } from 'lucide-react';
+import { Check, Star, Zap, MapPin, MessageCircle, BarChart3, ShieldCheck, ArrowRight, Package, Layout, Globe, Phone, Send, Mail } from 'lucide-react';
 import Link from 'next/link';
+import { submitVendorPremiumRequestAction } from '../../../actions';
+import { useToast } from '../../../components/Toast';
 
 export default function PremiumPage() {
+  const { showToast } = useToast();
   const features = [
     {
       title: "Vitrine Personnalisée & Branding",
@@ -150,14 +153,63 @@ export default function PremiumPage() {
         </div>
       </section>
 
-      {/* CTA Footer */}
-      <section style={{ padding: '100px 24px', textAlign: 'center' }}>
-         <div style={{ maxWidth: '800px', margin: '0 auto', background: '#E31E24', borderRadius: '40px', padding: '64px', color: '#fff' }}>
-            <h2 style={{ fontSize: '40px', fontWeight: 900, marginBottom: '24px' }}>Prêt à passer à la vitesse supérieure ?</h2>
-            <p style={{ fontSize: '18px', opacity: 0.9, marginBottom: '40px', fontWeight: 500 }}>Rejoignez le cercle fermé des fournisseurs leaders sur Elkassa.</p>
-            <button style={{ padding: '20px 48px', borderRadius: '16px', background: '#fff', color: '#E31E24', border: 'none', fontSize: '18px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }}>
-              Contactez un Conseiller
-            </button>
+      {/* CTA Footer & Form */}
+      <section id="premium-form" style={{ padding: '100px 24px', textAlign: 'center' }}>
+         <div style={{ maxWidth: '800px', margin: '0 auto', background: '#1E293B', borderRadius: '40px', padding: '64px', color: '#fff', textAlign: 'left' }}>
+            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+              <h2 style={{ fontSize: '40px', fontWeight: 900, marginBottom: '16px' }}>Demande de Statut Premium</h2>
+              <p style={{ fontSize: '18px', opacity: 0.7, fontWeight: 500 }}>Remplissez ce formulaire et un conseiller vous contactera sous 24h.</p>
+            </div>
+
+            <form action={async (formData) => {
+              const res = await submitVendorPremiumRequestAction({
+                phone: formData.get('phone') as string,
+                preferredContact: formData.get('preferredContact') as string,
+                message: formData.get('message') as string
+              });
+              if (res.success) {
+                showToast('Demande envoyée avec succès !');
+              }
+            }} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Téléphone de contact</label>
+                  <div style={{ position: 'relative' }}>
+                    <Phone size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#475569' }} />
+                    <input 
+                      name="phone"
+                      required
+                      placeholder="+216 22 123 456"
+                      style={{ width: '100%', padding: '16px 16px 16px 48px', borderRadius: '14px', background: '#0F172A', border: '1px solid #334155', color: '#fff', outline: 'none' }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Canal Préféré</label>
+                  <select 
+                    name="preferredContact"
+                    style={{ width: '100%', padding: '16px', borderRadius: '14px', background: '#0F172A', border: '1px solid #334155', color: '#fff', outline: 'none' }}
+                  >
+                    <option value="PHONE">Appel Téléphonique</option>
+                    <option value="WHATSAPP">WhatsApp</option>
+                    <option value="EMAIL">Email</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Votre Message (Optionnel)</label>
+                <textarea 
+                  name="message"
+                  placeholder="Décrivez brièvement vos besoins..."
+                  style={{ width: '100%', padding: '16px', borderRadius: '14px', background: '#0F172A', border: '1px solid #334155', color: '#fff', outline: 'none', minHeight: '120px' }}
+                />
+              </div>
+
+              <button type="submit" style={{ padding: '20px', borderRadius: '16px', background: '#E31E24', color: '#fff', border: 'none', fontSize: '16px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginTop: '16px' }}>
+                Envoyer ma Demande <Send size={20} />
+              </button>
+            </form>
          </div>
       </section>
     </div>

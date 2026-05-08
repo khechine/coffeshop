@@ -609,7 +609,56 @@ export async function updateUserPasswordAction(userId: string, newPassword: stri
     where: { id: userId },
     data: { password: hashed }
   });
-  revalidatePath('/superadmin/users');
+  revalidatePath('/superadmin/cafes');
+  return { success: true };
+}
+
+export async function submitVendorPremiumRequestAction(data: { message?: string, phone: string, preferredContact: string }) {
+  const user = await getUserContext();
+  if (!user || user.role !== 'VENDOR') throw new Error('Non autorisé');
+
+  const vendor = await prisma.vendorProfile.findUnique({
+    where: { userId: user.id }
+  });
+
+  if (!vendor) throw new Error('Profil vendeur non trouvé');
+
+  await (prisma as any).vendorPremiumRequest.create({
+    data: {
+      vendorId: vendor.id,
+      message: data.message,
+      phone: data.phone,
+      preferredContact: data.preferredContact,
+      status: 'PENDING'
+    }
+  });
+
+  return { success: true };
+}
+
+export async function updateVendorPremiumStatusAction(requestId: string, status: 'APPROVED' | 'REJECTED') {
+  const user = await getUserContext();
+  if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  const request = await (prisma as any).vendorPremiumRequest.findUnique({
+    where: { id: requestId }
+  });
+
+  if (!request) throw new Error('Demande non trouvée');
+
+  await (prisma as any).vendorPremiumRequest.update({
+    where: { id: requestId },
+    data: { status }
+  });
+
+  if (status === 'APPROVED') {
+    await prisma.vendorProfile.update({
+      where: { id: request.vendorId },
+      data: { isPremium: true }
+    });
+  }
+
+  revalidatePath('/superadmin/vendors/premium');
   return { success: true };
 }
 

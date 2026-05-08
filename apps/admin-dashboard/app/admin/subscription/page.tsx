@@ -1,5 +1,5 @@
 import { prisma } from '@coffeeshop/database';
-import { CreditCard, CheckCircle2, Zap, BarChart3, Shield, Headphones, ArrowRight, Calendar, AlertCircle } from 'lucide-react';
+import { CreditCard, CheckCircle2, Zap, BarChart3, Shield, Headphones, ArrowRight, Calendar, AlertCircle, Wallet, FileText, Upload, History } from 'lucide-react';
 import { getStore } from '../../actions';
 
 export const dynamic = 'force-dynamic';
@@ -11,6 +11,16 @@ export default async function SubscriptionManagement() {
   let subscription = await prisma.subscription.findUnique({
     where: { storeId: store.id },
     include: { plan: true }
+  });
+
+  const wallet = await (prisma as any).storeWallet.findUnique({
+    where: { storeId: store.id },
+    include: { transactions: { orderBy: { createdAt: 'desc' }, take: 5 } }
+  });
+
+  const storeInfo = await (prisma as any).store.findUnique({
+    where: { id: store.id },
+    select: { isRestricted: true, marketplaceGraceOrders: true, status: true }
   });
 
   // Robust fetch for plan details if client is stale
@@ -66,11 +76,60 @@ export default async function SubscriptionManagement() {
           <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Mon Abonnement SaaS</h1>
           <p className="text-slate-500 font-medium mt-2">Gérez votre forfait, consultez votre utilisation et votre historique de facturation.</p>
         </div>
-        <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-2xl flex items-center gap-3 shadow-sm dark:shadow-none">
-          <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-            {currentPlan ? 'Service Actif' : 'Période d\'essai'}
-          </span>
+        <div className="flex items-center gap-4">
+           <div className={`px-4 py-2 rounded-2xl flex items-center gap-3 shadow-sm border ${storeInfo?.isRestricted ? 'bg-rose-50 border-rose-100 text-rose-600 animate-pulse' : 'bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-slate-400'}`}>
+             <div className={`w-2 h-2 rounded-full ${storeInfo?.isRestricted ? 'bg-rose-500' : 'bg-indigo-500'}`} />
+             <span className="text-[10px] font-black uppercase tracking-widest">
+               {storeInfo?.isRestricted ? 'Accès Restreint' : currentPlan ? 'Service Actif' : 'Période d\'essai'}
+             </span>
+           </div>
+           {storeInfo?.marketplaceGraceOrders > 0 && !storeInfo?.isRestricted && (
+             <div className="bg-amber-50 border border-amber-100 px-4 py-2 rounded-2xl flex items-center gap-2 text-amber-600">
+                <AlertCircle size={14} />
+                <span className="text-[10px] font-black uppercase tracking-widest">Période de grâce : {3 - storeInfo.marketplaceGraceOrders} essais restants</span>
+             </div>
+           )}
+        </div>
+      </div>
+
+      {/* Wallet & Balance Header */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-slate-900 rounded-[32px] p-8 text-white flex flex-col justify-between shadow-xl shadow-slate-900/20 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl" />
+          <div className="flex justify-between items-start mb-6">
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
+              <Wallet size={24} className="text-indigo-400" />
+            </div>
+            <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">Solde Actuel</div>
+          </div>
+          <div>
+            <div className="text-4xl font-black tracking-tighter mb-1">{Number(wallet?.balance || 0).toFixed(3)} <span className="text-lg opacity-50">DT</span></div>
+            <p className="text-[11px] text-white/60 font-medium italic">Utilisé pour l'abonnement et les commissions marketplace.</p>
+          </div>
+        </div>
+
+        <div className="md:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] p-8 flex flex-col justify-between shadow-sm">
+           <div className="flex justify-between items-center mb-6">
+             <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
+               <History size={18} className="text-indigo-500" /> Dernières Transactions Wallet
+             </h3>
+             <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">Voir l'historique complet</button>
+           </div>
+           <div className="space-y-3">
+              {wallet?.transactions.length === 0 ? (
+                <p className="text-center py-4 text-slate-400 text-xs font-bold uppercase tracking-widest">Aucune transaction</p>
+              ) : wallet?.transactions.map((tx: any) => (
+                <div key={tx.id} className="flex justify-between items-center text-xs">
+                  <div className="flex flex-col">
+                    <span className="font-black text-slate-700 dark:text-slate-300 uppercase text-[10px]">{tx.type.replace(/_/g, ' ')}</span>
+                    <span className="text-[9px] text-slate-400">{new Date(tx.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <span className={`font-black ${Number(tx.amount) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {Number(tx.amount) >= 0 ? '+' : ''}{Number(tx.amount).toFixed(3)} DT
+                  </span>
+                </div>
+              ))}
+           </div>
         </div>
       </div>
 
@@ -267,6 +326,35 @@ export default async function SubscriptionManagement() {
             <button className="w-full mt-8 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-black text-[10px] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all uppercase tracking-[0.2em]">
               Voir tous les reçus
             </button>
+          </div>
+
+          {/* Verification Files */}
+          <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 p-8 rounded-[40px] backdrop-blur-md shadow-sm dark:shadow-none">
+            <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.2em] mb-8 flex items-center gap-2">
+              <Shield size={14} className="text-indigo-500" /> Documents de Vérification
+            </h3>
+            
+            <div className="p-6 bg-slate-50 dark:bg-slate-950/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 text-center space-y-4">
+               <div className="w-12 h-12 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center mx-auto shadow-sm">
+                 <Upload size={20} className="text-indigo-500" />
+               </div>
+               <div>
+                 <p className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-tight">Registre du Commerce / Patente</p>
+                 <p className="text-[10px] text-slate-400 mt-1">Uploadez vos documents officiels pour débloquer toutes les fonctionnalités.</p>
+               </div>
+               <button className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
+                 Choisir un fichier
+               </button>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between px-2">
+               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Statut du Compte</span>
+               <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                 storeInfo?.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+               }`}>
+                 {storeInfo?.status || 'PENDING'}
+               </span>
+            </div>
           </div>
         </div>
       </div>
