@@ -1,6 +1,7 @@
 import { prisma } from '@coffeeshop/database';
 import { CreditCard, CheckCircle2, Zap, BarChart3, Shield, Headphones, ArrowRight, Calendar, AlertCircle, Wallet, FileText, Upload, History, ArrowUpRight } from 'lucide-react';
 import { getStore, submitWalletRechargeRequestAction } from '../../actions';
+import RechargeForm from './RechargeForm';
 
 export const dynamic = 'force-dynamic';
 
@@ -141,47 +142,7 @@ export default async function SubscriptionManagement() {
 
       {/* Recharge Wallet Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] p-8 shadow-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl flex items-center justify-center">
-              <ArrowUpRight size={24} className="text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white">Recharger mon Wallet</h3>
-              <p className="text-xs text-slate-500 font-medium">Soumettez une preuve de virement pour créditer votre compte.</p>
-            </div>
-          </div>
-
-          <form action={async (fd) => { 'use server'; await submitWalletRechargeRequestAction(fd); }} className="space-y-6">
-            <div className="grid grid-cols-1 gap-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Montant à recharger (DT)</label>
-                <input 
-                  name="amount"
-                  type="number" 
-                  step="0.001"
-                  required
-                  placeholder="Ex: 100.000"
-                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preuve de paiement (Screenshot/PDF)</label>
-                <input 
-                  name="proofFile"
-                  type="file"
-                  accept="image/*,.pdf"
-                  required
-                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
-                />
-                <p className="text-[9px] text-slate-400 font-medium italic">Veuillez joindre une capture d'écran de votre virement.</p>
-              </div>
-            </div>
-            <button className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 transition-all">
-              Soumettre la recharge
-            </button>
-          </form>
-        </div>
+        <RechargeForm />
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] p-8 shadow-sm">
           <div className="flex justify-between items-center mb-6">
@@ -211,7 +172,12 @@ export default async function SubscriptionManagement() {
                   </div>
                 </div>
                 {req.proofUrl && (
-                  <a href={req.proofUrl} target="_blank" rel="noopener noreferrer" className="p-2 bg-white dark:bg-slate-800 rounded-xl text-indigo-600 hover:text-indigo-500 transition-colors">
+                  <a 
+                    href={req.proofUrl.startsWith('http') ? req.proofUrl : `${process.env.NEXT_PUBLIC_APP_URL || ''}${req.proofUrl}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="p-2 bg-white dark:bg-slate-800 rounded-xl text-indigo-600 hover:text-indigo-500 transition-colors"
+                  >
                     <FileText size={16} />
                   </a>
                 )}

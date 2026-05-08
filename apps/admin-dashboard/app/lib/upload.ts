@@ -9,7 +9,8 @@ export async function uploadFile(file: File): Promise<string> {
   const extension = file.name.split('.').pop();
   const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}.${extension}`;
   
-  const uploadDir = join(process.cwd(), 'public', 'uploads');
+  // Save to API's public folder so it's served by NestJS (which seems to be the one responding)
+  const uploadDir = join(process.cwd(), '..', 'api', 'public', 'uploads');
   
   try {
     await mkdir(uploadDir, { recursive: true });

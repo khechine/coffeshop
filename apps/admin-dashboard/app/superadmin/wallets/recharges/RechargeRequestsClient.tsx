@@ -50,7 +50,7 @@ export default function RechargeRequestsClient({ initialRequests }: { initialReq
                   <div className="flex items-center gap-4">
                     {req.proofUrl && (
                       <a 
-                        href={req.proofUrl} 
+                        href={req.proofUrl.startsWith('http') ? req.proofUrl : `${process.env.NEXT_PUBLIC_APP_URL || ''}${req.proofUrl}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="flex items-center gap-2 text-xs font-black text-indigo-600 uppercase tracking-widest hover:underline"
