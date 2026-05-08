@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ShieldCheck, Clock, CheckCircle2, XCircle, Phone, MessageSquare, Star, Store } from 'lucide-react';
-import { updateVendorPremiumStatusAction } from '../../../../actions';
+import { updateVendorPremiumStatusAction } from '../../../actions';
 
 export default function PremiumRequestsClient({ initialRequests }: { initialRequests: any[] }) {
   const handleStatusUpdate = async (id: string, status: 'APPROVED' | 'REJECTED') => {
