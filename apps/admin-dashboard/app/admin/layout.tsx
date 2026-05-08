@@ -1,5 +1,6 @@
 import { getStore } from '../actions';
 import { redirect } from 'next/navigation';
+import { ToastProvider } from '../components/Toast';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const store = await getStore();
@@ -8,8 +9,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <>
+    <ToastProvider>
       {children}
-    </>
+    </ToastProvider>
   );
 }

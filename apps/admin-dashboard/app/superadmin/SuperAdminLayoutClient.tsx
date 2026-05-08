@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { LayoutDashboard, Users, Store, ShieldCheck, MapPin, Package, CreditCard, LogOut, CheckCircle, Truck, Database, Wallet, Menu, X, Cake, Star } from 'lucide-react';
+import { ToastProvider } from '../components/Toast';
 
 export default function SuperAdminLayoutClient({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -36,7 +37,8 @@ export default function SuperAdminLayoutClient({ children }: { children: React.R
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC' }}>
+    <ToastProvider>
+      <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC' }}>
       
       {/* Mobile Header (Visible only on Mobile) */}
       <div className="mobile-header">
@@ -195,6 +197,7 @@ export default function SuperAdminLayoutClient({ children }: { children: React.R
           text-transform: uppercase;
         }
       `}</style>
-    </div>
+      </div>
+    </ToastProvider>
   );
 }
