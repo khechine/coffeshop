@@ -662,6 +662,78 @@ export async function updateVendorPremiumStatusAction(requestId: string, status:
   return { success: true };
 }
 
+export async function submitWalletRechargeRequestAction(data: { amount: number, proofUrl?: string }) {
+  const user = await getUserContext();
+  if (!user || !user.storeId) throw new Error('Non autorisé');
+
+  await (prisma as any).storeWalletRechargeRequest.create({
+    data: {
+      storeId: user.storeId,
+      amount: data.amount,
+      proofUrl: data.proofUrl,
+      status: 'PENDING'
+    }
+  });
+
+  revalidatePath('/admin/subscription');
+  return { success: true };
+}
+
+export async function updateWalletRechargeStatusAction(requestId: string, status: 'APPROVED' | 'REJECTED') {
+  const user = await getUserContext();
+  if (!user || user.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  const request = await (prisma as any).storeWalletRechargeRequest.findUnique({
+    where: { id: requestId }
+  });
+
+  if (!request) throw new Error('Demande non trouvée');
+
+  await (prisma as any).storeWalletRechargeRequest.update({
+    where: { id: requestId },
+    data: { status }
+  });
+
+  if (status === 'APPROVED') {
+    const wallet = await (prisma as any).storeWallet.findUnique({
+      where: { storeId: request.storeId }
+    });
+
+    if (!wallet) {
+      await (prisma as any).storeWallet.create({
+        data: {
+          storeId: request.storeId,
+          balance: request.amount,
+          transactions: {
+            create: {
+              amount: request.amount,
+              type: 'DEPOSIT',
+              description: 'Recharge Wallet (Virement/Preuve)'
+            }
+          }
+        }
+      });
+    } else {
+      await (prisma as any).storeWallet.update({
+        where: { id: wallet.id },
+        data: {
+          balance: { increment: request.amount },
+          transactions: {
+            create: {
+              amount: request.amount,
+              type: 'DEPOSIT',
+              description: 'Recharge Wallet (Virement/Preuve)'
+            }
+          }
+        }
+      });
+    }
+  }
+
+  revalidatePath('/superadmin/wallets/recharges');
+  return { success: true };
+}
+
 export async function loginUser(email: string, pass: string) {
   // Use (prisma as any) to bypass environment-specific client validation bugs
   const user = await (prisma as any).user.findUnique({ where: { email } });

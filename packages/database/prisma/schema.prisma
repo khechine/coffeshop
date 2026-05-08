@@ -191,6 +191,7 @@ model Store {
 
   // Wallet & Subscription B2B
   wallet                 StoreWallet?
+  rechargeRequests       StoreWalletRechargeRequest[]
   marketplaceGraceOrders Int      @default(0) // Compteur de commandes pendant la période de grâce (solde négatif)
   isRestricted           Boolean  @default(false) // Désactive POS / API si true (dépassement limite ou impayé)
   lastBillingAlertAt     DateTime?
@@ -1001,6 +1002,20 @@ model StoreWalletTransaction {
   createdAt    DateTime @default(now())
 
   @@index([walletId])
+}
+
+model StoreWalletRechargeRequest {
+  id              String   @id @default(cuid())
+  storeId         String
+  store           Store    @relation(fields: [storeId], references: [id])
+  amount          Decimal
+  proofUrl        String?
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  adminComment    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([storeId])
 }
 
 enum OrderStatus {

@@ -1,5 +1,5 @@
 import { prisma } from '@coffeeshop/database';
-import { CreditCard, CheckCircle2, Zap, BarChart3, Shield, Headphones, ArrowRight, Calendar, AlertCircle, Wallet, FileText, Upload, History } from 'lucide-react';
+import { CreditCard, CheckCircle2, Zap, BarChart3, Shield, Headphones, ArrowRight, Calendar, AlertCircle, Wallet, FileText, Upload, History, ArrowUpRight } from 'lucide-react';
 import { getStore } from '../../actions';
 
 export const dynamic = 'force-dynamic';
@@ -21,6 +21,12 @@ export default async function SubscriptionManagement() {
   const storeInfo = await (prisma as any).store.findUnique({
     where: { id: store.id },
     select: { isRestricted: true, marketplaceGraceOrders: true, status: true }
+  });
+
+  const rechargeRequests = await (prisma as any).storeWalletRechargeRequest.findMany({
+    where: { storeId: store.id },
+    orderBy: { createdAt: 'desc' },
+    take: 5
   });
 
   // Robust fetch for plan details if client is stale
@@ -130,6 +136,94 @@ export default async function SubscriptionManagement() {
                 </div>
               ))}
            </div>
+        </div>
+      </div>
+
+      {/* Recharge Wallet Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl flex items-center justify-center">
+              <ArrowUpRight size={24} className="text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white">Recharger mon Wallet</h3>
+              <p className="text-xs text-slate-500 font-medium">Soumettez une preuve de virement pour créditer votre compte.</p>
+            </div>
+          </div>
+
+          <form action={async (formData) => {
+            'use server';
+            const { submitWalletRechargeRequestAction } = await import('../../actions');
+            await submitWalletRechargeRequestAction({
+              amount: Number(formData.get('amount')),
+              proofUrl: formData.get('proofUrl') as string
+            });
+          }} className="space-y-6">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Montant à recharger (DT)</label>
+                <input 
+                  name="amount"
+                  type="number" 
+                  step="0.001"
+                  required
+                  placeholder="Ex: 100.000"
+                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lien de la preuve (Screenshot/PDF)</label>
+                <input 
+                  name="proofUrl"
+                  type="text"
+                  placeholder="Lien vers votre document ou photo"
+                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                />
+                <p className="text-[9px] text-slate-400 font-medium italic">Bientôt : Téléchargement direct de fichier.</p>
+              </div>
+            </div>
+            <button className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 transition-all">
+              Soumettre la recharge
+            </button>
+          </form>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] p-8 shadow-sm">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Suivi des Demandes</h3>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">5 dernières</span>
+          </div>
+          <div className="space-y-4">
+            {rechargeRequests.length === 0 ? (
+              <div className="text-center py-10 text-slate-300 font-black uppercase text-[10px] tracking-widest border border-dashed border-slate-100 dark:border-slate-800 rounded-3xl">
+                Aucune demande en cours
+              </div>
+            ) : rechargeRequests.map((req: any) => (
+              <div key={req.id} className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-black text-slate-900 dark:text-white">{Number(req.amount).toFixed(3)} DT</span>
+                    <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter ${
+                      req.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                      req.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
+                      'bg-rose-100 text-rose-700'
+                    }`}>
+                      {req.status}
+                    </span>
+                  </div>
+                  <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                    {new Date(req.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+                {req.proofUrl && (
+                  <a href={req.proofUrl} target="_blank" rel="noopener noreferrer" className="p-2 bg-white dark:bg-slate-800 rounded-xl text-indigo-600 hover:text-indigo-500 transition-colors">
+                    <FileText size={16} />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
