@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { CheckCircle2, XCircle, FileText, Store, Wallet, Clock, ArrowUpRight } from 'lucide-react';
-import { updateWalletRechargeStatusAction } from '../../../../actions';
+import { updateWalletRechargeStatusAction } from '../../../actions';
 
 export default function RechargeRequestsClient({ initialRequests }: { initialRequests: any[] }) {
   const handleStatusUpdate = async (id: string, status: 'APPROVED' | 'REJECTED') => {
