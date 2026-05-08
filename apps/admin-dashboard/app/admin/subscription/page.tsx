@@ -70,7 +70,7 @@ export default async function SubscriptionManagement() {
   const invoices: any[] = []; 
 
   return (
-    <div className="w-full space-y-10">
+    <div className="w-full max-w-7xl mx-auto space-y-12 py-10 px-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Mon Abonnement SaaS</h1>
