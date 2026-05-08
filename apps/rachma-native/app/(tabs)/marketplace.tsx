@@ -82,6 +82,9 @@ export default function MarketplaceScreen() {
   const [radius, setRadius] = useState<number>(5); // Rayon par défaut: 5km
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isEco, setIsEco] = useState(false);
+  const [isTunisia, setIsTunisia] = useState(false);
+
   const openVendor = (v: any) => { setVendorTab('HOME'); setSelectedVendor(v); };
 
   const [ordersOpen, setOrdersOpen] = useState(false);
@@ -95,6 +98,7 @@ export default function MarketplaceScreen() {
 
   const [rfqForm, setRfqForm] = useState({ product: '', qty: '', description: '', deadline: '' });
   const [tradeMessages, setTradeMessages] = useState<any[]>([]);
+  const [categoryDirectoryOpen, setCategoryDirectoryOpen] = useState(false);
 
   // Sync with global radius
   useFocusEffect(
@@ -147,11 +151,16 @@ export default function MarketplaceScreen() {
     }
   };
 
-  const fetchData = async (currentLoc?: {lat: number, lng: number}, currentRad?: number) => {
+  const fetchData = async (currentLoc?: {lat: number, lng: number}, currentRad?: number, ecoFlag?: boolean, tnFlag?: boolean) => {
     try {
       const loc = currentLoc || location;
-      const rad = currentRad || radius;
-      const query = loc ? `?lat=${loc.lat}&lng=${loc.lng}&radius=${rad}` : '';
+      const rad = currentRad !== undefined ? currentRad : radius;
+      const eco = ecoFlag !== undefined ? ecoFlag : isEco;
+      const tunisia = tnFlag !== undefined ? tnFlag : isTunisia;
+
+      let query = loc ? `?lat=${loc.lat}&lng=${loc.lng}&radius=${rad}` : '?';
+      if (eco) query += `${query.length > 1 ? '&' : ''}eco=true`;
+      if (tunisia) query += `${query.length > 1 ? '&' : ''}tunisia=true`;
       
       const [prodData, vendorData, bundleData, catData] = await Promise.all([
         ApiService.get(`/management/marketplace/products${query}`),
@@ -308,7 +317,9 @@ export default function MarketplaceScreen() {
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const matchesSearch = p.name?.toLowerCase().includes(search.toLowerCase()) || p.vendor?.companyName?.toLowerCase().includes(search.toLowerCase());
-      const matchesCat = activeCategory === 'all' || p.categoryId === activeCategory || p.subcategoryId === activeCategory || p.category?.id === activeCategory;
+      const catId = p.categoryId || p.productStandard?.categoryId;
+      const subCatId = p.subcategoryId || p.productStandard?.subcategoryId;
+      const matchesCat = activeCategory === 'all' || catId === activeCategory || subCatId === activeCategory || p.category?.id === activeCategory;
       return matchesSearch && matchesCat;
     });
   }, [products, search, activeCategory]);
@@ -338,6 +349,78 @@ export default function MarketplaceScreen() {
     return '📦';
   };
 
+  const getCategoryIcon = (name: string) => {
+    const n = (name || '').toLowerCase();
+    if (n.includes('matière')) return '🌾';
+    if (n.includes('aliment') || n.includes('boisson') || n.includes('café')) return '🍴';
+    if (n.includes('semi-fini') || n.includes('lait')) return '🥣';
+    if (n.includes('fini') || n.includes('pâtisserie')) return '🥐';
+    if (n.includes('emballage')) return '📦';
+    if (n.includes('service')) return '🤝';
+    if (n.includes('hygiène') || n.includes('nettoyage')) return '🧼';
+    if (n.includes('équipement') || n.includes('matériel') || n.includes('barista')) return '⚙️';
+    if (n.includes('tabac')) return '🚬';
+    return '📁';
+  };
+
+  // B2B Segments for consistent hierarchy even if API is stale
+  const B2B_SEGMENTS = [
+    { 
+        name: 'Matières Premières', 
+        icon: '🌾', 
+        matchKeywords: ['lait', 'café', 'boisson', 'pâtisserie', 'boulangerie', 'crémerie', 'sucre', 'sirop', 'arôme', 'thé', 'chocolat', 'farine', 'levure', 'ingrédient', 'fruit']
+    },
+    { 
+        name: 'Équipements & Matériel', 
+        icon: '⚙️', 
+        matchKeywords: ['équipement', 'matériel', 'barista', 'machine', 'moulin', 'pièce']
+    },
+    { 
+        name: 'Emballages', 
+        icon: '📦', 
+        matchKeywords: ['emballage', 'jetable', 'gobelet', 'paille', 'sac', 'boîte']
+    },
+    { 
+        name: 'Hygiène & Nettoyage', 
+        icon: '🧼', 
+        matchKeywords: ['hygiène', 'nettoyage', 'détergent', 'désinfectant', 'papier']
+    },
+    { 
+        name: 'Produits Finis', 
+        icon: '🥐', 
+        matchKeywords: ['fini', 'capsule', 'viennoiserie', 'snack', 'gâteau', 'dessert']
+    },
+    { 
+        name: 'Services', 
+        icon: '🤝', 
+        matchKeywords: ['service', 'livraison', 'maintenance', 'formation', 'location']
+    }
+  ];
+
+  const getTransformedCategories = () => {
+    const segments = B2B_SEGMENTS.map(seg => ({
+        ...seg,
+        children: categories.filter(cat => 
+            seg.matchKeywords.some(k => cat.name.toLowerCase().includes(k))
+        )
+    }));
+    
+    // Add "Autres" for uncategorized items
+    const usedIds = new Set(segments.flatMap(s => s.children.map(c => c.id)));
+    const others = categories.filter(c => !usedIds.has(c.id));
+    
+    if (others.length > 0) {
+        segments.push({
+            name: 'Autres Segments',
+            icon: '📁',
+            matchKeywords: [],
+            children: others
+        });
+    }
+    
+    return segments.filter(s => s.children.length > 0);
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: '#f4f4f7' }}>
       
@@ -365,6 +448,45 @@ export default function MarketplaceScreen() {
                 <View style={{ position: 'absolute', top: -5, right: -5, backgroundColor: '#fff', borderRadius: 10, width: 16, height: 16, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ color: '#E31E24', fontSize: 10, fontWeight: '900' }}>3</Text>
                 </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Quick Filter Chips */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, backgroundColor: 'transparent' }}>
+            <TouchableOpacity 
+              onPress={() => {
+                const newVal = !isEco;
+                setIsEco(newVal);
+                fetchData(undefined, undefined, newVal);
+              }}
+              activeOpacity={0.8}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
+                backgroundColor: isEco ? '#10b981' : 'rgba(255,255,255,0.15)',
+                borderWidth: 1, borderColor: isEco ? '#10b981' : 'rgba(255,255,255,0.2)'
+              }}
+            >
+              <FontAwesome name="leaf" size={12} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>Bio / Eco</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => {
+                const newVal = !isTunisia;
+                setIsTunisia(newVal);
+                fetchData(undefined, undefined, undefined, newVal);
+              }}
+              activeOpacity={0.8}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
+                backgroundColor: isTunisia ? '#fff' : 'rgba(255,255,255,0.15)',
+                borderWidth: 1, borderColor: isTunisia ? '#fff' : 'rgba(255,255,255,0.2)'
+              }}
+            >
+              <Text style={{ fontSize: 12 }}>🇹🇳</Text>
+              <Text style={{ color: isTunisia ? '#E31E24' : '#fff', fontSize: 11, fontWeight: '800' }}>Made in TN</Text>
             </TouchableOpacity>
           </View>
       </View>
@@ -419,7 +541,11 @@ export default function MarketplaceScreen() {
                   </View>
                   <FontAwesome name="chevron-right" size={14} color="#94a3b8" />
               </View>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={{ gap: 10, paddingRight: 20 }}
+              >
                   {[
                       { 
                         label: 'Plus Populaire', 
@@ -442,7 +568,7 @@ export default function MarketplaceScreen() {
                   ].map((item, idx) => (
                       <TouchableOpacity 
                         key={idx} 
-                        style={{ flex: 1, backgroundColor: '#f9fafb', borderRadius: 12, padding: 8 }}
+                        style={{ width: 140, backgroundColor: '#f9fafb', borderRadius: 12, padding: 8 }}
                         onPress={() => setSelectedProduct(item.product)}
                       >
                           <View style={{ height: 80, backgroundColor: '#f3f4f6', borderRadius: 8, marginBottom: 8, overflow: 'hidden' }}>
@@ -452,14 +578,17 @@ export default function MarketplaceScreen() {
                                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 30 }}>{getProductIcon(item.product?.name)}</Text></View>
                               )}
                           </View>
-                          <Text style={{ fontSize: 10, fontWeight: '900', color: item.color, marginBottom: 2 }}>{item.label}</Text>
-                          <Text style={{ fontSize: 9, fontWeight: '700', color: '#1f2937', marginBottom: 2 }}>
-                            {parseFloat(item.product?.price || 0).toFixed(2)} - {(parseFloat(item.product?.price || 0) * 1.2).toFixed(2)} DT
+                          <Text style={{ fontSize: 9, fontWeight: '900', color: item.color, marginBottom: 2 }}>{item.label}</Text>
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#1f2937', marginBottom: 2 }} numberOfLines={1}>
+                            {item.product?.name || 'Produit B2B'}
+                          </Text>
+                          <Text style={{ fontSize: 9, fontWeight: '700', color: '#E31E24', marginBottom: 2 }}>
+                            {parseFloat(item.product?.price || 0).toFixed(2)} DT
                           </Text>
                           <Text style={{ fontSize: 8, color: '#94a3b8' }}>{item.tag}</Text>
                       </TouchableOpacity>
                   ))}
-              </View>
+              </ScrollView>
           </View>
         )}
 
@@ -467,7 +596,7 @@ export default function MarketplaceScreen() {
         {/* ── B2B QUICK CATEGORIES ── */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', backgroundColor: '#fff', padding: 15, marginHorizontal: 15, borderRadius: 15, marginBottom: 15 }}>
             {[
-                { n: 'Catégories', i: 'th-large', c: '#ef4444', a: () => setViewMode('PRODUCTS') },
+                { n: 'Annuaire', i: 'th-large', c: '#ef4444', a: () => setCategoryDirectoryOpen(true) },
                 { n: 'Perspectives', i: 'thumb-tack', c: '#f59e0b', a: () => Alert.alert("Perspectives", "Tendances B2B bientôt disponibles.") },
                 { n: 'Guide Début', i: 'lightbulb-o', c: '#10b981', a: () => Alert.alert("Guide", "Comment sourcer efficacement sur Rachma.") },
                 { n: 'Usines', i: 'industry', c: '#6366f1', a: () => { setViewMode('VENDORS'); setSearch('Usine'); } }
@@ -546,7 +675,10 @@ export default function MarketplaceScreen() {
                         onPress={() => setActiveCategory(cat.id)}
                         style={{ alignItems: 'center' }}
                       >
-                        <Text style={{ color: activeCategory === cat.id ? '#E31E24' : '#64748b', fontSize: 15, fontWeight: activeCategory === cat.id ? '900' : '600' }}>{cat.name}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                           <Text style={{ fontSize: 14 }}>{getCategoryIcon(cat.name)}</Text>
+                           <Text style={{ color: activeCategory === cat.id ? '#E31E24' : '#64748b', fontSize: 15, fontWeight: activeCategory === cat.id ? '900' : '600' }}>{cat.name}</Text>
+                        </View>
                         {activeCategory === cat.id && (
                            <View style={{ height: 3, backgroundColor: '#E31E24', borderRadius: 2, marginTop: 4, width: '100%' }} />
                         )}
@@ -650,23 +782,23 @@ export default function MarketplaceScreen() {
                       >
                          <Text style={{ color: '#4F46E5', fontWeight: '900', fontSize: 13 }}>Inviter maintenant</Text>
                       </TouchableOpacity>
-                  </LinearGradient>
-               </View>
-            )}
+                   </LinearGradient>
+                </View>
+             )}
 
             <View style={{ paddingHorizontal: 15, flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              {filteredProducts.map((p) => (
-                <TouchableOpacity key={p.id} style={{ width: (width - 40) / 2, backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', marginBottom: 5 }} onPress={() => setSelectedProduct(p)}>
-                  <View style={{ height: 160, backgroundColor: '#f9fafb' }}>
+               {filteredProducts.map((p) => (
+                <TouchableOpacity key={p.id} style={{ width: (width - 40) / 2, backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 }} onPress={() => setSelectedProduct(p)}>
+                  <View style={{ height: 160, backgroundColor: '#f3f4f6' }}>
                     {p.image ? <Image source={{ uri: p.image }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 60 }}>{getProductIcon(p.name)}</Text></View>}
                   </View>
-                  <View style={{ padding: 10 }}>
-                     <Text style={{ color: '#E31E24', fontSize: 16, fontWeight: '900' }}>{parseFloat(p.price).toFixed(2)} - {(parseFloat(p.price) * 1.2).toFixed(2)} DT</Text>
-                     <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '700', marginTop: 2 }}>{p.minQty || 1} pièces (MOQ)</Text>
-                     <Text style={{ color: '#1f2937', fontSize: 12, fontWeight: '600', marginTop: 4 }} numberOfLines={2}>{p.name}</Text>
+                  <View style={{ padding: 12 }}>
+                     <Text style={{ color: '#E31E24', fontSize: 15, fontWeight: '900' }}>{parseFloat(p.price).toFixed(2)} DT</Text>
+                     <Text style={{ color: '#1f2937', fontSize: 13, fontWeight: '800', marginTop: 4 }} numberOfLines={2}>{p.name || 'Produit sans nom'}</Text>
+                     <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '600', marginTop: 4 }}>{p.minOrderQty || 1} {p.unit || 'pièces'} (MOQ)</Text>
                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 }}>
                         <FontAwesome name="shield" size={10} color="#fbbf24" />
-                        <Text style={{ color: '#94a3b8', fontSize: 9, fontWeight: '700' }}>Audited Supplier</Text>
+                        <Text style={{ color: '#94a3b8', fontSize: 9, fontWeight: '800' }}>Fournisseur Vérifié</Text>
                      </View>
                   </View>
                 </TouchableOpacity>
@@ -1363,7 +1495,6 @@ export default function MarketplaceScreen() {
                                   <FontAwesome name="building" size={18} color="#6366f1" />
                               </View>
                               <View>
-                                  <Text style={{ color: T.text, fontSize: 18, fontWeight: '900' }}>{viewingOrder?.supplier?.name || viewingOrder?.vendor?.companyName}</Text>
                                   <Text style={{ color: T.subtext, fontSize: 12, fontWeight: '700' }}>{i18n.t('marketplace.b2bMarketLabel')}</Text>
                               </View>
                           </View>
@@ -1457,12 +1588,93 @@ export default function MarketplaceScreen() {
                       </TouchableOpacity>
                       <TouchableOpacity 
                           style={{ flex: 1, height: 50, borderRadius: 25, backgroundColor: '#E31E24', alignItems: 'center', justifyContent: 'center' }}
-                          onPress={() => setFiltersOpen(false)}
+                          onPress={() => {
+                            setFiltersOpen(false);
+                            fetchData();
+                          }}
                       >
                           <Text style={{ color: '#fff', fontWeight: '800' }}>Appliquer</Text>
                       </TouchableOpacity>
                   </View>
               </View>
+          </View>
+      </Modal>
+
+      {/* ── CATEGORY DIRECTORY MODAL ── */}
+      <Modal visible={categoryDirectoryOpen} animationType="slide" transparent>
+          <View style={{ flex: 1, backgroundColor: '#fff' }}>
+              <View style={{ backgroundColor: '#E31E24', paddingTop: 60, paddingBottom: 15, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View>
+                      <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>Annuaire des Catégories</Text>
+                      <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11 }}>Explorez par segment et sous-segment</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setCategoryDirectoryOpen(false)}>
+                      <FontAwesome name="times-circle" size={28} color="#fff" />
+                  </TouchableOpacity>
+              </View>
+              
+              <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+                  {getTransformedCategories().map((segment) => (
+                      <View key={segment.name} style={{ marginBottom: 20 }}>
+                          {/* Segment Header */}
+                          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20, backgroundColor: '#f8fafc', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' }}>
+                              <Text style={{ fontSize: 24, marginRight: 15 }}>{segment.icon}</Text>
+                              <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#1f2937' }}>{segment.name}</Text>
+                                  <TouchableOpacity onPress={() => { setActiveCategory('all'); setCategoryDirectoryOpen(false); }}>
+                                      <Text style={{ fontSize: 11, color: '#E31E24', fontWeight: '700', marginTop: 2 }}>Tout voir dans {segment.name} →</Text>
+                                  </TouchableOpacity>
+                              </View>
+                          </View>
+                          
+                          {/* Categories within Segment */}
+                          <View style={{ padding: 15, gap: 20 }}>
+                              {(segment.children || []).map((category: any) => (
+                                  <View key={category.id}>
+                                      <TouchableOpacity 
+                                        style={{ marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                                        onPress={() => { setActiveCategory(category.id); setCategoryDirectoryOpen(false); }}
+                                      >
+                                          <View>
+                                              <Text style={{ fontSize: 14, fontWeight: '800', color: '#475569' }}>{category.name.toUpperCase()}</Text>
+                                              <View style={{ height: 2, width: 30, backgroundColor: '#E31E24', marginTop: 4 }} />
+                                          </View>
+                                          <FontAwesome name="chevron-right" size={10} color="#94a3b8" />
+                                      </TouchableOpacity>
+                                      
+                                      {/* Sub-segments Grid (Grandchildren if any, or just exploration) */}
+                                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                          {(category.children || []).map((sub: any) => (
+                                              <TouchableOpacity 
+                                                key={sub.id} 
+                                                style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: '#fff', borderWidth: 1, borderColor: '#f1f5f9', shadowColor: '#000', shadowOpacity: 0.02, shadowRadius: 5, elevation: 1 }}
+                                                onPress={() => { setActiveCategory(sub.id); setCategoryDirectoryOpen(false); }}
+                                              >
+                                                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#1f2937' }}>{sub.name}</Text>
+                                              </TouchableOpacity>
+                                          ))}
+                                          {(!category.children || category.children.length === 0) && (
+                                              <TouchableOpacity 
+                                                style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: '#f1f5f9' }}
+                                                onPress={() => { setActiveCategory(category.id); setCategoryDirectoryOpen(false); }}
+                                              >
+                                                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#64748b' }}>Découvrir la sélection</Text>
+                                              </TouchableOpacity>
+                                          )}
+                                      </View>
+                                  </View>
+                              ))}
+                          </View>
+                      </View>
+                  ))}
+                  
+                  {categories.length === 0 && (
+                       <View style={{ padding: 40, alignItems: 'center' }}>
+                           <ActivityIndicator color="#E31E24" />
+                           <Text style={{ marginTop: 15, color: '#94a3b8' }}>Mise à jour du catalogue...</Text>
+                       </View>
+                  )}
+              </ScrollView>
           </View>
       </Modal>
 

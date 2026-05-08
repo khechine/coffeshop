@@ -334,6 +334,7 @@ export default function TabLayout() {
         options={{
           title: i18n.t('nav.marketplace'),
           tabBarLabel: i18n.t('nav.marketplace'),
+          headerShown: false,
           tabBarIcon: ({ color }) => (
             <View style={{ backgroundColor: 'transparent' }}>
               <TabBarIcon name="shopping-bag" color={color} />

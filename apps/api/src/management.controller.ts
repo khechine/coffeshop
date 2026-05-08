@@ -606,9 +606,9 @@ export class ManagementController {
       }
     }
 
-    return prisma.mktCategory.findMany({
-      where: { status: 'ACTIVE' },
-      include: { subcategories: true },
+    return (prisma as any).marketplaceCategory.findMany({
+      where: { parentId: null },
+      include: { children: { include: { children: true } } },
       orderBy: { name: 'asc' },
     });
   }
@@ -621,9 +621,13 @@ export class ManagementController {
     @Query('radius') radius?: string,
     @Query('skip') skip?: string,
     @Query('take') take?: string,
+    @Query('eco') eco?: string,
+    @Query('tunisia') tunisia?: string,
   ): Promise<any> {
     const skipNum = skip ? Number(skip) : 0;
     const takeNum = take ? Number(take) : 50;
+    const isEco = eco === 'true';
+    const isTunisia = tunisia === 'true';
 
     // Helper: Haversine distance in km
     const haversine = (lat1: number, lng1: number, lat2: number | null, lng2: number | null): number => {
@@ -641,6 +645,8 @@ export class ManagementController {
     const allProducts = await prisma.vendorProduct.findMany({
       where: {
         ...(vendorId ? { vendorId } : {}),
+        ...(isEco ? { tags: { has: 'BIO' } } : {}),
+        ...(isTunisia ? { tags: { has: 'Tunisie' } } : {}),
         vendor: {
           status: { not: 'SUSPENDED' },
           // Note: Full billing check is done in memory below to handle gracePeriod and order counts accurately
@@ -938,7 +944,7 @@ export class ManagementController {
     });
   }
 
-  @Get('marketplace/categories')
+  @Get('marketplace/categories-legacy')
   async getAllMarketplaceCategories(): Promise<any> {
     return (prisma as any).mktCategory.findMany({
       where: { status: 'ACTIVE' },
