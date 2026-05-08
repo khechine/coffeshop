@@ -662,15 +662,24 @@ export async function updateVendorPremiumStatusAction(requestId: string, status:
   return { success: true };
 }
 
-export async function submitWalletRechargeRequestAction(data: { amount: number, proofUrl?: string }) {
+export async function submitWalletRechargeRequestAction(formData: FormData) {
   const user = await getUserContext();
   if (!user || !user.storeId) throw new Error('Non autorisé');
+
+  const amount = Number(formData.get('amount'));
+  const proofFile = formData.get('proofFile') as File;
+  
+  let proofUrl = '';
+  if (proofFile && proofFile.size > 0) {
+    const { uploadFile } = await import('./lib/upload');
+    proofUrl = await uploadFile(proofFile);
+  }
 
   await (prisma as any).storeWalletRechargeRequest.create({
     data: {
       storeId: user.storeId,
-      amount: data.amount,
-      proofUrl: data.proofUrl,
+      amount: amount,
+      proofUrl: proofUrl,
       status: 'PENDING'
     }
   });

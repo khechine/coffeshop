@@ -1,6 +1,6 @@
 import { prisma } from '@coffeeshop/database';
 import { CreditCard, CheckCircle2, Zap, BarChart3, Shield, Headphones, ArrowRight, Calendar, AlertCircle, Wallet, FileText, Upload, History, ArrowUpRight } from 'lucide-react';
-import { getStore } from '../../actions';
+import { getStore, submitWalletRechargeRequestAction } from '../../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -152,14 +152,7 @@ export default async function SubscriptionManagement() {
             </div>
           </div>
 
-          <form action={async (formData) => {
-            'use server';
-            const { submitWalletRechargeRequestAction } = await import('../../actions');
-            await submitWalletRechargeRequestAction({
-              amount: Number(formData.get('amount')),
-              proofUrl: formData.get('proofUrl') as string
-            });
-          }} className="space-y-6">
+          <form action={async (fd) => { 'use server'; await submitWalletRechargeRequestAction(fd); }} className="space-y-6">
             <div className="grid grid-cols-1 gap-4">
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Montant à recharger (DT)</label>
@@ -173,14 +166,15 @@ export default async function SubscriptionManagement() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lien de la preuve (Screenshot/PDF)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preuve de paiement (Screenshot/PDF)</label>
                 <input 
-                  name="proofUrl"
-                  type="text"
-                  placeholder="Lien vers votre document ou photo"
+                  name="proofFile"
+                  type="file"
+                  accept="image/*,.pdf"
+                  required
                   className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
                 />
-                <p className="text-[9px] text-slate-400 font-medium italic">Bientôt : Téléchargement direct de fichier.</p>
+                <p className="text-[9px] text-slate-400 font-medium italic">Veuillez joindre une capture d'écran de votre virement.</p>
               </div>
             </div>
             <button className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 transition-all">
