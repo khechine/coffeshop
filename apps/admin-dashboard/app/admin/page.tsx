@@ -286,6 +286,7 @@ export default async function AdminDashboardPage() {
             { label: 'Reporting & Clôtures', sub: 'Exports & Rapports', icon: FileText, color: '#EC4899', href: '/admin/reports', bg: '#FDF2F8', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
             { label: 'Dépenses & Finance', sub: 'Suivi des coûts nets', icon: Wallet, color: '#06B6D4', href: '/admin/expenses', bg: '#ECFEFF', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
             { label: 'Live Tracker', sub: 'Ventes en temps réel', icon: Activity, color: '#EF4444', href: '/admin/live', bg: '#FEF2F2', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
+            { label: 'Abonnement & Wallet', sub: 'Gérer mon solde & plan', icon: Wallet, color: '#8B5CF6', href: '/admin/subscription', bg: '#F5F3FF', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
             { label: 'Configuration', sub: 'Paramètres & Terminaux', icon: Settings, color: '#64748B', href: '/admin/configuration', bg: '#F8FAFC', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
           ].filter(m => !m.industries || m.industries.includes((store as any).industry || 'COFFEE_SHOP')).map((mod, i) => (
             <Link key={i} href={mod.href} style={{ 

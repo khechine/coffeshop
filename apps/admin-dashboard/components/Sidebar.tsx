@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, ShoppingCart, History, Store, Tablet, Users, CreditCard, Settings, 
   Boxes, Cake, BarChart3, ChevronDown, ChevronRight, Package, FileText, TrendingUp,
-  Layers, LayoutGrid, Truck, ShoppingBag, Activity
+  Layers, LayoutGrid, Truck, ShoppingBag, Activity, Wallet
 } from 'lucide-react';
 
 import { logoutUser } from '../app/actions';
@@ -245,6 +245,10 @@ export default function Sidebar({
                     <Link href="/admin/configuration" title="Configuration Admin" className={`nav-item${isActive('/admin/configuration') ? ' active' : ''}`} style={{ justifyContent: 'flex-start', border: '1px solid rgba(99,102,241,0.15)', background: isActive('/admin/configuration') ? 'rgba(99,102,241,0.15)' : 'transparent', marginTop: '4px' }}>
                       <Settings size={18} color="#818CF8" />
                       {displayExpanded && <span style={{ color: '#C7D2FE' }}>Configuration Admin</span>}
+                    </Link>
+                    <Link href="/admin/subscription" title="Abonnement & Wallet" className={`nav-item${isActive('/admin/subscription') ? ' active' : ''}`} style={{ justifyContent: 'flex-start', border: '1px solid rgba(139, 92, 246, 0.15)', background: isActive('/admin/subscription') ? 'rgba(139, 92, 246, 0.1)' : 'transparent', marginTop: '4px' }}>
+                      <Wallet size={18} color="#A78BFA" />
+                      {displayExpanded && <span style={{ color: '#DDD6FE' }}>Abonnement & Wallet</span>}
                     </Link>
                   </>
                 )}

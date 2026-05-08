@@ -54,7 +54,7 @@ export default function VendorPortalLayout({ children }: { children: React.React
     { id: 'catalog', label: 'Catalogue', icon: Package, href: '/vendor/portal/catalog' },
     { id: 'orders', label: 'Commandes', icon: ShoppingBag, href: '/vendor/portal/orders' },
     { id: 'rfq', label: 'Demandes (RFQ)', icon: MessageSquare, href: '/vendor/portal/rfq', badge: notifications.filter(n => n.type === 'RFQ_NEW').length },
-    { id: 'premium', label: 'Devenir Premium', icon: Star, href: '/vendor/premium' },
+    { id: 'premium', label: 'Devenir Premium', icon: Star, href: '/vendor/portal/premium' },
     { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, href: '/marketplace' },
     { id: 'profile', label: 'Profil', icon: Settings, href: '/vendor/portal/settings' },
   ];
