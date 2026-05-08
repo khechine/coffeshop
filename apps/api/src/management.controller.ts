@@ -25,7 +25,10 @@ interface CreateMarketplaceProductDto {
   flashEnd?: string | Date;
 }
 
+import { StoreStatusGuard } from './auth/store-status.guard';
+
 @Controller('management')
+@UseGuards(MarketplaceAuthGuard, StoreStatusGuard)
 export class ManagementController {
   constructor(private readonly interactionService: InteractionService) {}
 
@@ -610,6 +613,23 @@ export class ManagementController {
       where: { parentId: null },
       include: { children: { include: { children: true } } },
       orderBy: { name: 'asc' },
+    });
+  }
+
+  @Get('marketplace/messages')
+  async getMarketplaceMessages(@Query('storeId') storeId: string): Promise<any> {
+    if (!storeId) return [];
+    return (prisma as any).tradeMessage.findMany({
+      where: {
+        OR: [
+          { senderId: storeId },
+          { receiverId: storeId }
+        ]
+      },
+      include: {
+        vendor: { select: { companyName: true, id: true } }
+      },
+      orderBy: { createdAt: 'desc' }
     });
   }
 

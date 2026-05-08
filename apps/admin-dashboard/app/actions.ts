@@ -34,7 +34,8 @@ export async function getStore() {
           subscription: {
             include: { plan: true }
           },
-          erpIntegration: true
+          erpIntegration: true,
+          wallet: true
         }
       });
 
@@ -45,6 +46,13 @@ export async function getStore() {
         // Combined access: from Plan OR manual override (Forced TRUE for all plans as per requirement)
         const hasMarketplace = true; // (plan?.hasMarketplace === true) || (storeObj?.forceMarketplaceAccess === true);
         storeObj.hasMarketplace = hasMarketplace;
+
+        // Ensure wallet exists (Robustness check)
+        if (!storeObj.wallet) {
+          storeObj.wallet = await (prisma as any).storeWallet.create({
+            data: { storeId: store.id, balance: 0 }
+          });
+        }
 
         return storeObj;
       }
@@ -583,8 +591,9 @@ export async function registerStoreAction(data: any) {
           officialDocs: docs,
           trialEndsAt,
           industry: industry || 'COFFEE_SHOP',
-          businessType: businessType || 'STORE'
-        }
+          businessType: businessType || 'STORE',
+          wallet: { create: { balance: 0 } }
+        } as any
       }
     },
     include: { store: true }
@@ -775,6 +784,10 @@ export async function recordSale(data: {
 }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
+
+  if (store.isRestricted) {
+    throw new Error('ACCES_RESTREINT : Votre accès au POS est restreint en raison d\'un solde négatif. Veuillez alimenter votre wallet.');
+  }
 
   try {
     const sale = await prisma.$transaction(async (tx) => {
@@ -2014,13 +2027,62 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
   const store = await getStore();
   if (!store) throw new Error('Store not found');
 
-  // Enforce 2-order limit when vendor wallet balance is negative
+  // ── CLIENT (STORE) WALLET & RESTRICTION CHECK ────────────────
+  if (store.isRestricted) {
+    throw new Error('ACCES_RESTREINT : Votre accès aux services est restreint en raison d\'un solde négatif. Veuillez alimenter votre wallet.');
+  }
+
+  // Calculate Commission based on Store's Plan or Override
+  const commissionRate = Number(store.customCommissionRate || store.subscription?.plan?.defaultCommissionRate || 0.02);
+  const commissionAmount = Number(data.total) * commissionRate;
+
+  const storeWallet = await (prisma as any).storeWallet.findUnique({ where: { storeId: store.id } });
+  
+  if (storeWallet) {
+    const balance = Number(storeWallet.balance);
+    
+    if (balance < 0) {
+      if (store.marketplaceGraceOrders >= 2) {
+        // Enforce restriction
+        await (prisma as any).store.update({
+          where: { id: store.id },
+          data: { isRestricted: true }
+        });
+        throw new Error('ACCES_RESTREINT : Limite de commandes de grâce atteinte (2). Veuillez alimenter votre wallet pour continuer.');
+      }
+    }
+
+    // Debit the commission
+    await (prisma as any).$transaction([
+      (prisma as any).storeWallet.update({
+        where: { id: storeWallet.id },
+        data: { balance: { decrement: commissionAmount } }
+      }),
+      (prisma as any).storeWalletTransaction.create({
+        data: {
+          walletId: storeWallet.id,
+          amount: -commissionAmount,
+          type: 'MARKETPLACE_COMMISSION',
+          description: `Commission sur commande Marketplace (Taux: ${commissionRate * 100}%)`,
+          metadata: { total: data.total, vendorId: data.vendorId }
+        }
+      }),
+      (prisma as any).store.update({
+        where: { id: store.id },
+        data: { 
+          marketplaceGraceOrders: balance < 0 ? { increment: 1 } : undefined,
+          lastBillingAlertAt: balance < 0 ? new Date() : undefined // Mark as alerted if negative
+        }
+      })
+    ]);
+  }
+
+  // ── VENDOR WALLET CHECK (Existing logic) ──────────────────────
   try {
     const vendorWallet = await (prisma as any).vendorWallet.findUnique({
       where: { vendorId: data.vendorId }
     });
     if (vendorWallet && Number(vendorWallet.balance) < 0) {
-      // Count ALL pending/processing orders for this vendor (from any client)
       const pendingOrdersCount = await (prisma as any).supplierOrder.count({
         where: {
           vendorId: data.vendorId,
@@ -2035,7 +2097,6 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
     }
   } catch (e: any) {
     if (e.message?.startsWith('VENDOR_UNAVAILABLE:')) throw e;
-    // ignore wallet check errors (graceful degradation)
   }
 
   // AUTO-ASSIGN AVAILABLE COURIER
@@ -2945,6 +3006,79 @@ export async function depositToWalletAction(vendorId: string, amount: number, de
   revalidatePath('/marketplace');
 }
 
+export async function depositToStoreWalletAction(storeId: string, amount: number, description: string = 'Rechargement compte boutique') {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (user.role !== 'SUPERADMIN') throw new Error('Action réservée aux administrateurs');
+
+  let wallet = await (prisma as any).storeWallet.findUnique({ where: { storeId } });
+  
+  if (!wallet) {
+    // Auto-create if missing
+    wallet = await (prisma as any).storeWallet.create({
+      data: { storeId, balance: 0 }
+    });
+  }
+
+  await (prisma as any).$transaction([
+    (prisma as any).storeWallet.update({
+      where: { id: wallet.id },
+      data: { 
+        balance: { increment: amount },
+        // If they were restricted and now have a positive balance, we could unrestrict them here
+        // or let a background job handle it. Let's do it here for UX.
+        store: {
+          update: {
+            isRestricted: amount > 0 ? false : undefined, // Simplistic, should check total balance
+            marketplaceGraceOrders: amount > 0 ? 0 : undefined
+          }
+        }
+      }
+    }),
+    (prisma as any).storeWalletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        amount: amount,
+        type: 'DEPOSIT',
+        description: description
+      }
+    })
+  ]);
+
+  // If the new balance is positive, make sure restriction is lifted
+  const updatedWallet = await (prisma as any).storeWallet.findUnique({ where: { id: wallet.id } });
+  if (Number(updatedWallet.balance) >= 0) {
+    await (prisma as any).store.update({
+      where: { id: storeId },
+      data: { isRestricted: false, marketplaceGraceOrders: 0 }
+    });
+  }
+
+  revalidatePath('/superadmin/cafes');
+  revalidatePath('/superadmin/wallet');
+}
+
+export async function getStoreWalletTransactionsAction(storeId: string) {
+  return await (prisma as any).storeWalletTransaction.findMany({
+    where: { wallet: { storeId } },
+    orderBy: { createdAt: 'desc' }
+  });
+}
+
+export async function getGlobalStoreTransactionsAction() {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+  if (user?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  return (prisma as any).storeWalletTransaction.findMany({
+    include: { wallet: { include: { store: true } } },
+    orderBy: { createdAt: 'desc' },
+    take: 100
+  });
+}
+
 export async function createWalletDepositRequestAction(data: { amount: number, proofImage: string }) {
   const userId = cookies().get('userId')?.value;
   if (!userId) throw new Error('Non authentifié');
@@ -3258,9 +3392,7 @@ export async function importCsvProductsAction(rows: {
 }
 
 
-import { OrderStatus } from '@coffeeshop/database';
-
-export async function updateSupplierOrderStatus(orderId: string, status: OrderStatus) {
+export async function updateSupplierOrderStatus(orderId: string, status: any) {
   const order = await prisma.supplierOrder.update({
     where: { id: orderId },
     data: { status },
@@ -3508,7 +3640,7 @@ export async function getCourierPortalData() {
   };
 }
 
-export async function updateMissionStatus(orderId: string, status: OrderStatus) {
+export async function updateMissionStatus(orderId: string, status: any) {
   // Update the order status
   const order = await prisma.supplierOrder.update({
     where: { id: orderId },
@@ -3563,6 +3695,7 @@ export async function createPlanAction(data: any) {
       data: {
         ...data,
         price: Number(data.price),
+        defaultCommissionRate: data.defaultCommissionRate !== undefined ? Number(data.defaultCommissionRate) : undefined,
         hasMarketplace: data.hasMarketplace ?? true
       }
     });
@@ -3593,30 +3726,12 @@ export async function updatePlanAction(id: string, data: any) {
       data: {
         ...data,
         price: data.price !== undefined ? Number(data.price) : undefined,
-        hasMarketplace: data.hasMarketplace !== undefined ? data.hasMarketplace : undefined
+        defaultCommissionRate: data.defaultCommissionRate !== undefined ? Number(data.defaultCommissionRate) : undefined,
       }
     });
   } catch (err: any) {
-    // Fallback if the client is stale and doesn't recognize hasMarketplace yet
-    if (err.message.includes('Unknown argument `hasMarketplace`')) {
-      const { hasMarketplace, ...rest } = data;
-      await prisma.plan.update({
-        where: { id },
-        data: {
-          ...rest,
-          price: data.price !== undefined ? Number(data.price) : undefined
-        }
-      });
-      if (hasMarketplace !== undefined) {
-        // Force boolean literal update
-        await prisma.$executeRawUnsafe(
-          `UPDATE "Plan" SET "hasMarketplace" = ${hasMarketplace ? 'true' : 'false'} WHERE id = $1`,
-          id
-        );
-      }
-    } else {
-      throw err;
-    }
+    console.error("updatePlanAction error:", err);
+    throw err;
   }
   revalidatePath('/superadmin/plans');
 }

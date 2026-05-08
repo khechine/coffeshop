@@ -19,7 +19,7 @@ export default function SuperAdminLayoutClient({ children }: { children: React.R
     { label: 'Plans & Abonnements', icon: CreditCard, href: '/superadmin/plans' },
     { label: 'Règles Commissions', icon: ShieldCheck, href: '/superadmin/commissions' },
     { label: 'Référentiels Globaux', icon: Database, href: '/superadmin/referentiels' },
-    { label: 'Gestion Portefeuilles', icon: Wallet, href: '/superadmin/wallet', badge: 'Dépôts' },
+    { label: 'Flux Financiers Boutique', icon: CreditCard, href: '/superadmin/store-wallet', badge: 'Finances' },
     { label: 'Gestion Utilisateurs', icon: Users, href: '/superadmin/users' },
     { label: 'Monitoring Anti-Bypass', icon: ShieldCheck, href: '/superadmin/marketplace/monitoring', badge: 'Sécurité' },
   ];

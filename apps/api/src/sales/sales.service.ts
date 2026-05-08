@@ -18,6 +18,13 @@ export class SalesService {
     try {
       // Create Sale using a transaction
       const sale = await prisma.$transaction(async (tx) => {
+        // 0. Check for restriction
+        const storeInfo = await tx.store.findUnique({ where: { id: dto.storeId } });
+        if (!storeInfo) throw new Error('Store not found');
+        if ((storeInfo as any).isRestricted) {
+          throw new Error('ACCES_RESTREINT : Votre accès au POS est restreint en raison d\'un solde négatif. Veuillez alimenter votre wallet.');
+        }
+
         // 1. Fetch product tax rates for calculation
         const productIds = dto.items.map(i => i.productId);
         const dbProducts = await tx.product.findMany({
@@ -56,16 +63,14 @@ export class SalesService {
         });
 
         // --- NACEF / FISCAL CHAINING ---
-        const store = await tx.store.findUnique({ where: { id: dto.storeId } });
-        if (!store) throw new Error('Store not found');
-
-        let fiscalSecret = store.fiscalSecret;
+        // storeInfo is already fetched above
+        let fiscalSecret = (storeInfo as any).fiscalSecret;
         if (!fiscalSecret) {
           fiscalSecret = crypto.randomBytes(32).toString('hex');
           await tx.store.update({ where: { id: dto.storeId }, data: { fiscalSecret } });
         }
 
-        const currentSeq = store.currentFiscalSequence + 1;
+        const currentSeq = (storeInfo as any).currentFiscalSequence + 1;
         const fiscalNumber = `FAC-${new Date().getFullYear()}-${String(currentSeq).padStart(6, '0')}`;
         const totalTtcGlobal = Math.round((totalHtGlobal + totalTaxGlobal) * 1000) / 1000;
         const timestampIso = new Date().toISOString();

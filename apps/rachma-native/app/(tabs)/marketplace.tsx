@@ -48,6 +48,40 @@ interface CartItem { id: string; name: string; price: number; quantity: number; 
 
 type ViewMode = 'PRODUCTS' | 'VENDORS' | 'PACKS';
 
+// B2B Segments for consistent hierarchy even if API is stale
+const B2B_SEGMENTS = [
+  { 
+      name: 'Matières Premières', 
+      icon: '🌾', 
+      matchKeywords: ['lait', 'café', 'boisson', 'pâtisserie', 'boulangerie', 'crémerie', 'sucre', 'sirop', 'arôme', 'thé', 'chocolat', 'farine', 'levure', 'ingrédient', 'fruit']
+  },
+  { 
+      name: 'Équipements & Matériel', 
+      icon: '⚙️', 
+      matchKeywords: ['équipement', 'matériel', 'barista', 'machine', 'moulin', 'pièce']
+  },
+  { 
+      name: 'Emballages', 
+      icon: '📦', 
+      matchKeywords: ['emballage', 'jetable', 'gobelet', 'paille', 'sac', 'boîte']
+  },
+  { 
+      name: 'Hygiène & Nettoyage', 
+      icon: '🧼', 
+      matchKeywords: ['hygiène', 'nettoyage', 'détergent', 'désinfectant', 'papier']
+  },
+  { 
+      name: 'Produits Finis', 
+      icon: '🥐', 
+      matchKeywords: ['fini', 'capsule', 'viennoiserie', 'snack', 'gâteau', 'dessert']
+  },
+  { 
+      name: 'Services', 
+      icon: '🤝', 
+      matchKeywords: ['service', 'livraison', 'maintenance', 'formation', 'location']
+  }
+];
+
 export default function MarketplaceScreen() {
   const scheme = useColorScheme();
   const T = LIGHT_B2B; 
@@ -222,8 +256,8 @@ export default function MarketplaceScreen() {
       if (item.id === id) {
         const nextQty = item.quantity + delta;
         // Enforce MOQ: don't allow decrease below minQty
-        if (delta < 0 && nextQty < item.minQty) {
-          return item;
+        if (delta < 0 && nextQty < (item.minQty || 1)) {
+           return item;
         }
         return { ...item, quantity: nextQty };
       }
@@ -316,13 +350,35 @@ export default function MarketplaceScreen() {
   // --- Filtering ---
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      const matchesSearch = p.name?.toLowerCase().includes(search.toLowerCase()) || p.vendor?.companyName?.toLowerCase().includes(search.toLowerCase());
+      const name = (p.name || '').toLowerCase();
+      const matchesSearch = name.includes(search.toLowerCase()) || (p.vendor?.companyName || '').toLowerCase().includes(search.toLowerCase());
+      
+      if (activeCategory === 'all') return matchesSearch;
+
       const catId = p.categoryId || p.productStandard?.categoryId;
       const subCatId = p.subcategoryId || p.productStandard?.subcategoryId;
-      const matchesCat = activeCategory === 'all' || catId === activeCategory || subCatId === activeCategory || p.category?.id === activeCategory;
-      return matchesSearch && matchesCat;
+      const catName = (p.category?.name || '').toLowerCase();
+
+      // 1. Match by ID (exact)
+      if (catId === activeCategory || subCatId === activeCategory || p.category?.id === activeCategory) {
+        return matchesSearch;
+      }
+
+      // 2. Match by Segment Name
+      const segment = B2B_SEGMENTS.find(s => s.name === activeCategory);
+      if (segment) {
+        const belongsToSegment = segment.matchKeywords.some(k => catName.includes(k));
+        if (belongsToSegment) return matchesSearch;
+      }
+
+      // 3. Fallback: Match by name similarity
+      if (catName && activeCategory.length > 3 && catName.includes(activeCategory.toLowerCase())) {
+          return matchesSearch;
+      }
+
+      return false;
     });
-  }, [products, search, activeCategory]);
+  }, [products, search, activeCategory, categories]);
 
   const filteredBundles = useMemo(() => {
     return bundles.filter(b => b.name?.toLowerCase().includes(search.toLowerCase()) || b.vendor?.companyName?.toLowerCase().includes(search.toLowerCase()));
@@ -363,39 +419,6 @@ export default function MarketplaceScreen() {
     return '📁';
   };
 
-  // B2B Segments for consistent hierarchy even if API is stale
-  const B2B_SEGMENTS = [
-    { 
-        name: 'Matières Premières', 
-        icon: '🌾', 
-        matchKeywords: ['lait', 'café', 'boisson', 'pâtisserie', 'boulangerie', 'crémerie', 'sucre', 'sirop', 'arôme', 'thé', 'chocolat', 'farine', 'levure', 'ingrédient', 'fruit']
-    },
-    { 
-        name: 'Équipements & Matériel', 
-        icon: '⚙️', 
-        matchKeywords: ['équipement', 'matériel', 'barista', 'machine', 'moulin', 'pièce']
-    },
-    { 
-        name: 'Emballages', 
-        icon: '📦', 
-        matchKeywords: ['emballage', 'jetable', 'gobelet', 'paille', 'sac', 'boîte']
-    },
-    { 
-        name: 'Hygiène & Nettoyage', 
-        icon: '🧼', 
-        matchKeywords: ['hygiène', 'nettoyage', 'détergent', 'désinfectant', 'papier']
-    },
-    { 
-        name: 'Produits Finis', 
-        icon: '🥐', 
-        matchKeywords: ['fini', 'capsule', 'viennoiserie', 'snack', 'gâteau', 'dessert']
-    },
-    { 
-        name: 'Services', 
-        icon: '🤝', 
-        matchKeywords: ['service', 'livraison', 'maintenance', 'formation', 'location']
-    }
-  ];
 
   const getTransformedCategories = () => {
     const segments = B2B_SEGMENTS.map(seg => ({
@@ -443,7 +466,10 @@ export default function MarketplaceScreen() {
                     <FontAwesome name="sliders" size={18} color="#94a3b8" />
                 </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={() => setMessagesOpen(true)} style={{ position: 'relative' }}>
+            <TouchableOpacity onPress={() => setOrdersOpen(true)} style={{ marginLeft: 5 }}>
+                <FontAwesome name="list-alt" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setMessagesOpen(true)} style={{ position: 'relative', marginLeft: 5 }}>
                 <FontAwesome name="commenting-o" size={24} color="#fff" />
                 <View style={{ position: 'absolute', top: -5, right: -5, backgroundColor: '#fff', borderRadius: 10, width: 16, height: 16, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ color: '#E31E24', fontSize: 10, fontWeight: '900' }}>3</Text>
@@ -669,21 +695,21 @@ export default function MarketplaceScreen() {
                         <View style={{ height: 3, backgroundColor: '#E31E24', borderRadius: 2, marginTop: 4, width: '100%' }} />
                      )}
                   </TouchableOpacity>
-                  {categories.map(cat => (
-                      <TouchableOpacity 
-                        key={cat.id}
-                        onPress={() => setActiveCategory(cat.id)}
-                        style={{ alignItems: 'center' }}
-                      >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                           <Text style={{ fontSize: 14 }}>{getCategoryIcon(cat.name)}</Text>
-                           <Text style={{ color: activeCategory === cat.id ? '#E31E24' : '#64748b', fontSize: 15, fontWeight: activeCategory === cat.id ? '900' : '600' }}>{cat.name}</Text>
-                        </View>
-                        {activeCategory === cat.id && (
-                           <View style={{ height: 3, backgroundColor: '#E31E24', borderRadius: 2, marginTop: 4, width: '100%' }} />
-                        )}
-                      </TouchableOpacity>
-                  ))}
+                  {B2B_SEGMENTS.map(seg => (
+                       <TouchableOpacity 
+                         key={seg.name}
+                         onPress={() => setActiveCategory(seg.name)}
+                         style={{ alignItems: 'center' }}
+                       >
+                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={{ fontSize: 14 }}>{seg.icon}</Text>
+                            <Text style={{ color: activeCategory === seg.name ? '#E31E24' : '#64748b', fontSize: 15, fontWeight: activeCategory === seg.name ? '900' : '600' }}>{seg.name}</Text>
+                         </View>
+                         {activeCategory === seg.name && (
+                            <View style={{ height: 3, backgroundColor: '#E31E24', borderRadius: 2, marginTop: 4, width: '100%' }} />
+                         )}
+                       </TouchableOpacity>
+                   ))}
                </ScrollView>
             </View>
 
@@ -786,8 +812,29 @@ export default function MarketplaceScreen() {
                 </View>
              )}
 
-            <View style={{ paddingHorizontal: 15, flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-               {filteredProducts.map((p) => (
+             {/* Result Counter & Active Filter Header */}
+             <View style={{ paddingHorizontal: 20, paddingVertical: 15, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' }}>
+                <View>
+                   <Text style={{ fontSize: 18, fontWeight: '900', color: '#1f2937' }}>
+                      {activeCategory === 'all' ? 'Catalogue Complet' : (categories.find(c => c.id === activeCategory)?.name || activeCategory)}
+                   </Text>
+                   <Text style={{ fontSize: 12, color: '#64748b', fontWeight: '700', marginTop: 2 }}>
+                      {filteredProducts.length} {filteredProducts.length > 1 ? 'produits trouvés' : 'produit trouvé'}
+                   </Text>
+                </View>
+                {activeCategory !== 'all' && (
+                   <TouchableOpacity 
+                     onPress={() => setActiveCategory('all')} 
+                     style={{ paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#fee2e2', borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 5 }}
+                   >
+                      <FontAwesome name="times-circle" size={12} color="#E31E24" />
+                      <Text style={{ color: '#E31E24', fontSize: 11, fontWeight: '900' }}>Effacer</Text>
+                   </TouchableOpacity>
+                )}
+             </View>
+
+             <View style={{ paddingHorizontal: 15, flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 15 }}>
+                {filteredProducts.map((p) => (
                 <TouchableOpacity key={p.id} style={{ width: (width - 40) / 2, backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 }} onPress={() => setSelectedProduct(p)}>
                   <View style={{ height: 160, backgroundColor: '#f3f4f6' }}>
                     {p.image ? <Image source={{ uri: p.image }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 60 }}>{getProductIcon(p.name)}</Text></View>}
@@ -798,7 +845,7 @@ export default function MarketplaceScreen() {
                      <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '600', marginTop: 4 }}>{p.minOrderQty || 1} {p.unit || 'pièces'} (MOQ)</Text>
                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 }}>
                         <FontAwesome name="shield" size={10} color="#fbbf24" />
-                        <Text style={{ color: '#94a3b8', fontSize: 9, fontWeight: '800' }}>Fournisseur Vérifié</Text>
+                        <Text style={{ color: '#64748b', fontSize: 9, fontWeight: '800' }}>{p.vendor?.companyName || 'Fournisseur Vérifié'}</Text>
                      </View>
                   </View>
                 </TouchableOpacity>
@@ -1037,7 +1084,7 @@ export default function MarketplaceScreen() {
                                  onPress={() => setVendorTab(t as any)}
                                  style={{ paddingBottom: 10, borderBottomWidth: vendorTab === t ? 3 : 0, borderBottomColor: T.accent }}
                                >
-                                 <Text style={{ color: vendorTab === t ? '#fff' : T.muted, fontWeight: '800', fontSize: 13 }}>{t}</Text>
+                                 <Text style={{ color: vendorTab === t ? '#1f2937' : '#64748b', fontWeight: '900', fontSize: 13 }}>{t}</Text>
                                </TouchableOpacity>
                              ))}
                           </View>
@@ -1193,7 +1240,7 @@ export default function MarketplaceScreen() {
                              <Text style={styles.cartItemSub}>{item.vendor?.companyName}</Text>
                           </View>
                           <View style={styles.cartQtyControl}>
-                             {item.quantity > item.minQty ? (
+                             {item.quantity > (item.minQty || 1) ? (
                                <TouchableOpacity onPress={() => updateQuantity(item.id, -1)} style={styles.qBtn}>
                                  <FontAwesome name="minus" color="#fff" size={10} />
                                </TouchableOpacity>
@@ -1830,7 +1877,7 @@ const styles = StyleSheet.create({
   moqText: { color: '#64748b', fontSize: 10, fontWeight: '700' },
   vendorRow: { flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#fff', borderRadius: 18, borderWidth: 1, borderColor: '#e5e7eb' },
   vendorAvatar: { width: 50, height: 50, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', marginRight: 15 },
-  vendorRowName: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  vendorRowName: { color: '#1f2937', fontSize: 15, fontWeight: '900' },
   vendorRowCity: { color: '#94a3b8', fontSize: 12, fontWeight: '600' },
   vendorStats: { alignItems: 'flex-end', backgroundColor: 'transparent' },
   statsValue: { color: '#10b981', fontSize: 18, fontWeight: '900' },
@@ -1847,10 +1894,11 @@ const styles = StyleSheet.create({
   discountText: { color: '#10b981', fontSize: 10, fontWeight: '900' },
   packItemsCount: { color: '#64748b', fontSize: 12, fontWeight: '700' },
   cartBar: { 
-    position: 'absolute', bottom: 30, left: 20, right: 20, height: 65, 
+    position: 'absolute', bottom: 100, left: 20, right: 20, height: 65, 
     borderRadius: 20, backgroundColor: '#E31E24', paddingHorizontal: 20, 
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    shadowColor: '#E31E24', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 15, elevation: 10
+    shadowColor: '#E31E24', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 15, elevation: 10,
+    zIndex: 9999
   },
   cartBarBadge: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   cartBarBadgeText: { color: '#E31E24', fontSize: 12, fontWeight: '900' },

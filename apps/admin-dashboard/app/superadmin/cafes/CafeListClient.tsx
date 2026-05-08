@@ -7,12 +7,12 @@ import {
   CheckCircle2, XCircle, Truck, ShieldCheck, History
 } from 'lucide-react';
 import StoreActionButtons from './StoreActionButtons';
-import { toggleStoreMarketplaceAccess, getStoreLoginHistory } from '../../actions';
+import { toggleStoreMarketplaceAccess, getStoreLoginHistory, assignPlanAction } from '../../actions';
 import Modal from '../../../components/Modal';
 
 type StoreWithStats = any; // We'll use the type from the server
 
-export default function CafeListClient({ initialStores }: { initialStores: StoreWithStats[] }) {
+export default function CafeListClient({ initialStores, plans = [] }: { initialStores: StoreWithStats[], plans?: any[] }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [cityFilter, setCityFilter] = useState('ALL');
@@ -22,6 +22,8 @@ export default function CafeListClient({ initialStores }: { initialStores: Store
   const [loginHistory, setLoginHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [selectedStore, setSelectedStore] = useState<any>(null);
+  const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [newPlanId, setNewPlanId] = useState('');
 
   const handleOpenHistory = async (store: any) => {
     setSelectedStore(store);
@@ -189,9 +191,19 @@ export default function CafeListClient({ initialStores }: { initialStores: Store
                  >
                    <History size={16} />
                  </button>
-                 <div className="flex-1">
-                   <StoreActionButtons storeId={s.id} />
-                 </div>
+                  <div className="flex-1 flex gap-2">
+                    <StoreActionButtons storeId={s.id} />
+                    <button 
+                       onClick={() => {
+                         setSelectedStore(s);
+                         setNewPlanId(s.subscription?.planId || '');
+                         setPlanModalOpen(true);
+                       }}
+                       className="px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors"
+                    >
+                      Plan
+                    </button>
+                  </div>
               </div>
             </div>
           );
@@ -233,6 +245,49 @@ export default function CafeListClient({ initialStores }: { initialStores: Store
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Plan Assignment Modal */}
+      <Modal open={planModalOpen} onClose={() => setPlanModalOpen(false)} title="Modifier l'Abonnement">
+        <div className="p-4 space-y-6">
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Choisir un nouveau plan pour {selectedStore?.name}</label>
+            <select 
+              value={newPlanId}
+              onChange={(e) => setNewPlanId(e.target.value)}
+              className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-black focus:ring-2 focus:ring-indigo-500 outline-none"
+            >
+              <option value="">— Aucun —</option>
+              {plans.map((p: any) => (
+                <option key={p.id} value={p.id}>{p.name} ({Number(p.price)} DT)</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-4">
+            <button 
+              className="flex-1 py-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-slate-400 font-black text-sm" 
+              onClick={() => setPlanModalOpen(false)}
+            >
+              Annuler
+            </button>
+            <button 
+              onClick={() => {
+                startTransition(async () => {
+                  try {
+                    await assignPlanAction(selectedStore.id, newPlanId);
+                    setPlanModalOpen(false);
+                  } catch (err: any) {
+                    alert(err.message);
+                  }
+                });
+              }}
+              disabled={isPending}
+              className="flex-[2] py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/30"
+            >
+              {isPending ? 'Enregistrement...' : 'Confirmer le changement'}
+            </button>
           </div>
         </div>
       </Modal>
