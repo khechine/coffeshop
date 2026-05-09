@@ -18,6 +18,7 @@ import { useToast } from '../../../components/Toast';
 
 
 import VendorStorefrontMobile from './VendorStorefrontMobile';
+import { useVault } from '../../VaultContext';
 
 const fmt = (n: any) => Number(n).toFixed(2);
 
@@ -45,6 +46,8 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [stockSearch, setStockSearch] = useState('');
+
+  const { level, maskName, maskLogo, maskCity, identityVisible } = useVault(vendor.id, vendor.isPremium);
 
   useEffect(() => {
     if (activeTab === 'Franchises' && typeof window !== 'undefined' && mapContainerRef.current && !mapRef.current) {
@@ -126,9 +129,12 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
     minOrderQty: vp.minOrderQty,
     vendorId: vendor.id,
     vendor: {
-      companyName: vendor.companyName,
-      city: vendor.city,
-      isEcoResponsible: vendor.isEcoResponsible
+      id: vendor.id,
+      userId: vendor.userId,
+      companyName: vendor.companyName, // Pass raw name, child will mask if needed
+      city: vendor.city || 'Tunisie', // Pass raw city
+      isEcoResponsible: vendor.isEcoResponsible,
+      isPremium: vendor.isPremium
     },
     distance: null 
   }));
@@ -154,13 +160,14 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
         
         <div style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', padding: '40px 0' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '32px' }}>
-            <div style={{ width: '120px', height: '120px', borderRadius: '16px', border: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', overflow: 'hidden' }}>
-              {logoUrl ? <img src={logoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <Building2 size={48} color="#E5E7EB" />}
+            <div style={{ width: '120px', height: '120px', borderRadius: '16px', border: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', overflow: 'hidden', position: 'relative' }}>
+              {maskLogo(logoUrl) ? <img src={logoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <Building2 size={48} color="#E5E7EB" />}
+              {!identityVisible && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.4)' }}><ShieldCheck size={32} color="#111827" /></div>}
             </div>
             <div>
-              <h1 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', marginBottom: '8px' }}>{vendor.companyName}</h1>
+              <h1 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', marginBottom: '8px' }}>{maskName(vendor.companyName)}</h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#6B7280', fontSize: '14px', fontWeight: 600 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={16} /> {vendor.city || 'Tunisie'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={16} /> {maskCity(vendor.city)}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Package size={16} /> {products.length} Produits</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Star size={16} fill="#F59E0B" color="#F59E0B" /> 4.5/5</div>
               </div>
@@ -200,12 +207,12 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
 
       {/* ── Vendor Top Header (Badges & Quick Actions) ── */}
       <div style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', padding: '12px 0' }}>
-         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-               <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>{vendor.companyName}</span>
+               <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>{maskName(vendor.companyName)}</span>
                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: '#2563EB' }}>
-                    <ShieldCheck size={14} /> Diamond Member
+                    <ShieldCheck size={14} /> {identityVisible ? 'Diamond Member' : 'Membre Vérifié'}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#FEF2F2', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, color: '#E31E24' }}>
                      AUDITÉ
@@ -260,10 +267,10 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
       {/* ── Vendor Identity Bar (Logo & Name) ── */}
       <div style={{ background: '#fff', padding: '24px 0' }}>
          <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '24px' }}>
-            <div style={{ width: '80px', height: '80px', border: '1px solid #E5E7EB', borderRadius: '4px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>
+            <div style={{ width: '80px', height: '80px', border: '1px solid #E5E7EB', borderRadius: '4px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', position: 'relative' }}>
                {logoUrl ? <img src={logoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <Building2 size={40} color="#E5E7EB" />}
             </div>
-            <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#111827', margin: 0 }}>{vendor.companyName}</h1>
+            <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#111827', margin: 0 }}>{maskName(vendor.companyName)}</h1>
          </div>
       </div>
 

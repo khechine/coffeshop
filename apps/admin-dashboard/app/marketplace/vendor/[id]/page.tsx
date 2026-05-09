@@ -1,5 +1,5 @@
 import { prisma } from '@coffeeshop/database';
-import { getUser } from '../../../actions';
+import { getUser, getConfirmedVendorIds } from '../../../actions';
 import VendorStorefrontClient from './VendorStorefrontClient';
 import { notFound } from 'next/navigation';
 
@@ -27,15 +27,24 @@ export default async function VendorStorefrontPage({ params }: { params: Promise
     }
   });
 
-  const [mktCats, legacyCats, internalCats] = await Promise.all([
+  const [mktCats, legacyCats, internalCats, confirmedIds] = await Promise.all([
     (prisma as any).marketplaceCategory.findMany(),
     (prisma as any).mktCategory.findMany(),
-    (prisma as any).category.findMany()
+    (prisma as any).category.findMany(),
+    getConfirmedVendorIds()
   ]);
 
   const allCategories = [...mktCats, ...legacyCats, ...internalCats];
 
   if (!vendor) return notFound();
+
+  const isUnlocked = confirmedIds.includes(id);
+  const sanitizedVendor = {
+    ...vendor,
+    phone: isUnlocked ? vendor.phone : undefined,
+    email: isUnlocked ? vendor.email : undefined,
+    address: isUnlocked ? vendor.address : undefined,
+  };
 
   // Fetch specialized ratings manually since include might not work for aggregate/groupby results
   const ratingsAgg = await (prisma as any).vendorRating.aggregate({
@@ -65,10 +74,11 @@ export default async function VendorStorefrontPage({ params }: { params: Promise
 
   return (
     <VendorStorefrontClient 
-      vendor={JSON.parse(JSON.stringify(vendor))} 
+      vendor={JSON.parse(JSON.stringify(sanitizedVendor))} 
       ratings={ratings}
       isVendor={isVendor}
       allCategories={JSON.parse(JSON.stringify(allCategories))}
     />
   );
 }
+

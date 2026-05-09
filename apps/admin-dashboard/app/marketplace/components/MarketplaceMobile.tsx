@@ -9,6 +9,7 @@ import {
   ShoppingBag, Star, Zap, Clock, Flame, ArrowRight
 } from 'lucide-react';
 import { sanitizeUrl } from '../../lib/imageUtils';
+import { useVault } from '../VaultContext';
 
 export default function MarketplaceMobile({ initialData, store, setRfqOpen, blogPosts = [], isVendor = false, hidePrices = false }: any) {
   const router = useRouter();
@@ -141,17 +142,20 @@ export default function MarketplaceMobile({ initialData, store, setRfqOpen, blog
              {results.type === 'PRODUCT' ? (
                results.data.map((p: any) => <MobileProductCard key={p.id} p={p} />)
              ) : (
-               results.data.map((v: any) => (
-                 <Link key={v.id} href={`/marketplace/vendor/${v.id}`} style={{ background: '#fff', padding: '16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', border: '1px solid #eee' }}>
-                      <img src={v.logoUrl || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#111827' }}>{v.companyName}</div>
-                      <div style={{ fontSize: '12px', color: '#666' }}>{v.city} • {v.sector}</div>
-                    </div>
-                 </Link>
-               ))
+               results.data.map((v: any) => {
+                 const { maskName, identityVisible } = useVault(v.id, v.isPremium);
+                 return (
+                   <Link key={v.id} href={`/marketplace/vendor/${v.id}`} style={{ background: '#fff', padding: '16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
+                      <div style={{ width: '60px', height: '60px', borderRadius: '50%', overflow: 'hidden', border: '1px solid #eee', filter: identityVisible ? 'none' : 'blur(4px)' }}>
+                        <img src={v.logoUrl || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#111827' }}>{maskName(v.companyName)}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>{identityVisible ? v.city : 'Ville masquée'} • {v.sector}</div>
+                      </div>
+                   </Link>
+                 );
+               })
              )}
            </div>
         </div>

@@ -6,11 +6,15 @@ import MarketplaceHeader from '../components/MarketplaceHeader';
 import MarketplaceFooter from '../components/MarketplaceFooter';
 import { Target, Clock, MessageCircle, FileText, ChevronRight, User, CheckCircle2, AlertCircle } from 'lucide-react';
 import { acceptMarketplaceQuoteAction } from '../../actions';
+import Modal from '../../../components/Modal';
+import { useToast } from '../../components/Toast';
 
 export default function MyRequestsClient({ rfqs, store }: any) {
   const [selectedRfq, setSelectedRfq] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
   const [loadingQuoteId, setLoadingQuoteId] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState<{ quoteId: string } | null>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     setMounted(true);
@@ -22,16 +26,22 @@ export default function MyRequestsClient({ rfqs, store }: any) {
   };
 
   const handleAcceptQuote = async (quoteId: string) => {
-    if (!confirm("Voulez-vous vraiment accepter cette offre ? Le vendeur sera notifié.")) return;
+    setShowConfirm({ quoteId });
+  };
+
+  const confirmAcceptQuote = async () => {
+    if (!showConfirm) return;
+    const quoteId = showConfirm.quoteId;
+    setShowConfirm(null);
     setLoadingQuoteId(quoteId);
     try {
       const result = await acceptMarketplaceQuoteAction(quoteId);
       if (!result.success) {
-        alert(result.error || "Erreur lors de l'acceptation de l'offre.");
+        showToast(result.error || "Erreur lors de l'acceptation de l'offre.", 'error');
         return;
       }
       
-      alert('Offre acceptée avec succès !');
+      showToast('Offre acceptée avec succès !', 'success');
       // Update local state to reflect accepted status
       if (selectedRfq) {
         setSelectedRfq({
@@ -43,7 +53,7 @@ export default function MyRequestsClient({ rfqs, store }: any) {
         });
       }
     } catch (err: any) {
-      alert(err.message || "Erreur lors de l'acceptation de l'offre.");
+      showToast(err.message || "Erreur lors de l'acceptation de l'offre.", 'error');
     } finally {
       setLoadingQuoteId(null);
     }
@@ -208,6 +218,37 @@ export default function MyRequestsClient({ rfqs, store }: any) {
       </main>
 
       <MarketplaceFooter />
+
+      {/* Confirmation Modal */}
+      <Modal 
+        open={!!showConfirm} 
+        onClose={() => setShowConfirm(null)} 
+        title="Accepter l'offre"
+        width={450}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '64px', height: '64px', background: '#F0FDF4', color: '#16A34A', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+            <CheckCircle2 size={32} />
+          </div>
+          <p style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '8px' }}>Confirmation Requise</p>
+          <p style={{ color: '#6B7280', fontSize: '14px', marginBottom: '32px' }}>Voulez-vous vraiment accepter cette offre ? Le vendeur sera notifié.</p>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <button 
+              onClick={() => setShowConfirm(null)}
+              style={{ padding: '12px', borderRadius: '12px', border: '1px solid #E5E7EB', background: '#fff', color: '#111827', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Annuler
+            </button>
+            <button 
+              onClick={confirmAcceptQuote}
+              style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#111827', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Confirmer
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -7,8 +7,10 @@ import {
   Truck, RefreshCw, Plus, Minus, MessageSquare,
   ChevronRight, Building2, LayoutGrid, ShoppingBag,
   Heart, Share2, Play, CheckCircle2, ChevronDown, 
-  MapPin, Globe, Headphones, ArrowUp, ChevronLeft, X
+  MapPin, Globe, Headphones, ArrowUp, ChevronLeft, X,
+  FileText, Calendar, Leaf, Award, Shield
 } from 'lucide-react';
+import { useVault } from '../../VaultContext';
 import { useCart } from '../../CartContext';
 import MarketplaceHeader from '../../components/MarketplaceHeader';
 import MarketplaceFooter from '../../components/MarketplaceFooter';
@@ -24,6 +26,8 @@ export default function ProductDetailClient({ product, isVendor = false, related
   const [qty, setQty] = useState(1);
   const { addToCart } = useCart();
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const { level, maskName, identityVisible } = useVault(product.vendorId, product.vendor?.isPremium);
   
   const [isMobile, setIsMobile] = useState(false);
   React.useEffect(() => {
@@ -284,10 +288,10 @@ export default function ProductDetailClient({ product, isVendor = false, related
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#111827', margin: 0 }}>{product.vendor?.companyName}</h4>
+                      <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#111827', margin: 0 }}>{maskName(product.vendor?.companyName)}</h4>
                       <ChevronRight size={14} color="#9CA3AF" />
                     </div>
-                    <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 600 }}>Société Commerciale</span>
+                    <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 600 }}>{identityVisible ? 'Société Commerciale' : 'Fournisseur Vérifié'}</span>
                   </div>
                </div>
 
@@ -302,12 +306,12 @@ export default function ProductDetailClient({ product, isVendor = false, related
                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700 }}>
                     <ShieldCheck size={16} color="#2563EB" />
-                    <span style={{ color: '#111827' }}>Membre Diamant</span>
-                    <span style={{ color: '#6B7280' }}>Depuis 2025</span>
+                    <span style={{ color: '#111827' }}>{identityVisible ? 'Membre Diamant' : 'Membre Vérifié'}</span>
+                    <span style={{ color: '#6B7280' }}>{identityVisible ? 'Depuis 2025' : ''}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700 }}>
                     <CheckCircle2 size={16} color="#F59E0B" />
-                    <span style={{ color: '#111827' }}>Fournisseur Audité</span>
+                    <span style={{ color: '#111827' }}>{identityVisible ? 'Fournisseur Audité' : 'Qualité Garantie'}</span>
                   </div>
                </div>
             </div>
@@ -399,7 +403,7 @@ export default function ProductDetailClient({ product, isVendor = false, related
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', borderBottom: '1px solid #F1F5F9', paddingBottom: '8px', marginBottom: '4px' }}>
                         <Building2 size={12} color="#94A3B8" />
-                        <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>{p.vendor?.companyName || 'Vendeur Premium'}</span>
+                        <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>{maskName(p.vendor?.companyName)}</span>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <span style={{ fontSize: '16px', fontWeight: 900, color: '#111827' }}>

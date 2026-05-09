@@ -9,37 +9,70 @@ export default async function SubscriptionManagement() {
   const store = await getStore();
   if (!store) return <div>Accès refusé</div>;
 
-  let subscription = await prisma.subscription.findUnique({
+  let subscription = await (prisma as any).subscription.findUnique({
     where: { storeId: store.id },
-    include: { plan: true }
+    select: {
+      id: true,
+      status: true,
+      expiresAt: true,
+      createdAt: true,
+      planId: true,
+      plan: {
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          maxStores: true,
+          maxProducts: true,
+          hasMarketplace: true,
+          status: true
+        }
+      }
+    }
   });
 
-  const wallet = await (prisma as any).storeWallet.findUnique({
-    where: { storeId: store.id },
-    include: { transactions: { orderBy: { createdAt: 'desc' }, take: 5 } }
-  });
+  let wallet = null;
+  try {
+    wallet = await (prisma as any).storeWallet.findUnique({
+      where: { storeId: store.id },
+      include: { transactions: { orderBy: { createdAt: 'desc' }, take: 5 } }
+    });
+  } catch (e) {
+    console.error("Wallet table missing:", e);
+  }
 
-  const storeInfo = await (prisma as any).store.findUnique({
-    where: { id: store.id },
-    select: { isRestricted: true, marketplaceGraceOrders: true, status: true }
-  });
-
-  const rechargeRequests = await (prisma as any).storeWalletRechargeRequest.findMany({
-    where: { storeId: store.id },
-    orderBy: { createdAt: 'desc' },
-    take: 5
-  });
-
-  // Robust fetch for plan details if client is stale
-  if (subscription && subscription.plan) {
-    const rawPlan: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "Plan" WHERE id = $1`, subscription.planId);
-    if (rawPlan[0]) {
-        subscription = { 
-            ...subscription, 
-            plan: { ...subscription.plan, ...rawPlan[0] } 
-        } as any;
+  let storeInfo = null;
+  try {
+    storeInfo = await (prisma as any).store.findUnique({
+      where: { id: store.id },
+      select: { isRestricted: true, marketplaceGraceOrders: true, status: true }
+    });
+  } catch (e) {
+    console.error("Store restriction columns missing:", e);
+    // Fallback to only existing columns
+    storeInfo = await (prisma as any).store.findUnique({
+      where: { id: store.id },
+      select: { id: true, status: true }
+    }) as any;
+    // Add default values for missing columns
+    if (storeInfo) {
+      (storeInfo as any).isRestricted = false;
+      (storeInfo as any).marketplaceGraceOrders = 0;
     }
   }
+
+  let rechargeRequests = [];
+  try {
+    rechargeRequests = await (prisma as any).storeWalletRechargeRequest.findMany({
+      where: { storeId: store.id },
+      orderBy: { createdAt: 'desc' },
+      take: 5
+    });
+  } catch (e) {
+    console.error("RechargeRequest table missing:", e);
+  }
+
+  // Column safety: billingCycle is not in DB yet
 
   const currentPlan = subscription ? {
     name: subscription.plan.name,
@@ -64,12 +97,22 @@ export default async function SubscriptionManagement() {
     { label: 'Tables configurées', value: await prisma.storeTable.count({ where: { storeId: store.id } }), max: '∞', unit: 'Tables' },
   ];
 
-  // Fetch other plans to switch to
   let allPlans: any[] = [];
   try {
-     allPlans = await prisma.plan.findMany({ where: { status: 'ACTIVE' } });
+     allPlans = await (prisma as any).plan.findMany({ 
+       where: { status: 'ACTIVE' },
+       select: {
+         id: true,
+         name: true,
+         price: true,
+         maxStores: true,
+         maxProducts: true,
+         hasMarketplace: true,
+         status: true
+       }
+     });
   } catch(e) {
-     allPlans = await prisma.$queryRawUnsafe(`SELECT * FROM "Plan" WHERE status = 'ACTIVE'`);
+     console.error("Error fetching plans:", e);
   }
   const otherPlans = allPlans.filter(p => p.id !== subscription?.planId);
 

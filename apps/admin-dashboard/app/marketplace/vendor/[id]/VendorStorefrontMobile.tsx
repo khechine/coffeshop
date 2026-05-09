@@ -9,9 +9,13 @@ import {
   ArrowUpRight, LayoutGrid
 } from 'lucide-react';
 import { sanitizeUrl } from '../../../lib/imageUtils';
+import { useVault } from '../../VaultContext';
+import VaultReveal from '../../components/VaultReveal';
 
 export default function VendorStorefrontMobile({ vendor, products = [], isVendor = false }: any) {
   const [activeTab, setActiveTab] = useState('Home');
+  const { level, maskName, identityVisible } = useVault(vendor.id, vendor.isPremium);
+  
   const cust = vendor.customization || {};
   const logoUrl = sanitizeUrl(cust.logoUrl);
   const bannerUrl = sanitizeUrl(cust.bannerUrl) || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600';
@@ -32,18 +36,25 @@ export default function VendorStorefrontMobile({ vendor, products = [], isVendor
       {/* Hero Banner with Logo Overlay */}
       <div style={{ position: 'relative', width: '100%', height: '180px' }}>
         <img src={bannerUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="banner" />
-        <div style={{ position: 'absolute', bottom: '-40px', left: '16px', width: '80px', height: '80px', background: '#fff', borderRadius: '12px', padding: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid #eee' }}>
+        <VaultReveal 
+          vendorId={vendor.id} 
+          levelRequired={2}
+          placeholder={vendor.isPremium ? (logoUrl ? <img src={logoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <Building2 size={40} color="#E5E7EB" />) : null}
+          style={{ position: 'absolute', bottom: '-40px', left: '16px', width: '80px', height: '80px', background: '#fff', borderRadius: '12px', padding: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid #eee', overflow: 'hidden' }}
+        >
            {logoUrl ? <img src={logoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <Building2 size={40} color="#E5E7EB" />}
-        </div>
+        </VaultReveal>
       </div>
 
       {/* Identity Section */}
       <div style={{ background: '#fff', paddingTop: '50px', paddingLeft: '16px', paddingRight: '16px', paddingBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
            <div style={{ flex: 1 }}>
-              <h1 style={{ fontSize: '20px', fontWeight: 900, color: '#111827', margin: '0 0 4px' }}>{vendor.companyName}</h1>
+              <h1 style={{ fontSize: '20px', fontWeight: 900, color: '#111827', margin: '0 0 4px' }}>
+                {maskName(vendor.companyName)}
+              </h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#666', fontWeight: 600 }}>
-                 <MapPin size={12} /> {vendor.city || 'Tunisie'}
+                 <MapPin size={12} /> {identityVisible ? (vendor.city || 'Tunisie') : 'Ville masquée'}
               </div>
            </div>
            <button style={{ background: primaryColor, color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '100px', fontSize: '12px', fontWeight: 800 }}>
@@ -53,7 +64,7 @@ export default function VendorStorefrontMobile({ vendor, products = [], isVendor
 
         <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#EEF2FF', color: '#4F46E5', padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 800 }}>
-             <ShieldCheck size={12} /> Diamond Member
+             <ShieldCheck size={12} /> {identityVisible ? 'Diamond Member' : 'Membre Vérifié'}
            </div>
            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#FEF2F2', color: '#E31E24', padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 800 }}>
              AUDITÉ
@@ -108,9 +119,11 @@ export default function VendorStorefrontMobile({ vendor, products = [], isVendor
                <div style={{ position: 'absolute', right: '-20px', top: '-20px', width: '100px', height: '100px', background: primaryColor, opacity: 0.3, borderRadius: '50%' }} />
                <h3 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '8px' }}>Besoins de sur-mesure ?</h3>
                <p style={{ fontSize: '13px', opacity: 0.8, marginBottom: '16px' }}>Demandez un devis personnalisé pour vos volumes pro.</p>
-               <button style={{ background: '#fff', color: '#111827', border: 'none', padding: '10px 20px', borderRadius: '100px', fontSize: '13px', fontWeight: 800 }}>
-                 Envoyer RFQ
-               </button>
+               <VaultReveal vendorId={vendor.id} levelRequired={3}>
+                  <button style={{ background: '#fff', color: '#111827', border: 'none', padding: '10px 20px', borderRadius: '100px', fontSize: '13px', fontWeight: 800 }}>
+                    Envoyer RFQ
+                  </button>
+               </VaultReveal>
             </div>
           </>
         )}
@@ -130,22 +143,83 @@ export default function VendorStorefrontMobile({ vendor, products = [], isVendor
             ))}
           </div>
         )}
+
+        {activeTab === 'Franchises' && (
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '16px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '12px' }}>Réseau de distribution</h3>
+            <p style={{ fontSize: '13px', color: '#666', marginBottom: '20px' }}>
+              Ce fournisseur possède <strong>{vendor.posList?.length || 0} points de vente</strong> actifs.
+            </p>
+            
+            <VaultReveal vendorId={vendor.id} levelRequired={3}>
+               <div style={{ height: '200px', background: '#eee', borderRadius: '12px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <MapPin size={32} color="#999" />
+                 <span style={{ fontSize: '12px', color: '#999', fontWeight: 700, marginLeft: '8px' }}>Interactive Map Loaded</span>
+               </div>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                 {vendor.posList?.map((pos: any, idx: number) => (
+                   <div key={idx} style={{ padding: '12px', border: '1px solid #eee', borderRadius: '12px' }}>
+                     <div style={{ fontSize: '14px', fontWeight: 800 }}>{pos.name}</div>
+                     <div style={{ fontSize: '12px', color: '#666' }}>{pos.address}</div>
+                   </div>
+                 ))}
+               </div>
+            </VaultReveal>
+          </div>
+        )}
+
+        {activeTab === 'About' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ background: '#fff', borderRadius: '16px', padding: '16px' }}>
+               <h3 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '12px' }}>À propos</h3>
+               <p style={{ fontSize: '14px', color: '#374151', lineHeight: 1.6 }}>{vendor.description || 'Aucune description disponible.'}</p>
+            </div>
+            
+            <div style={{ background: '#fff', borderRadius: '16px', padding: '16px' }}>
+               <h3 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '12px' }}>Coordonnées Directes</h3>
+               <VaultReveal vendorId={vendor.id} levelRequired={3}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Globe size={16} />
+                      </div>
+                      <span style={{ fontSize: '14px', fontWeight: 700 }}>{vendor.email || 'Email non renseigné'}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <MapPin size={16} />
+                      </div>
+                      <span style={{ fontSize: '14px', fontWeight: 700 }}>{vendor.address || 'Adresse non renseignée'}</span>
+                    </div>
+                  </div>
+               </VaultReveal>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Fixed Bottom Action Bar */}
+
+
+      {/* Fixed Bottom Action Bar */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', borderTop: '1px solid #eee', padding: '12px 16px', display: 'flex', gap: '12px', zIndex: 1001 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#666' }}>
-          <MessageSquare size={22} />
-          <span style={{ fontSize: '10px', fontWeight: 800 }}>Chat</span>
-        </div>
-        <button style={{ flex: 1, background: '#111827', color: '#fff', border: 'none', borderRadius: '100px', fontWeight: 800, fontSize: '14px' }}>
-          Contact Supplier
-        </button>
-        <button style={{ flex: 1, background: primaryColor, color: '#fff', border: 'none', borderRadius: '100px', fontWeight: 800, fontSize: '14px' }}>
-          Send Inquiry
-        </button>
+        <VaultReveal vendorId={vendor.id} levelRequired={3} style={{ flex: 1 }}>
+          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#666' }}>
+              <MessageSquare size={22} />
+              <span style={{ fontSize: '10px', fontWeight: 800 }}>Chat</span>
+            </div>
+            <button style={{ flex: 1, background: '#111827', color: '#fff', border: 'none', borderRadius: '100px', fontWeight: 800, fontSize: '14px' }}>
+              Contact Supplier
+            </button>
+            <button style={{ flex: 1, background: primaryColor, color: '#fff', border: 'none', borderRadius: '100px', fontWeight: 800, fontSize: '14px' }}>
+              Send Inquiry
+            </button>
+          </div>
+        </VaultReveal>
       </div>
 
     </div>
   );
 }
+

@@ -12,6 +12,7 @@ import {
   Target, ShieldAlert, Zap, Headphones, ArrowUp,
   FileText, Calendar, Leaf, MapPin, Award
 } from 'lucide-react';
+import { useVault } from './VaultContext';
 import MarketplaceProductCard from './components/MarketplaceProductCard';
 import MarketplaceHeader from './components/MarketplaceHeader';
 import MarketplaceFooter from './components/MarketplaceFooter';
@@ -342,23 +343,26 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                       />
                     ))}
 
-                    {urlScope === 'VENDOR' && searchData.results.map((v: any) => (
-                      <Link 
-                        key={v.id} 
-                        href={`/marketplace/vendor/${v.id}`}
-                        style={{ background: '#fff', borderRadius: '16px', padding: '24px', border: '1px solid #F1F5F9', textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px', transition: 'all 0.2s' }}
-                        className="vendor-card"
-                      >
-                        <div style={{ width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', border: '1px solid #E5E7EB' }}>
-                          <img src={v.logoUrl || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=200'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        </div>
-                        <div>
-                          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#111827', margin: 0 }}>{v.companyName}</h3>
-                          <p style={{ fontSize: '13px', color: '#6B7280', margin: '4px 0' }}>{v.city}, {v.sector}</p>
-                        </div>
-                        <button style={{ background: '#F3F4F6', color: '#111827', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '12px' }}>Voir la boutique</button>
-                      </Link>
-                    ))}
+                    {urlScope === 'VENDOR' && searchData.results.map((v: any) => {
+                      const { maskName, identityVisible } = useVault(v.id, v.isPremium);
+                      return (
+                        <Link 
+                          key={v.id} 
+                          href={`/marketplace/vendor/${v.id}`}
+                          style={{ background: '#fff', borderRadius: '16px', padding: '24px', border: '1px solid #F1F5F9', textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px', transition: 'all 0.2s' }}
+                          className="vendor-card"
+                        >
+                          <div style={{ width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', border: '1px solid #E5E7EB', filter: identityVisible ? 'none' : 'blur(4px)' }}>
+                            <img src={v.logoUrl || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=200'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                          <div>
+                            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#111827', margin: 0 }}>{maskName(v.companyName)}</h3>
+                            <p style={{ fontSize: '13px', color: '#6B7280', margin: '4px 0' }}>{identityVisible ? v.city : 'Ville masquée'}, {v.sector}</p>
+                          </div>
+                          <button style={{ background: '#F3F4F6', color: '#111827', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '12px' }}>Voir la boutique</button>
+                        </Link>
+                      );
+                    })}
 
                     {urlScope === 'CATEGORY' && searchData.results.map((c: any) => (
                       <Link 
@@ -770,45 +774,48 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
-                    {initialData.bundles.slice(0, 4).map((bundle: any) => (
-                      <div 
-                        key={bundle.id} 
-                        style={{ 
-                          background: '#fff', 
-                          borderRadius: '24px', 
-                          border: '1px solid #F1F5F9', 
-                          padding: '24px', 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: '20px',
-                          transition: 'all 0.2s',
-                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
-                        }}
-                      >
-                         <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '16px', overflow: 'hidden', background: '#F8FAFC' }}>
-                            <img src={bundle.image || 'https://images.unsplash.com/photo-1549462220-2a9f5d378278?w=400'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            {bundle.discountPercent && (
-                              <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#E31E24', color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900 }}>
-                                -{bundle.discountPercent}%
+                    {initialData.bundles.slice(0, 4).map((bundle: any) => {
+                      const { maskName } = useVault(bundle.vendorId, bundle.vendor?.isPremium);
+                      return (
+                        <div 
+                          key={bundle.id} 
+                          style={{ 
+                            background: '#fff', 
+                            borderRadius: '24px', 
+                            border: '1px solid #F1F5F9', 
+                            padding: '24px', 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: '20px',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+                          }}
+                        >
+                           <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '16px', overflow: 'hidden', background: '#F8FAFC' }}>
+                              <img src={bundle.image || 'https://images.unsplash.com/photo-1549462220-2a9f5d378278?w=400'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              {bundle.discountPercent && (
+                                <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#E31E24', color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900 }}>
+                                  -{bundle.discountPercent}%
+                                </div>
+                              )}
+                           </div>
+                           <div>
+                              <span style={{ fontSize: '11px', fontWeight: 900, color: '#E31E24', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{maskName(bundle.vendor?.companyName)}</span>
+                              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', margin: '4px 0 8px' }}>{bundle.name}</h3>
+                              <p style={{ fontSize: '13px', color: '#64748B', margin: 0, height: '40px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{bundle.description}</p>
+                           </div>
+                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #F1F5F9' }}>
+                              <div>
+                                 <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 700, textDecoration: 'line-through' }}>{((Number(bundle.price) * 100) / (100 - (bundle.discountPercent || 0))).toFixed(2)} DT</span>
+                                 <div style={{ fontSize: '20px', fontWeight: 900, color: '#111827' }}>{Number(bundle.price).toFixed(2)} <span style={{ fontSize: '13px' }}>DT</span></div>
                               </div>
-                            )}
-                         </div>
-                         <div>
-                            <span style={{ fontSize: '11px', fontWeight: 900, color: '#E31E24', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{bundle.vendor?.companyName}</span>
-                            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', margin: '4px 0 8px' }}>{bundle.name}</h3>
-                            <p style={{ fontSize: '13px', color: '#64748B', margin: 0, height: '40px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{bundle.description}</p>
-                         </div>
-                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #F1F5F9' }}>
-                            <div>
-                               <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 700, textDecoration: 'line-through' }}>{((Number(bundle.price) * 100) / (100 - (bundle.discountPercent || 0))).toFixed(2)} DT</span>
-                               <div style={{ fontSize: '20px', fontWeight: 900, color: '#111827' }}>{Number(bundle.price).toFixed(2)} <span style={{ fontSize: '13px' }}>DT</span></div>
-                            </div>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827' }}>
-                               <ArrowRight size={18} />
-                            </div>
-                         </div>
-                      </div>
-                    ))}
+                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827' }}>
+                                 <ArrowRight size={18} />
+                              </div>
+                           </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </section>
               )}

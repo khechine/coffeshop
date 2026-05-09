@@ -16,6 +16,7 @@ import {
   markNotificationAsReadAction
 } from '../../actions';
 import { sanitizeUrl } from '../../lib/imageUtils';
+import { useVault } from '../VaultContext';
 
 export default function MyMessagesClient({ store }: any) {
   const searchParams = useSearchParams();
@@ -28,6 +29,8 @@ export default function MyMessagesClient({ store }: any) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const prevMessagesLength = useRef(0);
 
   useEffect(() => {
     loadConversations();
@@ -36,9 +39,11 @@ export default function MyMessagesClient({ store }: any) {
   useEffect(() => {
     if (conversations.length > 0 && userIdParam) {
       const found = conversations.find(c => c.otherUser.id === userIdParam);
-      if (found) setSelectedConversation(found);
+      if (found && selectedConversation?.otherUser.id !== found.otherUser.id) {
+        setSelectedConversation(found);
+      }
     }
-  }, [conversations, userIdParam]);
+  }, [conversations, userIdParam, selectedConversation]);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -47,8 +52,23 @@ export default function MyMessagesClient({ store }: any) {
   }, [selectedConversation]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (messages.length > prevMessagesLength.current) {
+      const isMyMessage = messages[messages.length - 1]?.senderId === userIdParam;
+      
+      // If I sent the message, always scroll
+      // Or if I'm already at the bottom, scroll for new messages
+      const container = chatContainerRef.current;
+      if (container) {
+        const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
+        if (isMyMessage || isAtBottom) {
+          scrollToBottom();
+        }
+      } else {
+        scrollToBottom();
+      }
+    }
+    prevMessagesLength.current = messages.length;
+  }, [messages, userIdParam]);
 
   // Polling for new messages every 5 seconds
   useEffect(() => {
@@ -68,7 +88,14 @@ export default function MyMessagesClient({ store }: any) {
   const loadConversations = async () => {
     try {
       const data = await getTradeConversationsAction();
-      setConversations(data);
+      
+      // Simple diff check to avoid unnecessary state updates
+      const currentIds = conversations.map(c => `${c.otherUser.id}-${c.lastMessage.id}`).join('|');
+      const newIds = data.map((c: any) => `${c.otherUser.id}-${c.lastMessage.id}`).join('|');
+      
+      if (currentIds !== newIds) {
+        setConversations(data);
+      }
       if (data.length > 0 && !selectedConversation) {
         setSelectedConversation(data[0]);
       }
@@ -89,7 +116,12 @@ export default function MyMessagesClient({ store }: any) {
   const loadMessages = async (otherUserId: string) => {
     try {
       const data = await getTradeMessagesAction(otherUserId);
-      setMessages(data);
+      const currentMsgIds = messages.map(m => m.id).join('|');
+      const newMsgIds = data.map((m: any) => m.id).join('|');
+      
+      if (currentMsgIds !== newMsgIds) {
+        setMessages(data);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -166,44 +198,12 @@ export default function MyMessagesClient({ store }: any) {
                 </div>
               ) : (
                 conversations.map((conv) => (
-                  <div 
+                  <ConversationItem 
                     key={conv.otherUser.id}
-                    onClick={() => setSelectedConversation(conv)}
-                    className={`p-6 cursor-pointer border-b border-slate-50 transition-all ${
-                      selectedConversation?.otherUser.id === conv.otherUser.id 
-                      ? 'bg-white shadow-md z-10 scale-[1.02] rounded-2xl mx-3 my-2 border-none' 
-                      : 'hover:bg-white/60'
-                    }`}
-                  >
-                    <div className="flex gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200 overflow-hidden">
-                        {conv.otherUser.image ? (
-                          <img src={conv.otherUser.image} className="w-full h-full object-cover" alt="" />
-                        ) : (
-                          <Store size={24} className="text-slate-400" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start mb-1">
-                          <h4 className="font-black text-slate-900 truncate text-[15px]">
-                            {conv.otherUser.name}
-                          </h4>
-                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                            {new Date(conv.lastMessage.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-                          </span>
-                        </div>
-                        <p className="text-sm text-slate-500 truncate font-medium">
-                          {conv.lastMessage.isFiltered ? conv.lastMessage.filteredContent : conv.lastMessage.content}
-                        </p>
-                        {conv.lastMessage.product && (
-                          <div className="mt-3 flex items-center gap-2 text-[10px] text-red-600 font-black bg-red-50 px-3 py-1 rounded-lg w-fit uppercase tracking-widest">
-                            <Box size={12} />
-                            <span className="truncate max-w-[150px]">{conv.lastMessage.product.name}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                    conv={conv}
+                    isSelected={selectedConversation?.otherUser.id === conv.otherUser.id}
+                    onSelect={() => setSelectedConversation(conv)}
+                  />
                 ))
               )}
             </div>
@@ -213,26 +213,12 @@ export default function MyMessagesClient({ store }: any) {
           <div className="flex-1 flex flex-col bg-white">
             {selectedConversation ? (
               <>
-                <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                   <div className="flex items-center gap-4">
-                     <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
-                        <Store size={24} className="text-slate-900" />
-                     </div>
-                     <div>
-                       <h3 className="text-lg font-black text-slate-900">{selectedConversation.otherUser.name}</h3>
-                       <div className="flex items-center gap-2">
-                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                         <span className="text-[10px] font-black text-green-600 uppercase tracking-widest">Vendeur Vérifié</span>
-                       </div>
-                     </div>
-                   </div>
-                   <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest">
-                      <ShieldCheck size={14} className="text-red-500" />
-                      Transaction Sécurisée
-                   </div>
-                </div>
+                <ChatHeader otherUser={selectedConversation.otherUser} />
 
-                <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50/20 no-scrollbar">
+                <div 
+                  ref={chatContainerRef}
+                  className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50/20 no-scrollbar"
+                >
                   {messages.map((msg, idx) => {
                     const isMine = msg.senderId !== selectedConversation.otherUser.id;
                     return (
@@ -279,21 +265,12 @@ export default function MyMessagesClient({ store }: any) {
                 </div>
 
                 <div className="p-6 border-t border-slate-100">
-                   <form onSubmit={handleSendMessage} className="flex gap-4">
-                      <input 
-                        value={newMessage}
-                        onChange={e => setNewMessage(e.target.value)}
-                        placeholder="Répondez au fournisseur..."
-                        className="flex-1 px-8 py-4 bg-slate-50 border border-slate-100 rounded-[24px] text-sm outline-none focus:ring-4 focus:ring-red-500/10 transition-all font-bold text-slate-900"
-                      />
-                      <button 
-                        type="submit"
-                        disabled={isSending || !newMessage.trim()}
-                        className="w-14 h-14 bg-red-600 text-white rounded-[24px] flex items-center justify-center hover:bg-red-700 transition-all shadow-xl shadow-red-200 disabled:opacity-50 active:scale-95"
-                      >
-                        <Send size={24} />
-                      </button>
-                   </form>
+                   <MessageInput 
+                     onSendMessage={handleSendMessage}
+                     isSending={isSending}
+                     newMessage={newMessage}
+                     setNewMessage={setNewMessage}
+                   />
                 </div>
               </>
             ) : (
@@ -315,3 +292,92 @@ export default function MyMessagesClient({ store }: any) {
     </div>
   );
 }
+
+const ConversationItem = React.memo(({ conv, isSelected, onSelect }: { conv: any, isSelected: boolean, onSelect: () => void }) => {
+  const { maskName, identityVisible } = useVault(conv.otherUser.vendorProfile?.id, conv.otherUser.vendorProfile?.isPremium);
+  
+  return (
+    <div 
+      onClick={onSelect}
+      className={`p-6 cursor-pointer border-b border-slate-50 transition-all ${
+        isSelected 
+        ? 'bg-white shadow-md z-10 scale-[1.02] rounded-2xl mx-3 my-2 border-none' 
+        : 'hover:bg-white/60'
+      }`}
+    >
+      <div className="flex gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200 overflow-hidden">
+          {(conv.otherUser.image && identityVisible) ? (
+            <img src={conv.otherUser.image} className="w-full h-full object-cover" alt="" />
+          ) : (
+            <Store size={24} className="text-slate-400" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-start mb-1">
+            <h4 className="font-black text-slate-900 truncate text-[15px]">
+              {maskName(conv.otherUser.name)}
+            </h4>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              {new Date(conv.lastMessage.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+            </span>
+          </div>
+          <p className="text-sm text-slate-500 truncate font-medium">
+            {conv.lastMessage.isFiltered ? conv.lastMessage.filteredContent : conv.lastMessage.content}
+          </p>
+          {conv.lastMessage.product && (
+            <div className="mt-3 flex items-center gap-2 text-[10px] text-red-600 font-black bg-red-50 px-3 py-1 rounded-lg w-fit uppercase tracking-widest">
+              <Box size={12} />
+              <span className="truncate max-w-[150px]">{conv.lastMessage.product.name}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+const ChatHeader = React.memo(({ otherUser }: { otherUser: any }) => {
+  const { maskName } = useVault(otherUser.vendorProfile?.id, otherUser.vendorProfile?.isPremium);
+  
+  return (
+    <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
+            <Store size={24} className="text-slate-900" />
+          </div>
+          <div>
+            <h3 className="text-lg font-black text-slate-900">{maskName(otherUser.name)}</h3>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-[10px] font-black text-green-600 uppercase tracking-widest">Vendeur Vérifié</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest">
+          <ShieldCheck size={14} className="text-red-500" />
+          Transaction Sécurisée
+        </div>
+    </div>
+  );
+});
+
+const MessageInput = React.memo(({ onSendMessage, isSending, newMessage, setNewMessage }: { onSendMessage: (e: any) => void, isSending: boolean, newMessage: string, setNewMessage: (val: string) => void }) => {
+  return (
+    <form onSubmit={onSendMessage} className="flex gap-4">
+      <input 
+        value={newMessage}
+        onChange={e => setNewMessage(e.target.value)}
+        placeholder="Répondez au fournisseur..."
+        className="flex-1 px-8 py-4 bg-slate-50 border border-slate-100 rounded-[24px] text-sm outline-none focus:ring-4 focus:ring-red-500/10 transition-all font-bold text-slate-900"
+      />
+      <button 
+        type="submit"
+        disabled={isSending || !newMessage.trim()}
+        className="w-14 h-14 bg-red-600 text-white rounded-[24px] flex items-center justify-center hover:bg-red-700 transition-all shadow-xl shadow-red-200 disabled:opacity-50 active:scale-95"
+      >
+        <Send size={24} />
+      </button>
+    </form>
+  );
+});

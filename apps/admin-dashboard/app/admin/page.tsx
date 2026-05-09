@@ -48,7 +48,14 @@ export default async function AdminDashboardPage() {
 
   const recentSales = await prisma.sale.findMany({
     where: { storeId: store.id },
-    include: { barista: true, takenBy: true, items: { include: { product: true } } },
+    select: {
+      id: true,
+      total: true,
+      createdAt: true,
+      barista: { select: { id: true, name: true } },
+      takenBy: { select: { id: true, name: true } },
+      items: { include: { product: true } }
+    },
     orderBy: { createdAt: 'desc' },
     take: 6,
   });

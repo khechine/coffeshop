@@ -13,16 +13,26 @@ export default async function SuperAdminDashboard() {
   
   const mrr = activeSubscriptions.reduce((acc: number, sub: any) => acc + Number(sub.plan?.price || 0), 0);
 
-  const commissionsTx = await (prisma as any).storeWalletTransaction.aggregate({
-    where: { type: 'MARKETPLACE_COMMISSION' },
-    _sum: { amount: true }
-  });
-  const totalCommissions = Math.abs(Number(commissionsTx._sum.amount || 0));
+  let totalCommissions = 0;
+  try {
+    const commissionsTx = await (prisma as any).storeWalletTransaction.aggregate({
+      where: { type: 'MARKETPLACE_COMMISSION' },
+      _sum: { amount: true }
+    });
+    totalCommissions = Math.abs(Number(commissionsTx._sum.amount || 0));
+  } catch (e) {
+    console.error("Commission table missing:", e);
+  }
 
-  const walletsAgg = await (prisma as any).storeWallet.aggregate({
-    _sum: { balance: true }
-  });
-  const netWalletBalance = Number(walletsAgg._sum.balance || 0);
+  let netWalletBalance = 0;
+  try {
+    const walletsAgg = await (prisma as any).storeWallet.aggregate({
+      _sum: { balance: true }
+    });
+    netWalletBalance = Number(walletsAgg._sum.balance || 0);
+  } catch (e) {
+    console.error("Wallet table missing:", e);
+  }
 
   // Restore Missing Context
   const ordersAgg = await prisma.supplierOrder.aggregate({
@@ -44,21 +54,28 @@ export default async function SuperAdminDashboard() {
   });
 
   // Critical Alerts Logic
-  const criticalStores = await (prisma as any).store.findMany({
-    where: {
-      OR: [
-        { isRestricted: true },
-        { marketplaceGraceOrders: { gt: 0 } }
-      ]
-    },
-    select: {
-      id: true,
-      name: true,
-      isRestricted: true,
-      marketplaceGraceOrders: true,
-      wallet: { select: { balance: true } }
-    }
-  });
+  let criticalStores: any[] = [];
+  try {
+    criticalStores = await (prisma as any).store.findMany({
+      where: {
+        OR: [
+          { isRestricted: true },
+          { marketplaceGraceOrders: { gt: 0 } }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        isRestricted: true,
+        marketplaceGraceOrders: true,
+        wallet: { select: { balance: true } }
+      }
+    });
+  } catch (e) {
+    console.error("Critical stores query failed (columns missing):", e);
+    // If columns are missing, we simply have no critical stores to show for these reasons
+    criticalStores = [];
+  }
 
   const stats = [
     { label: 'MRR (Abonnements)', value: `${mrr.toFixed(0)} DT`, icon: CreditCard, color: '#4F46E5', trend: 'Revenu Mensuel' },

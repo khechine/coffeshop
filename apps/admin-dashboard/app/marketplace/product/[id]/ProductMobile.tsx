@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 import { sendTradeMessageAction } from '../../../actions';
+import { useVault } from '../../VaultContext';
+import VaultReveal from '../../components/VaultReveal';
 
 const fmt = (n: any) => Number(n).toFixed(2);
 
@@ -19,6 +21,9 @@ export default function ProductMobile({ product, isVendor, relatedProducts = [] 
   const [tradeMessagerOpen, setTradeMessagerOpen] = useState(false);
   const [tradeMessage, setTradeMessage] = useState('');
   const [isSendingMsg, setIsSendingMsg] = useState(false);
+  
+  const { maskName, identityVisible } = useVault(product.vendorId, product.vendor?.isPremium);
+
 
   const gallery = [product.image, ...(product.images || [])].filter(Boolean);
 
@@ -104,8 +109,10 @@ export default function ProductMobile({ product, isVendor, relatedProducts = [] 
           <Building2 size={24} color="#666" />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '14px', fontWeight: 800, color: '#111827' }}>{product.vendor?.companyName}</div>
-          <div style={{ fontSize: '12px', color: '#999' }}>{product.vendor?.city} • Diamond Member</div>
+          <div style={{ fontSize: '14px', fontWeight: 800, color: '#111827' }}>
+            {maskName(product.vendor?.companyName)}
+          </div>
+          <div style={{ fontSize: '12px', color: '#999' }}>{identityVisible ? product.vendor?.city : 'Ville masquée'} • {identityVisible ? 'Diamond Member' : 'Membre Vérifié'}</div>
         </div>
         <ChevronRight size={20} color="#ccc" />
       </Link>
@@ -148,24 +155,28 @@ export default function ProductMobile({ product, isVendor, relatedProducts = [] 
 
       {/* Bottom Sticky CTA */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', borderTop: '1px solid #eee', padding: '12px 16px', display: 'flex', gap: '12px', zIndex: 1000 }}>
-        <div 
-          onClick={() => setTradeMessagerOpen(true)}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#666', cursor: 'pointer' }}
-        >
-          <MessageSquare size={20} />
-          <span style={{ fontSize: '10px', fontWeight: 800 }}>Chat</span>
-        </div>
-        <button 
-          onClick={() => setTradeMessagerOpen(true)}
-          style={{ flex: 1, background: '#111827', color: '#fff', border: 'none', borderRadius: '100px', fontWeight: 800, fontSize: '14px' }}
-        >
-          Contacter
-        </button>
-        <button 
-          style={{ flex: 1, background: '#E31E24', color: '#fff', border: 'none', borderRadius: '100px', fontWeight: 800, fontSize: '14px' }}
-        >
-          Inquiry
-        </button>
+        <VaultReveal vendorId={product.vendorId} levelRequired={3} style={{ flex: 1 }}>
+          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+            <div 
+              onClick={() => setTradeMessagerOpen(true)}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#666', cursor: 'pointer' }}
+            >
+              <MessageSquare size={20} />
+              <span style={{ fontSize: '10px', fontWeight: 800 }}>Chat</span>
+            </div>
+            <button 
+              onClick={() => setTradeMessagerOpen(true)}
+              style={{ flex: 1, height: '44px', background: '#111827', color: '#fff', border: 'none', borderRadius: '100px', fontWeight: 800, fontSize: '14px' }}
+            >
+              Contacter
+            </button>
+            <button 
+              style={{ flex: 1, height: '44px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '100px', fontWeight: 800, fontSize: '14px' }}
+            >
+              Inquiry
+            </button>
+          </div>
+        </VaultReveal>
       </div>
 
       {/* TradeMessager Mobile Drawer */}
@@ -203,3 +214,4 @@ export default function ProductMobile({ product, isVendor, relatedProducts = [] 
     </div>
   );
 }
+

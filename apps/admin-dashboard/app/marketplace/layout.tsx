@@ -1,4 +1,5 @@
 import { CartProvider } from './CartContext';
+import { VaultProvider } from './VaultContext';
 import { getUserContext } from '../actions';
 import { redirect } from 'next/navigation';
 import NotificationToastListener from './components/NotificationToastListener';
@@ -13,9 +14,12 @@ export default async function MarketplaceLayout({ children }: { children: React.
   return (
     <ToastProvider>
       <CartProvider>
-        <NotificationToastListener />
-        {children}
+        <VaultProvider>
+          <NotificationToastListener />
+          {children}
+        </VaultProvider>
       </CartProvider>
     </ToastProvider>
   );
 }
+

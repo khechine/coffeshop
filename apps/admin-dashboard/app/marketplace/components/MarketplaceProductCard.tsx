@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Heart, Play, Maximize2, MessageCircle, Star } from 'lucide-react';
 import { sanitizeUrl } from '../../lib/imageUtils';
+import { useVault } from '../VaultContext';
 
 const fmt = (n: any) => Number(n).toFixed(2);
 
@@ -14,6 +15,9 @@ interface MarketplaceProductCardProps {
 }
 
 export default function MarketplaceProductCard({ product, isVendor = false, hidePrice = false }: MarketplaceProductCardProps) {
+  const { maskName, identityVisible } = useVault(product.vendorId, product.vendor?.isPremium);
+
+  
   return (
     <div 
       style={{ 
@@ -146,7 +150,7 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
             href={`/marketplace/vendor/${product.vendorId}`}
             style={{ fontSize: '13px', color: '#111827', fontWeight: 700, textDecoration: 'none', display: 'block', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
-            {product.vendor?.companyName}
+            {maskName(product.vendor?.companyName)}
           </Link>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -162,7 +166,7 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
              )}
              
              {product.vendor?.city && (
-               <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 600 }}>• {product.vendor.city}</span>
+               <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 600 }}>• {identityVisible ? product.vendor.city : 'Ville masquée'}</span>
              )}
           </div>
         </div>
@@ -178,3 +182,4 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
     </div>
   );
 }
+
