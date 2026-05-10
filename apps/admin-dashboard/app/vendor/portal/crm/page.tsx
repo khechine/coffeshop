@@ -1,5 +1,5 @@
 import React from 'react';
-import { getVendorPortalData } from '../../../actions';
+import { getVendorPortalData, getVendorClientListsAction } from '../../../actions';
 import { redirect } from 'next/navigation';
 import VendorCrmClient from './VendorCrmClient';
 
@@ -7,35 +7,38 @@ export const dynamic = 'force-dynamic';
 
 export default async function VendorCrmPage() {
   const portalData = await getVendorPortalData();
+  const initialLists = await getVendorClientListsAction();
 
   if (!portalData) {
     redirect('/login');
   }
 
   // Serialize complex objects before passing to client component
-  const serializedCustomers = portalData.customers?.map((c: any) => ({
+  const serializedCustomers = (portalData.customers || []).map((c: any) => ({
     ...c,
     totalSpent: Number(c.totalSpent || 0),
     createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
-    store: { 
+    updatedAt: c.updatedAt instanceof Date ? c.updatedAt.toISOString() : c.updatedAt,
+    store: c.store ? { 
       ...c.store,
-      supplierOrders: c.store?.orders?.map((o: any) => ({
+      supplierOrders: (c.store.orders || []).map((o: any) => ({
         ...o,
         total: Number(o.total),
         createdAt: o.createdAt instanceof Date ? o.createdAt.toISOString() : o.createdAt,
-        items: o.items?.map((it: any) => ({
+        items: (o.items || []).map((it: any) => ({
           ...it,
           price: Number(it.price),
           quantity: Number(it.quantity)
         }))
       }))
-    }
-  })) || [];
+    } : null
+  }));
 
-  const serializedCampaigns = portalData.campaigns?.map((c: any) => ({
+  const serializedCampaigns = (portalData.campaigns || []).map((c: any) => ({
     ...c,
-    createdAt: c.createdAt?.toISOString()
-  })) || [];
+    createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
+    sentAt: c.sentAt instanceof Date ? c.sentAt.toISOString() : c.sentAt
+  }));
 
   return (
     <div className="w-full">
@@ -45,7 +48,11 @@ export default async function VendorCrmPage() {
       </div>
       
       <React.Suspense fallback={<div className="animate-pulse bg-slate-100 h-96 rounded-[40px]" />}>
-        <VendorCrmClient initialCustomers={serializedCustomers} initialCampaigns={serializedCampaigns} />
+        <VendorCrmClient 
+          initialCustomers={serializedCustomers} 
+          initialCampaigns={serializedCampaigns} 
+          initialLists={initialLists}
+        />
       </React.Suspense>
     </div>
   );

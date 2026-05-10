@@ -1,6 +1,7 @@
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
+  output        = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -935,6 +936,7 @@ model VendorProfile {
   customers      VendorCustomer[]
   campaigns      VendorCampaign[]
   collections    VendorCollection[]
+  clientLists    VendorClientList[]
   premiumRequests VendorPremiumRequest[]
 }
 
@@ -1262,8 +1264,13 @@ model VendorCustomer {
   id          String   @id @default(cuid())
   vendorId    String
   vendor      VendorProfile @relation(fields: [vendorId], references: [id])
-  storeId     String   
-  store       Store    @relation(fields: [storeId], references: [id])
+  storeId     String?  
+  store       Store?    @relation(fields: [storeId], references: [id])
+  
+  // For manual/external customers
+  name        String?
+  email       String?
+  phone       String?
   
   category    String?  @default("REGULAR") // VIP, REGULAR, CHURN_RISK
   tags        String[]
@@ -1271,18 +1278,37 @@ model VendorCustomer {
   orderCount  Int      @default(0)
   
   createdAt   DateTime @default(now())
-  
+  updatedAt   DateTime @updatedAt
+
+  lists       VendorClientList[]
+
   @@unique([vendorId, storeId])
+}
+
+model VendorClientList {
+  id          String   @id @default(cuid())
+  name        String
+  vendorId    String
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id])
+  customers   VendorCustomer[]
+  campaigns   VendorCampaign[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model VendorCampaign {
   id             String   @id @default(cuid())
   vendorId       String
   vendor         VendorProfile @relation(fields: [vendorId], references: [id])
-  title          String
+  name           String   
+  type           String   @default("EMAIL") // EMAIL, SMS, WHATSAPP
   content        String
   targetCategory String?  
+  targetTags     String[]
+  targetListId   String?
+  targetList     VendorClientList? @relation(fields: [targetListId], references: [id])
   status         String   @default("DRAFT") // DRAFT, SENT
+  sentAt         DateTime?
   createdAt      DateTime @default(now())
 }
 

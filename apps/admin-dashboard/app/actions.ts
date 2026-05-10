@@ -2413,6 +2413,32 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
         content: `Vous avez reçu une nouvelle commande de ${store.name} pour un montant de ${data.total} DT.`,
         metadata: { orderId: order.id }
       });
+
+      // Update Vendor CRM
+      try {
+        await (prisma as any).vendorCustomer.upsert({
+          where: {
+            vendorId_storeId: {
+              vendorId: data.vendorId,
+              storeId: store.id
+            }
+          },
+          update: {
+            totalSpent: { increment: data.total },
+            orderCount: { increment: 1 }
+          },
+          create: {
+            vendorId: data.vendorId,
+            storeId: store.id,
+            totalSpent: data.total,
+            orderCount: 1,
+            category: 'REGULAR',
+            tags: []
+          }
+        });
+      } catch (crmErr) {
+        console.error('Failed to update Vendor CRM:', crmErr);
+      }
     }
   } catch (e) {
     console.error('Order notification failed:', e);
@@ -2460,6 +2486,60 @@ export async function updateVendorCustomerAction(customerId: string, data: { cat
   return await (prisma as any).vendorCustomer.update({
     where: { id: customerId },
     data: updateData
+  });
+}
+
+export async function createVendorClientListAction(name: string, customerIds: string[]) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Unauthorized');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({ where: { userId } });
+  if (!vendor) throw new Error('Vendor not found');
+
+  return await (prisma as any).vendorClientList.create({
+    data: {
+      name,
+      vendor: { connect: { id: vendor.id } },
+      customers: {
+        connect: customerIds.map(id => ({ id }))
+      }
+    },
+    include: {
+      _count: {
+        select: { customers: true }
+      }
+    }
+  });
+}
+
+export async function addCustomersToClientListAction(listId: string, customerIds: string[]) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Unauthorized');
+
+  return await (prisma as any).vendorClientList.update({
+    where: { id: listId },
+    data: {
+      customers: {
+        connect: customerIds.map(id => ({ id }))
+      }
+    }
+  });
+}
+
+export async function getVendorClientListsAction() {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) return [];
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({ where: { userId } });
+  if (!vendor) return [];
+
+  return await (prisma as any).vendorClientList.findMany({
+    where: { vendorId: vendor.id },
+    include: {
+      _count: {
+        select: { customers: true }
+      }
+    }
   });
 }
 
@@ -2521,7 +2601,62 @@ export async function addVendorCustomerAction(storeId: string) {
   });
 }
 
-export async function createVendorCampaignAction(data: { name: string; type: 'EMAIL' | 'SMS' | 'WHATSAPP'; content: string; targetTags?: string[] }) {
+export async function createManualVendorCustomerAction(data: { name: string; email?: string; phone?: string; category?: string; tags?: string[] }) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Unauthorized');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({ where: { userId } });
+  if (!vendor) throw new Error('Vendor not found');
+
+  return await (prisma as any).vendorCustomer.create({
+    data: {
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      category: data.category || 'REGULAR',
+      tags: data.tags || [],
+      vendor: { connect: { id: vendor.id } },
+      totalSpent: 0,
+      orderCount: 0
+    }
+  });
+}
+
+export async function importVendorCustomersCSVAction(customersData: any[]) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Unauthorized');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({ where: { userId } });
+  if (!vendor) throw new Error('Vendor not found');
+
+  const results = [];
+  for (const item of customersData) {
+    try {
+      const customer = await (prisma as any).vendorCustomer.create({
+        data: {
+          vendor: { connect: { id: vendor.id } },
+          name: item.name,
+          email: item.email,
+          phone: item.phone,
+          category: item.category || 'REGULAR',
+          tags: item.tags || []
+        }
+      });
+      results.push(customer);
+    } catch (e) {
+      console.error('Import row failed:', e);
+    }
+  }
+  return results;
+}
+
+export async function createVendorCampaignAction(data: { 
+  name: string; 
+  type: 'EMAIL' | 'SMS' | 'WHATSAPP'; 
+  content: string; 
+  targetTags?: string[];
+  targetListId?: string;
+}) {
   const userId = cookies().get('userId')?.value;
   if (!userId) throw new Error('Unauthorized');
 
@@ -2530,9 +2665,13 @@ export async function createVendorCampaignAction(data: { name: string; type: 'EM
 
   return await (prisma as any).vendorCampaign.create({
     data: {
-      ...data,
-      vendorId: vendor.id,
-      status: 'SENT', // For now auto-send
+      name: data.name,
+      type: data.type,
+      content: data.content,
+      targetTags: data.targetTags || [],
+      targetListId: data.targetListId,
+      vendor: { connect: { id: vendor.id } },
+      status: 'SENT',
       sentAt: new Date()
     }
   });
@@ -3070,14 +3209,23 @@ export async function getVendorPortalData() {
       ...vendor,
       products: (vendor.vendorProducts || []).map(mapProduct),
       bundles: (vendor.bundles || []).map(mapBundle),
-      orders: vendor.orders.map((o: any) => ({
+      orders: (vendor.orders || []).map((o: any) => ({
         ...o,
         total: Number(o.total),
-        items: o.items.map((it: any) => ({ ...it, quantity: Number(it.quantity), price: Number(it.price) })),
+        items: (o.items || []).map((it: any) => ({ ...it, quantity: Number(it.quantity), price: Number(it.price) })),
         settlement: o.settlement ? {
           ...o.settlement,
           commissionAmount: Number(o.settlement.commissionAmount)
         } : null
+      })),
+      customers: (vendor.customers || []).map((c: any) => ({
+        ...c,
+        totalSpent: Number(c.totalSpent),
+        orderCount: Number(c.orderCount)
+      })),
+      campaigns: (vendor.campaigns || []).map((c: any) => ({
+        ...c,
+        sentAt: c.sentAt ? c.sentAt.toISOString() : null
       })),
       wallet: wallet ? {
         ...wallet,
@@ -3091,7 +3239,7 @@ export async function getVendorPortalData() {
         transactions: [],
         status: 'PENDING_SERVER_RESTART'
       },
-      depositRequests: depositRequests.map((r: any) => ({
+      depositRequests: (depositRequests || []).map((r: any) => ({
         ...r,
         amount: Number(r.amount)
       })),

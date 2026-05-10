@@ -11,7 +11,9 @@ export const prisma =
       // We check if known new models exist on the singleton.
       const hasNewModels = 
         'storeVendorRelationship' in (globalForPrisma.prisma as any) &&
-        'vendorInteraction' in (globalForPrisma.prisma as any);
+        'vendorInteraction' in (globalForPrisma.prisma as any) &&
+        'vendorCustomer' in (globalForPrisma.prisma as any) &&
+        'vendorClientList' in (globalForPrisma.prisma as any);
       
       if (hasNewModels) return globalForPrisma.prisma;
     }
