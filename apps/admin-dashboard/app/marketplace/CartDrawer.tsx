@@ -1,11 +1,56 @@
 'use client';
 
 import React from 'react';
-import { ShoppingCart, X, Send } from 'lucide-react';
+import { ShoppingCart, X, Send, ShieldCheck, MapPin } from 'lucide-react';
 import { useCart } from './CartContext';
+import { useVault } from './VaultContext';
 import { sanitizeUrl } from '../lib/imageUtils';
 
 const fmt = (n: any) => Number(n).toFixed(3);
+
+const VendorGroup = ({ group, updateQty, removeItem }: any) => {
+  const { maskName, maskLogo, maskCity, identityVisible } = useVault(group.vendor?.id, group.vendor?.isPremium);
+  
+  return (
+    <div key={group.vendor?.id || 'v'}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#F3F4F6', overflow: 'hidden', border: '1px solid #E5E7EB', filter: identityVisible ? 'none' : 'blur(4px)' }}>
+          <img src={maskLogo(group.vendor?.logoUrl) || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=100'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '15px', fontWeight: 900, color: '#111827' }}>{maskName(group.vendor?.companyName || 'Fournisseur')}</span>
+            {group.vendor?.isPremium && <ShieldCheck size={14} color="#E31E24" fill="#E31E24" />}
+          </div>
+          <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <MapPin size={10} /> {maskCity(group.vendor?.city)}
+          </div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {group.items.map((item: any) => (
+          <div key={item.id} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <div style={{ width: '70px', height: '70px', borderRadius: '12px', background: '#F9FAFB', border: '1px solid #F1F5F9', overflow: 'hidden', flexShrink: 0 }}>
+              <img src={sanitizeUrl(item.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{item.name}</div>
+              <div style={{ fontSize: '15px', fontWeight: 900, color: '#111827' }}>{fmt(item.price)} DT <span style={{ fontWeight: 500, color: '#6B7280', fontSize: '12px' }}>/ unité</span></div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+               <div style={{ display: 'flex', alignItems: 'center', background: '#F3F4F6', borderRadius: '8px', padding: '4px' }}>
+                  <button onClick={() => updateQty(item.id, -1)} style={{ width: '24px', height: '24px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+                  <span style={{ width: '30px', textAlign: 'center', fontSize: '13px', fontWeight: 800 }}>{item.quantity}</span>
+                  <button onClick={() => updateQty(item.id, 1)} style={{ width: '24px', height: '24px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+               </div>
+               <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: 0 }}><X size={14} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export default function CartDrawer({ onClose }: { onClose: () => void }) {
   const { cart, updateQty, removeItem, cartTotal, handleCheckout, isOrdering, orderStatus, orderError, dismissError } = useCart();
@@ -88,37 +133,14 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-              {vendors.map((group: any) => (
-                <div key={group.vendor?.id || 'v'}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F3F4F6', overflow: 'hidden', border: '1px solid #E5E7EB' }}>
-                      <img src={group.vendor?.logoUrl || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=100'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                    <span style={{ fontSize: '14px', fontWeight: 900, color: '#111827' }}>{group.vendor?.companyName || 'Fournisseur'}</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {group.items.map((item: any) => (
-                      <div key={item.id} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                        <div style={{ width: '70px', height: '70px', borderRadius: '12px', background: '#F9FAFB', border: '1px solid #F1F5F9', overflow: 'hidden', flexShrink: 0 }}>
-                          <img src={sanitizeUrl(item.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{item.name}</div>
-                          <div style={{ fontSize: '15px', fontWeight: 900, color: '#111827' }}>{fmt(item.price)} DT <span style={{ fontWeight: 500, color: '#6B7280', fontSize: '12px' }}>/ unité</span></div>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                           <div style={{ display: 'flex', alignItems: 'center', background: '#F3F4F6', borderRadius: '8px', padding: '4px' }}>
-                              <button onClick={() => updateQty(item.id, -1)} style={{ width: '24px', height: '24px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
-                              <span style={{ width: '30px', textAlign: 'center', fontSize: '13px', fontWeight: 800 }}>{item.quantity}</span>
-                              <button onClick={() => updateQty(item.id, 1)} style={{ width: '24px', height: '24px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-                           </div>
-                           <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: 0 }}><X size={14} /></button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+              {vendors.map((group: any, idx: number) => (
+                <VendorGroup 
+                  key={group.vendor?.id || idx} 
+                  group={group} 
+                  updateQty={updateQty} 
+                  removeItem={removeItem} 
+                />
               ))}
             </div>
           )}

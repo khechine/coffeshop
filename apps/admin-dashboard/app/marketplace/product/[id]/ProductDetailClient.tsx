@@ -452,8 +452,8 @@ export default function ProductDetailClient({ product, isVendor = false, related
                <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '16px', background: '#FEF2F2', padding: '12px', borderRadius: '8px', border: '1px solid #FEE2E2' }}>
                  <strong style={{ color: '#E31E24' }}>Sécurité B2B :</strong> Les numéros de téléphone et adresses emails sont automatiquement filtrés pour garantir la sécurité des transactions sur la plateforme.
                </div>
-               <p style={{ fontSize: '14px', fontWeight: 600, color: '#374151', margin: '0 0 8px 0' }}>Sujet : {product.name}</p>
-               <p style={{ fontSize: '12px', color: '#6B7280', margin: 0 }}>Vendeur : {product.vendor?.name}</p>
+                <p style={{ fontSize: '14px', fontWeight: 600, color: '#374151', margin: '0 0 8px 0' }}>Sujet : {product.name}</p>
+                <p style={{ fontSize: '12px', color: '#6B7280', margin: 0 }}>Vendeur : {maskName(product.vendor?.companyName || product.vendor?.name)}</p>
              </div>
              <div style={{ padding: '16px', background: '#fff' }}>
                <textarea 

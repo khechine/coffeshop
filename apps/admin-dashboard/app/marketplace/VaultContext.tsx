@@ -64,8 +64,8 @@ export function useVault(vendorId?: string | null, isPremium: boolean = false) {
 
   const level = vendorId ? context.getVaultLevel(vendorId) : 1;
 
-  // Identity is visible if level >= 2 OR if vendor is Premium (Stade 1)
-  const identityVisible = level >= 2 || isPremium;
+  // Identity is visible if level >= 3 (Confirmed) OR if vendor is Premium (Stade 1)
+  const identityVisible = level >= 3 || isPremium;
 
   return {
     level,
