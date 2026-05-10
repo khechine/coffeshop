@@ -1,5 +1,5 @@
 import React from 'react';
-import { getVendorPortalData, getVendorClientListsAction } from '../../../actions';
+import { getVendorPortalData, getVendorClientListsAction, getVendorMarketingTemplatesAction } from '../../../actions';
 import { redirect } from 'next/navigation';
 import VendorCrmClient from './VendorCrmClient';
 
@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 export default async function VendorCrmPage() {
   const portalData = await getVendorPortalData();
   const initialLists = await getVendorClientListsAction();
+  const initialTemplates = await getVendorMarketingTemplatesAction();
 
   if (!portalData) {
     redirect('/login');
@@ -52,6 +53,7 @@ export default async function VendorCrmPage() {
           initialCustomers={serializedCustomers} 
           initialCampaigns={serializedCampaigns} 
           initialLists={initialLists}
+          initialTemplates={initialTemplates}
         />
       </React.Suspense>
     </div>

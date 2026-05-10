@@ -2538,8 +2538,48 @@ export async function getVendorClientListsAction() {
     include: {
       _count: {
         select: { customers: true }
+      },
+      customers: {
+        select: { tags: true }
       }
     }
+  });
+}
+
+export async function getVendorMarketingTemplatesAction() {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) return [];
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({ where: { userId } });
+  if (!vendor) return [];
+
+  return await (prisma as any).vendorMarketingTemplate.findMany({
+    where: { vendorId: vendor.id },
+    orderBy: { createdAt: 'desc' }
+  });
+}
+
+export async function createVendorMarketingTemplateAction(data: { name: string; content: string; type: string }) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Unauthorized');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({ where: { userId } });
+  if (!vendor) throw new Error('Vendor not found');
+
+  return await (prisma as any).vendorMarketingTemplate.create({
+    data: {
+      ...data,
+      vendor: { connect: { id: vendor.id } }
+    }
+  });
+}
+
+export async function deleteVendorMarketingTemplateAction(id: string) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Unauthorized');
+
+  return await (prisma as any).vendorMarketingTemplate.delete({
+    where: { id }
   });
 }
 
@@ -2656,6 +2696,7 @@ export async function createVendorCampaignAction(data: {
   content: string; 
   targetTags?: string[];
   targetListId?: string;
+  recipientCount?: number;
 }) {
   const userId = cookies().get('userId')?.value;
   if (!userId) throw new Error('Unauthorized');
@@ -2670,6 +2711,7 @@ export async function createVendorCampaignAction(data: {
       content: data.content,
       targetTags: data.targetTags || [],
       targetListId: data.targetListId,
+      recipientCount: data.recipientCount || 0,
       vendor: { connect: { id: vendor.id } },
       status: 'SENT',
       sentAt: new Date()

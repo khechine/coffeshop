@@ -13,9 +13,13 @@ export const prisma =
         'storeVendorRelationship' in (globalForPrisma.prisma as any) &&
         'vendorInteraction' in (globalForPrisma.prisma as any) &&
         'vendorCustomer' in (globalForPrisma.prisma as any) &&
-        'vendorClientList' in (globalForPrisma.prisma as any);
+        'vendorClientList' in (globalForPrisma.prisma as any) &&
+        'vendorMarketingTemplate' in (globalForPrisma.prisma as any);
       
       if (hasNewModels) return globalForPrisma.prisma;
+      
+      // If models are missing, clear it to force recreation
+      globalForPrisma.prisma = undefined;
     }
     
     return new PrismaClient({

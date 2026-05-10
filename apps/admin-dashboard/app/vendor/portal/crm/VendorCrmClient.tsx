@@ -6,7 +6,7 @@ import {
   Users, TrendingUp, Mail, Filter, Star, ShieldAlert, 
   Tag as TagIcon, Plus, Send, Phone, MessageCircle, 
   ExternalLink, ChevronRight, Search, LayoutGrid, X,
-  Upload, FileText, Download, Save, Trash2, Info, ListPlus
+  Upload, FileText, Download, Save, Trash2, Info, ListPlus, Zap
 } from 'lucide-react';
 import { 
   updateVendorCustomerAction, 
@@ -16,7 +16,10 @@ import {
   createManualVendorCustomerAction,
   importVendorCustomersCSVAction,
   createVendorClientListAction,
-  getVendorClientListsAction
+  getVendorClientListsAction,
+  getVendorMarketingTemplatesAction,
+  createVendorMarketingTemplateAction,
+  deleteVendorMarketingTemplateAction
 } from '../../../actions';
 import dynamic from 'next/dynamic';
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
@@ -35,16 +38,23 @@ interface VendorCrmClientProps {
   initialCustomers: any[];
   initialCampaigns: any[];
   initialLists: any[];
+  initialTemplates: any[];
 }
 
-export default function VendorCrmClient({ initialCustomers, initialCampaigns, initialLists }: VendorCrmClientProps) {
+export default function VendorCrmClient({ 
+  initialCustomers, 
+  initialCampaigns, 
+  initialLists,
+  initialTemplates
+}: VendorCrmClientProps) {
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
   
-  const [activeTab, setActiveTab] = useState<'customers' | 'campaigns' | 'lists'>('customers');
+  const [activeTab, setActiveTab] = useState<'customers' | 'campaigns' | 'lists' | 'templates'>('customers');
   const [customers, setCustomers] = useState(initialCustomers);
   const [campaigns, setCampaigns] = useState(initialCampaigns);
   const [lists, setLists] = useState(initialLists);
+  const [templates, setTemplates] = useState(initialTemplates);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
   const [search, setSearch] = useState(initialSearch);
   const [selectedCust, setSelectedCust] = useState<any>(null);
@@ -66,6 +76,14 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns, in
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [newListName, setNewListName] = useState('');
 
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [templateForm, setTemplateForm] = useState({
+    id: '',
+    name: '',
+    type: 'EMAIL',
+    content: ''
+  });
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -84,10 +102,6 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns, in
 
   const [tagInput, setTagInput] = useState('');
 
-  const [templates, setTemplates] = useState([
-    { id: '1', name: 'Offre Bienvenue', content: 'Bonjour {{name}}, bienvenue chez nous ! Profitez de -10% sur votre prochaine commande.' },
-    { id: '2', name: 'Relance Inactif', content: 'Bonjour {{name}}, cela fait longtemps ! Nous avons des nouveautés pour vous.' }
-  ]);
 
   const handleUpdateCustomer = (id: string, data: { category?: string; tags?: string[] }) => {
     startTransition(async () => {
@@ -99,10 +113,44 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns, in
     });
   };
 
+  const handleSaveTemplate = () => {
+    if (!templateForm.name || !templateForm.content) return;
+    startTransition(async () => {
+      const newTemplate = await createVendorMarketingTemplateAction(templateForm);
+      setTemplates(prev => [newTemplate, ...prev.filter(t => t.id !== newTemplate.id)]);
+      setIsTemplateModalOpen(false);
+      setTemplateForm({ id: '', name: '', type: 'EMAIL', content: '' });
+      alert('Modèle enregistré !');
+    });
+  };
+
+  const handleDeleteTemplate = (id: string) => {
+    if (!confirm('Supprimer ce modèle ?')) return;
+    startTransition(async () => {
+      await deleteVendorMarketingTemplateAction(id);
+      setTemplates(prev => prev.filter(t => t.id !== id));
+    });
+  };
+
   const handleSendCampaign = () => {
     if (!campaignForm.name || !campaignForm.content) return;
     startTransition(async () => {
-      const newCampaign = await createVendorCampaignAction(campaignForm);
+      // Calculate recipient count
+      let count = 0;
+      if (campaignForm.targetListId) {
+        const list = lists.find(l => l.id === campaignForm.targetListId);
+        count = list?._count?.customers || 0;
+      } else if (campaignForm.targetTags.length > 0) {
+        count = customers.filter(c => c.tags?.some((t: string) => campaignForm.targetTags.includes(t))).length;
+      } else {
+        count = customers.length;
+      }
+
+      const newCampaign = await createVendorCampaignAction({
+        ...campaignForm,
+        recipientCount: count
+      } as any);
+      
       setCampaigns(prev => [newCampaign, ...prev]);
       setCampaignForm({ name: '', type: 'EMAIL', content: '', targetTags: [], targetListId: '' });
       alert('Campagne envoyée avec succès !');
@@ -256,6 +304,12 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns, in
             className={`px-8 py-3 rounded-xl text-sm font-black transition-all ${activeTab === 'campaigns' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
           >
             Campagnes
+          </button>
+          <button 
+            onClick={() => setActiveTab('templates')}
+            className={`px-8 py-3 rounded-xl text-sm font-black transition-all ${activeTab === 'templates' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Modèles
           </button>
         </div>
 
@@ -461,7 +515,7 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns, in
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cibler par Liste Enregistrée</label>
                 <select 
                   value={campaignForm.targetListId}
-                  onChange={e => setCampaignForm(f => ({ ...f, targetListId: e.target.value }))}
+                  onChange={e => setCampaignForm(f => ({ ...f, targetListId: e.target.value, targetTags: [] }))}
                   className="w-full px-6 py-3.5 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 appearance-none"
                 >
                   <option value="">-- Aucune liste (utiliser les tags) --</option>
@@ -474,20 +528,27 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns, in
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cibler par Tags</label>
                 <div className="flex flex-wrap gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  {Array.from(new Set(customers.flatMap(c => c.tags || []))).map(tag => (
-                    <button 
-                      key={tag}
-                      onClick={() => {
-                        const tags = campaignForm.targetTags.includes(tag)
-                          ? campaignForm.targetTags.filter(t => t !== tag)
-                          : [...campaignForm.targetTags, tag];
-                        setCampaignForm(f => ({ ...f, targetTags: tags }));
-                      }}
-                      className={`px-3 py-1.5 rounded-full text-[10px] font-black border-2 transition-all ${campaignForm.targetTags.includes(tag) ? 'border-rose-500 bg-rose-50 text-rose-600' : 'border-slate-100 bg-white text-slate-400'}`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
+                  {(() => {
+                    const selectedList = lists.find(l => l.id === campaignForm.targetListId);
+                    const availableTags = selectedList 
+                      ? Array.from(new Set(selectedList.customers.flatMap((c: any) => c.tags || [])))
+                      : Array.from(new Set(customers.flatMap(c => c.tags || [])));
+
+                    return availableTags.map((tag: any) => (
+                      <button 
+                        key={tag}
+                        onClick={() => {
+                          const tags = campaignForm.targetTags.includes(tag)
+                            ? campaignForm.targetTags.filter(t => t !== tag)
+                            : [...campaignForm.targetTags, tag];
+                          setCampaignForm(f => ({ ...f, targetTags: tags }));
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-[10px] font-black border-2 transition-all ${campaignForm.targetTags.includes(tag) ? 'border-rose-500 bg-rose-50 text-rose-600' : 'border-slate-100 bg-white text-slate-400'}`}
+                      >
+                        {tag}
+                      </button>
+                    ));
+                  })()}
                   {campaignForm.targetTags.length === 0 && <span className="text-[10px] text-slate-400 italic font-bold">Tous les clients (aucun tag sélectionné)</span>}
                 </div>
               </div>
@@ -810,6 +871,258 @@ export default function VendorCrmClient({ initialCustomers, initialCampaigns, in
               >
                 {isPending ? 'Enregistrement...' : <><Save size={20} /> Enregistrer la liste</>}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {activeTab === 'templates' && (
+        <div className="bg-white rounded-[40px] shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden">
+          <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center">
+            <div>
+              <h2 className="font-black text-xl text-slate-900">Modèles de Marketing</h2>
+              <p className="text-slate-400 font-bold text-sm">Préparez vos messages types pour gagner du temps.</p>
+            </div>
+            <button 
+              onClick={() => {
+                setTemplateForm({ id: '', name: '', type: 'EMAIL', content: '' });
+                setIsTemplateModalOpen(true);
+              }}
+              className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-rose-600 transition-all flex items-center gap-2"
+            >
+              <Plus size={20} /> Créer un modèle
+            </button>
+          </div>
+
+          <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+            {templates.length === 0 ? (
+              <div className="col-span-full py-24 text-center">
+                 <FileText size={48} className="mx-auto text-slate-200 mb-4" />
+                 <p className="text-slate-400 font-bold text-lg">Aucun modèle enregistré</p>
+              </div>
+            ) : templates.map((template: any) => (
+              <div key={template.id} className="p-8 bg-slate-50 rounded-[32px] border border-slate-100 hover:border-rose-200 hover:bg-rose-50/20 transition-all group relative">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-rose-600 shadow-sm group-hover:scale-110 transition-transform">
+                    {template.type === 'EMAIL' ? <Mail size={24} /> : <MessageCircle size={24} />}
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        setTemplateForm(template);
+                        setIsTemplateModalOpen(true);
+                      }}
+                      className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-rose-600 transition-all"
+                    >
+                      <Save size={16} />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteTemplate(template.id)}
+                      className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-rose-600 transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+                <h3 className="font-black text-xl text-slate-900 mb-2">{template.name}</h3>
+                <div className="text-slate-400 text-sm line-clamp-3 mb-8" dangerouslySetInnerHTML={{ __html: template.content }} />
+                <button 
+                  onClick={() => {
+                    setCampaignForm(f => ({ ...f, content: template.content, name: template.name }));
+                    setActiveTab('campaigns');
+                  }}
+                  className="w-full bg-slate-900 text-white py-4 rounded-xl font-black text-xs hover:bg-rose-600 transition-all"
+                >
+                  Utiliser ce modèle
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'campaigns' && (
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600 mb-4">
+                <Mail size={20} />
+              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Messages Envoyés</p>
+              <p className="text-3xl font-black text-slate-900">{campaigns.reduce((acc, c) => acc + (c.recipientCount || 0), 0)}</p>
+            </div>
+            
+            <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-shadow border-b-4 border-b-emerald-500">
+              <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 mb-4">
+                <Users size={20} />
+              </div>
+              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Taux d'Ouverture</p>
+              <p className="text-3xl font-black text-slate-900">
+                {campaigns.length > 0 ? ((campaigns.reduce((acc, c) => acc + (c.openCount || 0), 0) / campaigns.reduce((acc, c) => acc + (c.recipientCount || 1), 0)) * 100).toFixed(1) : '0.0'}%
+              </p>
+            </div>
+
+            <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-shadow border-b-4 border-b-blue-500">
+              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 mb-4">
+                <TrendingUp size={20} />
+              </div>
+              <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Taux de Clic</p>
+              <p className="text-3xl font-black text-slate-900">
+                {campaigns.length > 0 ? ((campaigns.reduce((acc, c) => acc + (c.clickCount || 0), 0) / campaigns.reduce((acc, c) => acc + (c.recipientCount || 1), 0)) * 100).toFixed(1) : '0.0'}%
+              </p>
+            </div>
+
+            <div className="bg-slate-900 p-8 rounded-[32px] shadow-xl shadow-slate-900/20">
+              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-rose-500 mb-4">
+                <Zap size={20} />
+              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Conversion B2B</p>
+              <p className="text-3xl font-black text-white">4.2%</p>
+              <p className="text-[10px] font-bold text-rose-400 mt-2">+1.2% ce mois</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[40px] shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden">
+            <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center">
+              <div>
+                <h2 className="font-black text-xl text-slate-900">Historique des Campagnes</h2>
+                <p className="text-slate-400 font-bold text-sm">Suivez la performance de vos envois.</p>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50/50">
+                  <tr>
+                    <th className="px-10 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Campagne</th>
+                    <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cible</th>
+                    <th className="px-6 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Audience</th>
+                    <th className="px-6 py-5 text-center text-[10px] font-black text-emerald-600 uppercase tracking-widest">Ouvertures</th>
+                    <th className="px-6 py-5 text-center text-[10px] font-black text-blue-600 uppercase tracking-widest">Clics</th>
+                    <th className="px-6 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Statut</th>
+                    <th className="px-10 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {campaigns.map((campaign: any) => (
+                    <tr key={campaign.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-10 py-6">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${campaign.type === 'EMAIL' ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                            {campaign.type === 'EMAIL' ? <Mail size={18} /> : <MessageCircle size={18} />}
+                          </div>
+                          <div>
+                            <p className="font-black text-slate-900">{campaign.name}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">{campaign.type}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-6">
+                        <div className="flex flex-wrap gap-1">
+                          {campaign.targetListId ? (
+                            <span className="bg-slate-100 px-2 py-1 rounded-md text-[10px] font-black text-slate-600">LISTE: {lists.find(l => l.id === campaign.targetListId)?.name}</span>
+                          ) : campaign.targetTags.length > 0 ? (
+                            campaign.targetTags.map((tag: string) => (
+                              <span key={tag} className="bg-rose-50 px-2 py-1 rounded-md text-[10px] font-black text-rose-600 uppercase">{tag}</span>
+                            ))
+                          ) : (
+                            <span className="bg-slate-100 px-2 py-1 rounded-md text-[10px] font-black text-slate-400 uppercase tracking-widest">TOUTE LA BASE</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-6 text-center font-black text-slate-900">{campaign.recipientCount || 0}</td>
+                      <td className="px-6 py-6 text-center">
+                        <span className="font-black text-emerald-600">{campaign.openCount || 0}</span>
+                        <p className="text-[10px] font-bold text-slate-400">{campaign.recipientCount > 0 ? ((campaign.openCount / campaign.recipientCount) * 100).toFixed(0) : 0}%</p>
+                      </td>
+                      <td className="px-6 py-6 text-center">
+                        <span className="font-black text-blue-600">{campaign.clickCount || 0}</span>
+                        <p className="text-[10px] font-bold text-slate-400">{campaign.recipientCount > 0 ? ((campaign.clickCount / campaign.recipientCount) * 100).toFixed(0) : 0}%</p>
+                      </td>
+                      <td className="px-6 py-6 text-center">
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${campaign.status === 'SENT' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                          {campaign.status}
+                        </span>
+                      </td>
+                      <td className="px-10 py-6 text-right text-sm font-bold text-slate-400 italic">
+                        {new Date(campaign.createdAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template Modal */}
+      {isTemplateModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[40px] p-10 w-full max-w-2xl shadow-2xl">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="font-black text-2xl text-slate-900">{templateForm.id ? 'Modifier' : 'Créer'} un modèle</h3>
+              <button onClick={() => setIsTemplateModalOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+            </div>
+            <p className="text-slate-400 font-bold text-sm mb-8">Utilisez des variables comme {"{{name}}"} pour personnaliser.</p>
+
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nom du modèle</label>
+                  <input 
+                    type="text" 
+                    value={templateForm.name}
+                    onChange={e => setTemplateForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="Ex: Offre Bienvenue"
+                    className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 focus:ring-2 focus:ring-rose-500 transition-all"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Type de canal</label>
+                  <select 
+                    value={templateForm.type}
+                    onChange={e => setTemplateForm(f => ({ ...f, type: e.target.value }))}
+                    className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 focus:ring-2 focus:ring-rose-500 transition-all"
+                  >
+                    <option value="EMAIL">Email Professionnel</option>
+                    <option value="WHATSAPP">WhatsApp B2B</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Contenu du message</label>
+                <div className="quill-container">
+                  <ReactQuill 
+                    theme="snow"
+                    value={templateForm.content}
+                    onChange={val => setTemplateForm(f => ({ ...f, content: val }))}
+                    placeholder="Votre message ici..."
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {['{{name}}', '{{storeName}}', '{{city}}', '{{category}}', '{{totalSpent}}'].map(v => (
+                    <span key={v} className="bg-slate-100 text-slate-500 text-[10px] font-black px-2 py-1 rounded cursor-pointer hover:bg-rose-100 hover:text-rose-600 transition-colors">
+                      {v}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setIsTemplateModalOpen(false)}
+                  className="flex-1 py-5 bg-slate-50 text-slate-400 rounded-[20px] font-black text-lg hover:bg-slate-100 transition-all"
+                >
+                  Annuler
+                </button>
+                <button 
+                  onClick={handleSaveTemplate}
+                  disabled={isPending || !templateForm.name || !templateForm.content}
+                  className="flex-[2] py-5 bg-rose-600 text-white rounded-[20px] font-black text-lg shadow-xl shadow-rose-600/20 hover:bg-rose-700 transition-all flex items-center justify-center gap-2"
+                >
+                  {isPending ? 'Enregistrement...' : <><Save size={20} /> Enregistrer le modèle</>}
+                </button>
+              </div>
             </div>
           </div>
         </div>

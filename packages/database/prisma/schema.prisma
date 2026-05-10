@@ -937,6 +937,7 @@ model VendorProfile {
   campaigns      VendorCampaign[]
   collections    VendorCollection[]
   clientLists    VendorClientList[]
+  marketingTemplates VendorMarketingTemplate[]
   premiumRequests VendorPremiumRequest[]
 }
 
@@ -1296,6 +1297,17 @@ model VendorClientList {
   updatedAt   DateTime @updatedAt
 }
 
+model VendorMarketingTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  content     String
+  type        String   @default("EMAIL") // EMAIL, SMS, WHATSAPP
+  vendorId    String
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model VendorCampaign {
   id             String   @id @default(cuid())
   vendorId       String
@@ -1307,6 +1319,12 @@ model VendorCampaign {
   targetTags     String[]
   targetListId   String?
   targetList     VendorClientList? @relation(fields: [targetListId], references: [id])
+  
+  // KPIs
+  recipientCount Int      @default(0)
+  openCount      Int      @default(0)
+  clickCount     Int      @default(0)
+  
   status         String   @default("DRAFT") // DRAFT, SENT
   sentAt         DateTime?
   createdAt      DateTime @default(now())
