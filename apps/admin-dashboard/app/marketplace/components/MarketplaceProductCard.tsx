@@ -2,9 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Heart, Play, Maximize2, MessageCircle, Star } from 'lucide-react';
+import { Heart, Play, Maximize2, MessageCircle, Star, Loader2 } from 'lucide-react';
 import { sanitizeUrl } from '../../lib/imageUtils';
 import { useVault } from '../VaultContext';
+import { sendTradeMessageAction } from '../../actions';
 
 const fmt = (n: any) => Number(n).toFixed(2);
 
@@ -16,6 +17,28 @@ interface MarketplaceProductCardProps {
 
 export default function MarketplaceProductCard({ product, isVendor = false, hidePrice = false }: MarketplaceProductCardProps) {
   const { maskName, identityVisible } = useVault(product.vendorId, product.vendor?.isPremium);
+  const [isChatLoading, setIsChatLoading] = React.useState(false);
+
+  const handleStartChat = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isChatLoading) return;
+    setIsChatLoading(true);
+    try {
+      await sendTradeMessageAction({
+        receiverId: product.vendor.userId,
+        productId: product.id,
+        content: `Bonjour, je suis intéressé par votre produit : ${product.name}. Pouvez-vous m'en dire plus ?`
+      });
+      window.location.href = `/marketplace/messages?userId=${product.vendor.userId}`;
+    } catch (err: any) {
+      console.error(err);
+      if (err.message?.includes('Non authentifié') || err.message?.includes('Non autorisé')) {
+        window.location.href = '/login';
+      }
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
 
   
   return (
@@ -134,15 +157,16 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
               Découvrir
             </Link>
           )}
-          <Link 
-            href={`/marketplace/messages?userId=${product.vendor?.userId}`}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#374151', textDecoration: 'none' }}
+          <button 
+            onClick={handleStartChat}
+            disabled={isChatLoading}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: isChatLoading ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 700, color: '#374151', textDecoration: 'none', opacity: isChatLoading ? 0.5 : 1 }}
           >
             <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <MessageCircle size={16} />
+              {isChatLoading ? <Loader2 size={16} className="animate-spin" /> : <MessageCircle size={16} />}
             </div>
             Chat
-          </Link>
+          </button>
         </div>
 
         {/* Supplier Info */}
