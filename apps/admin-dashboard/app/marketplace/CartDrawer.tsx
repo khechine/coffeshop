@@ -70,7 +70,8 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
   React.useEffect(() => {
     if (orderStatus === 'SUCCESS') {
       const timer = setTimeout(() => {
-        window.location.href = '/vendor/dashboard'; 
+        alert("Votre commande a été envoyée avec succès !");
+        window.location.href = '/marketplace/orders'; 
       }, 2000);
       return () => clearTimeout(timer);
     }

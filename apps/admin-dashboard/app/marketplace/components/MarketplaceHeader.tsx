@@ -216,6 +216,9 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
                 <Link href="/marketplace/my-requests" style={{ color: '#4B5563', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }} className="top-link">
                   <Target size={14} /> Mes Demandes
                 </Link>
+                <Link href="/marketplace/orders" style={{ color: '#4B5563', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }} className="top-link">
+                  <ShoppingBag size={14} /> Mes Commandes
+                </Link>
                 <Link href="/marketplace/help" style={{ color: '#4B5563', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }} className="top-link">
                   Aide
                 </Link>

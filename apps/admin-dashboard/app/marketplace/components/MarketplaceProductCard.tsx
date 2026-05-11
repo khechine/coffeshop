@@ -128,9 +128,10 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
           {!isVendor && (
             <Link 
               href={`/marketplace/product/${product.id}`}
+              className="btn-decouvrir"
               style={{ flex: 1, height: '36px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '100px', fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
             >
-              Contact Now
+              Découvrir
             </Link>
           )}
           <Link 
@@ -177,6 +178,14 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
           box-shadow: 0 12px 24px rgba(0,0,0,0.1);
           transform: translateY(-4px);
           border-color: #D1D5DB;
+        }
+        .btn-decouvrir {
+          transition: all 0.2s ease;
+        }
+        .btn-decouvrir:hover {
+          background: #C81A20 !important;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(227, 30, 36, 0.3);
         }
       `}</style>
     </div>

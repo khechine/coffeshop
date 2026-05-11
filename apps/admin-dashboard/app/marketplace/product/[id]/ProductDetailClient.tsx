@@ -23,7 +23,8 @@ import ProductMobile from './ProductMobile';
 const fmt = (n: any) => Number(n).toFixed(2);
 
 export default function ProductDetailClient({ product, isVendor = false, relatedProducts = [], allCategories = [] }: { product: any; isVendor?: boolean; relatedProducts?: any[]; allCategories?: any[] }) {
-  const [qty, setQty] = useState(1);
+  const minQty = product.minOrderQty ? Number(product.minOrderQty) : 1;
+  const [qty, setQty] = useState(minQty);
   const { addToCart } = useCart();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -207,7 +208,7 @@ export default function ProductDetailClient({ product, isVendor = false, related
                   <span style={{ fontSize: '14px', fontWeight: 700, color: '#6B7280' }}>Quantité:</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                      <button 
-                      onClick={() => setQty(Math.max(1, qty - 1))}
+                      onClick={() => setQty(Math.max(minQty, qty - 1))}
                       style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #E5E7EB', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                      >
                        <Minus size={16} />
