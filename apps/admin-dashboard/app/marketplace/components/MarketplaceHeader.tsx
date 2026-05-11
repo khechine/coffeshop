@@ -77,8 +77,8 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
   return (
     <>
       <header style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, zIndex: 1000 }}>
-        {/* Top Slim Bar - Only visible when client is connected */}
-        {store && (
+        {/* Top Slim Bar - Visible everywhere except main landing page for non-authenticated users */}
+        {(!minimal || store) && (
           <div className="top-bar" style={{ background: '#F9FAFB', borderBottom: '1px solid #F1F5F9', padding: '6px 24px' }}>
             <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#6B7280' }}>
               <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>

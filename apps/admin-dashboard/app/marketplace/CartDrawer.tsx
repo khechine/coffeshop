@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ShoppingCart, X, Send, ShieldCheck, MapPin } from 'lucide-react';
+import { ShoppingCart, X, Send, ShieldCheck, MapPin, CheckCircle2 } from 'lucide-react';
 import { useCart } from './CartContext';
 import { useVault } from './VaultContext';
 import { sanitizeUrl } from '../lib/imageUtils';
@@ -35,7 +35,15 @@ const VendorGroup = ({ group, updateQty, removeItem }: any) => {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{item.name}</div>
-              <div style={{ fontSize: '15px', fontWeight: 900, color: '#111827' }}>{fmt(item.price)} DT <span style={{ fontWeight: 500, color: '#6B7280', fontSize: '12px' }}>/ unité</span></div>
+              <div style={{ fontSize: '15px', fontWeight: 900, color: '#E31E24' }}>{fmt(item.price)} DT <span style={{ fontWeight: 600, color: '#6B7280', fontSize: '12px' }}>/ {item.unit || 'unité'}</span></div>
+              {item.originalPrice && item.originalPrice > item.price && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                  <span style={{ fontSize: '12px', color: '#9CA3AF', textDecoration: 'line-through', fontWeight: 600 }}>{fmt(item.originalPrice)} DT</span>
+                  <span style={{ fontSize: '10px', color: '#E31E24', background: '#FEF2F2', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                    -{Math.round((1 - item.price / item.originalPrice) * 100)}%
+                  </span>
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                <div style={{ display: 'flex', alignItems: 'center', background: '#F3F4F6', borderRadius: '8px', padding: '4px' }}>
@@ -53,7 +61,7 @@ const VendorGroup = ({ group, updateQty, removeItem }: any) => {
 };
 
 export default function CartDrawer({ onClose }: { onClose: () => void }) {
-  const { cart, updateQty, removeItem, cartTotal, handleCheckout, isOrdering, orderStatus, orderError, dismissError } = useCart();
+  const { cart, updateQty, removeItem, clearCart, cartTotal, handleCheckout, isOrdering, orderStatus, orderError, dismissError } = useCart();
 
   // Handle automatic redirect on error
   React.useEffect(() => {
@@ -70,9 +78,8 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
   React.useEffect(() => {
     if (orderStatus === 'SUCCESS') {
       const timer = setTimeout(() => {
-        alert("Votre commande a été envoyée avec succès !");
         window.location.href = '/marketplace/orders'; 
-      }, 2000);
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [orderStatus]);
@@ -109,13 +116,40 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
             <h2 style={{ fontSize: '22px', fontWeight: 950, color: '#111827', margin: 0 }}>Mon Panier</h2>
             <p style={{ fontSize: '13px', color: '#6B7280', margin: '4px 0 0' }}>{cart.length} article{cart.length > 1 ? 's' : ''} au total</p>
           </div>
-          <button 
-            onClick={onClose}
-            style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: '#F9FAFB', color: '#111827', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
-          >
-            <X size={20} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {cart.length > 0 && (
+              <button 
+                onClick={() => {
+                  if (confirm("Voulez-vous vraiment vider votre panier ?")) {
+                    clearCart();
+                  }
+                }}
+                style={{ background: 'none', border: 'none', color: '#E31E24', fontSize: '12px', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Vider le panier
+              </button>
+            )}
+            <button 
+              onClick={onClose}
+              style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: '#F9FAFB', color: '#111827', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
+
+        {/* Success Overlay */}
+        {orderStatus === 'SUCCESS' && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(4px)', zIndex: 1002, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px', animation: 'fadeIn 0.4s ease' }}>
+            <div style={{ width: '80px', height: '80px', background: '#DCFCE7', color: '#16A34A', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', animation: 'scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+              <CheckCircle2 size={40} />
+            </div>
+            <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', textAlign: 'center', marginBottom: '8px' }}>Commande réussie !</h3>
+            <p style={{ color: '#6B7280', textAlign: 'center', fontSize: '15px', lineHeight: 1.5 }}>
+              Votre commande a été envoyée avec succès.<br/>Vous allez être redirigé vers vos commandes...
+            </p>
+          </div>
+        )}
 
         {/* Content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
@@ -204,6 +238,7 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
       <style jsx>{`
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes scaleIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
       `}</style>
     </>
   );

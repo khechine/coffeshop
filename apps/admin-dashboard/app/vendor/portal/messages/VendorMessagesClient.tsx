@@ -3,14 +3,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, Send, Search, ChevronRight, 
-  User, Box, Clock, ShieldCheck, PhoneOff, MailWarning 
+  User, Box, Clock, ShieldCheck, PhoneOff, MailWarning, ShoppingCart 
 } from 'lucide-react';
 import { 
   getTradeConversationsAction, 
   getTradeMessagesAction, 
   sendTradeMessageAction,
   getUserNotificationsAction,
-  markNotificationAsReadAction
+  markNotificationAsReadAction,
+  vendorConvertDiscussionToOrderAction
 } from '../../../actions';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 
@@ -21,7 +22,49 @@ export default function VendorMessagesClient() {
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [showOrderForm, setShowOrderForm] = useState(false);
+  const [orderQuantity, setOrderQuantity] = useState('');
+  const [orderPrice, setOrderPrice] = useState('');
+  const [isConverting, setIsConverting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleConvertOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const productId = selectedConversation?.lastMessage?.productId;
+    if (!productId || !selectedConversation) return;
+
+    if (!orderQuantity || !orderPrice) {
+      alert("Veuillez saisir une quantité et un prix unitaire.");
+      return;
+    }
+
+    setIsConverting(true);
+    try {
+      const res = await vendorConvertDiscussionToOrderAction({
+        buyerUserId: selectedConversation.otherUser.id,
+        productId,
+        quantity: Number(orderQuantity),
+        price: Number(orderPrice)
+      });
+      if (res.success) {
+        alert("La commande a été créée et proposée au client avec succès !");
+        setShowOrderForm(false);
+        setOrderQuantity('');
+        setOrderPrice('');
+        // Optional: Send a message indicating an order was proposed
+        await sendTradeMessageAction({
+          receiverId: selectedConversation.otherUser.id,
+          productId,
+          content: `J'ai créé une proposition de commande pour ce produit (Qté: ${orderQuantity}, Prix: ${orderPrice} DT). Vous pouvez la consulter dans vos commandes.`
+        });
+        await loadMessages(selectedConversation.otherUser.id);
+      }
+    } catch (e: any) {
+      alert(e.message || "Erreur lors de la création de la commande.");
+    } finally {
+      setIsConverting(false);
+    }
+  };
 
   useEffect(() => {
     loadConversations();
@@ -207,8 +250,64 @@ export default function VendorMessagesClient() {
                     <ShieldCheck size={12} />
                     TradeMessager Protection Active
                  </div>
+                 {selectedConversation.lastMessage?.product && (
+                   <button 
+                     onClick={() => setShowOrderForm(!showOrderForm)}
+                     className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors"
+                   >
+                     <ShoppingCart size={14} />
+                     Convertir en commande
+                   </button>
+                 )}
               </div>
             </div>
+
+            {/* Order Form */}
+            {showOrderForm && selectedConversation.lastMessage?.product && (
+              <div className="p-4 bg-indigo-50 dark:bg-indigo-950/30 border-b border-indigo-100 dark:border-indigo-900/50 flex flex-col gap-3">
+                <div className="text-xs font-bold text-indigo-800 dark:text-indigo-300">
+                  Proposer une commande pour : {selectedConversation.lastMessage.product.name}
+                </div>
+                <form onSubmit={handleConvertOrder} className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mb-1 uppercase tracking-wider">Quantité</label>
+                    <input 
+                      type="number" 
+                      min="1"
+                      value={orderQuantity}
+                      onChange={e => setOrderQuantity(e.target.value)}
+                      placeholder="Ex: 50"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mb-1 uppercase tracking-wider">Prix unitaire (DT)</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      min="0"
+                      value={orderPrice}
+                      onChange={e => setOrderPrice(e.target.value)}
+                      placeholder="Ex: 15.50"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mb-1 uppercase tracking-wider">Total estimé</label>
+                    <div className="px-3 py-2 bg-indigo-100 dark:bg-indigo-900/50 border border-transparent rounded-lg text-sm font-black text-indigo-900 dark:text-indigo-100">
+                      {orderQuantity && orderPrice ? (Number(orderQuantity) * Number(orderPrice)).toFixed(2) + ' DT' : '0.00 DT'}
+                    </div>
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={isConverting || !orderQuantity || !orderPrice}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors h-[38px]"
+                  >
+                    {isConverting ? 'Création...' : 'Valider'}
+                  </button>
+                </form>
+              </div>
+            )}
 
             {/* Messages Feed */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/30 dark:bg-slate-950/10">

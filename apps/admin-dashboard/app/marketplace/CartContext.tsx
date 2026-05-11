@@ -7,6 +7,7 @@ interface CartItem {
   id: string;
   name: string;
   price: number;
+  originalPrice?: number;
   quantity: number;
   image?: string;
   unit: string;
@@ -69,7 +70,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return [...prev, { 
         id: p.id, 
         name: p.name, 
-        price: Number(p.price), 
+        price: p.discountPrice ? Number(p.discountPrice) : Number(p.price),
+        originalPrice: p.discountPrice && Number(p.discountPrice) < Number(p.price) ? Number(p.price) : undefined,
         image: p.image, 
         unit: p.unit,
         quantity: q, 
