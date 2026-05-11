@@ -6378,118 +6378,144 @@ export async function getPredictiveAlertsAction() {
 }
 
 
+export async function getVendorProductsForUpsellAction() {
+  const user = await getUserContext();
+  if (!user || user.role !== 'VENDOR') return [];
+  
+  const vendor = await prisma.vendorProfile.findUnique({
+    where: { userId: user.id }
+  });
+  if (!vendor) return [];
+
+  return await (prisma as any).vendorProduct.findMany({
+    where: { vendorId: vendor.id },
+    select: { id: true, name: true, price: true, image: true, unit: true }
+  });
+}
 
 
 export async function vendorConvertDiscussionToOrderAction(data: {
   buyerUserId: string;
-  productId: string;
-  quantity: number;
-  price: number;
+  items: {
+    productId: string;
+    quantity: number;
+    price: number;
+  }[];
 }) {
-  const user = await getUserContext();
-  if (!user || user.role !== 'VENDOR') throw new Error('Non autorisé');
+  try {
+    const user = await getUserContext();
+    if (!user || user.role !== 'VENDOR') throw new Error('Non autorisé');
 
-  const vendor = await prisma.vendorProfile.findUnique({
-    where: { userId: user.id }
-  });
-  if (!vendor) throw new Error('Profil vendeur introuvable');
-
-  const buyer = await prisma.user.findUnique({
-    where: { id: data.buyerUserId },
-    select: { storeId: true, name: true }
-  });
-  if (!buyer || !buyer.storeId) throw new Error('Acheteur introuvable ou sans boutique');
-
-  const product = await prisma.vendorProduct.findUnique({
-    where: { id: data.productId }
-  });
-  if (!product) throw new Error('Produit introuvable');
-
-  const buyerStore = await (prisma as any).store.findUnique({
-    where: { id: buyer.storeId },
-    include: { subscription: { include: { plan: true } } }
-  });
-
-  const total = Number(data.quantity) * Number(data.price);
-
-  // 1. Create Order as CONFIRMED
-  const order = await (prisma as any).supplierOrder.create({
-    data: {
-      storeId: buyer.storeId,
-      vendorId: vendor.id,
-      total: total,
-      status: 'CONFIRMED',
-      items: {
-        create: [{
-          productId: product.id,
-          name: product.name,
-          quantity: Number(data.quantity),
-          price: Number(data.price)
-        }]
-      }
-    }
-  });
-
-  // 2. Client Wallet Deduction
-  const clientCommissionRate = Number(buyerStore?.customCommissionRate || buyerStore?.subscription?.plan?.defaultCommissionRate || 0.02);
-  const clientCommissionAmount = Number(total) * clientCommissionRate;
-  
-  const storeWallet = await (prisma as any).storeWallet.findUnique({ where: { storeId: buyer.storeId } });
-  if (storeWallet && clientCommissionAmount > 0) {
-    await (prisma as any).storeWallet.update({
-      where: { id: storeWallet.id },
-      data: { balance: { decrement: clientCommissionAmount } }
+    const vendor = await prisma.vendorProfile.findUnique({
+      where: { userId: user.id }
     });
-    await (prisma as any).storeWalletTransaction.create({
+    if (!vendor) throw new Error('Profil vendeur introuvable');
+
+    const buyer = await prisma.user.findUnique({
+      where: { id: data.buyerUserId },
+      select: { storeId: true, name: true }
+    });
+    if (!buyer || !buyer.storeId) throw new Error('Acheteur introuvable ou sans boutique');
+
+    const productIds = data.items.map((i) => i.productId);
+    const products = await (prisma as any).vendorProduct.findMany({
+      where: { id: { in: productIds } }
+    });
+    const productsMap = new Map(products.map((p: any) => [p.id, p]));
+
+    const buyerStore = await (prisma as any).store.findUnique({
+      where: { id: buyer.storeId },
+      include: { subscription: { include: { plan: true } } }
+    });
+
+    const total = data.items.reduce((acc, item) => acc + (Number(item.quantity) * Number(item.price)), 0);
+
+    // 1. Create Order as CONFIRMED
+    const order = await (prisma as any).supplierOrder.create({
       data: {
-        walletId: storeWallet.id,
-        amount: -clientCommissionAmount,
-        type: 'MARKETPLACE_COMMISSION',
-        description: `Commission sur commande Marketplace (Taux: ${clientCommissionRate * 100}%)`,
+        storeId: buyer.storeId,
+        vendorId: vendor.id,
+        total: total,
+        status: 'CONFIRMED',
+        items: {
+          create: data.items.map((item) => {
+            const p = productsMap.get(item.productId);
+            if (!p) throw new Error(`Produit ${item.productId} introuvable`);
+            return {
+              productId: p.id,
+              name: p.name,
+              quantity: Number(item.quantity),
+              price: Number(item.price)
+            };
+          })
+        }
       }
     });
-  }
 
-  // 3. Vendor Wallet Deduction & Settlement
-  const vendorCommissionAmount = Number(total) * Number((vendor as any).commissionRate || 0);
-  const settlement = await (prisma as any).marketplaceSettlement.create({
-    data: {
-      orderId: order.id,
-      commissionAmount: vendorCommissionAmount,
-      vendorApproved: true,
-      superadminApproved: true,
-      isProcessed: true,
-      processedAt: new Date()
+    // 2. Client Wallet Deduction
+    const clientCommissionRate = Number(buyerStore?.customCommissionRate || buyerStore?.subscription?.plan?.defaultCommissionRate || 0.02);
+    const clientCommissionAmount = Number(total) * clientCommissionRate;
+    
+    const storeWallet = await (prisma as any).storeWallet.findUnique({ where: { storeId: buyer.storeId } });
+    if (storeWallet && clientCommissionAmount > 0) {
+      await (prisma as any).storeWallet.update({
+        where: { id: storeWallet.id },
+        data: { balance: { decrement: clientCommissionAmount } }
+      });
+      await (prisma as any).storeWalletTransaction.create({
+        data: {
+          walletId: storeWallet.id,
+          amount: -clientCommissionAmount,
+          type: 'MARKETPLACE_COMMISSION',
+          description: `Commission sur commande Marketplace (Taux: ${clientCommissionRate * 100}%)`,
+        }
+      });
     }
-  });
 
-  const vendorWallet = await (prisma as any).vendorWallet.findUnique({ where: { vendorId: vendor.id } });
-  if (vendorWallet && vendorCommissionAmount > 0) {
-    await (prisma as any).vendorWallet.update({
-      where: { id: vendorWallet.id },
-      data: { balance: { decrement: vendorCommissionAmount } }
-    });
-    await (prisma as any).walletTransaction.create({
+    // 3. Vendor Wallet Deduction & Settlement
+    const vendorCommissionAmount = Number(total) * Number((vendor as any).commissionRate || 0);
+    const settlement = await (prisma as any).marketplaceSettlement.create({
       data: {
-        walletId: vendorWallet.id,
-        amount: -vendorCommissionAmount,
-        type: 'COMMISSION',
-        description: `Commission sur commande #${order.id.slice(-5)}`,
-        settlementId: settlement.id
+        orderId: order.id,
+        commissionAmount: vendorCommissionAmount,
+        vendorApproved: true,
+        superadminApproved: true,
+        isProcessed: true,
+        processedAt: new Date()
       }
     });
-  }
 
-  await (prisma as any).notification.create({
-    data: {
-      userId: data.buyerUserId,
-      type: 'ORDER',
-      title: 'Nouvelle commande proposée',
-      message: `${vendor.companyName} vous propose une commande suite à votre discussion.`,
-      link: '/marketplace/orders',
-      isRead: false
+    const vendorWallet = await (prisma as any).vendorWallet.findUnique({ where: { vendorId: vendor.id } });
+    if (vendorWallet && vendorCommissionAmount > 0) {
+      await (prisma as any).vendorWallet.update({
+        where: { id: vendorWallet.id },
+        data: { balance: { decrement: vendorCommissionAmount } }
+      });
+      await (prisma as any).walletTransaction.create({
+        data: {
+          walletId: vendorWallet.id,
+          amount: -vendorCommissionAmount,
+          type: 'COMMISSION',
+          description: `Commission sur commande #${order.id.slice(-5)}`,
+          settlementId: settlement.id
+        }
+      });
     }
-  });
 
-  return { success: true, orderId: order.id };
+    await (prisma as any).notification.create({
+      data: {
+        userId: data.buyerUserId,
+        type: 'ORDER',
+        title: 'Nouvelle commande proposée',
+        message: `${vendor.companyName} vous propose une commande suite à votre discussion.`,
+        link: '/marketplace/orders',
+        isRead: false
+      }
+    });
+
+    return { success: true, orderId: order.id };
+  } catch (error: any) {
+    console.error("vendorConvertDiscussionToOrderAction Error:", error);
+    return { success: false, error: error.message || "Une erreur inattendue est survenue." };
+  }
 }

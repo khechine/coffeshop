@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, Send, Search, ChevronRight, 
-  User, Box, Clock, ShieldCheck, PhoneOff, MailWarning, ShoppingCart 
+  User, Box, Clock, ShieldCheck, PhoneOff, MailWarning, ShoppingCart, Plus, Trash2 
 } from 'lucide-react';
 import { 
   getTradeConversationsAction, 
@@ -11,7 +11,8 @@ import {
   sendTradeMessageAction,
   getUserNotificationsAction,
   markNotificationAsReadAction,
-  vendorConvertDiscussionToOrderAction
+  vendorConvertDiscussionToOrderAction,
+  getVendorProductsForUpsellAction
 } from '../../../actions';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 
@@ -23,41 +24,46 @@ export default function VendorMessagesClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [showOrderForm, setShowOrderForm] = useState(false);
-  const [orderQuantity, setOrderQuantity] = useState('');
-  const [orderPrice, setOrderPrice] = useState('');
+  const [orderItems, setOrderItems] = useState<{ productId: string; name: string; quantity: string; price: string }[]>([]);
+  const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
   const [isConverting, setIsConverting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const handleConvertOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    const productId = selectedConversation?.lastMessage?.productId;
-    if (!productId || !selectedConversation) return;
+    if (!selectedConversation) return;
 
-    if (!orderQuantity || !orderPrice) {
-      alert("Veuillez saisir une quantité et un prix unitaire.");
+    if (orderItems.some(i => !i.productId || !i.quantity || !i.price)) {
+      alert("Veuillez remplir correctement tous les produits de la commande.");
       return;
     }
 
     setIsConverting(true);
     try {
+      const payloadItems = orderItems.map(i => ({
+        productId: i.productId,
+        quantity: Number(i.quantity),
+        price: Number(i.price)
+      }));
+
       const res = await vendorConvertDiscussionToOrderAction({
         buyerUserId: selectedConversation.otherUser.id,
-        productId,
-        quantity: Number(orderQuantity),
-        price: Number(orderPrice)
+        items: payloadItems
       });
       if (res.success) {
-        alert("La commande a été créée et proposée au client avec succès !");
+        alert("La commande a été créée et confirmée avec succès !");
         setShowOrderForm(false);
-        setOrderQuantity('');
-        setOrderPrice('');
-        // Optional: Send a message indicating an order was proposed
+        setOrderItems([]);
+        
+        const total = payloadItems.reduce((acc, i) => acc + (i.quantity * i.price), 0);
         await sendTradeMessageAction({
           receiverId: selectedConversation.otherUser.id,
-          productId,
-          content: `J'ai créé une proposition de commande pour ce produit (Qté: ${orderQuantity}, Prix: ${orderPrice} DT). Vous pouvez la consulter dans vos commandes.`
+          productId: payloadItems[0].productId,
+          content: `J'ai créé une commande confirmée pour un total de ${total.toFixed(2)} DT comprenant ${payloadItems.length} produit(s). Vous la retrouverez dans vos commandes.`
         });
         await loadMessages(selectedConversation.otherUser.id);
+      } else {
+        alert(res.error || "Erreur lors de la création de la commande.");
       }
     } catch (e: any) {
       alert(e.message || "Erreur lors de la création de la commande.");
@@ -66,8 +72,30 @@ export default function VendorMessagesClient() {
     }
   };
 
+  const updateOrderItem = (index: number, field: string, value: string) => {
+    const newItems = [...orderItems];
+    newItems[index] = { ...newItems[index], [field]: value };
+    if (field === 'productId') {
+      const p = catalogProducts.find(cp => cp.id === value);
+      if (p) {
+        newItems[index].name = p.name;
+        newItems[index].price = String(p.price || '');
+      }
+    }
+    setOrderItems(newItems);
+  };
+
+  const addOrderItem = () => {
+    setOrderItems([...orderItems, { productId: '', name: '', quantity: '', price: '' }]);
+  };
+
+  const removeOrderItem = (index: number) => {
+    setOrderItems(orderItems.filter((_, i) => i !== index));
+  };
+
   useEffect(() => {
     loadConversations();
+    getVendorProductsForUpsellAction().then(setCatalogProducts).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -252,7 +280,17 @@ export default function VendorMessagesClient() {
                  </div>
                  {selectedConversation.lastMessage?.product && (
                    <button 
-                     onClick={() => setShowOrderForm(!showOrderForm)}
+                     onClick={() => {
+                       if (!showOrderForm) {
+                         setOrderItems([{
+                           productId: selectedConversation.lastMessage.productId,
+                           name: selectedConversation.lastMessage.product.name,
+                           quantity: '',
+                           price: String(selectedConversation.lastMessage.product.price || '')
+                         }]);
+                       }
+                       setShowOrderForm(!showOrderForm);
+                     }}
                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors"
                    >
                      <ShoppingCart size={14} />
@@ -262,48 +300,67 @@ export default function VendorMessagesClient() {
               </div>
             </div>
 
-            {/* Order Form */}
+            {/* Order Form (Upsell support) */}
             {showOrderForm && selectedConversation.lastMessage?.product && (
               <div className="p-4 bg-indigo-50 dark:bg-indigo-950/30 border-b border-indigo-100 dark:border-indigo-900/50 flex flex-col gap-3">
                 <div className="text-xs font-bold text-indigo-800 dark:text-indigo-300">
-                  Proposer une commande pour : {selectedConversation.lastMessage.product.name}
+                  Composer une commande pour {selectedConversation.otherUser.name}
                 </div>
-                <form onSubmit={handleConvertOrder} className="flex gap-3 items-end">
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mb-1 uppercase tracking-wider">Quantité</label>
-                    <input 
-                      type="number" 
-                      min="1"
-                      value={orderQuantity}
-                      onChange={e => setOrderQuantity(e.target.value)}
-                      placeholder="Ex: 50"
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mb-1 uppercase tracking-wider">Prix unitaire (DT)</label>
-                    <input 
-                      type="number" 
-                      step="0.01"
-                      min="0"
-                      value={orderPrice}
-                      onChange={e => setOrderPrice(e.target.value)}
-                      placeholder="Ex: 15.50"
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mb-1 uppercase tracking-wider">Total estimé</label>
-                    <div className="px-3 py-2 bg-indigo-100 dark:bg-indigo-900/50 border border-transparent rounded-lg text-sm font-black text-indigo-900 dark:text-indigo-100">
-                      {orderQuantity && orderPrice ? (Number(orderQuantity) * Number(orderPrice)).toFixed(2) + ' DT' : '0.00 DT'}
+                <form onSubmit={handleConvertOrder} className="flex flex-col gap-3">
+                  {orderItems.map((item, index) => (
+                    <div key={index} className="flex gap-3 items-end p-3 bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-800/50 shadow-sm">
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mb-1 uppercase tracking-wider">Produit</label>
+                        <select 
+                          value={item.productId}
+                          onChange={e => updateOrderItem(index, 'productId', e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm outline-none font-medium"
+                        >
+                          <option value="">Sélectionner un produit</option>
+                          {catalogProducts.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="w-20">
+                        <label className="block text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mb-1 uppercase tracking-wider">Qté</label>
+                        <input 
+                          type="number" min="1" value={item.quantity} onChange={e => updateOrderItem(index, 'quantity', e.target.value)}
+                          placeholder="Qté"
+                          className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm outline-none"
+                        />
+                      </div>
+                      <div className="w-24">
+                        <label className="block text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mb-1 uppercase tracking-wider">Prix (DT)</label>
+                        <input 
+                          type="number" step="0.01" min="0" value={item.price} onChange={e => updateOrderItem(index, 'price', e.target.value)}
+                          placeholder="Prix"
+                          className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm outline-none"
+                        />
+                      </div>
+                      {orderItems.length > 1 && (
+                        <button type="button" onClick={() => removeOrderItem(index)} className="p-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg mb-[1px]">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <div className="flex justify-between items-center px-1">
+                    <button type="button" onClick={addOrderItem} className="text-[11px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5 hover:text-indigo-800 dark:hover:text-indigo-300">
+                      <Plus size={14} strokeWidth={3} /> Ajouter un produit (Upsell)
+                    </button>
+                    <div className="text-sm font-black text-indigo-900 dark:text-indigo-100">
+                      Total: {orderItems.reduce((acc, item) => acc + (Number(item.quantity) * Number(item.price)), 0).toFixed(2)} DT
                     </div>
                   </div>
+
                   <button 
                     type="submit"
-                    disabled={isConverting || !orderQuantity || !orderPrice}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors h-[38px]"
+                    disabled={isConverting || orderItems.some(i => !i.productId || !i.quantity || !i.price)}
+                    className="w-full mt-2 px-4 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-lg shadow-indigo-500/20"
                   >
-                    {isConverting ? 'Création...' : 'Valider'}
+                    {isConverting ? 'Traitement...' : 'Créer et confirmer la commande'}
                   </button>
                 </form>
               </div>
