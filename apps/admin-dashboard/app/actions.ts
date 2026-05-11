@@ -6442,7 +6442,7 @@ export async function vendorConvertDiscussionToOrderAction(data: {
             const p = productsMap.get(item.productId);
             if (!p) throw new Error(`Produit ${item.productId} introuvable`);
             return {
-              productId: p.id,
+              mktProductId: p.id,
               name: p.name,
               quantity: Number(item.quantity),
               price: Number(item.price)
