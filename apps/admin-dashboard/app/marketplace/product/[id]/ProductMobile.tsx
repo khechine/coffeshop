@@ -52,13 +52,19 @@ export default function ProductMobile({ product, isVendor, relatedProducts = [] 
     <div style={{ background: '#F4F4F4', minHeight: '100vh', paddingBottom: '100px', fontFamily: '-apple-system, system-ui, sans-serif' }}>
       
       {/* Top Header */}
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '50px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', zIndex: 1000, borderBottom: '1px solid #eee' }}>
-        <Link href="/marketplace" style={{ color: '#333' }}><ArrowLeft size={24} /></Link>
-        <div style={{ display: 'flex', gap: '20px', color: '#333' }}>
-          <Share2 size={22} />
-          <Heart size={22} />
-          <Link href="/marketplace/cart" style={{ color: '#333', position: 'relative' }}>
-            <ShoppingCart size={22} />
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '60px', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', zIndex: 1000, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+        <Link href="/marketplace" style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827', textDecoration: 'none' }}>
+          <ArrowLeft size={22} />
+        </Link>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <button style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#F9FAFB', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827' }}>
+            <Share2 size={20} />
+          </button>
+          <button style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#F9FAFB', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827' }}>
+            <Heart size={20} />
+          </button>
+          <Link href="/marketplace/cart" style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827', textDecoration: 'none' }}>
+            <ShoppingCart size={20} />
           </Link>
         </div>
       </div>
@@ -154,54 +160,44 @@ export default function ProductMobile({ product, isVendor, relatedProducts = [] 
       </div>
 
       {/* Bottom Sticky CTA */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', borderTop: '1px solid #eee', padding: '12px 16px', display: 'flex', gap: '12px', zIndex: 1000 }}>
-        <VaultReveal vendorId={product.vendorId} levelRequired={3} style={{ flex: 1 }}>
-          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-            <div 
-              onClick={() => setTradeMessagerOpen(true)}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#666', cursor: 'pointer' }}
-            >
-              <MessageSquare size={20} />
-              <span style={{ fontSize: '10px', fontWeight: 800 }}>Chat</span>
-            </div>
-            <button 
-              onClick={() => setTradeMessagerOpen(true)}
-              style={{ flex: 1, height: '44px', background: '#111827', color: '#fff', border: 'none', borderRadius: '100px', fontWeight: 800, fontSize: '14px' }}
-            >
-              Contacter
-            </button>
-            <button 
-              style={{ flex: 1, height: '44px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '100px', fontWeight: 800, fontSize: '14px' }}
-            >
-              Inquiry
-            </button>
-          </div>
-        </VaultReveal>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', borderTop: '1px solid #F1F5F9', padding: '16px 20px', display: 'flex', gap: '12px', zIndex: 1000, boxShadow: '0 -10px 25px rgba(0,0,0,0.05)' }}>
+        <div 
+          onClick={() => setTradeMessagerOpen(true)}
+          style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#F9FAFB', border: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5', flexShrink: 0, cursor: 'pointer' }}
+        >
+          <MessageSquare size={24} />
+        </div>
+        <button 
+          style={{ flex: 1, height: '56px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 900, boxShadow: '0 8px 16px rgba(227,30,36,0.2)' }}
+        >
+          {isVendor ? 'Contacter' : 'Ajouter au Panier'}
+        </button>
       </div>
 
       {/* TradeMessager Mobile Drawer */}
       {tradeMessagerOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'flex-end' }}>
-           <div style={{ width: '100%', background: '#fff', borderRadius: '24px 24px 0 0', padding: '24px', position: 'relative' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                 <h3 style={{ fontSize: '18px', fontWeight: 950 }}>Contact Supplier</h3>
-                 <button onClick={() => setTradeMessagerOpen(false)} style={{ background: 'none', border: 'none' }}><X size={24} /></button>
+           <div style={{ width: '100%', background: '#fff', borderRadius: '24px 24px 0 0', padding: '32px 24px', position: 'relative', animation: 'slideUp 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                 <h3 style={{ fontSize: '20px', fontWeight: 950, color: '#111827' }}>Contacter le fournisseur</h3>
+                 <button onClick={() => setTradeMessagerOpen(false)} style={{ background: '#F9FAFB', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827' }}><X size={20} /></button>
               </div>
-              <div style={{ background: '#F9FAFB', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '12px', color: '#666', border: '1px solid #eee' }}>
-                <strong>Note:</strong> Your personal contact info will be masked to ensure secure platform communication.
+              <div style={{ background: '#EEF2FF', padding: '14px 16px', borderRadius: '14px', marginBottom: '24px', fontSize: '13px', color: '#4338CA', border: '1px solid #C7D2FE', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ShieldCheck size={18} />
+                <span>Vos coordonnées sont protégées et masquées automatiquement.</span>
               </div>
               <textarea 
                 value={tradeMessage}
                 onChange={e => setTradeMessage(e.target.value)}
-                placeholder="Hi, I'm interested in this product..."
-                style={{ width: '100%', height: '120px', borderRadius: '12px', border: '1px solid #ddd', padding: '12px', outline: 'none', fontSize: '14px' }}
+                placeholder="Ex: Bonjour, je souhaiterais obtenir plus d'informations sur ce produit..."
+                style={{ width: '100%', height: '140px', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '16px', outline: 'none', fontSize: '15px', fontFamily: 'inherit', resize: 'none', background: '#F9FAFB' }}
               />
               <button 
                 onClick={handleSendTradeMessage}
                 disabled={isSendingMsg || !tradeMessage.trim()}
-                style={{ width: '100%', height: '50px', background: '#E31E24', color: '#fff', borderRadius: '100px', fontWeight: 800, border: 'none', marginTop: '16px', opacity: isSendingMsg ? 0.5 : 1 }}
+                style={{ width: '100%', height: '58px', background: '#E31E24', color: '#fff', borderRadius: '16px', fontWeight: 900, border: 'none', marginTop: '20px', fontSize: '16px', boxShadow: '0 8px 20px rgba(227,30,36,0.25)', opacity: isSendingMsg ? 0.7 : 1 }}
               >
-                {isSendingMsg ? 'Sending...' : 'Send Inquiry Now'}
+                {isSendingMsg ? 'Envoi en cours...' : 'Envoyer la demande'}
               </button>
            </div>
         </div>

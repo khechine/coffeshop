@@ -99,55 +99,116 @@ export default function ProductDetailClient({ product, isVendor = false, related
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 500px', gap: '48px', alignItems: 'start', marginBottom: '48px' }}>
           
           {/* Left Column: Media & Gallery */}
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3', background: '#F9FAFB', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-               <img 
-                  src={activeImage} 
-                  alt={product.name} 
-                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-               />
-               
-               {/* Overlay Icons */}
-               <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                    <Heart size={20} color="#374151" />
-                  </button>
-                  <button style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                    <Share2 size={20} color="#374151" />
-                  </button>
-               </div>
+          <div style={{ position: 'sticky', top: '100px', alignSelf: 'start' }}>
+            <div style={{ background: '#fff', borderRadius: '24px', padding: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid #F1F5F9' }}>
+              <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: '#fff', borderRadius: '16px', overflow: 'hidden', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <img 
+                    src={activeImage} 
+                    alt={product.name} 
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', transition: 'transform 0.5s ease' }}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                 />
+                 
+                 {/* Overlay Icons */}
+                 <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', flexDirection: 'column', gap: '12px', zIndex: 10 }}>
+                    <button 
+                      onClick={(e) => {
+                        const icon = e.currentTarget.querySelector('svg');
+                        if (icon) icon.style.fill = icon.style.fill === 'red' ? 'none' : 'red';
+                        if (icon) icon.style.stroke = icon.style.fill === 'red' ? 'red' : '#374151';
+                      }}
+                      style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#fff', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'transform 0.2s' }}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <Heart size={22} color="#374151" />
+                    </button>
+                    
+                    {/* Share Dropdown Trigger */}
+                    <div style={{ position: 'relative' }}>
+                      <button 
+                        onClick={() => {
+                          const menu = document.getElementById('share-menu');
+                          if (menu) menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+                        }}
+                        style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#fff', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'transform 0.2s' }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        <Share2 size={22} color="#374151" />
+                      </button>
+                      <div id="share-menu" style={{ display: 'none', position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: '#fff', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', border: '1px solid #F1F5F9', padding: '8px', flexDirection: 'column', gap: '4px', minWidth: '160px', zIndex: 20 }}>
+                        {[
+                          { name: 'WhatsApp', icon: MessageSquare, color: '#25D366' },
+                          { name: 'Facebook', icon: Globe, color: '#1877F2' },
+                          { name: 'LinkedIn', icon: Building2, color: '#0A66C2' },
+                          { name: 'Copier le lien', icon: Plus, color: '#6B7280' },
+                        ].map((s, i) => (
+                          <button key={i} onClick={() => {
+                            if (s.name === 'Copier le lien') {
+                              navigator.clipboard.writeText(window.location.href);
+                              alert("Lien copié !");
+                            } else {
+                              alert(`Partage sur ${s.name} simulé`);
+                            }
+                            const menu = document.getElementById('share-menu');
+                            if (menu) menu.style.display = 'none';
+                          }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', border: 'none', background: 'transparent', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#F9FAFB'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                            <s.icon size={16} color={s.color} />
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>{s.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                 </div>
 
-               {/* Play Button Overlay */}
-               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid #fff' }}>
-                  <Play size={32} fill="#fff" color="#fff" />
-               </div>
-
-               {/* Navigation Arrows */}
-               <button style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', width: '40px', height: '40px', borderRadius: '50%', background: '#fff', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <ChevronRight size={24} color="#374151" />
-               </button>
-            </div>
-
-            {/* Thumbnails */}
-            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto' }} className="no-scrollbar">
-               {gallery.map((img, i) => (
+                 {/* Navigation Arrows */}
                  <button 
-                  key={i} 
-                  onClick={() => setActiveImage(img)}
-                  style={{ 
-                    width: '80px', 
-                    height: '80px', 
-                    borderRadius: '8px', 
-                    border: activeImage === img ? '2px solid #E31E24' : '1px solid #E5E7EB', 
-                    padding: '4px', 
-                    background: '#fff',
-                    cursor: 'pointer',
-                    overflow: 'hidden'
+                  onClick={() => {
+                    const idx = gallery.indexOf(activeImage);
+                    setActiveImage(gallery[(idx + 1) % gallery.length]);
                   }}
+                  style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
                  >
-                   <img src={img} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }} />
+                    <ChevronRight size={28} color="#111827" />
                  </button>
-               ))}
+                 <button 
+                  onClick={() => {
+                    const idx = gallery.indexOf(activeImage);
+                    setActiveImage(gallery[(idx - 1 + gallery.length) % gallery.length]);
+                  }}
+                  style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
+                 >
+                    <ChevronLeft size={28} color="#111827" />
+                 </button>
+              </div>
+
+              {/* Thumbnails */}
+              <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '4px 0' }} className="no-scrollbar">
+                 {gallery.map((img, i) => (
+                   <button 
+                    key={i} 
+                    onClick={() => setActiveImage(img)}
+                    style={{ 
+                      flexShrink: 0,
+                      width: '80px', 
+                      height: '80px', 
+                      borderRadius: '12px', 
+                      border: activeImage === img ? '3px solid #E31E24' : '1px solid #F1F5F9', 
+                      padding: '4px', 
+                      background: '#fff',
+                      cursor: 'pointer',
+                      overflow: 'hidden',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => activeImage !== img && (e.currentTarget.style.borderColor = '#FECACA')}
+                    onMouseLeave={(e) => activeImage !== img && (e.currentTarget.style.borderColor = '#F1F5F9')}
+                   >
+                     <img src={img} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                   </button>
+                 ))}
+              </div>
             </div>
           </div>
 
@@ -230,21 +291,25 @@ export default function ProductDetailClient({ product, isVendor = false, related
                     addToCart(product, qty);
                     const btn = document.getElementById('add-to-cart-btn');
                     if (btn) {
-                      const oldText = btn.innerText;
-                      btn.innerText = 'Ajouté !';
-                      setTimeout(() => { btn.innerText = oldText; }, 2000);
+                      const oldText = btn.innerHTML;
+                      btn.innerHTML = '<span style="display:flex;align-items:center;gap:8px;"><svg size="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle-2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg> Ajouté !</span>';
+                      setTimeout(() => { btn.innerHTML = oldText; }, 2000);
                     }
                   }}
                   id="add-to-cart-btn"
-                  style={{ flex: 1, height: '56px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '100px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', transition: 'opacity 0.2s' }}
+                  style={{ flex: 1, height: '64px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '16px', fontSize: '18px', fontWeight: 900, cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(227,30,36,0.25)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(227,30,36,0.35)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(227,30,36,0.25)'; }}
                 >
                   {isVendor ? 'Contacter Vendeur' : 'Ajouter au Panier'}
                 </button>
                 <button 
                   onClick={() => setTradeMessagerOpen(true)}
-                  style={{ flex: 1, height: '56px', background: '#fff', color: '#111827', border: '2px solid #F1F5F9', borderRadius: '100px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
+                  style={{ flex: 1, height: '64px', background: '#fff', color: '#111827', border: '2px solid #F1F5F9', borderRadius: '16px', fontSize: '18px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#F9FAFB'; e.currentTarget.style.borderColor = '#E2E8F0'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#F1F5F9'; }}
                 >
-                  <MessageSquare size={18} className="text-indigo-600" />
+                  <MessageSquare size={20} className="text-indigo-600" />
                   Discuter
                 </button>
               </div>
