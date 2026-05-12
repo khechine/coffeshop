@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Store, ShieldCheck, MapPin, Package, CreditCard, LogOut, CheckCircle, Truck, Database, Wallet, Menu, X, Cake, Star } from 'lucide-react';
+import { LayoutDashboard, Users, Store, ShieldCheck, MapPin, Package, CreditCard, LogOut, CheckCircle, Truck, Database, Wallet, Menu, X, Cake, Star, FileText } from 'lucide-react';
 import { ToastProvider } from '../components/Toast';
 
 export default function SuperAdminLayoutClient({ children }: { children: React.ReactNode }) {
@@ -19,6 +19,7 @@ export default function SuperAdminLayoutClient({ children }: { children: React.R
     { label: 'Catalogue & Flux', icon: Package, href: '/superadmin/marketplace' },
     { label: 'Carte de Tunisie', icon: MapPin, href: '/superadmin/map' },
     { label: 'Plans & Abonnements', icon: CreditCard, href: '/superadmin/plans' },
+    { label: 'Gestion du Blog', icon: FileText, href: '/superadmin/blog', badge: 'Content' },
     { label: 'Règles Commissions', icon: ShieldCheck, href: '/superadmin/commissions' },
     { label: 'Référentiels Globaux', icon: Database, href: '/superadmin/referentiels' },
     { label: 'Flux Financiers Boutique', icon: CreditCard, href: '/superadmin/store-wallet', badge: 'Finances' },
