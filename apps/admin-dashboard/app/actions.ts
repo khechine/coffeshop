@@ -2262,6 +2262,22 @@ export async function getMarketplaceProductAction(id: string) {
   return product;
 }
 
+export async function getMarketplaceBundleAction(id: string) {
+  try {
+    const bundle = await (prisma as any).mktBundle.findUnique({
+      where: { id },
+      include: {
+        vendor: { include: { customization: true } },
+        items: { include: { product: true } }
+      }
+    });
+    return bundle;
+  } catch (e) {
+    console.error("getMarketplaceBundleAction Error:", e);
+    return null;
+  }
+}
+
 export async function getRelatedProductsAction(categoryId: string, excludeId: string) {
   return await (prisma as any).vendorProduct.findMany({
     where: {
@@ -6561,17 +6577,31 @@ export async function getMarketplaceUpsellRecommendationsAction(cartProductIds: 
 
     const cartProducts = await (prisma as any).vendorProduct.findMany({
       where: { id: { in: cartProductIds } },
-      select: { vendorId: true, mktCategoryId: true }
+      select: { name: true, vendorId: true, categoryId: true, tags: true }
     });
 
     const vendorIds = Array.from(new Set(cartProducts.map((p: any) => p.vendorId)));
-    const categoryIds = Array.from(new Set(cartProducts.map((p: any) => p.mktCategoryId).filter(Boolean)));
+    const categoryIds = Array.from(new Set(cartProducts.map((p: any) => p.categoryId).filter(Boolean)));
+    
+    // Smart Upsell Logic: Find complementary keywords
+    const keywords: string[] = [];
+    cartProducts.forEach((p: any) => {
+      const n = (p.name || '').toLowerCase();
+      if (n.includes('machine') || n.includes('cafetière')) keywords.push('grain', 'capsule', 'filtre', 'détartrant');
+      if (n.includes('grain') || n.includes('moulu')) keywords.push('sucre', 'tasse', 'cuillère', 'lait');
+      if (n.includes('thé') || n.includes('tisane')) keywords.push('théière', 'miel', 'citron');
+      if (n.includes('frigo') || n.includes('froid')) keywords.push('boisson', 'jus', 'eau');
+    });
 
     const recommendations = await (prisma as any).vendorProduct.findMany({
       where: {
         id: { notIn: cartProductIds },
         OR: [
+          // 1. Matches smart keywords
+          ...keywords.map(k => ({ name: { contains: k, mode: 'insensitive' } })),
+          // 2. Same vendor (to reduce shipping costs)
           { vendorId: { in: vendorIds } },
+          // 3. Same category
           { categoryId: { in: categoryIds } }
         ]
       },
@@ -6586,7 +6616,12 @@ export async function getMarketplaceUpsellRecommendationsAction(cartProductIds: 
       }
     });
 
-    return recommendations;
+    // Shuffle and prioritize keyword matches
+    return recommendations.sort((a: any, b: any) => {
+      const aMatches = keywords.some(k => a.name.toLowerCase().includes(k)) ? 0 : 1;
+      const bMatches = keywords.some(k => b.name.toLowerCase().includes(k)) ? 0 : 1;
+      return aMatches - bMatches;
+    });
   } catch (error) {
     console.error("getMarketplaceUpsellRecommendationsAction Error:", error);
     return [];
