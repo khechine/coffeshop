@@ -6546,7 +6546,6 @@ export async function getMarketplaceUpsellRecommendationsAction(cartProductIds: 
   try {
     if (!cartProductIds || cartProductIds.length === 0) {
       return await (prisma as any).vendorProduct.findMany({
-        where: { active: true },
         take: 6,
         orderBy: { createdAt: 'desc' },
         select: {
@@ -6570,11 +6569,10 @@ export async function getMarketplaceUpsellRecommendationsAction(cartProductIds: 
 
     const recommendations = await (prisma as any).vendorProduct.findMany({
       where: {
-        active: true,
         id: { notIn: cartProductIds },
         OR: [
           { vendorId: { in: vendorIds } },
-          { mktCategoryId: { in: categoryIds } }
+          { categoryId: { in: categoryIds } }
         ]
       },
       take: 8,
@@ -6584,7 +6582,7 @@ export async function getMarketplaceUpsellRecommendationsAction(cartProductIds: 
         price: true,
         image: true,
         unit: true,
-        vendor: { select: { companyName: true } }
+        vendor: { select: { id: true, companyName: true, isPremium: true } }
       }
     });
 
@@ -6592,5 +6590,74 @@ export async function getMarketplaceUpsellRecommendationsAction(cartProductIds: 
   } catch (error) {
     console.error("getMarketplaceUpsellRecommendationsAction Error:", error);
     return [];
+  }
+}
+
+export async function getVendorOrderDetailsForWalletAction(orderId: string) {
+  try {
+    const user = await getUserContext();
+    if (!user || user.role !== 'VENDOR') throw new Error('Non autorisé');
+
+    const vendor = await (prisma as any).vendorProfile.findUnique({
+      where: { userId: user.id }
+    });
+    if (!vendor) throw new Error('Profil vendeur introuvable');
+
+    // Find order by full ID or last characters
+    let order: any = await (prisma as any).supplierOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        store: true,
+        items: true,
+        settlement: true
+      }
+    });
+
+    // Fallback search if ID is partial (e.g. from description)
+    if (!order && orderId.length <= 10) {
+      const allOrders = await (prisma as any).supplierOrder.findMany({
+        where: { vendorId: vendor.id },
+        include: {
+          store: true,
+          items: true,
+          settlement: true
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100
+      });
+      order = allOrders.find((o: any) => o.id.endsWith(orderId)) || null;
+    }
+
+    if (!order) throw new Error('Commande introuvable');
+    if (order.vendorId !== vendor.id) throw new Error('Accès refusé');
+
+    return {
+      success: true,
+      order: {
+        id: order.id,
+        createdAt: order.createdAt,
+        total: Number(order.total),
+        status: order.status,
+        store: {
+          name: order.store?.name || 'Client inconnu',
+          city: order.store?.city || '',
+          address: order.store?.address || '',
+          phone: order.store?.phone || ''
+        },
+        items: order.items.map((i: any) => ({
+          name: i.name || 'Produit inconnu',
+          quantity: Number(i.quantity),
+          price: Number(i.price),
+          image: null // Relation non disponible directement
+        })),
+        settlement: order.settlement ? {
+          commissionAmount: Number(order.settlement.commissionAmount),
+          isProcessed: order.settlement.isProcessed
+        } : null
+      }
+    };
+  } catch (error: any) {
+    console.error("getVendorOrderDetailsForWalletAction Error:", error);
+    return { success: false, error: error.message };
   }
 }

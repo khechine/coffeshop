@@ -5,7 +5,7 @@ import {
   Wallet, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, 
   AlertCircle, ChevronRight, Info, ShieldCheck, UserCheck, Plus, Camera, Image as ImageIcon, X
 } from 'lucide-react';
-import { approveMarketplaceOrderAction, createWalletDepositRequestAction } from '../../../actions';
+import { approveMarketplaceOrderAction, createWalletDepositRequestAction, getVendorOrderDetailsForWalletAction } from '../../../actions';
 import Modal from '../../../../components/Modal';
 
 interface WalletClientProps {
@@ -33,6 +33,11 @@ export default function WalletClient({
     amount: '',
     imagePreview: ''
   });
+
+  // Order Detail Modal State
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isLoadingOrder, setIsLoadingOrder] = useState(false);
 
   // Filter orders that need vendor approval
   const pendingOrders = orders.filter(o => 
@@ -69,6 +74,51 @@ export default function WalletClient({
       } catch (err: any) {
         alert(err.message);
       }
+    });
+  };
+
+  const handleShowOrderDetails = async (desc: string) => {
+    const match = desc.match(/#([a-zA-Z0-9]+)/);
+    if (!match) return;
+
+    const orderId = match[1];
+    setIsLoadingOrder(true);
+    setIsOrderModalOpen(true);
+    try {
+      const res = await getVendorOrderDetailsForWalletAction(orderId);
+      if (res.success) {
+        setSelectedOrder(res.order);
+      } else {
+        alert(res.error || "Impossible de charger les détails.");
+        setIsOrderModalOpen(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsOrderModalOpen(false);
+    } finally {
+      setIsLoadingOrder(false);
+    }
+  };
+
+  const renderDescription = (text: string) => {
+    if (!text) return null;
+    const parts = text.split(/(#[a-zA-Z0-9]+)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('#')) {
+        return (
+          <button 
+            key={i}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleShowOrderDetails(part);
+            }}
+            className="text-indigo-600 hover:text-indigo-800 font-black underline decoration-indigo-300 underline-offset-2 transition-colors px-1"
+          >
+            {part}
+          </button>
+        );
+      }
+      return <span key={i}>{part}</span>;
     });
   };
 
@@ -265,7 +315,9 @@ export default function WalletClient({
                     {t.amount > 0 ? <Plus size={24} /> : <ArrowUpRight size={24} />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-900 truncate">{t.description || t.type}</p>
+                    <div className="font-bold text-slate-900 truncate">
+                      {t.description ? renderDescription(t.description) : t.type}
+                    </div>
                     <p className="text-slate-400 text-[10px] font-medium">{new Date(t.createdAt).toLocaleString()}</p>
                   </div>
                   <div className="text-right">
@@ -368,6 +420,97 @@ export default function WalletClient({
             {isPending ? 'Envoi en cours...' : 'Envoyer la Demande'}
           </button>
         </form>
+      </Modal>
+
+      {/* Order Detail Modal */}
+      <Modal 
+        open={isOrderModalOpen} 
+        onClose={() => setIsOrderModalOpen(false)} 
+        title={`Détails de la Commande #${selectedOrder?.id?.slice(-5) || '...'}`}
+      >
+        <div className="p-6">
+          {isLoadingOrder ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-4">
+              <Clock className="animate-spin text-indigo-500" size={40} />
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Chargement des détails...</p>
+            </div>
+          ) : selectedOrder ? (
+            <div className="space-y-8">
+              {/* Client Info */}
+              <div className="bg-slate-50 rounded-3xl p-6 flex items-start gap-4">
+                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm text-indigo-600">
+                  <UserCheck size={24} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-black text-slate-900 text-lg leading-none mb-1">{selectedOrder.store.name}</h4>
+                  <p className="text-slate-500 text-sm font-medium mb-2">{selectedOrder.store.city} {selectedOrder.store.address && `• ${selectedOrder.store.address}`}</p>
+                  
+                  {selectedOrder.store.phone && (
+                    <div className="flex items-center gap-2 text-indigo-600">
+                      <div className="w-6 h-6 bg-indigo-50 rounded-lg flex items-center justify-center">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-phone w-3 h-3"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                      </div>
+                      <span className="font-black text-xs tracking-widest">{selectedOrder.store.phone}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Items List */}
+              <div className="space-y-4">
+                <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Articles commandés</h5>
+                <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden divide-y divide-slate-50">
+                  {selectedOrder.items.map((item: any, i: number) => (
+                    <div key={i} className="p-4 flex items-center justify-between group hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center font-black text-indigo-300 text-xs">
+                          {i + 1}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900">{item.name}</p>
+                          <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                            {item.quantity} x {item.price.toFixed(3)} DT
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-black text-slate-900">{(item.quantity * item.price).toFixed(3)} DT</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Financial Summary */}
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <div className="flex justify-between items-center px-4">
+                  <span className="text-slate-500 font-bold">Total Commande</span>
+                  <span className="text-xl font-black text-slate-900">{selectedOrder.total.toFixed(3)} DT</span>
+                </div>
+                {selectedOrder.settlement && (
+                  <div className="flex justify-between items-center px-4 py-3 bg-rose-50 rounded-2xl">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
+                      <span className="text-rose-700 font-black text-sm uppercase tracking-wider">Commission Marketplace</span>
+                    </div>
+                    <span className="text-lg font-black text-rose-600">-{selectedOrder.settlement.commissionAmount.toFixed(3)} DT</span>
+                  </div>
+                )}
+              </div>
+
+              <button 
+                onClick={() => setIsOrderModalOpen(false)}
+                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm shadow-lg hover:bg-slate-800 transition-all active:scale-95"
+              >
+                Fermer
+              </button>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-slate-400 font-medium">
+              Erreur lors du chargement des données.
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

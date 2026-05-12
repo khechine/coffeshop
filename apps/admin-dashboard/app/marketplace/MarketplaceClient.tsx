@@ -13,6 +13,7 @@ import {
   FileText, Calendar, Leaf, MapPin, Award
 } from 'lucide-react';
 import { useVault } from './VaultContext';
+import { sanitizeUrl } from '../lib/imageUtils';
 import MarketplaceProductCard from './components/MarketplaceProductCard';
 import MarketplaceHeader from './components/MarketplaceHeader';
 import MarketplaceFooter from './components/MarketplaceFooter';
@@ -773,13 +774,26 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                       <p style={{ color: '#64748B', fontSize: '15px', marginTop: '8px', fontWeight: 500 }}>Optimisez vos achats avec nos sélections thématiques</p>
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
-                    {initialData.bundles.slice(0, 4).map((bundle: any) => {
+                  <div 
+                    style={{ 
+                      display: 'flex', 
+                      gap: '24px', 
+                      overflowX: 'auto', 
+                      paddingBottom: '24px', 
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none',
+                      scrollSnapType: 'x mandatory'
+                    }}
+                    className="no-scrollbar"
+                  >
+                    {initialData.bundles.map((bundle: any) => {
                       const { maskName } = useVault(bundle.vendorId, bundle.vendor?.isPremium);
                       return (
                         <div 
                           key={bundle.id} 
                           style={{ 
+                            flex: '0 0 340px',
+                            scrollSnapAlign: 'start',
                             background: '#fff', 
                             borderRadius: '24px', 
                             border: '1px solid #F1F5F9', 
@@ -787,29 +801,43 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                             display: 'flex', 
                             flexDirection: 'column', 
                             gap: '20px',
-                            transition: 'all 0.2s',
-                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-8px)';
+                            e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05)';
                           }}
                         >
                            <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '16px', overflow: 'hidden', background: '#F8FAFC' }}>
-                              <img src={bundle.image || 'https://images.unsplash.com/photo-1549462220-2a9f5d378278?w=400'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <img 
+                                src={bundle.image || 'https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600&auto=format&fit=crop'} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} 
+                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                              />
                               {bundle.discountPercent && (
-                                <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#E31E24', color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900 }}>
+                                <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#E31E24', color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900, boxShadow: '0 4px 12px rgba(227,30,36,0.3)' }}>
                                   -{bundle.discountPercent}%
                                 </div>
                               )}
                            </div>
                            <div>
                               <span style={{ fontSize: '11px', fontWeight: 900, color: '#E31E24', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{maskName(bundle.vendor?.companyName)}</span>
-                              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', margin: '4px 0 8px' }}>{bundle.name}</h3>
-                              <p style={{ fontSize: '13px', color: '#64748B', margin: 0, height: '40px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{bundle.description}</p>
+                              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', margin: '4px 0 8px', height: '24px', overflow: 'hidden' }}>{bundle.name}</h3>
+                              <p style={{ fontSize: '13px', color: '#64748B', margin: 0, height: '40px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.5 }}>{bundle.description}</p>
                            </div>
                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #F1F5F9' }}>
                               <div>
                                  <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 700, textDecoration: 'line-through' }}>{((Number(bundle.price) * 100) / (100 - (bundle.discountPercent || 0))).toFixed(2)} DT</span>
                                  <div style={{ fontSize: '20px', fontWeight: 900, color: '#111827' }}>{Number(bundle.price).toFixed(2)} <span style={{ fontSize: '13px' }}>DT</span></div>
                               </div>
-                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827', transition: 'all 0.2s' }}>
                                  <ArrowRight size={18} />
                               </div>
                            </div>
@@ -903,11 +931,12 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                             e.currentTarget.style.borderColor = '#F1F5F9';
                           }}
                           >
-                            <img 
-                              src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=200'} 
-                              alt={p.name}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
+        <img 
+          src={sanitizeUrl(p.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} 
+          alt={p.name} 
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} 
+          className="product-card-image"
+        />
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                             <span style={{ 

@@ -56,11 +56,14 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
       className="mkt-prof-card"
     >
       {/* Media Container */}
-      <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: '#F9FAFB' }}>
+      <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: '#F9FAFB', overflow: 'hidden' }}>
         <img 
-          src={sanitizeUrl(product.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400'} 
+          src={sanitizeUrl(product.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} 
           alt={product.name} 
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1)' }} 
+          className="product-card-image"
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
         />
         
         {/* Favorite Icon */}
