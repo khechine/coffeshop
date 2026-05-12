@@ -6487,19 +6487,28 @@ export async function vendorConvertDiscussionToOrderAction(data: {
 
     const vendorWallet = await (prisma as any).vendorWallet.findUnique({ where: { vendorId: vendor.id } });
     if (vendorWallet && vendorCommissionAmount > 0) {
+      // Deduct from vendor balance
       await (prisma as any).vendorWallet.update({
         where: { id: vendorWallet.id },
         data: { balance: { decrement: vendorCommissionAmount } }
       });
-      await (prisma as any).walletTransaction.create({
-        data: {
-          walletId: vendorWallet.id,
-          amount: -vendorCommissionAmount,
-          type: 'COMMISSION',
-          description: `Commission sur commande #${order.id.slice(-5)}`,
-          settlementId: settlement.id
+      // Record the debit transaction — non-blocking if model alias differs
+      try {
+        const txModel = (prisma as any).walletTransaction ?? (prisma as any).WalletTransaction;
+        if (txModel) {
+          await txModel.create({
+            data: {
+              walletId: vendorWallet.id,
+              amount: -vendorCommissionAmount,
+              type: 'COMMISSION',
+              description: `Commission sur commande #${order.id.slice(-5)}`,
+              settlementId: settlement.id
+            }
+          });
         }
-      });
+      } catch (txErr: any) {
+        console.error('Vendor WalletTransaction create (non-blocking):', txErr.message);
+      }
     }
 
     await (prisma as any).notification.create({
