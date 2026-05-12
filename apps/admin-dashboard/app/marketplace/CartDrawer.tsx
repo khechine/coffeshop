@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
-import { ShoppingCart, X, Send, ShieldCheck, MapPin, CheckCircle2 } from 'lucide-react';
+import { ShoppingCart, X, Send, ShieldCheck, MapPin, CheckCircle2, Sparkles, Plus } from 'lucide-react';
 import { useCart } from './CartContext';
 import { useVault } from './VaultContext';
 import { sanitizeUrl } from '../lib/imageUtils';
+import { getMarketplaceUpsellRecommendationsAction } from '../actions';
 
 const fmt = (n: any) => Number(n).toFixed(3);
 
@@ -60,8 +61,69 @@ const VendorGroup = ({ group, updateQty, removeItem }: any) => {
   );
 };
 
+const RecommendationCard = ({ prod, addItem, fmt }: any) => {
+  const { maskName, identityVisible } = useVault(prod.vendor?.id, prod.vendor?.isPremium);
+  
+  return (
+    <div 
+      style={{ 
+        minWidth: '160px', background: '#fff', padding: '12px', borderRadius: '16px', 
+        border: '1px solid #F1F5F9', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+        display: 'flex', flexDirection: 'column', gap: '8px'
+      }}
+    >
+      <div style={{ width: '100%', aspectRatio: '1', borderRadius: '10px', overflow: 'hidden', background: '#F9FAFB' }}>
+        <img src={sanitizeUrl(prod.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=200'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      </div>
+      <div>
+        <div style={{ fontSize: '12px', fontWeight: 800, color: '#111827', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3, height: '32px' }}>
+          {prod.name}
+        </div>
+        <div style={{ fontSize: '10px', color: '#6B7280', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {maskName(prod.vendor?.companyName || 'Fournisseur')}
+          {prod.vendor?.isPremium && identityVisible && <ShieldCheck size={10} color="#E31E24" fill="#E31E24" />}
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+        <span style={{ fontSize: '13px', fontWeight: 950, color: '#0369A1' }}>{fmt(prod.price)} DT</span>
+        <button 
+          onClick={() => addItem(prod)}
+          style={{ 
+            width: '28px', height: '28px', borderRadius: '8px', border: 'none', 
+            background: '#0284C7', color: '#fff', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'transform 0.1s active'
+          }}
+        >
+          <Plus size={16} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function CartDrawer({ onClose }: { onClose: () => void }) {
-  const { cart, updateQty, removeItem, clearCart, cartTotal, handleCheckout, isOrdering, orderStatus, orderError, dismissError } = useCart();
+  const { cart, updateQty, removeItem, clearCart, cartTotal, handleCheckout, isOrdering, orderStatus, orderError, dismissError, addToCart } = useCart();
+  const [recommendations, setRecommendations] = React.useState<any[]>([]);
+  const [isRecommendationsLoading, setIsRecommendationsLoading] = React.useState(false);
+
+  // Fetch recommendations based on cart contents
+  React.useEffect(() => {
+    const fetchRecommendations = async () => {
+      setIsRecommendationsLoading(true);
+      try {
+        const productIds = cart.map((i: any) => i.id);
+        const data = await getMarketplaceUpsellRecommendationsAction(productIds);
+        setRecommendations(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsRecommendationsLoading(false);
+      }
+    };
+
+    fetchRecommendations();
+  }, [cart.length]);
 
   // Handle automatic redirect on error
   React.useEffect(() => {
@@ -177,6 +239,32 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
                   removeItem={removeItem} 
                 />
               ))}
+
+              {/* Intelligent Upsell Section */}
+              {recommendations.length > 0 && (
+                <div style={{ marginTop: '20px', padding: '24px', background: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%)', borderRadius: '24px', border: '1px solid #BAE6FD' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <div style={{ padding: '6px', background: '#0284C7', color: '#fff', borderRadius: '8px' }}>
+                      <Sparkles size={16} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#0369A1', margin: 0 }}>Optimisez votre commande</h4>
+                      <p style={{ fontSize: '11px', color: '#0EA5E9', fontWeight: 700, margin: 0 }}>Suggestions intelligentes basées sur votre panier</p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '12px', scrollbarWidth: 'none' }}>
+                    {recommendations.map((prod: any) => (
+                      <RecommendationCard 
+                        key={prod.id} 
+                        prod={prod} 
+                        addItem={addToCart} 
+                        fmt={fmt} 
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

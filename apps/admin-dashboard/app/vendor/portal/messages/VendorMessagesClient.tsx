@@ -27,6 +27,8 @@ export default function VendorMessagesClient() {
   const [orderItems, setOrderItems] = useState<{ productId: string; name: string; quantity: string; price: string }[]>([]);
   const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
   const [isConverting, setIsConverting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const handleConvertOrder = async (e: React.FormEvent) => {
@@ -39,6 +41,7 @@ export default function VendorMessagesClient() {
     }
 
     setIsConverting(true);
+    setErrorMsg(null);
     try {
       const payloadItems = orderItems.map(i => ({
         productId: i.productId,
@@ -51,7 +54,7 @@ export default function VendorMessagesClient() {
         items: payloadItems
       });
       if (res.success) {
-        alert("La commande a été créée et confirmée avec succès !");
+        setShowSuccess(true);
         setShowOrderForm(false);
         setOrderItems([]);
         
@@ -62,11 +65,14 @@ export default function VendorMessagesClient() {
           content: `J'ai créé une commande confirmée pour un total de ${total.toFixed(2)} DT comprenant ${payloadItems.length} produit(s). Vous la retrouverez dans vos commandes.`
         });
         await loadMessages(selectedConversation.otherUser.id);
+        
+        // Auto-hide success after 3s
+        setTimeout(() => setShowSuccess(false), 3000);
       } else {
-        alert(res.error || "Erreur lors de la création de la commande.");
+        setErrorMsg(res.error || "Erreur lors de la création de la commande.");
       }
     } catch (e: any) {
-      alert(e.message || "Erreur lors de la création de la commande.");
+      setErrorMsg(e.message || "Erreur lors de la création de la commande.");
     } finally {
       setIsConverting(false);
     }
@@ -290,6 +296,7 @@ export default function VendorMessagesClient() {
                          }]);
                        }
                        setShowOrderForm(!showOrderForm);
+                       setErrorMsg(null);
                      }}
                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors"
                    >
@@ -299,6 +306,15 @@ export default function VendorMessagesClient() {
                  )}
               </div>
             </div>
+
+            {/* Error Message */}
+            {errorMsg && (
+              <div className="mx-6 mt-4 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold animate-in fade-in slide-in-from-top-2">
+                <MailWarning size={18} />
+                {errorMsg}
+                <button onClick={() => setErrorMsg(null)} className="ml-auto text-rose-400 hover:text-rose-600">✕</button>
+              </div>
+            )}
 
             {/* Order Form (Upsell support) */}
             {showOrderForm && selectedConversation.lastMessage?.product && (
@@ -358,11 +374,37 @@ export default function VendorMessagesClient() {
                   <button 
                     type="submit"
                     disabled={isConverting || orderItems.some(i => !i.productId || !i.quantity || !i.price)}
-                    className="w-full mt-2 px-4 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-lg shadow-indigo-500/20"
+                    className="w-full mt-2 px-4 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all active:scale-95 shadow-lg shadow-indigo-500/20"
                   >
-                    {isConverting ? 'Traitement...' : 'Créer et confirmer la commande'}
+                    {isConverting ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Clock className="animate-spin" size={16} />
+                        Confirmation en cours...
+                      </div>
+                    ) : 'Créer et confirmer la commande'}
                   </button>
                 </form>
+              </div>
+            )}
+
+            {/* Success Overlay */}
+            {showSuccess && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
+                <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center max-w-sm animate-in zoom-in-95 duration-300">
+                  <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6 text-green-600 dark:text-green-400">
+                    <ShieldCheck size={48} />
+                  </div>
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Succès !</h3>
+                  <p className="text-slate-500 dark:text-slate-400 font-medium mb-6">
+                    La commande a été créée, confirmée et les fonds ont été déduits avec succès.
+                  </p>
+                  <button 
+                    onClick={() => setShowSuccess(false)}
+                    className="w-full py-3 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-bold hover:opacity-90 transition-opacity"
+                  >
+                    Continuer
+                  </button>
+                </div>
               </div>
             )}
 

@@ -6510,21 +6510,76 @@ export async function vendorConvertDiscussionToOrderAction(data: {
         console.error('Vendor WalletTransaction create (non-blocking):', txErr.message);
       }
     }
-
-    await (prisma as any).notification.create({
-      data: {
-        userId: data.buyerUserId,
-        type: 'ORDER',
-        title: 'Nouvelle commande proposée',
-        message: `${vendor.companyName} vous propose une commande suite à votre discussion.`,
-        link: '/marketplace/orders',
-        isRead: false
-      }
-    });
+    const txNotif = (prisma as any).tradeNotification ?? (prisma as any).TradeNotification;
+    if (txNotif) {
+      await txNotif.create({
+        data: {
+          userId: data.buyerUserId,
+          type: 'ORDER_UPDATE',
+          title: 'Nouvelle commande confirmée',
+          content: `${vendor.companyName} a créé et confirmé une commande suite à votre discussion.`,
+          metadata: { orderId: order.id },
+          isRead: false
+        }
+      });
+    }
 
     return { success: true, orderId: order.id };
   } catch (error: any) {
     console.error("vendorConvertDiscussionToOrderAction Error:", error);
     return { success: false, error: error.message || "Une erreur inattendue est survenue." };
+  }
+}
+
+export async function getMarketplaceUpsellRecommendationsAction(cartProductIds: string[]) {
+  try {
+    if (!cartProductIds || cartProductIds.length === 0) {
+      return await (prisma as any).vendorProduct.findMany({
+        where: { active: true },
+        take: 6,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          image: true,
+          unit: true,
+          vendor: { select: { id: true, companyName: true, isPremium: true } }
+        }
+      });
+    }
+
+    const cartProducts = await (prisma as any).vendorProduct.findMany({
+      where: { id: { in: cartProductIds } },
+      select: { vendorId: true, mktCategoryId: true }
+    });
+
+    const vendorIds = Array.from(new Set(cartProducts.map((p: any) => p.vendorId)));
+    const categoryIds = Array.from(new Set(cartProducts.map((p: any) => p.mktCategoryId).filter(Boolean)));
+
+    const recommendations = await (prisma as any).vendorProduct.findMany({
+      where: {
+        active: true,
+        id: { notIn: cartProductIds },
+        OR: [
+          { vendorId: { in: vendorIds } },
+          { mktCategoryId: { in: categoryIds } }
+        ]
+      },
+      take: 8,
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        image: true,
+        unit: true,
+        vendor: { select: { companyName: true } }
+      }
+    });
+
+    return recommendations;
+  } catch (error) {
+    console.error("getMarketplaceUpsellRecommendationsAction Error:", error);
+    return [];
   }
 }
