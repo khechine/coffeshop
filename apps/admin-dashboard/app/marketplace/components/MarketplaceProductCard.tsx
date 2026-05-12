@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Heart, Play, Maximize2, MessageCircle, Star, Loader2 } from 'lucide-react';
 import { sanitizeUrl } from '../../lib/imageUtils';
 import { useVault } from '../VaultContext';
+import { useCart } from '../CartContext';
 import { sendTradeMessageAction } from '../../actions';
 
 const fmt = (n: any) => Number(n).toFixed(2);
@@ -17,6 +18,7 @@ interface MarketplaceProductCardProps {
 
 export default function MarketplaceProductCard({ product, isVendor = false, hidePrice = false }: MarketplaceProductCardProps) {
   const { maskName, identityVisible } = useVault(product.vendorId, product.vendor?.isPremium);
+  const { addToCart } = useCart();
   const [isChatLoading, setIsChatLoading] = React.useState(false);
 
   const handleStartChat = async (e: React.MouseEvent) => {
@@ -150,8 +152,19 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: 'auto' }}>
-          {!isVendor && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: 'auto' }}>
+          {!isVendor ? (
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                addToCart(product, product.minOrderQty || 1);
+              }}
+              style={{ flex: 1, height: '36px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '100px', fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease' }}
+              className="btn-add-cart"
+            >
+              Panier
+            </button>
+          ) : (
             <Link 
               href={`/marketplace/product/${product.id}`}
               className="btn-decouvrir"
