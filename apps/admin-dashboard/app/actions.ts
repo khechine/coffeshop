@@ -6471,9 +6471,12 @@ export async function vendorConvertDiscussionToOrderAction(data: {
         }
       });
     }
-
     // 3. Vendor Wallet Deduction & Settlement
-    const vendorCommissionAmount = Number(total) * Number((vendor as any).commissionRate || 0);
+    const effectiveCommissionRate = Number((vendor as any).commissionRate) || 0.01;
+    const vendorCommissionAmount = Number(total) * effectiveCommissionRate;
+    
+    console.log(`[Finance] Order ${order.id}: Total=${total}, Rate=${effectiveCommissionRate}, Commission=${vendorCommissionAmount}`);
+
     const settlement = await (prisma as any).marketplaceSettlement.create({
       data: {
         orderId: order.id,
@@ -6485,14 +6488,21 @@ export async function vendorConvertDiscussionToOrderAction(data: {
       }
     });
 
-    const vendorWallet = await (prisma as any).vendorWallet.findUnique({ where: { vendorId: vendor.id } });
-    if (vendorWallet && vendorCommissionAmount > 0) {
-      // Deduct from vendor balance
+    let vendorWallet = await (prisma as any).vendorWallet.findUnique({ where: { vendorId: vendor.id } });
+    
+    if (!vendorWallet) {
+      console.warn(`[Finance] Vendor ${vendor.id} had no wallet. Creating one.`);
+      vendorWallet = await (prisma as any).vendorWallet.create({
+        data: { vendorId: vendor.id, balance: 0 }
+      });
+    }
+
+    if (vendorCommissionAmount > 0) {
       await (prisma as any).vendorWallet.update({
         where: { id: vendorWallet.id },
         data: { balance: { decrement: vendorCommissionAmount } }
       });
-      // Record the debit transaction — non-blocking if model alias differs
+
       try {
         const txModel = (prisma as any).walletTransaction ?? (prisma as any).WalletTransaction;
         if (txModel) {
@@ -6501,15 +6511,16 @@ export async function vendorConvertDiscussionToOrderAction(data: {
               walletId: vendorWallet.id,
               amount: -vendorCommissionAmount,
               type: 'COMMISSION',
-              description: `Commission sur commande #${order.id.slice(-5)}`,
+              description: `Commission sur vente directe #${order.id.slice(-5)} (Taux: ${effectiveCommissionRate * 100}%)`,
               settlementId: settlement.id
             }
           });
         }
       } catch (txErr: any) {
-        console.error('Vendor WalletTransaction create (non-blocking):', txErr.message);
+        console.error('[Finance] Vendor WalletTransaction create failed:', txErr.message);
       }
     }
+
     const txNotif = (prisma as any).tradeNotification ?? (prisma as any).TradeNotification;
     if (txNotif) {
       await txNotif.create({
