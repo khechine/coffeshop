@@ -1,0 +1,163 @@
+'use client';
+
+import React, { useState, useMemo } from 'react';
+import { Search, Filter, ShoppingCart, Plus, ChevronRight, Star, Heart } from 'lucide-react';
+import { sanitizeUrl } from '../../lib/imageUtils';
+import { useCart } from '../../marketplace/CartContext';
+
+export default function MobileMarketplaceClient({ initialData }: { initialData: any }) {
+  const { addToCart, cartCount } = useCart();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCat, setSelectedCat] = useState('all');
+
+  const { products = [], categories = [] } = initialData || {};
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p: any) => {
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCat = selectedCat === 'all' || p.categoryId === selectedCat;
+      return matchesSearch && matchesCat;
+    });
+  }, [products, searchTerm, selectedCat]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '16px' }}>
+      
+      {/* Search Bar - Integrated & Mobile First */}
+      <div style={{ position: 'relative' }}>
+        <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} size={20} />
+        <input 
+          type="text" 
+          placeholder="Rechercher un produit..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ 
+            width: '100%', padding: '16px 16px 16px 52px', 
+            borderRadius: '16px', border: '1px solid #E5E7EB', 
+            fontSize: '16px', outline: 'none', background: '#fff',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.02)'
+          }}
+        />
+      </div>
+
+      {/* Categories Horizontal Scroll */}
+      <div style={{ 
+        display: 'flex', gap: '10px', overflowX: 'auto', 
+        paddingBottom: '4px', scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
+      }} className="no-scrollbar">
+        <button 
+          onClick={() => setSelectedCat('all')}
+          style={{ 
+            whiteSpace: 'nowrap', padding: '10px 20px', borderRadius: '12px',
+            background: selectedCat === 'all' ? '#111827' : '#fff',
+            color: selectedCat === 'all' ? '#fff' : '#4B5563',
+            fontSize: '14px', fontWeight: 700, border: '1px solid #E5E7EB',
+            transition: '0.2s'
+          }}
+        >
+          Tous
+        </button>
+        {categories.map((cat: any) => (
+          <button 
+            key={cat.id}
+            onClick={() => setSelectedCat(cat.id)}
+            style={{ 
+              whiteSpace: 'nowrap', padding: '10px 20px', borderRadius: '12px',
+              background: selectedCat === cat.id ? '#111827' : '#fff',
+              color: selectedCat === cat.id ? '#fff' : '#4B5563',
+              fontSize: '14px', fontWeight: 700, border: '1px solid #E5E7EB',
+              transition: '0.2s'
+            }}
+          >
+            {cat.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Results Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#111827', margin: 0 }}>
+          {selectedCat === 'all' ? 'Tous les produits' : categories.find((c:any) => c.id === selectedCat)?.name}
+        </h3>
+        <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600 }}>{filteredProducts.length} articles</span>
+      </div>
+
+      {/* Product List - Optimized Vertical View */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {filteredProducts.map((p: any) => (
+          <div 
+            key={p.id}
+            style={{ 
+              background: '#fff', borderRadius: '24px', padding: '12px',
+              border: '1px solid #F3F4F6', display: 'flex', gap: '16px',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
+            }}
+          >
+            <div style={{ width: '100px', height: '100px', borderRadius: '16px', overflow: 'hidden', background: '#F9FAFB', flexShrink: 0 }}>
+              <img src={sanitizeUrl(p.image)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                   <div style={{ fontSize: '11px', fontWeight: 800, color: '#E31E24', textTransform: 'uppercase' }}>{p.vendor?.companyName}</div>
+                   <Heart size={16} color="#D1D5DB" />
+                </div>
+                <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#111827', margin: '4px 0' }}>{p.name}</h4>
+                <div style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600 }}>{p.unit}</div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: '17px', fontWeight: 950, color: '#111827' }}>
+                   {Number(p.price).toFixed(2)} <span style={{ fontSize: '12px' }}>DT</span>
+                </div>
+                <button 
+                  onClick={() => addToCart(p, 1)}
+                  style={{ 
+                    width: '36px', height: '36px', borderRadius: '12px', 
+                    background: '#E31E24', color: '#fff', border: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 10px rgba(227,30,36,0.2)'
+                  }}
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+        {filteredProducts.length === 0 && (
+          <div style={{ padding: '60px 20px', textAlign: 'center', color: '#9CA3AF' }}>
+            <Search size={40} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+            <div style={{ fontSize: '16px', fontWeight: 700 }}>Aucun produit trouvé</div>
+            <p style={{ fontSize: '14px', marginTop: '4px' }}>Essayez d'ajuster votre recherche ou filtre.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Floating Cart Indicator (Mobile Exclusive) */}
+      {cartCount > 0 && (
+        <button style={{ 
+          position: 'fixed', bottom: '100px', right: '20px',
+          background: '#111827', color: '#fff', padding: '12px 24px',
+          borderRadius: '100px', border: 'none', display: 'flex', alignItems: 'center', gap: '12px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 1001,
+          animation: 'slideUp 0.3s ease-out'
+        }}>
+           <div style={{ position: 'relative' }}>
+             <ShoppingCart size={20} />
+             <div style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#E31E24', width: '18px', height: '18px', borderRadius: '50%', fontSize: '10px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               {cartCount}
+             </div>
+           </div>
+           <span style={{ fontWeight: 800, fontSize: '14px' }}>Voir le Panier</span>
+        </button>
+      )}
+
+      <style jsx>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+    </div>
+  );
+}
