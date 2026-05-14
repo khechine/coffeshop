@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, ShoppingBag, ClipboardList, User, Search, Menu } from 'lucide-react';
+import { CartProvider } from '../marketplace/CartContext';
 
 export default function MobileLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -35,7 +36,9 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
 
       {/* Main Content Area */}
       <main style={{ flex: 1, paddingBottom: '90px' }}>
-        {children}
+        <CartProvider>
+          {children}
+        </CartProvider>
       </main>
 
       {/* Bottom Navigation Bar (PWA Style) */}

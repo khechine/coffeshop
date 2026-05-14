@@ -5,36 +5,31 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const host = request.headers.get('host') || '';
   
-  // Detection du sous-domaine mobile m.elkassa.com ou m.localhost:3000
   const isMobileSubdomain = host.startsWith('m.');
-  
-  // On peut aussi detecter le user agent si on veut forcer la version mobile sur smartphone
-  // même sans le sous-domaine (optionnel, selon le choix de separation stricte)
-  const userAgent = request.headers.get('user-agent') || '';
-  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+  const response = NextResponse.next();
 
-  // Si c'est le sous-domaine mobile, on reecrit vers le dossier interne /mobile
+  // On passe l'info via un header ou un cookie pour que le layout puisse s'adapter
   if (isMobileSubdomain) {
-    // Eviter les boucles si le chemin commence deja par /mobile
-    if (!url.pathname.startsWith('/mobile')) {
-      url.pathname = `/mobile${url.pathname}`;
-      return NextResponse.rewrite(url);
+    response.cookies.set('is_mobile_subdomain', 'true');
+    
+    // Si on veut quand meme utiliser le dossier /mobile pour les pages specifiques optimisées
+    // On peut verifier si la page existe (ou on liste les pages optimisées)
+    const optimizedPaths = ['/', '/marketplace', '/orders', '/profile'];
+    if (optimizedPaths.includes(url.pathname) || url.pathname === '') {
+       url.pathname = `/mobile${url.pathname === '/' ? '' : url.pathname}`;
+       const rewriteRes = NextResponse.rewrite(url);
+       rewriteRes.cookies.set('is_mobile_subdomain', 'true');
+       return rewriteRes;
     }
+  } else {
+    response.cookies.set('is_mobile_subdomain', 'false');
   }
 
-  return NextResponse.next();
+  return response;
 }
 
-// Configurer le middleware pour s'appliquer a toutes les routes sauf statiques
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };
