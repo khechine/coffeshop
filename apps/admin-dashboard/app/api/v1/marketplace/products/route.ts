@@ -30,7 +30,7 @@ export async function GET(req: Request) {
         where: whereClause,
         include: {
           vendor: {
-            select: { id: true, companyName: true, image: true }
+            select: { id: true, companyName: true, image: true, isPremium: true }
           },
           category: {
             select: { id: true, name: true }
@@ -45,17 +45,27 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
-      data: products.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-        unit: p.unit,
-        image: p.image,
-        description: p.description,
-        isBundle: p.isBundle,
-        vendor: p.vendor,
-        category: p.category
-      })),
+      data: products.map((p: any) => {
+        // Appliquer la logique de masquage Vault pour les vendeurs non-premium
+        const isPremium = p.vendor?.isPremium;
+        const maskedVendor = p.vendor ? {
+          ...p.vendor,
+          companyName: isPremium ? p.vendor.companyName : `Fournisseur ${p.vendor.id.slice(-4).toUpperCase()}`,
+          image: isPremium ? p.vendor.image : null,
+        } : null;
+
+        return {
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          unit: p.unit,
+          image: p.image,
+          description: p.description,
+          isBundle: p.isBundle,
+          vendor: maskedVendor,
+          category: p.category
+        };
+      }),
       meta: {
         pagination: {
           total,

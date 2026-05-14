@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ShoppingBag, ClipboardList, User, Search, Menu } from 'lucide-react';
+import { Home, ShoppingBag, ClipboardList, User, Search, Menu, MessageSquare, Users } from 'lucide-react';
 import { CartProvider } from '../marketplace/CartContext';
 
 export default function MobileLayout({ children }: { children: React.ReactNode }) {
@@ -50,10 +50,11 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
         zIndex: 1000, boxShadow: '0 -10px 25px rgba(0,0,0,0.05)'
       }}>
         {(pathname.startsWith('/mobile/vendor') ? [
-          { label: 'Dashboard', icon: Home, href: '/mobile/vendor' },
-          { label: 'Catalogue', icon: Search, href: '/mobile/vendor/products' },
+          { label: 'Accueil', icon: Home, href: '/mobile/vendor' },
           { label: 'Commandes', icon: ClipboardList, href: '/mobile/vendor/orders' },
-          { label: 'Profil', icon: User, href: '/mobile/profile' } // Shared profile
+          { label: 'Messages', icon: MessageSquare, href: '/mobile/vendor/messages' },
+          { label: 'CRM', icon: Users, href: '/mobile/vendor/crm' },
+          { label: 'Profil', icon: User, href: '/mobile/profile' }
         ] : navItems).map((item) => {
           const isActive = pathname === item.href;
           return (
