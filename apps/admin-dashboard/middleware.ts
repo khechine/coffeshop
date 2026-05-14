@@ -15,6 +15,15 @@ export function middleware(request: NextRequest) {
     // Si on veut quand meme utiliser le dossier /mobile pour les pages specifiques optimisées
     // On liste les pages optimisées
     const optimizedPaths = ['/', '/marketplace', '/orders', '/profile', '/vendor'];
+    
+    // Cas spécial : L'ancienne route desktop /vendor/portal redirige vers le dashboard mobile
+    if (url.pathname === '/vendor/portal') {
+       url.pathname = '/mobile/vendor';
+       const rewriteRes = NextResponse.rewrite(url);
+       rewriteRes.cookies.set('is_mobile_subdomain', 'true');
+       return rewriteRes;
+    }
+
     if (optimizedPaths.includes(url.pathname) || url.pathname.startsWith('/vendor/') || url.pathname === '') {
        url.pathname = `/mobile${url.pathname === '/' ? '' : url.pathname}`;
        const rewriteRes = NextResponse.rewrite(url);

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, ShoppingBag, ClipboardList, User, Search, Menu, MessageSquare, Users } from 'lucide-react';
 import { CartProvider } from '../marketplace/CartContext';
+import { VaultProvider } from '../marketplace/VaultContext';
 
 export default function MobileLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -37,7 +38,9 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
       {/* Main Content Area */}
       <main style={{ flex: 1, paddingBottom: '90px' }}>
         <CartProvider>
-          {children}
+          <VaultProvider>
+            {children}
+          </VaultProvider>
         </CartProvider>
       </main>
 

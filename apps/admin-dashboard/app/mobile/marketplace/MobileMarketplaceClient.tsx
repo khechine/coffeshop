@@ -4,11 +4,58 @@ import React, { useState, useMemo } from 'react';
 import { Search, Filter, ShoppingCart, Plus, ChevronRight, Star, Heart } from 'lucide-react';
 import { sanitizeUrl } from '../../lib/imageUtils';
 import { useCart } from '../../marketplace/CartContext';
+import { useVault } from '../../marketplace/VaultContext';
+import CartDrawer from '../../marketplace/CartDrawer';
+
+const ProductItem = ({ p, addToCart }: { p: any, addToCart: any }) => {
+  const { maskName, identityVisible } = useVault(p.vendor?.id, p.vendor?.isPremium);
+  
+  return (
+    <div 
+      style={{ 
+        background: '#fff', borderRadius: '24px', padding: '12px',
+        border: '1px solid #F3F4F6', display: 'flex', gap: '16px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
+      }}
+    >
+      <div style={{ width: '100px', height: '100px', borderRadius: '16px', overflow: 'hidden', background: '#F9FAFB', flexShrink: 0, filter: identityVisible ? 'none' : 'blur(4px)' }}>
+        <img src={sanitizeUrl(p.image)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+             <div style={{ fontSize: '11px', fontWeight: 800, color: '#E31E24', textTransform: 'uppercase' }}>{maskName(p.vendor?.companyName)}</div>
+             <Heart size={16} color="#D1D5DB" />
+          </div>
+          <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#111827', margin: '4px 0' }}>{p.name}</h4>
+          <div style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600 }}>{p.unit}</div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: '17px', fontWeight: 950, color: '#111827' }}>
+             {Number(p.price).toFixed(2)} <span style={{ fontSize: '12px' }}>DT</span>
+          </div>
+          <button 
+            onClick={() => addToCart(p, 1)}
+            style={{ 
+              width: '36px', height: '36px', borderRadius: '12px', 
+              background: '#E31E24', color: '#fff', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 10px rgba(227,30,36,0.2)'
+            }}
+          >
+            <Plus size={20} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function MobileMarketplaceClient({ initialData }: { initialData: any }) {
   const { addToCart, cartCount } = useCart();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCat, setSelectedCat] = useState('all');
+  const [cartOpen, setCartOpen] = useState(false);
 
   const { products = [], categories = [] } = initialData || {};
 
@@ -86,44 +133,7 @@ export default function MobileMarketplaceClient({ initialData }: { initialData: 
       {/* Product List - Optimized Vertical View */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {filteredProducts.map((p: any) => (
-          <div 
-            key={p.id}
-            style={{ 
-              background: '#fff', borderRadius: '24px', padding: '12px',
-              border: '1px solid #F3F4F6', display: 'flex', gap: '16px',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
-            }}
-          >
-            <div style={{ width: '100px', height: '100px', borderRadius: '16px', overflow: 'hidden', background: '#F9FAFB', flexShrink: 0 }}>
-              <img src={sanitizeUrl(p.image)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                   <div style={{ fontSize: '11px', fontWeight: 800, color: '#E31E24', textTransform: 'uppercase' }}>{p.vendor?.companyName}</div>
-                   <Heart size={16} color="#D1D5DB" />
-                </div>
-                <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#111827', margin: '4px 0' }}>{p.name}</h4>
-                <div style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600 }}>{p.unit}</div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: '17px', fontWeight: 950, color: '#111827' }}>
-                   {Number(p.price).toFixed(2)} <span style={{ fontSize: '12px' }}>DT</span>
-                </div>
-                <button 
-                  onClick={() => addToCart(p, 1)}
-                  style={{ 
-                    width: '36px', height: '36px', borderRadius: '12px', 
-                    background: '#E31E24', color: '#fff', border: 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 4px 10px rgba(227,30,36,0.2)'
-                  }}
-                >
-                  <Plus size={20} />
-                </button>
-              </div>
-            </div>
-          </div>
+          <ProductItem key={p.id} p={p} addToCart={addToCart} />
         ))}
         {filteredProducts.length === 0 && (
           <div style={{ padding: '60px 20px', textAlign: 'center', color: '#9CA3AF' }}>
@@ -136,13 +146,16 @@ export default function MobileMarketplaceClient({ initialData }: { initialData: 
 
       {/* Floating Cart Indicator (Mobile Exclusive) */}
       {cartCount > 0 && (
-        <button style={{ 
-          position: 'fixed', bottom: '100px', right: '20px',
-          background: '#111827', color: '#fff', padding: '12px 24px',
-          borderRadius: '100px', border: 'none', display: 'flex', alignItems: 'center', gap: '12px',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 1001,
-          animation: 'slideUp 0.3s ease-out'
-        }}>
+        <button 
+          onClick={() => setCartOpen(true)}
+          style={{ 
+            position: 'fixed', bottom: '100px', right: '20px',
+            background: '#111827', color: '#fff', padding: '12px 24px',
+            borderRadius: '100px', border: 'none', display: 'flex', alignItems: 'center', gap: '12px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 1001,
+            animation: 'slideUp 0.3s ease-out'
+          }}
+        >
            <div style={{ position: 'relative' }}>
              <ShoppingCart size={20} />
              <div style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#E31E24', width: '18px', height: '18px', borderRadius: '50%', fontSize: '10px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -152,6 +165,9 @@ export default function MobileMarketplaceClient({ initialData }: { initialData: 
            <span style={{ fontWeight: 800, fontSize: '14px' }}>Voir le Panier</span>
         </button>
       )}
+
+      {/* Cart Drawer */}
+      {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
 
       <style jsx>{`
         .no-scrollbar::-webkit-scrollbar {
