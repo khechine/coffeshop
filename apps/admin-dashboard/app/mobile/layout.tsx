@@ -49,7 +49,12 @@ export default function MobileLayout({ children }: { children: React.ReactNode }
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
         zIndex: 1000, boxShadow: '0 -10px 25px rgba(0,0,0,0.05)'
       }}>
-        {navItems.map((item) => {
+        {(pathname.startsWith('/mobile/vendor') ? [
+          { label: 'Dashboard', icon: Home, href: '/mobile/vendor' },
+          { label: 'Catalogue', icon: Search, href: '/mobile/vendor/products' },
+          { label: 'Commandes', icon: ClipboardList, href: '/mobile/vendor/orders' },
+          { label: 'Profil', icon: User, href: '/mobile/profile' } // Shared profile
+        ] : navItems).map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link 

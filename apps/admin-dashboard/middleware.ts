@@ -13,9 +13,9 @@ export function middleware(request: NextRequest) {
     response.cookies.set('is_mobile_subdomain', 'true');
     
     // Si on veut quand meme utiliser le dossier /mobile pour les pages specifiques optimisées
-    // On peut verifier si la page existe (ou on liste les pages optimisées)
-    const optimizedPaths = ['/', '/marketplace', '/orders', '/profile'];
-    if (optimizedPaths.includes(url.pathname) || url.pathname === '') {
+    // On liste les pages optimisées
+    const optimizedPaths = ['/', '/marketplace', '/orders', '/profile', '/vendor'];
+    if (optimizedPaths.includes(url.pathname) || url.pathname.startsWith('/vendor/') || url.pathname === '') {
        url.pathname = `/mobile${url.pathname === '/' ? '' : url.pathname}`;
        const rewriteRes = NextResponse.rewrite(url);
        rewriteRes.cookies.set('is_mobile_subdomain', 'true');
