@@ -68,6 +68,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Notification Preferences
+  notifyEmailMessages Boolean @default(true)
+  notifyEmailOrders   Boolean @default(true)
+  notifyEmailRFQs     Boolean @default(true)
+
   vendorProfile  VendorProfile?
   courierProfile CourierProfile?
   paidSales     Sale[] @relation("paidBy")
@@ -77,6 +82,9 @@ model User {
   cashSessions  CashSession[] @relation("BaristaSessions")
   specialOrders SpecialOrder[] @relation("takenBy")
   loginLogs     UserLoginLog[]
+  sentTradeMessages     TradeMessage[] @relation("SentMessages")
+  receivedTradeMessages TradeMessage[] @relation("ReceivedMessages")
+  tradeNotifications    TradeNotification[]
 }
 
 model StaffSessionLog {
@@ -110,7 +118,7 @@ model Expense {
   description String?
   date        DateTime @default(now())
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model Store {
@@ -163,6 +171,7 @@ model Store {
   zReports       ZReport[]
   zones          StoreZone[]
   cashSessions   CashSession[]
+  rfqs           MarketplaceRFQ[]
   vendorRatings  VendorRating[]
 
 
@@ -179,6 +188,17 @@ model Store {
 
   // Third-party Integrations
   erpIntegration         ErpIntegration?
+
+  // Wallet & Subscription B2B
+  wallet                 StoreWallet?
+  rechargeRequests       StoreWalletRechargeRequest[]
+  marketplaceGraceOrders Int      @default(0) // Compteur de commandes pendant la période de grâce (solde négatif)
+  isRestricted           Boolean  @default(false) // Désactive POS / API si true (dépassement limite ou impayé)
+  lastBillingAlertAt     DateTime?
+  
+  // Overrides Superadmin
+  customSubscriptionPrice Decimal?
+  customCommissionRate    Decimal?
 }
 
 model ErpIntegration {
@@ -191,7 +211,7 @@ model ErpIntegration {
   isActive    Boolean  @default(true)
   lastSyncAt  DateTime?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model StoreZone {
@@ -247,11 +267,17 @@ model Plan {
   id            String         @id @default(cuid())
   name          String
   price         Decimal
+  billingCycle  String         @default("MONTHLY") // MONTHLY, ANNUAL
   maxStores     Int            @default(1)
   maxProducts   Int            @default(50)
   hasMarketplace Boolean       @default(true)
   status        String         @default("ACTIVE")
   subscriptions Subscription[]
+
+  // Marketplace Commission Config
+  defaultCommissionRate Decimal @default(0.02)
+  commissionRuleId      String?
+  commissionRule        CommissionRule? @relation("PlanCommission", fields: [commissionRuleId], references: [id])
 }
 
 model Subscription {
@@ -291,7 +317,7 @@ model MarketplaceBanner {
   isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @default(now()) @updatedAt
 
   @@index([position])
   @@index([isActive])
@@ -305,6 +331,7 @@ model MarketplaceCategory {
   image       String?
   color       String?
   description String?
+  groupTitle  String?
   sortOrder   Int      @default(0)
 
   parentId    String?
@@ -312,7 +339,7 @@ model MarketplaceCategory {
   children    MarketplaceCategory[] @relation("MarketplaceCategoryHierarchy")
 
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @default(now()) @updatedAt
 
   @@index([parentId])
 }
@@ -446,6 +473,7 @@ model VendorProduct {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
+  tradeMessages   TradeMessage[]
   bundleItems     MktBundleItem[]
   
   // Franchise POS Stocks
@@ -610,7 +638,7 @@ model WalletDepositRequest {
   status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
   adminNotes  String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @default(now()) @updatedAt
 
   @@index([vendorId])
 }
@@ -864,6 +892,7 @@ model VendorProfile {
   phone       String?
   lat         Float?
   lng         Float?
+  isEcoResponsible Boolean @default(false)
 
   status      String   @default("PENDING")
   createdAt   DateTime @default(now())
@@ -875,12 +904,13 @@ model VendorProfile {
   bundles        MktBundle[]
   orders         SupplierOrder[]
   stockItems     StockItem[]
+  quotes         MarketplaceQuote[]
   
   wallet         VendorWallet?
   
   // Commission Management
   commissionRuleId String?
-  commissionRule   CommissionRule? @relation(fields: [commissionRuleId], references: [id])
+  commissionRule   CommissionRule? @relation("VendorCommission", fields: [commissionRuleId], references: [id])
   
   commissionRate Decimal @default(0.01) // Legacy / Manual Override
   commissionTiers Json?  // Format: [{ minAmount: number, rate: number }]
@@ -905,6 +935,23 @@ model VendorProfile {
   customers      VendorCustomer[]
   campaigns      VendorCampaign[]
   collections    VendorCollection[]
+  clientLists    VendorClientList[]
+  marketingTemplates VendorMarketingTemplate[]
+  premiumRequests VendorPremiumRequest[]
+}
+
+model VendorPremiumRequest {
+  id              String   @id @default(cuid())
+  vendorId        String
+  vendor          VendorProfile @relation(fields: [vendorId], references: [id])
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  message         String?
+  phone           String?
+  preferredContact String? // EMAIL, PHONE, WHATSAPP
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([vendorId])
 }
 
 model CourierProfile {
@@ -926,9 +973,51 @@ model CommissionRule {
   baseRate    Decimal  @default(0.01)
   tiers       Json?    // Array of { minAmount: number, rate: number }
   isDefault   Boolean  @default(false)
-  vendors     VendorProfile[]
+  
+  vendors     VendorProfile[] @relation("VendorCommission")
+  plans       Plan[]          @relation("PlanCommission")
+  
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @default(now()) @updatedAt
+}
+
+model StoreWallet {
+  id        String   @id @default(cuid())
+  storeId   String   @unique
+  store     Store    @relation(fields: [storeId], references: [id])
+  balance   Decimal  @default(0)
+  currency  String   @default("DT")
+  status    String   @default("ACTIVE") // ACTIVE, SUSPENDED
+  updatedAt DateTime @updatedAt
+  
+  transactions StoreWalletTransaction[]
+}
+
+model StoreWalletTransaction {
+  id           String   @id @default(cuid())
+  walletId     String
+  wallet       StoreWallet @relation(fields: [walletId], references: [id])
+  amount       Decimal  // positive for credit, negative for debit
+  type         String   // DEPOSIT, SUBSCRIPTION_FEE, MARKETPLACE_COMMISSION, REFUND
+  description  String?
+  metadata     Json?    // { orderId, planId, etc }
+  createdAt    DateTime @default(now())
+
+  @@index([walletId])
+}
+
+model StoreWalletRechargeRequest {
+  id              String   @id @default(cuid())
+  storeId         String
+  store           Store    @relation(fields: [storeId], references: [id])
+  amount          Decimal
+  proofUrl        String?
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  adminComment    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([storeId])
 }
 
 enum OrderStatus {
@@ -1175,8 +1264,13 @@ model VendorCustomer {
   id          String   @id @default(cuid())
   vendorId    String
   vendor      VendorProfile @relation(fields: [vendorId], references: [id])
-  storeId     String   
-  store       Store    @relation(fields: [storeId], references: [id])
+  storeId     String?  
+  store       Store?    @relation(fields: [storeId], references: [id])
+  
+  // For manual/external customers
+  name        String?
+  email       String?
+  phone       String?
   
   category    String?  @default("REGULAR") // VIP, REGULAR, CHURN_RISK
   tags        String[]
@@ -1184,18 +1278,54 @@ model VendorCustomer {
   orderCount  Int      @default(0)
   
   createdAt   DateTime @default(now())
-  
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  lists       VendorClientList[]
+
   @@unique([vendorId, storeId])
+}
+
+model VendorClientList {
+  id          String   @id @default(cuid())
+  name        String
+  vendorId    String
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id])
+  customers   VendorCustomer[]
+  campaigns   VendorCampaign[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+}
+
+model VendorMarketingTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  content     String
+  type        String   @default("EMAIL") // EMAIL, SMS, WHATSAPP
+  vendorId    String
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model VendorCampaign {
   id             String   @id @default(cuid())
   vendorId       String
   vendor         VendorProfile @relation(fields: [vendorId], references: [id])
-  title          String
+  name           String   
+  type           String   @default("EMAIL") // EMAIL, SMS, WHATSAPP
   content        String
   targetCategory String?  
+  targetTags     String[]
+  targetListId   String?
+  targetList     VendorClientList? @relation(fields: [targetListId], references: [id])
+  
+  // KPIs
+  recipientCount Int      @default(0)
+  openCount      Int      @default(0)
+  clickCount     Int      @default(0)
+  
   status         String   @default("DRAFT") // DRAFT, SENT
+  sentAt         DateTime?
   createdAt      DateTime @default(now())
 }
 
@@ -1207,4 +1337,94 @@ model VendorCollection {
   products  VendorProduct[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model MarketplaceRFQ {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id])
+  title       String
+  category    String?
+  description String?
+  quantity    Decimal?
+  budget      Decimal?
+  deadline    DateTime?
+  expiresAt   DateTime? // Temps max sans réponse
+  status      String   @default("OPEN") // OPEN, CLOSED, FULFILLED, EXPIRED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  quotes      MarketplaceQuote[]
+}
+
+model MarketplaceQuote {
+  id          String         @id @default(cuid())
+  rfqId       String
+  rfq         MarketplaceRFQ @relation(fields: [rfqId], references: [id])
+  vendorId    String
+  vendor      VendorProfile  @relation(fields: [vendorId], references: [id])
+  price       Decimal
+  notes       String?
+  status      String         @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  
+  commissionRate      Decimal?
+  commissionAmount    Decimal?
+  commissionDeducted  Boolean @default(false)
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model MarketplaceConfig {
+  id                  String   @id @default("default")
+  rfqExpirationHours  Int      @default(48)
+  rfqCommissionRate   Decimal  @default(2.5) // Pourcentage (ex: 2.5%)
+  updatedAt           DateTime @updatedAt
+}
+
+
+model MarketplaceBlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String
+  coverImage  String?
+  author      String
+  category    String   @default("Perspectives Commerciales")
+  tags        String[]
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+}
+
+model TradeMessage {
+  id          String   @id @default(cuid())
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId  String
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  productId   String?
+  product     VendorProduct? @relation(fields: [productId], references: [id])
+  
+  content     String
+  isFiltered  Boolean  @default(false)
+  filteredContent String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+}
+model TradeNotification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // MESSAGE, RFQ_NEW, RFQ_QUOTE, ORDER_UPDATE
+  title     String
+  content   String
+  metadata  Json?    // { threadId, productId, rfqId }
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
 }

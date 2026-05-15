@@ -5,6 +5,19 @@ import { Building2, Save, CheckCircle2, Briefcase, MapPin, Crosshair, Package, U
 import { updateVendorSectorsAction, updateVendorProfileAction, updateVendorCustomizationAction, updateVendorPasswordAction } from '../../../actions';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 import { tunisianData } from '../../../marketplace/lib/tunisiaData';
+import dynamic from 'next/dynamic';
+
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+import 'react-quill/dist/quill.snow.css';
+
+const quillModules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+    ['link', 'clean']
+  ],
+};
 
 import 'leaflet/dist/leaflet.css';
 
@@ -13,14 +26,30 @@ export default function VendorSettingsClient({
   mktCategories,
   globalUnits,
   userEmail = '',
+  notificationPrefs = { notifyEmailMessages: true, notifyEmailOrders: true, notifyEmailRFQs: true }
 }: {
   portalData: any;
   mktCategories: { id: string; name: string; icon?: string | null }[];
   globalUnits: { id: string; name: string }[];
   userEmail?: string;
+  notificationPrefs?: { notifyEmailMessages: boolean; notifyEmailOrders: boolean; notifyEmailRFQs: boolean };
 }) {
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ show: boolean; message: string } | null>(null);
+
+  const [notifPrefs, setNotifPrefs] = useState(notificationPrefs);
+
+  const handleSaveNotifications = () => {
+    startTransition(async () => {
+      try {
+        const { updateNotificationSettingsAction } = await import('../../../actions');
+        await updateNotificationSettingsAction(notifPrefs);
+        showToast('Préférences de notification mises à jour !');
+      } catch (e: any) {
+        alert(e.message);
+      }
+    });
+  };
 
   const [customForm, setCustomForm] = useState({
     logoUrl: portalData.customization?.logoUrl || '',
@@ -30,6 +59,12 @@ export default function VendorSettingsClient({
     accentColor: portalData.customization?.accentColor || '#F43F5E',
     fontFamily: portalData.customization?.fontFamily || 'Inter',
     welcomeMessage: portalData.customization?.welcomeMessage || '',
+    themeConfig: portalData.customization?.themeConfig || {
+      aboutUs: '',
+      solutions: '',
+      discover: '',
+      contactUs: ''
+    },
   });
 
   const handleSaveCustomization = () => {
@@ -423,17 +458,65 @@ export default function VendorSettingsClient({
                    </div>
                 </div>
 
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 quill-container">
                    <label className={labelClass}>Message de Bienvenue (Slogan)</label>
-                   <div className="relative">
-                      <MessageSquare className="absolute left-4 top-4 text-slate-300" size={18} />
-                      <textarea 
-                        className={`${inputClass} pl-12 min-h-[100px] resize-none`}
-                        placeholder="Ex: Le meilleur du café en Tunisie livré chez vous..."
-                        value={customForm.welcomeMessage}
-                        onChange={e => setCustomForm(f => ({ ...f, welcomeMessage: e.target.value }))}
-                      />
-                   </div>
+                   <ReactQuill 
+                      key="quill-welcome"
+                      theme="snow"
+                      modules={quillModules}
+                      value={customForm.welcomeMessage || ''}
+                      onChange={val => setCustomForm(f => ({ ...f, welcomeMessage: val }))}
+                      style={{ height: '150px', marginBottom: '50px' }}
+                      placeholder="Ex: Le meilleur du café en Tunisie livré chez vous..."
+                   />
+                </div>
+
+                {/* Rubriques Personnalisées */}
+                <div className="md:col-span-2 grid grid-cols-1 gap-10">
+                  <div className="quill-container">
+                    <label className={labelClass}>Section "About Us"</label>
+                    <ReactQuill 
+                      key="quill-about"
+                      theme="snow"
+                      modules={quillModules}
+                      value={customForm.themeConfig?.aboutUs || ''}
+                      onChange={val => setCustomForm(f => ({ ...f, themeConfig: { ...f.themeConfig, aboutUs: val } }))}
+                      style={{ height: '250px', marginBottom: '50px' }}
+                    />
+                  </div>
+                  <div className="quill-container">
+                    <label className={labelClass}>Section "Solutions"</label>
+                    <ReactQuill 
+                      key="quill-solutions"
+                      theme="snow"
+                      modules={quillModules}
+                      value={customForm.themeConfig?.solutions || ''}
+                      onChange={val => setCustomForm(f => ({ ...f, themeConfig: { ...f.themeConfig, solutions: val } }))}
+                      style={{ height: '250px', marginBottom: '50px' }}
+                    />
+                  </div>
+                  <div className="quill-container">
+                    <label className={labelClass}>Section "Discover"</label>
+                    <ReactQuill 
+                      key="quill-discover"
+                      theme="snow"
+                      modules={quillModules}
+                      value={customForm.themeConfig?.discover || ''}
+                      onChange={val => setCustomForm(f => ({ ...f, themeConfig: { ...f.themeConfig, discover: val } }))}
+                      style={{ height: '250px', marginBottom: '50px' }}
+                    />
+                  </div>
+                  <div className="quill-container">
+                    <label className={labelClass}>Section "Contact Us"</label>
+                    <ReactQuill 
+                      key="quill-contact"
+                      theme="snow"
+                      modules={quillModules}
+                      value={customForm.themeConfig?.contactUs || ''}
+                      onChange={val => setCustomForm(f => ({ ...f, themeConfig: { ...f.themeConfig, contactUs: val } }))}
+                      style={{ height: '250px', marginBottom: '50px' }}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -480,9 +563,16 @@ export default function VendorSettingsClient({
                   <p className="text-[10px] text-slate-400 font-bold uppercase mt-2">L’email ne peut pas être modifié directement. Contactez l’administrateur si nécessaire.</p>
                 </div>
               )}
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 quill-container">
                 <label className={labelClass}>Bio / Présentation de l’entreprise</label>
-                <textarea className={`${inputClass} min-h-[120px] resize-none py-4`} value={profileForm.description} onChange={e => setProfileForm(f => ({ ...f, description: e.target.value }))} />
+                <ReactQuill 
+                  key="quill-bio"
+                  theme="snow"
+                  modules={quillModules}
+                  value={profileForm.description}
+                  onChange={val => setProfileForm(f => ({ ...f, description: val }))}
+                  style={{ height: '200px', marginBottom: '50px' }}
+                />
               </div>
               <div>
                 <label className={labelClass}>Contact Téléphone</label>
@@ -568,7 +658,6 @@ export default function VendorSettingsClient({
                 </div>
               </div>
             </div>
-            
             <div className="pt-6">
               <button 
                 onClick={handleSaveProfile}
@@ -576,6 +665,94 @@ export default function VendorSettingsClient({
                 className="w-full px-8 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-white font-black text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all uppercase tracking-widest disabled:opacity-50"
               >
                 {isPending ? 'Enregistrement...' : 'Sauvegarder les informations'}
+              </button>
+            </div>
+          </div>
+          
+          {/* ── NOTIFICATIONS EMAIL ── */}
+          <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 p-8 md:p-10 rounded-[40px] backdrop-blur-md shadow-sm dark:shadow-none">
+            <div className="flex items-center gap-6 mb-10">
+              <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/50 rounded-[24px] border border-rose-200 dark:border-rose-800 flex items-center justify-center text-rose-500 shadow-inner">
+                <Mail size={28} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white">Notifications Email</h2>
+                <p className="text-slate-500 text-sm font-medium">Choisissez quelles alertes recevoir par email</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-slate-400">
+                    <MessageSquare size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white">Nouveaux Messages</h4>
+                    <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Discussions TradeMessager</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={notifPrefs.notifyEmailMessages} 
+                    onChange={e => setNotifPrefs(p => ({ ...p, notifyEmailMessages: e.target.checked }))}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-rose-500"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-slate-400">
+                    <Package size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white">Nouvelles Commandes</h4>
+                    <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Alertes de ventes panier</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={notifPrefs.notifyEmailOrders} 
+                    onChange={e => setNotifPrefs(p => ({ ...p, notifyEmailOrders: e.target.checked }))}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-rose-500"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-slate-400">
+                    <Mail size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white">Appels d'Offres (RFQ)</h4>
+                    <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Demandes directes et devis</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={notifPrefs.notifyEmailRFQs} 
+                    onChange={e => setNotifPrefs(p => ({ ...p, notifyEmailRFQs: e.target.checked }))}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-rose-500"></div>
+                </label>
+              </div>
+            </div>
+
+            <div className="pt-8">
+              <button 
+                onClick={handleSaveNotifications}
+                disabled={isPending}
+                className="w-full px-8 py-4 rounded-2xl bg-slate-900 dark:bg-slate-800 text-white font-black text-sm hover:bg-slate-800 dark:hover:bg-slate-700 transition-all uppercase tracking-widest disabled:opacity-50"
+              >
+                {isPending ? 'Enregistrement...' : 'Mettre à jour les préférences'}
               </button>
             </div>
           </div>
@@ -736,6 +913,30 @@ export default function VendorSettingsClient({
           </div>
         </div>
       )}
+      <style jsx global>{`
+        .quill-container .ql-toolbar {
+          border-top-left-radius: 12px;
+          border-top-right-radius: 12px;
+          border-color: #E2E8F0;
+          background: #F8FAFC;
+          border-bottom: none;
+        }
+        /* Suppress potential double toolbars from Quill/Next.js hydration mismatch */
+        .quill-container .ql-toolbar + .ql-toolbar {
+          display: none !important;
+        }
+        .quill-container .ql-container {
+          border-bottom-left-radius: 12px;
+          border-bottom-right-radius: 12px;
+          border-color: #E2E8F0;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          background: #fff;
+        }
+        .quill-container .ql-editor {
+          min-height: 200px;
+        }
+      `}</style>
     </div>
   );
 }

@@ -26,8 +26,25 @@ export default async function SuperAdminPlans() {
   const totalRevenue = plansWithSubs.reduce((acc, p) => acc + (Number(p.price) * p.activeCount), 0);
   const totalActive = plansWithSubs.reduce((acc, p) => acc + p.activeCount, 0);
 
-  const merchants = await prisma.store.findMany({
-    include: { subscription: { include: { plan: true } }, owners: true }
+  const merchants = await (prisma as any).store.findMany({
+    select: {
+      id: true,
+      name: true,
+      owners: { select: { email: true } },
+      subscription: {
+        select: {
+          id: true,
+          status: true,
+          expiresAt: true,
+          plan: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      }
+    }
   });
 
   return (

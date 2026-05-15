@@ -1,54 +1,42 @@
-import { getMarketplaceData, getStore, getUser } from '../actions';
-import { ShoppingCart, Package, Lock } from 'lucide-react';
+import React from 'react';
+import MarketplaceClient from './MarketplaceClient';
+import { getMarketplaceData, getBlogPosts, getUserContext } from '../actions';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-import MarketplaceClient from './MarketplaceClient';
-
 export default async function MarketplacePage({ searchParams }: { searchParams: any }) {
-  const params = await searchParams;
-  const radius = params.radius ? parseInt(params.radius) : 500;
-  const store = await getStore();
-  const user = await getUser();
-  const isVendor = user?.role === 'VENDOR';
-  const hasMarketplace = isVendor || (store && (store as any)?.hasMarketplace === true);
-  const data = await getMarketplaceData(
-    store?.lat ? Number(store.lat) : undefined,
-    store?.lng ? Number(store.lng) : undefined,
-    radius
-  );
-
-  if (!hasMarketplace) {
-    return (
-      <div className="page-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '70vh' }}>
-        <div className="card" style={{ maxWidth: 500, padding: '48px', textAlign: 'center', borderRadius: '24px' }}>
-           <div style={{ width: 64, height: 64, background: '#FEF2F2', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: '#EF4444' }}>
-              <Lock size={32} />
-           </div>
-           <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#1E293B', marginBottom: '16px' }}>Accès Restreint</h1>
-           <p style={{ color: '#64748B', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
-              Votre forfait actuel n'inclut pas l'accès au <strong>Marketplace B2B</strong>. 
-              Veuillez contacter l'administrateur de la plateforme pour mettre à jour votre offre.
-           </p>
-           <a href="/" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-              Retour au Dashboard
-           </a>
-        </div>
-      </div>
-    );
+  const sParams = await searchParams;
+  
+  let radius: number | undefined = undefined;
+  if (sParams.radius && sParams.radius !== 'all') {
+    const parsed = parseInt(sParams.radius);
+    if (!isNaN(parsed)) radius = parsed;
+  }
+  
+  const user = await getUserContext();
+  if (!user) {
+    redirect('/login');
   }
 
-  // Robust serialization for Prisma types (Decimal, Date, etc)
-  const serializedData = JSON.parse(JSON.stringify(data, (key, value) => 
-    typeof value === 'object' && value !== null && value?.constructor?.name === 'Decimal' 
-      ? Number(value) 
-      : value
-  ));
-
+  const lat = user.store?.lat || user.vendorProfile?.lat;
+  const lng = user.store?.lng || user.vendorProfile?.lng;
+  
+  const [data, blogPosts] = await Promise.all([
+    getMarketplaceData(
+      lat ? Number(lat) : undefined,
+      lng ? Number(lng) : undefined,
+      radius
+    ),
+    getBlogPosts(true),
+  ]);
+  
   return (
     <MarketplaceClient 
-      initialData={serializedData} 
-      isVendor={isVendor}
+      initialData={data} 
+      store={user.store} 
+      blogPosts={blogPosts} 
+      user={user}
     />
   );
 }

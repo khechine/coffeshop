@@ -330,6 +330,23 @@ export default function TabLayout() {
         redirect={!hasTablesAccess}
       />
       <Tabs.Screen
+        name="marketplace"
+        options={{
+          title: i18n.t('nav.marketplace'),
+          tabBarLabel: i18n.t('nav.marketplace'),
+          headerShown: false,
+          tabBarIcon: ({ color }) => (
+            <View style={{ backgroundColor: 'transparent' }}>
+              <TabBarIcon name="shopping-bag" color={color} />
+              <View style={{ position: 'absolute', top: -4, right: -8, backgroundColor: '#E31E24', borderRadius: 6, paddingHorizontal: 4, paddingVertical: 1 }}>
+                <Text style={{ color: '#fff', fontSize: 7, fontWeight: '900' }}>B2B</Text>
+              </View>
+            </View>
+          ),
+        }}
+        redirect={!hasMarketplaceAccess}
+      />
+      <Tabs.Screen
         name="rachma"
         options={{
           title: i18n.t('nav.live'),
@@ -340,30 +357,15 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="history"
-        options={{
-          title: i18n.t('nav.history'),
-          tabBarLabel: i18n.t('nav.history'),
-          tabBarIcon: ({ color }) => <TabBarIcon name="history" color={color} />,
-        }}
-        redirect={!isOwnerRole && !permissions.includes('HISTORY')}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="stocks"
-        options={{
-          title: i18n.t('nav.stocks'),
-          tabBarLabel: i18n.t('nav.stocks'),
-          tabBarIcon: ({ color }) => <TabBarIcon name="cubes" color={color} />,
-        }}
-        redirect={!hasManagementAccess || isRachmaOnly}
+        options={{ href: null }}
       />
       <Tabs.Screen
-        name="marketplace"
-        options={{
-          title: i18n.t('nav.marketplace'),
-          tabBarLabel: i18n.t('nav.marketplace'),
-          tabBarIcon: ({ color }) => <TabBarIcon name="shopping-bag" color={color} />,
-        }}
-        redirect={!hasMarketplaceAccess}
+        name="suppliers"
+        options={{ href: null }}
       />
     </Tabs>
 

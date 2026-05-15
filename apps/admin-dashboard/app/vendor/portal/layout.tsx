@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Package, Truck, LayoutDashboard, Settings, LogOut, ShoppingBag, Sun, Moon, ChevronLeft, BarChart3, Wallet, Users } from 'lucide-react';
+import { Package, Truck, LayoutDashboard, Settings, LogOut, ShoppingBag, Sun, Moon, ChevronLeft, BarChart3, Wallet, Users, MessageSquare, Star } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import VendorAlertBar from './VendorAlertBar';
+import { ToastProvider } from '../../components/Toast';
+import PredictiveAlertsManager from './components/PredictiveAlertsManager';
 
 export default function VendorPortalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -28,14 +30,31 @@ export default function VendorPortalLayout({ children }: { children: React.React
       document.documentElement.classList.toggle('dark', newTheme === 'dark');
     }
   };
-  
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchNotifs = async () => {
+      const { getUserNotificationsAction } = await import('../../actions');
+      try {
+        const notifs = await getUserNotificationsAction();
+        setNotifications(notifs);
+      } catch (e) {}
+    };
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const navItems = [
     { id: 'dashboard', label: 'Accueil', icon: LayoutDashboard, href: '/vendor/portal' },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, href: '/vendor/portal/messages', badge: notifications.filter(n => n.type === 'MESSAGE').length },
     { id: 'crm', label: 'Clients', icon: Users, href: '/vendor/portal/crm' },
     { id: 'wallet', label: 'Portefeuille', icon: Wallet, href: '/vendor/portal/wallet' },
     { id: 'sales', label: 'Ventes', icon: BarChart3, href: '/vendor/portal/sales' },
     { id: 'catalog', label: 'Catalogue', icon: Package, href: '/vendor/portal/catalog' },
     { id: 'orders', label: 'Commandes', icon: ShoppingBag, href: '/vendor/portal/orders' },
+    { id: 'rfq', label: 'Demandes (RFQ)', icon: MessageSquare, href: '/vendor/portal/rfq', badge: notifications.filter(n => n.type === 'RFQ_NEW').length },
+    { id: 'premium', label: 'Devenir Premium', icon: Star, href: '/vendor/portal/premium' },
     { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, href: '/marketplace' },
     { id: 'profile', label: 'Profil', icon: Settings, href: '/vendor/portal/settings' },
   ];
@@ -52,81 +71,89 @@ export default function VendorPortalLayout({ children }: { children: React.React
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 overflow-x-hidden">
-      {/* Mobile Overlay */}
-      <div 
-        className={`fixed inset-0 bg-black/50 z-[110] transition-opacity duration-300 md:hidden ${isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
-        onClick={() => setIsMenuOpen(false)} 
-      />
-      
-      {/* Mobile hamburger */}
-      <button 
-        onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="fixed top-4 left-4 z-[120] md:hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl text-slate-900 dark:text-slate-100 shadow-md"
-      >
-        {isMenuOpen ? <ChevronLeft size={20} /> : <LayoutDashboard size={20} />}
-      </button>
+    <ToastProvider>
+      <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 overflow-x-hidden">
+        {/* Mobile Overlay */}
+        <div 
+          className={`fixed inset-0 bg-black/50 z-[110] transition-opacity duration-300 md:hidden ${isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
+          onClick={() => setIsMenuOpen(false)} 
+        />
+        
+        {/* Mobile hamburger */}
+        <button 
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="fixed top-4 left-4 z-[120] md:hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl text-slate-900 dark:text-slate-100 shadow-md"
+        >
+          {isMenuOpen ? <ChevronLeft size={20} /> : <LayoutDashboard size={20} />}
+        </button>
 
-      {/* Sidebar */}
-      <aside 
-        className={`fixed top-0 bottom-0 left-0 z-[115] w-[280px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-6 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
-      >
-        <div className="flex items-center gap-3 mb-8 px-2">
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-            <Truck size={24} className="text-white" />
+        {/* Sidebar */}
+        <aside 
+          className={`fixed top-0 bottom-0 left-0 z-[115] w-[280px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-6 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        >
+          <div className="flex items-center gap-3 mb-8 px-2">
+            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+              <Truck size={24} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-slate-900 dark:text-white">Fournisseur</h1>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Espace B2B</span>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-slate-900 dark:text-white">Fournisseur</h1>
-            <span className="text-xs text-slate-500 dark:text-slate-400">Espace B2B</span>
+
+          <nav className="flex flex-col gap-1 flex-1">
+            {navItems.map(item => {
+              const active = isActive(item.href);
+              return (
+                <Link 
+                  key={item.id} 
+                  href={item.href}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl no-underline transition-all duration-200 font-medium text-sm ${
+                    active 
+                      ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20' 
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white border border-transparent'
+                  }`}
+                >
+                  <item.icon size={18} />
+                  <span className="flex-1">{item.label}</span>
+                  {(item.badge || 0) > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="border-t border-slate-200 dark:border-slate-800 pt-5 mt-auto space-y-2">
+            <button 
+              onClick={toggleTheme}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium cursor-pointer transition-all hover:bg-slate-100 dark:hover:bg-slate-700"
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              {theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+            </button>
+            
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-none text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 font-medium cursor-pointer transition-colors"
+            >
+              <LogOut size={18} /> Déconnexion
+            </button>
           </div>
-        </div>
+        </aside>
 
-        <nav className="flex flex-col gap-1 flex-1">
-          {navItems.map(item => {
-            const active = isActive(item.href);
-            return (
-              <Link 
-                key={item.id} 
-                href={item.href}
-                onClick={() => setIsMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl no-underline transition-all duration-200 font-medium text-sm ${
-                  active 
-                    ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20' 
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white border border-transparent'
-                }`}
-              >
-                <item.icon size={18} />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="border-t border-slate-200 dark:border-slate-800 pt-5 mt-auto space-y-2">
-          <button 
-            onClick={toggleTheme}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium cursor-pointer transition-all hover:bg-slate-100 dark:hover:bg-slate-700"
-          >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            {theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
-          </button>
-          
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-none text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 font-medium cursor-pointer transition-colors"
-          >
-            <LogOut size={18} /> Déconnexion
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content Area */}
-      <main className="flex-1 md:ml-[280px] min-w-0 transition-all duration-300">
-        <div className="p-6 md:p-8 max-w-6xl mx-auto">
-          <VendorAlertBar />
-          {children}
-        </div>
-      </main>
-    </div>
+        {/* Main Content Area */}
+        <main className="flex-1 md:ml-[280px] min-w-0 transition-all duration-300">
+          <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
+            <PredictiveAlertsManager />
+            <VendorAlertBar />
+            {children}
+          </div>
+        </main>
+      </div>
+    </ToastProvider>
   );
 }

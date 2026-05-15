@@ -1,0 +1,2124 @@
+/* ============================================
+   MADE-IN-CHINA INSPIRED MARKETPLACE STYLES
+   Clean, Professional B2B Design
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+/* --- Base --- */
+.mkt-page { font-family: 'Inter', sans-serif; background: #F5F7FA; min-height: 100vh; }
+
+/* --- Top Bar --- */
+.mkt-cocote-topbar { 
+  background: #fff; 
+  border-bottom: 1px solid #E5E7EB; 
+  font-size: 12px; 
+}
+.mkt-cocote-topbar-inner { 
+  max-width: 1440px; 
+  margin: 0 auto; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 8px 32px; 
+}
+.mkt-cocote-loc-trigger { 
+  display: flex; 
+  align-items: center; 
+  gap: 6px; 
+  color: #1E293B; 
+  cursor: pointer; 
+  font-weight: 500; 
+}
+.mkt-cocote-topbar-links { 
+  display: flex; 
+  gap: 16px; 
+  font-weight: 600; 
+  color: #64748B; 
+}
+.mkt-cocote-topbar-links a { 
+  color: #64748B; 
+  text-decoration: none; 
+  transition: color 0.2s; 
+}
+.mkt-cocote-topbar-links a:hover { 
+  color: #111827; 
+}
+
+/* --- Header --- */
+.mkt-cocote-header { 
+  background: #fff; 
+  position: sticky; 
+  top: 0; 
+  z-index: 100; 
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04); 
+  border-bottom: 1px solid #E5E7EB; 
+}
+.mkt-cocote-header-inner { 
+  max-width: 1440px; 
+  margin: 0 auto; 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  padding: 12px 32px; 
+  gap: 24px; 
+}
+.mkt-cocote-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 950;
+  color: #111827;
+  text-decoration: none;
+  letter-spacing: -0.03em;
+  flex-shrink: 0;
+}
+.mkt-cocote-logo span {
+  color: #111827;
+  font-weight: 800;
+}
+.mkt-cocote-logo-icon {
+  width: 40px;
+  height: 40px;
+  background: #111827;
+  color: #fff;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.15);
+  transition: transform 0.3s ease;
+}
+.mkt-cocote-logo:hover .mkt-cocote-logo-icon {
+  transform: scale(1.05);
+}
+
+/* --- Search Bar (MiC Style) --- */
+.mkt-cocote-search-wrap { 
+  flex: 1; 
+  max-width: 680px; 
+  display: flex; 
+  align-items: center; 
+  background: #fff; 
+  border-radius: 4px; 
+  border: 2px solid #111827; 
+  height: 48px; 
+  overflow: hidden;
+  margin: 0 auto;
+}
+.mkt-cocote-search-select {
+  padding: 0 16px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  border-right: 1px solid #E5E7EB;
+  background: #F9FAFB;
+  min-width: 90px;
+}
+.mkt-cocote-search-select select {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  padding-right: 20px;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2364748B' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: 14px;
+}
+.mkt-cocote-search-input { 
+  flex: 1; 
+  padding: 0 16px; 
+  border: none; 
+  background: transparent; 
+  outline: none; 
+  font-size: 14px; 
+  font-family: 'Inter'; 
+  color: #111827;
+}
+.mkt-cocote-search-input::placeholder {
+  color: #9CA3AF;
+}
+.mkt-cocote-search-btn {
+  background: #111827;
+  border: none;
+  color: #fff;
+  height: 100%;
+  padding: 0 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.mkt-cocote-search-btn:hover {
+  background: #374151;
+}
+
+/* --- Header Actions --- */
+.mkt-cocote-header-actions { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  flex-shrink: 0;
+}
+.mkt-cocote-action-btn { 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  color: #374151; 
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  transition: all 0.2s; 
+  cursor: pointer;
+}
+.mkt-cocote-action-btn:hover { 
+  background: #111827; 
+  color: #fff; 
+  border-color: #111827; 
+}
+.mkt-cocote-cart-btn { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  background: #111827; 
+  color: #fff; 
+  padding: 10px 20px; 
+  border-radius: 4px; 
+  border: none; 
+  cursor: pointer; 
+  font-weight: 700;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.mkt-cocote-cart-btn:hover { 
+  background: #374151; 
+}
+.mkt-cocote-cart-text { 
+  display: none; 
+}
+@media (min-width: 768px) { 
+  .mkt-cocote-cart-text { 
+    display: inline; 
+  } 
+}
+.mkt-cocote-cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #EF4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  padding: 0 4px;
+}
+
+/* --- Category Navigation --- */
+.mkt-cocote-nav { 
+  background: #fff; 
+  border-bottom: 1px solid #E5E7EB; 
+}
+.mkt-cocote-nav-inner { 
+  max-width: 1440px; 
+  margin: 0 auto;
+  display: flex; 
+  gap: 4px; 
+  padding: 0 32px; 
+  overflow-x: auto; 
+  height: 48px;
+  align-items: center;
+}
+.mkt-cocote-nav-inner::-webkit-scrollbar { 
+  display: none; 
+}
+.mkt-cocote-nav-item { 
+  padding: 12px 16px; 
+  color: #374151; 
+  font-weight: 600; 
+  font-size: 13px; 
+  white-space: nowrap; 
+  border-bottom: 2px solid transparent; 
+  display: flex; 
+  align-items: center; 
+  gap: 6px;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.mkt-cocote-nav-item:hover { 
+  color: #111827; 
+  border-bottom-color: #111827; 
+}
+.mkt-cocote-nav-item.active { 
+  color: #111827; 
+  border-bottom-color: #111827; 
+  font-weight: 700;
+}
+
+/* --- Product Grid --- */
+.mkt-cocote-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+@media (min-width: 1440px) {
+  .mkt-cocote-grid { grid-template-columns: repeat(5, 1fr); }
+}
+@media (max-width: 768px) {
+  .mkt-cocote-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+}
+
+/* --- Product Card (MiC Inspired) --- */
+.mkt-cocote-card {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+.mkt-cocote-card:hover {
+  border-color: #111827;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+.mkt-cocote-card-img-wrap {
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #F9FAFB;
+  border-bottom: 1px solid #F3F4F6;
+  position: relative;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.mkt-cocote-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+.mkt-cocote-card:hover .mkt-cocote-card-img {
+  transform: scale(1.05);
+}
+.mkt-cocote-card-body {
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.mkt-cocote-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.mkt-cocote-vendor-link {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s;
+}
+.mkt-cocote-vendor-link:hover {
+  color: #111827;
+}
+.mkt-cocote-distance {
+  font-size: 10px;
+  font-weight: 800;
+  color: #10B981;
+  background: #ECFDF5;
+  padding: 2px 8px;
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.mkt-cocote-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 40px;
+}
+.mkt-cocote-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid #F3F4F6;
+  margin-top: auto;
+}
+.mkt-cocote-price-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.mkt-cocote-old-price {
+  font-size: 11px;
+  color: #9CA3AF;
+  text-decoration: line-through;
+  font-weight: 600;
+}
+.mkt-cocote-price {
+  font-size: 18px;
+  font-weight: 900;
+  color: #111827;
+}
+.mkt-cocote-unit {
+  font-size: 11px;
+  color: #6B7280;
+  font-weight: 600;
+}
+.mkt-cocote-add-btn {
+  background: #111827;
+  color: #fff;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+  opacity: 0;
+}
+.mkt-cocote-card:hover .mkt-cocote-add-btn {
+  opacity: 1;
+}
+.mkt-cocote-add-btn:hover {
+  background: #374151;
+}
+
+/* --- Badges --- */
+.mkt-cocote-badge-discount {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: #EF4444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 4px 8px;
+  border-radius: 3px;
+  z-index: 10;
+}
+.mkt-cocote-premium-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: #111827;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 8px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 10;
+}
+.mkt-cocote-wish {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #94A3B8;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s;
+  backdrop-filter: blur(4px);
+  z-index: 10;
+}
+.mkt-cocote-card:hover .mkt-cocote-wish {
+  opacity: 1;
+}
+.mkt-cocote-wish:hover {
+  color: #EF4444;
+}
+
+/* --- Vendor Card --- */
+.mkt-cocote-vendor-card {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 4px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+.mkt-cocote-vendor-card:hover {
+  border-color: #111827;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+.mkt-cocote-vendor-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 4px;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.mkt-cocote-vendor-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+}
+.mkt-cocote-vendor-info {
+  flex: 1;
+  min-width: 0;
+}
+.mkt-cocote-vendor-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mkt-cocote-vendor-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #6B7280;
+}
+
+/* --- Vendor Grid --- */
+.mkt-cocote-vendor-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+/* --- Section Headers --- */
+.mkt-cocote-section {
+  margin-bottom: 64px;
+}
+.mkt-cocote-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #E5E7EB;
+}
+.mkt-cocote-section-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mkt-cocote-see-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: #64748B;
+  font-size: 14px;
+  text-decoration: none;
+}
+.mkt-cocote-see-all:hover {
+  color: #10B981;
+}
+
+/* --- Container --- */
+.mkt-container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 32px;
+}
+@media (max-width: 768px) {
+  .mkt-container { padding: 16px; }
+}
+
+/* --- Footer --- */
+.mkt-cocote-footer {
+  background: #0F172A;
+  color: #CBD5E1;
+  padding: 80px 0 40px;
+  margin-top: 80px;
+}
+
+/* --- Mobile Drawer --- */
+.mkt-mobile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+}
+.mkt-mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 85%;
+  max-width: 320px;
+  background: #fff;
+  z-index: 2001;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 20px 0 50px rgba(0, 0, 0, 0.1);
+  animation: slideInLeft 0.3s ease;
+}
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.mkt-drawer-header {
+  padding: 24px;
+  border-bottom: 1px solid #F1F5F9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.mkt-drawer-title {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #1E293B;
+}
+.mkt-drawer-close {
+  background: #F8FAFC;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748B;
+  transition: all 0.2s;
+}
+.mkt-drawer-close:hover {
+  background: #E2E8F0;
+  transform: rotate(90deg);
+}
+.mkt-drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+.mkt-drawer-section {
+  margin-bottom: 32px;
+}
+.mkt-drawer-section-title {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #94A3B8;
+  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+}
+.mkt-drawer-cat-item {
+  margin-bottom: 20px;
+}
+.mkt-drawer-cat-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 800;
+  color: #1E293B;
+  text-decoration: none;
+  font-size: 15px;
+}
+.mkt-drawer-cat-icon {
+  width: 32px;
+  height: 32px;
+  background: #F1F5F9;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.mkt-drawer-sublist {
+  padding-left: 44px;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mkt-drawer-sublink {
+  font-size: 14px;
+  color: #64748B;
+  text-decoration: none;
+  font-weight: 600;
+}
+.mkt-drawer-link {
+  display: block;
+  padding: 12px 0;
+  font-weight: 700;
+  color: #1E293B;
+  text-decoration: none;
+  border-bottom: 1px solid #F8FAFC;
+}
+
+/* --- Mobile Toggle --- */
+.desktop-only { display: flex !important; }
+.mobile-only { display: none !important; }
+@media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+  .mobile-only { display: flex !important; }
+  
+  .mkt-cocote-header-inner { padding: 12px 16px; }
+  .mkt-cocote-logo { font-size: 18px; }
+  .mkt-cocote-logo-icon { width: 36px; height: 36px; }
+  
+  .mkt-cocote-card-title { font-size: 12px; min-height: 32px; }
+  .mkt-cocote-price { font-size: 15px; }
+  .mkt-cocote-vendor-link { font-size: 10px; }
+  
+  .mkt-cocote-section-title { font-size: 18px; }
+}
+
+/* --- Hero Section --- */
+.mkt-category-hero-premium {
+  border-radius: 0 !important;
+  margin-bottom: 48px !important;
+  position: relative;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-size: cover !important;
+  background-position: center !important;
+}
+.mkt-category-hero-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 1;
+}
+.mkt-category-hero-content {
+  position: relative;
+  z-index: 2;
+  color: #fff;
+  max-width: 800px;
+  padding: 0 24px;
+}
+.mkt-category-hero-content h1 {
+  font-size: 64px !important;
+  font-weight: 800 !important;
+  text-transform: none !important;
+  letter-spacing: -0.02em !important;
+  margin-bottom: 16px !important;
+}
+.mkt-category-hero-content p {
+  font-size: 20px !important;
+  font-weight: 400 !important;
+  opacity: 0.9;
+}
+
+/* --- Cart Drawer --- */
+.mkt-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 440px;
+  background: #fff;
+  z-index: 401;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -20px 0 60px rgba(0,0,0,0.15);
+  animation: slideLeft 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+@keyframes slideLeft { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.mkt-drawer-head {
+  padding: 24px 28px;
+  border-bottom: 1px solid #F1F5F9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mkt-drawer-title {
+  font-size: 20px;
+  font-weight: 950;
+  color: #1E1B4B;
+}
+.mkt-drawer-items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.mkt-cart-item {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.mkt-cart-item-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.mkt-cart-item-info {
+  flex: 1;
+}
+.mkt-cart-item-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #1E293B;
+}
+.mkt-cart-item-vendor {
+  font-size: 11px;
+  color: #94A3B8;
+  font-weight: 600;
+  margin-top: 1px;
+}
+.mkt-qty-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #F1F5F9;
+  padding: 4px 8px;
+  border-radius: 10px;
+  margin-top: 8px;
+}
+.mkt-qty-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  color: #1E1B4B;
+  width: 20px;
+  text-align: center;
+}
+.mkt-qty-val {
+  font-size: 13px;
+  font-weight: 900;
+}
+.mkt-cart-item-price {
+  font-size: 14px;
+  font-weight: 900;
+  color: #4F46E5;
+}
+.mkt-cart-remove {
+  background: none;
+  border: none;
+  color: #CBD5E1;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.mkt-cart-remove:hover {
+  color: #EF4444;
+}
+.mkt-drawer-foot {
+  padding: 24px 28px;
+  background: #F8FAFC;
+  border-top: 1px solid #E2E8F0;
+}
+.mkt-drawer-total {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.mkt-drawer-total-label {
+  font-size: 16px;
+  font-weight: 900;
+  color: #1E293B;
+}
+.mkt-drawer-total-val {
+  font-size: 24px;
+  font-weight: 950;
+  color: #1E1B4B;
+}
+.mkt-checkout-btn {
+  width: 100%;
+  padding: 18px;
+  border: none;
+  border-radius: 18px;
+  background: #1E1B4B;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.3s;
+  box-shadow: 0 8px 20px rgba(30, 27, 75, 0.25);
+}
+.mkt-checkout-btn:hover {
+  background: #312E81;
+  transform: translateY(-2px);
+}
+.mkt-checkout-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* --- Stars/Rating --- */
+.mkt-stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.mkt-star {
+  color: #10B981;
+  font-size: 12px;
+}
+.mkt-star-empty {
+  color: #D1D5DB;
+}
+.mkt-rating-count {
+  font-size: 11px;
+  color: #94A3B8;
+  margin-left: 4px;
+}
+
+/* --- Brands --- */
+.mkt-cocote-brands-flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.mkt-cocote-brand-tag {
+  padding: 10px 20px;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #475569;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+.mkt-cocote-brand-tag:hover {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+
+/* --- Cities Index --- */
+.mkt-cocote-cities {
+  background: #fff;
+  padding: 48px;
+  border-radius: 4px;
+  border: 1px solid #F1F5F9;
+}
+.mkt-cocote-cities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+  margin-top: 32px;
+}
+.mkt-cocote-city-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748B;
+  padding: 8px 0;
+  border-bottom: 1px solid #F1F5F9;
+  transition: color 0.2s;
+  text-decoration: none;
+}
+.mkt-cocote-city-link:hover {
+  color: #10B981;
+  border-bottom-color: #10B981;
+}
+
+/* --- Product Detail Page --- */
+.mkt-product-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 64px;
+  background: #fff;
+  padding: 48px;
+  border-radius: 32px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+  border: 1px solid #F1F5F9;
+}
+.mkt-product-gallery img {
+  border-radius: 24px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mkt-product-info h1 {
+  font-size: 40px;
+  font-weight: 950;
+  color: #1E1B4B;
+  margin: 0 0 16px;
+  line-height: 1.1;
+}
+.mkt-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748B;
+  font-weight: 700;
+  text-decoration: none;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+.mkt-back-link:hover {
+  color: #1E1B4B;
+}
+
+/* --- Hero Banner --- */
+.mkt-cocote-hero {
+  min-height: 320px;
+  border-radius: 0;
+  margin-bottom: 0;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+}
+.mkt-cocote-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.3));
+}
+.mkt-cocote-hero-content {
+  position: relative;
+  z-index: 1;
+  padding: 40px 20px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+.mkt-cocote-hero-badge {
+  display: inline-block;
+  background: #6366F1;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+.mkt-cocote-hero-title {
+  color: #fff;
+  font-size: 42px;
+  font-weight: 900;
+  margin: 0 0 16px;
+}
+.mkt-cocote-hero-subtitle {
+  color: rgba(255,255,255,0.9);
+  font-size: 16px;
+  max-width: 672px;
+  margin: 16px auto 0;
+}
+.mkt-cocote-hero-btn {
+  display: inline-block;
+  margin-top: 24px;
+  padding: 12px 24px;
+  background: #fff;
+  color: #0F172A;
+  font-weight: 800;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.mkt-cocote-hero-btn:hover {
+  background: #F1F5F9;
+  transform: translateY(-2px);
+}
+
+/* --- Banners Grid --- */
+.mkt-cocote-banners {
+  margin-top: 32px;
+}
+.mkt-cocote-banner-link {
+  display: block;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #E2E8F0;
+  position: relative;
+  aspect-ratio: 21/9;
+  transition: all 0.3s ease;
+}
+.mkt-cocote-banner-link:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+}
+.mkt-cocote-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s;
+}
+.mkt-cocote-banner-link:hover .mkt-cocote-banner-img {
+  transform: scale(1.05);
+}
+.mkt-cocote-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.2));
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.mkt-cocote-banner-content {
+  max-width: 500px;
+}
+
+/* --- Selection Cards --- */
+.mkt-cocote-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+.mkt-cocote-selection-card {
+  background: #fff;
+  padding: 40px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  height: 100%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+  display: block;
+  color: inherit;
+}
+.mkt-cocote-selection-card:hover {
+  border-color: #111827;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  transform: translateY(-8px);
+}
+.mkt-cocote-selection-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: #6366F1;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.mkt-cocote-selection-card:hover::after {
+  opacity: 1;
+}
+.mkt-cocote-selection-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: #F8FAFC;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
+  border: 1px solid #F1F5F9;
+  transition: all 0.3s;
+}
+.mkt-cocote-selection-card:hover .mkt-cocote-selection-icon {
+  background: #111827;
+  color: #fff;
+}
+.mkt-cocote-selection-label {
+  font-size: 10px;
+  font-weight: 900;
+  color: #6366F1;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+.mkt-cocote-selection-title {
+  font-size: 20px;
+  font-weight: 900;
+  color: #0F172A;
+  margin-bottom: 16px;
+}
+.mkt-cocote-selection-desc {
+  font-size: 15px;
+  color: #64748B;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+.mkt-cocote-selection-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #111827;
+}
+.mkt-cocote-selection-card:hover .mkt-cocote-selection-link {
+  color: #6366F1;
+}
+
+/* --- Stats Section --- */
+.mkt-cocote-stats {
+  background: #111827;
+  border-radius: 8px;
+  padding: 48px;
+  margin: 64px 0;
+}
+.mkt-cocote-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+}
+.mkt-cocote-stat {
+  text-align: center;
+}
+.mkt-cocote-stat-value {
+  font-size: 36px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.mkt-cocote-stat-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* --- Brands --- */
+.mkt-cocote-brands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.mkt-cocote-brand-tag {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748B;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  padding: 8px 16px;
+  border-radius: 100px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.mkt-cocote-brand-tag:hover {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+
+/* --- Cities --- */
+.mkt-cocote-cities {
+  margin-top: 64px;
+}
+.mkt-cocote-cities-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.mkt-cocote-city-link {
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748B;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  padding: 10px 20px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.mkt-cocote-city-link:hover {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+  transform: translateY(-2px);
+}
+
+/* --- Section Header --- */
+.mkt-cocote-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #E5E7EB;
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .mkt-cocote-selection-grid {
+    grid-template-columns: 1fr;
+  }
+  .mkt-cocote-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .mkt-cocote-hero-title {
+    font-size: 28px;
+  }
+}
+
+/* --- Search Wrap (MiC Style) --- */
+.mkt-cocote-search-wrap {
+  flex: 1;
+  max-width: 680px;
+  display: flex;
+  align-items: center;
+  margin: 0 auto;
+}
+.mkt-cocote-search-inner {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 8px;
+  border: 2px solid #111827;
+  height: 48px;
+  width: 100%;
+  overflow: hidden;
+}
+.mkt-cocote-search-type {
+  padding: 0 16px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  border-right: 1px solid #E5E7EB;
+  background: #F9FAFB;
+}
+.mkt-cocote-search-select {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E293B;
+  cursor: pointer;
+  appearance: none;
+  padding-right: 20px;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2364748B' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: 14px;
+  min-width: 90px;
+}
+.mkt-cocote-search-input-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  background: #fff;
+}
+.mkt-search-icon-abs {
+  position: absolute;
+  left: 16px;
+  color: #94A3B8;
+  pointer-events: none;
+}
+.mkt-cocote-search-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  width: 100%;
+  height: 100%;
+  padding: 0 16px 0 44px;
+  color: #1E293B;
+}
+.mkt-cocote-search-input::placeholder {
+  color: #94A3B8;
+}
+.mkt-cocote-search-btn {
+  background: #111827;
+  border: none;
+  color: #fff;
+  height: 100%;
+  padding: 0 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.mkt-cocote-search-btn:hover {
+  background: #374151;
+}
+
+/* --- Header Actions --- */
+.mkt-cocote-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mkt-cocote-action-btn {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748B;
+  transition: all 0.2s;
+}
+.mkt-cocote-action-btn:hover {
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  color: #111827;
+}
+.mkt-cocote-dashboard-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #F8FAFC;
+  color: #1E293B;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  border: 1px solid #E2E8F0;
+  transition: all 0.2s;
+}
+.mkt-cocote-dashboard-btn:hover {
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.mkt-cocote-cart-btn {
+  position: relative;
+  background: #111827;
+  border: none;
+  color: #fff;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+.mkt-cocote-cart-btn:hover {
+  background: #374151;
+}
+.mkt-cocote-cart-text {
+  display: inline;
+}
+.mkt-cocote-cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #EF4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --- Mobile Search --- */
+.mkt-mobile-search-expansion {
+  padding: 16px;
+  background: #fff;
+  border-bottom: 1px solid #E5E7EB;
+}
+.mkt-mobile-search-expansion .mkt-cocote-search-wrap {
+  max-width: 100%;
+}
+
+/* --- Hero Banner (MiC Full Width) --- */
+.mkt-cocote-hero {
+  min-height: 320px;
+  border-radius: 0;
+  margin-bottom: 0;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+}
+.mkt-cocote-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.3));
+}
+.mkt-cocote-hero-content {
+  position: relative;
+  z-index: 1;
+  padding: 40px 20px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+}
+.mkt-cocote-hero-badge {
+  display: inline-block;
+  background: #6366F1;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  letter-spacing: 0.05em;
+}
+.mkt-cocote-hero-title {
+  color: #fff;
+  font-size: 42px;
+  font-weight: 900;
+  margin: 0 0 16px;
+  line-height: 1.2;
+}
+.mkt-cocote-hero-subtitle {
+  color: rgba(255,255,255,0.9);
+  font-size: 16px;
+  max-width: 672px;
+  margin: 16px auto 0;
+  line-height: 1.6;
+}
+.mkt-cocote-hero-btn {
+  display: inline-block;
+  margin-top: 24px;
+  padding: 12px 24px;
+  background: #fff;
+  color: #0F172A;
+  font-weight: 800;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+.mkt-cocote-hero-btn:hover {
+  background: #F1F5F9;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+/* --- Banners Grid --- */
+.mkt-cocote-banners {
+  margin-top: 32px;
+}
+.mkt-cocote-banners-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+.mkt-cocote-banners-2 {
+  grid-template-columns: 1fr 1fr;
+}
+.mkt-cocote-banner-link {
+  display: block;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #E2E8F0;
+  position: relative;
+  aspect-ratio: 21/9;
+  transition: all 0.3s ease;
+}
+.mkt-cocote-banner-link:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+}
+.mkt-cocote-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s;
+}
+.mkt-cocote-banner-link:hover .mkt-cocote-banner-img {
+  transform: scale(1.05);
+}
+.mkt-cocote-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.2));
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.mkt-cocote-banner-badge {
+  background: #6366F1;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 4px;
+  width: fit-content;
+  margin-bottom: 12px;
+  letter-spacing: 0.05em;
+}
+.mkt-cocote-banner-title {
+  color: #fff;
+  font-size: 24px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+.mkt-cocote-banner-text {
+  color: rgba(255,255,255,0.8);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+.mkt-cocote-banner-link-text {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-decoration: underline;
+}
+
+/* --- Section Styles --- */
+.mkt-cocote-section {
+  padding: 40px 0;
+}
+.mkt-cocote-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #E5E7EB;
+}
+.mkt-cocote-section-header-center {
+  text-align: center;
+  margin-bottom: 48px;
+}
+.mkt-cocote-section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  background: #EEF2FF;
+  color: #6366F1;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+}
+.mkt-cocote-section-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mkt-cocote-section-title-lg {
+  font-size: 36px;
+  font-weight: 900;
+  color: #111827;
+  margin-bottom: 16px;
+  line-height: 1.2;
+}
+.mkt-cocote-section-desc {
+  color: #64748B;
+  max-width: 672px;
+  margin: 16px auto 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.mkt-cocote-see-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: #64748B;
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.mkt-cocote-see-all:hover {
+  color: #10B981;
+}
+
+/* --- Search Results --- */
+.mkt-cocote-search-results {
+  margin-bottom: 40px;
+}
+.mkt-cocote-search-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #0F172A;
+  margin-bottom: 24px;
+}
+.mkt-cocote-search-section {
+  margin-bottom: 48px;
+}
+.mkt-cocote-search-subtitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --- Selection Cards --- */
+.mkt-cocote-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+.mkt-cocote-selection-card {
+  background: #fff;
+  padding: 40px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  height: 100%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+  display: block;
+  color: inherit;
+}
+.mkt-cocote-selection-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  background: #6366F1;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.mkt-cocote-selection-card:hover {
+  border-color: #111827;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  transform: translateY(-8px);
+}
+.mkt-cocote-selection-card:hover::after {
+  opacity: 1;
+}
+.mkt-cocote-selection-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: #F8FAFC;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
+  border: 1px solid #F1F5F9;
+  transition: all 0.3s;
+}
+.mkt-cocote-selection-card:hover .mkt-cocote-selection-icon {
+  background: #111827;
+  color: #fff;
+}
+.mkt-cocote-selection-label {
+  font-size: 10px;
+  font-weight: 900;
+  color: #6366F1;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+.mkt-cocote-selection-title {
+  font-size: 20px;
+  font-weight: 900;
+  color: #0F172A;
+  margin-bottom: 16px;
+}
+.mkt-cocote-selection-desc {
+  font-size: 15px;
+  color: #64748B;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+.mkt-cocote-selection-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #111827;
+  transition: color 0.2s;
+}
+.mkt-cocote-selection-card:hover .mkt-cocote-selection-link {
+  color: #6366F1;
+}
+
+/* --- Category Grid --- */
+.mkt-cocote-category-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+.mkt-cocote-category-card {
+  position: relative;
+  display: block;
+  aspect-ratio: 4/5;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid #E5E7EB;
+  text-decoration: none;
+}
+.mkt-cocote-category-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.7s;
+}
+.mkt-cocote-category-card:hover .mkt-cocote-category-img {
+  transform: scale(1.1);
+}
+.mkt-cocote-category-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.2));
+}
+.mkt-cocote-category-content {
+  position: absolute;
+  inset: 0;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.mkt-cocote-category-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+.mkt-cocote-category-name {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.3;
+}
+.mkt-cocote-category-link {
+  color: rgba(255,255,255,0.7);
+  font-size: 14px;
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.mkt-cocote-category-card:hover .mkt-cocote-category-link {
+  opacity: 1;
+}
+
+/* --- Stars --- */
+.mkt-cocote-stars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mkt-cocote-stars-star {
+  color: #10B981;
+  font-size: 12px;
+}
+.mkt-cocote-stars-avg {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E293B;
+}
+.mkt-cocote-stars-total {
+  font-size: 11px;
+  color: #64748B;
+}
+.mkt-cocote-stars-empty {
+  font-size: 12px;
+  color: #94A3B8;
+  font-weight: 600;
+}
+
+/* --- Card Category Label --- */
+.mkt-cocote-card-cat {
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #6366F1;
+  margin-bottom: 6px;
+  opacity: 0.8;
+}
+
+/* --- Card Link --- */
+.mkt-cocote-card-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* --- Empty States --- */
+.mkt-cocote-empty {
+  text-align: center;
+  padding: 80px 20px;
+  background: #F8FAFC;
+  border-radius: 16px;
+  border: 1px solid #F1F5F9;
+}
+.mkt-cocote-empty-icon {
+  color: #CBD5E1;
+  margin-bottom: 16px;
+}
+.mkt-cocote-empty-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 8px;
+}
+.mkt-cocote-empty-text {
+  color: #64748B;
+  font-size: 14px;
+}
+.mkt-cocote-empty-promo {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 32px;
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  border-radius: 16px;
+  color: #fff;
+}
+.mkt-cocote-empty-promo-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+.mkt-cocote-empty-promo-icon {
+  opacity: 0.9;
+}
+.mkt-cocote-empty-promo h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+.mkt-cocote-empty-promo p {
+  font-size: 14px;
+  opacity: 0.8;
+  margin: 0;
+}
+.mkt-cocote-empty-promo-btn {
+  background: #fff;
+  color: #111827;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mkt-cocote-empty-promo-btn:hover {
+  background: #F1F5F9;
+  transform: translateY(-2px);
+}
+
+/* --- Location Modal --- */
+.mkt-cocote-loc-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.mkt-cocote-loc-icon {
+  width: 64px;
+  height: 64px;
+  background: #EEF2FF;
+  color: #6366F1;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+}
+.mkt-cocote-loc-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #0F172A;
+  margin-bottom: 12px;
+}
+.mkt-cocote-loc-subtitle {
+  font-size: 15px;
+  color: #64748B;
+  line-height: 1.6;
+}
+.mkt-cocote-loc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.mkt-cocote-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 900;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+}
+.mkt-cocote-label-value {
+  color: #6366F1;
+  font-weight: 800;
+}
+.mkt-cocote-input {
+  width: 100%;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 2px solid #F1F5F9;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1E293B;
+  appearance: none;
+  background: #F8FAFC;
+  transition: border-color 0.2s;
+}
+.mkt-cocote-input:focus {
+  outline: none;
+  border-color: #6366F1;
+}
+.mkt-cocote-select-wrap {
+  position: relative;
+}
+.mkt-cocote-select-arrow {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  color: #94A3B8;
+  pointer-events: none;
+}
+.mkt-cocote-radius-slider {
+  margin-top: 8px;
+}
+.mkt-cocote-range {
+  width: 100%;
+  height: 8px;
+  background: #EEF2FF;
+  border-radius: 10px;
+  appearance: none;
+  cursor: pointer;
+}
+.mkt-cocote-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #6366F1;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(99,102,241,0.3);
+}
+.mkt-cocote-range-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+.mkt-cocote-range-labels span {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94A3B8;
+}
+.mkt-cocote-btn-primary {
+  width: 100%;
+  padding: 18px;
+  border-radius: 14px;
+  background: #111827;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.mkt-cocote-btn-primary:hover {
+  background: #374151;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .mkt-cocote-hero-title {
+    font-size: 28px;
+  }
+  .mkt-cocote-section-title-lg {
+    font-size: 28px;
+  }
+  .mkt-cocote-selection-grid {
+    grid-template-columns: 1fr;
+  }
+  .mkt-cocote-category-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .mkt-cocote-banners-2 {
+    grid-template-columns: 1fr;
+  }
+  .mkt-cocote-cart-text {
+    display: none;
+  }
+}

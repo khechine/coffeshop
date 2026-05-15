@@ -1,12 +1,15 @@
 import { prisma } from '@coffeeshop/database';
 import { getStore } from '../actions';
 import PremiumPOSClient from './PremiumPOSClient';
-import POSClient from './POSClient';
+import { redirect } from 'next/navigation';
+
 export const dynamic = 'force-dynamic';
 
 export default async function POSPage() {
   const store = await getStore();
-  if (!store) return <div>Boutique non trouvée</div>;
+  if (!store) {
+    redirect('/login');
+  }
   
   const products = await prisma.product.findMany({
     where: { storeId: store.id },

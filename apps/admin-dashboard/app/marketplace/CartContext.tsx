@@ -1,12 +1,16 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { placeMarketplaceOrder } from '../actions';
+import { placeMarketplaceOrder, getMarketplaceUpsellRecommendationsAction } from '../actions';
+import { ShoppingBag, ArrowRight, X, Sparkles, CheckCircle2 } from 'lucide-react';
+import { sanitizeUrl } from '../lib/imageUtils';
+import Link from 'next/link';
 
 interface CartItem {
   id: string;
   name: string;
   price: number;
+  originalPrice?: number;
   quantity: number;
   image?: string;
   unit: string;
@@ -18,7 +22,7 @@ interface CartItem {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: any) => void;
+  addToCart: (product: any, quantity?: number) => void;
   updateQty: (id: string, delta: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
@@ -29,6 +33,9 @@ interface CartContextType {
   orderStatus: string;
   orderError: string;
   dismissError: () => void;
+  lastAddedProduct: any | null;
+  isUpsellOpen: boolean;
+  setUpsellOpen: (open: boolean) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -39,6 +46,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [orderStatus, setOrderStatus] = useState('');
   const [orderError, setOrderError] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [lastAddedProduct, setLastAddedProduct] = useState<any | null>(null);
+  const [isUpsellOpen, setIsUpsellOpen] = useState(false);
 
   // Load cart from localStorage
   useEffect(() => {
@@ -60,22 +69,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cart, isLoaded]);
 
-  const addToCart = (p: any) => {
+  const addToCart = (p: any, q: number = 1) => {
+    const vendorInfo = p.vendor || p.vendorInfo;
+    const productToTrack = { 
+      id: p.id, 
+      name: p.name, 
+      price: p.discountPrice ? Number(p.discountPrice) : Number(p.price),
+      originalPrice: p.discountPrice && Number(p.discountPrice) < Number(p.price) ? Number(p.price) : undefined,
+      image: p.image, 
+      unit: p.unit,
+      quantity: q, 
+      vendor: vendorInfo ? { id: vendorInfo.id, companyName: vendorInfo.companyName } : undefined
+    };
+
     setCart(prev => {
       const ex = prev.find(i => i.id === p.id);
-      if (ex) return prev.map(i => i.id === p.id ? { ...i, quantity: i.quantity + 1 } : i);
-      
-      const vendorInfo = p.vendor || p.vendorInfo;
-      return [...prev, { 
-        id: p.id, 
-        name: p.name, 
-        price: Number(p.price), 
-        image: p.image, 
-        unit: p.unit,
-        quantity: 1, 
-        vendor: vendorInfo ? { id: vendorInfo.id, companyName: vendorInfo.companyName } : undefined
-      }];
+      if (ex) return prev.map(i => i.id === p.id ? { ...i, quantity: i.quantity + q } : i);
+      return [...prev, productToTrack];
     });
+
+    setLastAddedProduct(productToTrack);
+    setIsUpsellOpen(true);
   };
 
   const updateQty = (id: string, delta: number) =>
@@ -138,10 +152,122 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     <CartContext.Provider value={{ 
       cart, addToCart, updateQty, removeItem, clearCart, 
       cartTotal, cartCount, handleCheckout, isOrdering, orderStatus,
-      orderError, dismissError
+      orderError, dismissError, lastAddedProduct, isUpsellOpen, setUpsellOpen: setIsUpsellOpen
     }}>
       {children}
+      {isUpsellOpen && lastAddedProduct && (
+        <UpsellModal 
+          product={lastAddedProduct} 
+          onClose={() => setIsUpsellOpen(false)} 
+        />
+      )}
     </CartContext.Provider>
+  );
+}
+
+function UpsellModal({ product, onClose }: { product: any; onClose: () => void }) {
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecs = async () => {
+      setLoading(true);
+      try {
+        const data = await getMarketplaceUpsellRecommendationsAction([product.id]);
+        setRecommendations(data.slice(0, 4));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRecs();
+  }, [product.id]);
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div style={{ background: '#fff', width: '100%', maxWidth: '720px', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', animation: 'scaleUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+        
+        {/* Success Banner */}
+        <div style={{ background: '#F0FDF4', padding: '24px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #DCFCE7' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '40px', height: '40px', background: '#16A34A', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CheckCircle2 size={24} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#111827', margin: 0 }}>Ajouté au panier !</h3>
+              <p style={{ fontSize: '13px', color: '#166534', margin: 0 }}>Votre article a été ajouté avec succès.</p>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: '#fff', color: '#6B7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div style={{ padding: '32px' }}>
+          {/* Main Added Product */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '40px', background: '#F9FAFB', padding: '20px', borderRadius: '20px', border: '1px solid #F1F5F9' }}>
+            <div style={{ width: '100px', height: '100px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #E5E7EB', background: '#fff' }}>
+              <img src={sanitizeUrl(product.image)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#111827', margin: '0 0 4px' }}>{product.name}</h4>
+              <p style={{ fontSize: '14px', fontWeight: 700, color: '#6B7280', margin: 0 }}>{product.quantity} x {Number(product.price).toFixed(2)} DT</p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button onClick={onClose} style={{ padding: '12px 24px', borderRadius: '100px', border: '1px solid #E5E7EB', background: '#fff', color: '#374151', fontSize: '14px', fontWeight: 800, cursor: 'pointer' }}>Continuer</button>
+              <Link href="/marketplace?openCart=true" onClick={onClose} style={{ padding: '12px 24px', borderRadius: '100px', border: 'none', background: '#111827', color: '#fff', fontSize: '14px', fontWeight: 800, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Panier <ArrowRight size={16} />
+              </Link>
+            </div>
+          </div>
+
+          {/* Recommendations */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+              <Sparkles size={18} color="#E31E24" />
+              <h4 style={{ fontSize: '15px', fontWeight: 900, color: '#111827', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nos clients ont aussi acheté</h4>
+            </div>
+
+            {loading ? (
+              <div style={{ display: 'flex', gap: '16px' }}>
+                {[1, 2, 3, 4].map(i => <div key={i} style={{ flex: 1, height: '180px', background: '#F9FAFB', borderRadius: '16px', animation: 'pulse 1.5s infinite' }} />)}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                {recommendations.map((p: any) => (
+                  <Link 
+                    key={p.id} 
+                    href={`/marketplace/product/${p.id}`} 
+                    onClick={onClose}
+                    style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: '8px' }}
+                  >
+                    <div style={{ width: '100%', aspectRatio: '1/1', borderRadius: '16px', overflow: 'hidden', border: '1px solid #F1F5F9', background: '#fff' }}>
+                      <img src={sanitizeUrl(p.image)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 800, color: '#111827', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '32px', lineHeight: 1.3 }}>{p.name}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 900, color: '#E31E24', marginTop: '4px' }}>{Number(p.price).toFixed(2)} DT</div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <style jsx>{`
+        @keyframes scaleUp {
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes pulse {
+          0% { opacity: 1; }
+          50% { opacity: 0.5; }
+          100% { opacity: 1; }
+        }
+      `}</style>
+    </div>
   );
 }
 

@@ -1,275 +1,448 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   ShoppingBag, Search, LayoutGrid, Star, MapPin, 
   Phone, Mail, Calendar, ChevronRight, Package, Info,
-  ShoppingCart, Plus, Minus, Send, X
+  ShoppingCart, Plus, Minus, Send, X, MessageCircle,
+  Play, Maximize2, ShieldCheck, Heart, Building2
 } from 'lucide-react';
-import { placeMarketplaceOrder } from '../../../actions';
 import { useCart } from '../../CartContext';
 import MarketplaceHeader from '../../components/MarketplaceHeader';
 import MarketplaceFooter from '../../components/MarketplaceFooter';
-import '../../marketplace.css';
-import 'leaflet/dist/leaflet.css';
+import MarketplaceProductCard from '../../components/MarketplaceProductCard';
 import { sanitizeUrl } from '../../../lib/imageUtils';
+import { sendTradeMessageAction } from '../../../actions';
+import { useToast } from '../../../components/Toast';
 
-const fmt = (n: any) => Number(n).toFixed(3);
 
-function Stars({ avg = 0, total = 0, size = 12 }: any) {
-  if (!total) return <span style={{ fontSize: size, color: '#94A3B8', fontWeight: 600 }}>Nouveau</span>;
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <span style={{ color: '#111827', fontSize: size }}>★</span>
-      <span style={{ fontSize: size, fontWeight: 700, color: '#111827' }}>{Number(avg).toFixed(1)}</span>
-      <span style={{ fontSize: size - 1, color: '#64748B' }}>({total})</span>
-    </div>
-  );
-}
+import VendorStorefrontMobile from './VendorStorefrontMobile';
+import { useVault } from '../../VaultContext';
 
-export default function VendorStorefrontClient({ vendor, ratings, isVendor = false }: any) {
-  const [activeTab, setActiveTab] = useState('products');
-  
+const fmt = (n: any) => Number(n).toFixed(2);
+
+
+export default function VendorStorefrontClient({ vendor, ratings, isVendor = false, allCategories = [] }: any) {
+  const [activeTab, setActiveTab] = useState('Home');
+  const [activeCollection, setActiveCollection] = useState<Record<string, string>>({});
   const { addToCart } = useCart();
+  const { showToast } = useToast();
   
-  const cust = vendor.customization || {};
-  const isPremium = vendor.isPremium || !!cust.id;
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
-  const products = vendor.vendorProducts.map((vp: any) => ({
+  const [tradeMessagerOpen, setTradeMessagerOpen] = useState(false);
+  const [tradeMessage, setTradeMessage] = useState('');
+  const [isSendingMsg, setIsSendingMsg] = useState(false);
+
+  // Franchises / POS state
+  const [selectedPos, setSelectedPos] = useState<any>(null);
+  const mapRef = useRef<any>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [stockSearch, setStockSearch] = useState('');
+
+  const { level, maskName, maskLogo, maskCity, identityVisible } = useVault(vendor.id, vendor.isPremium);
+
+  useEffect(() => {
+    if (activeTab === 'Franchises' && typeof window !== 'undefined' && mapContainerRef.current && !mapRef.current) {
+      const initMap = async () => {
+        const L = (await import('leaflet')).default;
+        // @ts-ignore
+        import('leaflet/dist/leaflet.css');
+
+        const map = L.map(mapContainerRef.current!).setView([36.80, 10.18], 7);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        const vendorLogo = (vendor.customization?.logoUrl) || '/default-vendor.png';
+        const customIcon = L.divIcon({
+          className: 'custom-div-icon',
+          html: `<div style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 3px solid #E31E24; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+                   <img src="${vendorLogo}" style="width: 100%; height: 100%; object-fit: contain;" />
+                 </div>`,
+          iconSize: [40, 40],
+          iconAnchor: [20, 40],
+          popupAnchor: [0, -40]
+        });
+
+        const posList = vendor.posList || [];
+        posList.forEach((pos: any) => {
+          if (pos.lat && pos.lng) {
+            const marker = L.marker([pos.lat, pos.lng], { icon: customIcon }).addTo(map);
+            marker.bindPopup(`<b>${pos.name}</b><br/>${pos.address || ''}`);
+          }
+        });
+
+        if (posList.length > 0 && posList[0].lat) {
+            map.setView([posList[0].lat, posList[0].lng], 10);
+            setSelectedPos(posList[0]);
+        }
+
+        mapRef.current = map;
+      };
+      initMap();
+    }
+  }, [activeTab, vendor.posList, vendor.customization?.logoUrl]);
+
+  const handleSendTradeMessage = async () => {
+    if (!tradeMessage.trim()) return;
+    setIsSendingMsg(true);
+    try {
+      const res = await sendTradeMessageAction({
+        receiverId: vendor.userId,
+        content: tradeMessage
+      });
+      if (res.success) {
+        showToast("Message envoyé ! Les coordonnées personnelles ont été masquées selon nos conditions.");
+        setTradeMessagerOpen(false);
+        setTradeMessage('');
+      }
+    } catch (e: any) {
+      showToast("Erreur lors de l'envoi du message : " + e.message, 'error');
+    } finally {
+      setIsSendingMsg(false);
+    }
+  };
+
+  const isPremium = vendor.isPremium;
+  const cust = vendor.customization || {};
+  const primaryColor = isPremium ? (cust.primaryColor || '#E31E24') : '#111827';
+  const accentColor = isPremium ? (cust.secondaryColor || '#475569') : '#F3F4F6';
+  
+  const logoUrl = sanitizeUrl(cust.logoUrl);
+  const bannerUrl = sanitizeUrl(cust.bannerUrl) || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600';
+
+  const products = (vendor.vendorProducts || []).map((vp: any) => ({
     id: vp.id,
     name: vp.name || vp.productStandard?.name,
     price: vp.price,
     unit: vp.unit || vp.productStandard?.unit,
     image: vp.image || vp.productStandard?.image,
-    categoryId: vp.categoryId || vp.productStandard?.categoryId
+    categoryId: vp.categoryId || vp.productStandard?.categoryId,
+    minOrderQty: vp.minOrderQty,
+    vendorId: vendor.id,
+    vendor: {
+      id: vendor.id,
+      userId: vendor.userId,
+      companyName: vendor.companyName, // Pass raw name, child will mask if needed
+      city: vendor.city || 'Tunisie', // Pass raw city
+      isEcoResponsible: vendor.isEcoResponsible,
+      isPremium: vendor.isPremium
+    },
+    distance: null 
   }));
 
-  // Map and Theme colors
-  const mapRef = useRef<any>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const { productsByCategory, categoryMap } = useMemo(() => {
+     const groups: Record<string, any[]> = {};
+     const map: Record<string, string> = {};
+     allCategories.forEach((c: any) => { map[c.id] = c.name; });
+     products.forEach((p: any) => {
+        const catId = p.categoryId || 'Other';
+        if (!groups[catId]) groups[catId] = [];
+        groups[catId].push(p);
+     });
+     return { productsByCategory: groups, categoryMap: map };
+  }, [products, allCategories]);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
-  const primaryColor = isPremium ? (cust.primaryColor || '#1E1B4B') : '#1E1B4B';
-  const bannerUrl = isPremium ? (sanitizeUrl(cust.bannerUrl) || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600') : null;
-  const logoUrl = isPremium ? (sanitizeUrl(cust.logoUrl) || null) : null;
-  const fontFamily = isPremium ? (cust.fontFamily || 'Inter') : 'Inter';
+  const navItems = isPremium ? ['Home', 'Products', 'Franchises', 'About Us', 'Solutions', 'Discover', 'Contact Us'] : ['Tous les Produits', 'À Propos'];
 
-  useEffect(() => {
-    if (activeTab === 'info' && vendor.lat && vendor.lng && typeof window !== 'undefined') {
-      const initMap = async () => {
-        const L = (await import('leaflet')).default;
-        if (!mapRef.current && mapContainerRef.current) {
-          mapRef.current = L.map(mapContainerRef.current).setView([vendor.lat, vendor.lng], 13);
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-          }).addTo(mapRef.current);
-
-          const customIcon = L.divIcon({
-            className: 'custom-div-icon',
-            html: `
-              <div style="background-color: ${primaryColor}; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-                <div style={{ transform: 'rotate(45deg)', color: 'white', marginBottom: '2px' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                </div>
+  if (!isPremium) {
+    return (
+      <div style={{ background: '#F9FAFB', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
+        <MarketplaceHeader isVendor={isVendor} />
+        
+        <div style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', padding: '40px 0' }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '32px' }}>
+            <div style={{ width: '120px', height: '120px', borderRadius: '16px', border: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', overflow: 'hidden', position: 'relative' }}>
+              {maskLogo(logoUrl) ? <img src={logoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <Building2 size={48} color="#E5E7EB" />}
+              {!identityVisible && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.4)' }}><ShieldCheck size={32} color="#111827" /></div>}
+            </div>
+            <div>
+              <h1 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', marginBottom: '8px' }}>{maskName(vendor.companyName)}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#6B7280', fontSize: '14px', fontWeight: 600 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={16} /> {maskCity(vendor.city)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Package size={16} /> {products.length} Produits</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Star size={16} fill="#F59E0B" color="#F59E0B" /> 4.5/5</div>
               </div>
-            `,
-            iconSize: [32, 32],
-            iconAnchor: [16, 32],
-          });
+            </div>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
+               <button style={{ height: '48px', paddingLeft: '24px', paddingRight: '24px', borderRadius: '12px', background: '#F3F4F6', color: '#111827', border: 'none', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                 <MessageCircle size={18} /> Chat
+               </button>
+               <button style={{ height: '48px', paddingLeft: '24px', paddingRight: '24px', borderRadius: '12px', background: '#E31E24', color: '#fff', border: 'none', fontWeight: 800, cursor: 'pointer' }}>
+                 Suivre
+               </button>
+            </div>
+          </div>
+        </div>
 
-          L.marker([vendor.lat, vendor.lng], { icon: customIcon }).addTo(mapRef.current);
-        }
-      };
-      initMap();
-    }
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
-  }, [activeTab, vendor.lat, vendor.lng, primaryColor]);
+        <main style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 24px' }}>
+           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '24px' }}>
+              {products.map((p: any) => (
+                <div key={p.id} style={{ background: '#fff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+                   <MarketplaceProductCard product={p} isVendor={isVendor} hidePrice={isVendor} />
+                </div>
+              ))}
+           </div>
+        </main>
+        <MarketplaceFooter />
+      </div>
+    );
+  }
+
+  if (isMobile) {
+    return <VendorStorefrontMobile vendor={vendor} products={products} isVendor={isVendor} />;
+  }
 
   return (
-    <div className="mkt-page cocote-theme" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
+    <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <MarketplaceHeader isVendor={isVendor} />
 
-      {/* Hero Banner (FULL WIDTH COMPACT) */}
-      <div style={{ position: 'relative', marginBottom: 40 }}>
-        {bannerUrl ? (
-          <div style={{ height: 280, width: '100%', overflow: 'hidden' }}>
-             <img src={bannerUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Banner" />
-             <div className="mkt-category-hero-overlay" />
-          </div>
-        ) : (
-          <div style={{ height: 180, background: '#F8FAFC', borderBottom: '1px solid #E5E7EB' }} />
-        )}
-
-        <div className="mkt-container" style={{ marginTop: -80, position: 'relative', zIndex: 10 }}>
-          <div style={{ background: '#fff', padding: '32px 48px', borderRadius: 4, border: '1px solid #E5E7EB', boxShadow: '0 10px 30px rgba(0,0,0,0.06)', display: 'flex', flexWrap: 'wrap', gap: 40, alignItems: 'center' }}>
-            
-            {/* Logo */}
-            <div style={{ 
-              width: 120, height: 120, borderRadius: 4, background: '#fff', 
-              border: '1px solid #E5E7EB',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48,
-              overflow: 'hidden', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
-            }}>
-              {logoUrl ? <img src={logoUrl} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : '🏪'}
+      {/* ── Vendor Top Header (Badges & Quick Actions) ── */}
+      <div style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', padding: '12px 0' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+               <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>{maskName(vendor.companyName)}</span>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: '#2563EB' }}>
+                    <ShieldCheck size={14} /> {identityVisible ? 'Diamond Member' : 'Membre Vérifié'}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#FEF2F2', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, color: '#E31E24' }}>
+                     AUDITÉ
+                  </div>
+                  <div style={{ display: 'flex', gap: '2px' }}>
+                     {[1,2,3,4].map(i => <Star key={i} size={12} fill="#F59E0B" color="#F59E0B" />)}
+                  </div>
+               </div>
             </div>
-
-            {/* Vendor Info */}
-            <div style={{ flex: 1, minWidth: 300 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
-                <h1 style={{ fontSize: 36, fontWeight: 800, color: '#111827', margin: 0 }}>{vendor.companyName}</h1>
-                {isPremium && <span style={{ background: '#111827', color: '#fff', padding: '4px 10px', borderRadius: 2, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Certifié</span>}
-              </div>
-              
-              <div style={{ display: 'flex', gap: 24, color: '#64748B', fontSize: 14, fontWeight: 600, flexWrap: 'wrap' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><MapPin size={16} /> {vendor.city || 'Tunis'}</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ShoppingBag size={16} /> Min: 150 DT</span>
-                <Stars avg={ratings.overallAvg} total={ratings.totalReviews} size={13} />
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-               <button className="mkt-cocote-btn-primary" style={{ padding: '12px 32px' }}>
-                  Commander
+            <div style={{ display: 'flex', gap: '12px', position: 'relative' }}>
+               <button style={{ height: '32px', padding: '0 16px', border: `1px solid ${primaryColor}`, color: primaryColor, borderRadius: '4px', background: 'transparent', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>Send Inquiry</button>
+               <button onClick={() => setTradeMessagerOpen(!tradeMessagerOpen)} style={{ height: '32px', padding: '0 16px', border: 'none', color: '#fff', borderRadius: '100px', background: '#2563EB', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                 <MessageCircle size={14} /> TradeMessager
                </button>
-               <button className="px-6 py-3 border border-slate-200 text-slate-900 font-bold rounded-[4px] hover:bg-slate-50 transition-all text-sm">
-                  Suivre
-               </button>
+               
+               {tradeMessagerOpen && (
+                 <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', zIndex: 1000, width: '380px', background: '#fff', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' }}>
+                   <div style={{ background: '#111827', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                       <MessageCircle size={18} />
+                       <span style={{ fontWeight: 800 }}>TradeMessager</span>
+                     </div>
+                     <button onClick={() => setTradeMessagerOpen(false)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer' }}><X size={18} /></button>
+                   </div>
+                   <div style={{ padding: '20px', flex: 1, background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+                     <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '16px', background: '#FEF2F2', padding: '12px', borderRadius: '8px', border: '1px solid #FEE2E2' }}>
+                       <strong style={{ color: '#E31E24' }}>Sécurité B2B :</strong> Les numéros de téléphone et adresses emails sont automatiquement filtrés pour garantir la sécurité des transactions sur la plateforme.
+                     </div>
+                     <p style={{ fontSize: '14px', fontWeight: 600, color: '#374151', margin: 0 }}>Vendeur : {vendor.companyName}</p>
+                   </div>
+                   <div style={{ padding: '16px', background: '#fff' }}>
+                     <textarea 
+                       value={tradeMessage}
+                       onChange={e => setTradeMessage(e.target.value)}
+                       placeholder="Posez vos questions techniques, demandez un devis sur-mesure..."
+                       style={{ width: '100%', height: '100px', padding: '12px', borderRadius: '12px', border: '1px solid #E5E7EB', fontSize: '14px', resize: 'none', outline: 'none' }}
+                     />
+                     <button 
+                       onClick={handleSendTradeMessage}
+                       disabled={isSendingMsg || !tradeMessage.trim()}
+                       style={{ width: '100%', padding: '12px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 800, marginTop: '12px', cursor: isSendingMsg || !tradeMessage.trim() ? 'not-allowed' : 'pointer', opacity: isSendingMsg || !tradeMessage.trim() ? 0.5 : 1 }}
+                     >
+                       {isSendingMsg ? 'Envoi...' : 'Envoyer le message'}
+                     </button>
+                   </div>
+                 </div>
+               )}
             </div>
-          </div>
-        </div>
+         </div>
       </div>
 
-      <div className="mkt-container">
-        {/* Navigation Tabs (Sober) */}
-        <div style={{ display: 'flex', gap: 48, marginBottom: 48, borderBottom: '1px solid #E5E7EB' }}>
-           <button 
-            onClick={() => setActiveTab('products')}
-            style={{ padding: '16px 0', border: 'none', background: 'none', borderBottom: activeTab === 'products' ? `2px solid #111827` : '2px solid transparent', color: activeTab === 'products' ? '#111827' : '#94A3B8', fontWeight: 800, fontSize: 16, cursor: 'pointer' }}
-           >
-              Produits ({products.length})
-           </button>
-           <button 
-            onClick={() => setActiveTab('reviews')}
-            style={{ padding: '16px 0', border: 'none', background: 'none', borderBottom: activeTab === 'reviews' ? `2px solid #111827` : '2px solid transparent', color: activeTab === 'reviews' ? '#111827' : '#94A3B8', fontWeight: 800, fontSize: 16, cursor: 'pointer' }}
-           >
-              Avis ({ratings.totalReviews})
-           </button>
-           <button 
-            onClick={() => setActiveTab('info')}
-            style={{ padding: '16px 0', border: 'none', background: 'none', borderBottom: activeTab === 'info' ? `2px solid #111827` : '2px solid transparent', color: activeTab === 'info' ? '#111827' : '#94A3B8', fontWeight: 800, fontSize: 16, cursor: 'pointer' }}
-           >
-              Notre Histoire
-           </button>
-        </div>
-
-        {activeTab === 'products' && (
-          <div className="mkt-cocote-grid">
-            {products.map((p: any) => (
-              <div key={p.id} className="mkt-cocote-card">
-                <Link href={`/marketplace/product/${p.id}`} className="mkt-cocote-card-img-wrap">
-                  <img src={sanitizeUrl(p.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'} className="mkt-cocote-card-img" alt={p.name} />
-                </Link>
-                <div className="mkt-cocote-card-body">
-                  <Link href={`/marketplace/product/${p.id}`} style={{ textDecoration: 'none' }}>
-                    <h3 className="mkt-cocote-card-title">{p.name}</h3>
-                  </Link>
-                  <div className="mkt-cocote-card-footer">
-                    <div className="mkt-cocote-price-wrap" style={isVendor ? { filter: 'blur(5px)', userSelect: 'none', pointerEvents: 'none' } : {}}>
-                      <span className="mkt-cocote-price">{fmt(p.price)}</span>
-                      <span className="mkt-cocote-unit">DT/{p.unit}</span>
-                    </div>
-                    {!isVendor && (
-                      <button className="mkt-cocote-add-btn" onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCart(p); }}>
-                        <ShoppingCart size={16} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-            {products.length === 0 && (
-              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '80px 0', color: '#94A3B8' }}>
-                <Package size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                <p style={{ fontWeight: 700 }}>Aucun produit ne correspond à votre recherche chez ce vendeur.</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'reviews' && (
-          <div style={{ padding: 64, background: '#fff', borderRadius: 4, border: '1px solid #E5E7EB' }}>
-            <div style={{ display: 'flex', gap: 64, alignItems: 'center', marginBottom: 64 }}>
-               <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 72, fontWeight: 800, color: '#111827', lineHeight: 1 }}>{ratings.overallAvg.toFixed(1)}</div>
-                  <div style={{ display: 'flex', gap: 4, justifyContent: 'center', margin: '16px 0' }}>
-                    {[1,2,3,4,5].map(s => <Star key={s} size={20} fill={s <= Math.round(ratings.overallAvg) ? "#111827" : "none"} color="#111827" />)}
-                  </div>
-                  <div style={{ color: '#64748B', fontWeight: 600 }}>Basé sur {ratings.totalReviews} avis</div>
-               </div>
-               <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 32 }}>
-                  <div style={{ padding: '24px', border: '1px solid #F3F4F6', borderRadius: 4 }}>
-                     <div style={{ fontSize: 12, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Qualité Produits</div>
-                     <div style={{ fontSize: 24, fontWeight: 800, color: '#111827' }}>{ratings.avgQuality.toFixed(1)}/5</div>
-                  </div>
-                  <div style={{ padding: '24px', border: '1px solid #F3F4F6', borderRadius: 4 }}>
-                     <div style={{ fontSize: 12, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Réactivité</div>
-                     <div style={{ fontSize: 24, fontWeight: 800, color: '#111827' }}>{ratings.avgSpeed.toFixed(1)}/5</div>
-                  </div>
-                  <div style={{ padding: '24px', border: '1px solid #F3F4F6', borderRadius: 4 }}>
-                     <div style={{ fontSize: 12, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Service Livraison</div>
-                     <div style={{ fontSize: 24, fontWeight: 800, color: '#111827' }}>{ratings.avgDelivery.toFixed(1)}/5</div>
-                  </div>
-                  <div style={{ padding: '24px', border: '1px solid #F3F4F6', borderRadius: 4 }}>
-                     <div style={{ fontSize: 12, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Fiabilité</div>
-                     <div style={{ fontSize: 24, fontWeight: 800, color: '#111827' }}>{ratings.avgReliability.toFixed(1)}/5</div>
-                  </div>
-               </div>
+      {/* ── Vendor Identity Bar (Logo & Name) ── */}
+      <div style={{ background: '#fff', padding: '24px 0' }}>
+         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <div style={{ width: '80px', height: '80px', border: '1px solid #E5E7EB', borderRadius: '4px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', position: 'relative' }}>
+               {logoUrl ? <img src={logoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <Building2 size={40} color="#E5E7EB" />}
             </div>
-          </div>
-        )}
+            <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#111827', margin: 0 }}>{maskName(vendor.companyName)}</h1>
+         </div>
+      </div>
 
-        {activeTab === 'info' && (
-          <div style={{ padding: 64, background: '#fff', borderRadius: 4, border: '1px solid #E5E7EB' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80 }}>
-              <div>
-                <h3 style={{ fontSize: 32, fontWeight: 800, color: '#111827', margin: '0 0 32px' }}>Notre Mission</h3>
-                <p style={{ color: '#475569', fontSize: 18, lineHeight: 1.8, marginBottom: 48 }}>{vendor.description || "Nous sommes engagés à fournir les meilleurs produits pour les professionnels de la restauration et du café en Tunisie."}</p>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', marginBottom: 12 }}>Contact</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#111827', fontWeight: 600 }}>
-                          <Phone size={18} /> {vendor.phone}
+      {/* ── Vendor Navigation Bar ── */}
+      <div style={{ background: accentColor, color: '#fff' }}>
+         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex' }}>
+               {navItems.map(item => (
+                 <button 
+                  key={item} 
+                  onClick={() => setActiveTab(item)}
+                  style={{ 
+                    padding: '16px 24px', 
+                    background: activeTab === item ? primaryColor : 'transparent', 
+                    border: 'none', 
+                    color: '#fff', 
+                    fontSize: '14px', 
+                    fontWeight: 700, 
+                    cursor: 'pointer',
+                    transition: 'background 0.2s'
+                  }}
+                 >
+                   {item}
+                 </button>
+               ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', background: '#fff', borderRadius: '4px', padding: '0 12px', height: '36px', width: '300px' }}>
+               <input type="text" placeholder="Rechercher dans cette boutique..." style={{ flex: 1, border: 'none', outline: 'none', fontSize: '13px', color: '#111827' }} />
+               <Search size={16} color="#64748B" />
+            </div>
+         </div>
+      </div>
+
+      {/* ── Hero Banner ── */}
+      <div style={{ width: '100%', height: '400px', position: 'relative', overflow: 'hidden' }}>
+         <img src={bannerUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+         <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '8px' }}>
+            {[1,2,3].map(i => <div key={i} style={{ width: '10px', height: '10px', borderRadius: '50%', background: i === 1 ? primaryColor : '#fff', opacity: i === 1 ? 1 : 0.5 }} />)}
+         </div>
+      </div>
+
+      {/* ── Main Content Area ── */}
+      <main style={{ maxWidth: '1400px', margin: '48px auto', padding: '0 24px' }}>
+         
+         {activeTab === 'Home' && (
+           <div style={{ display: 'flex', flexDirection: 'column', gap: '64px' }}>
+              {Object.entries(productsByCategory).map(([catId, items]: [string, any]) => (
+                <section key={catId} style={{ background: '#fff', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr' }}>
+                    <div style={{ background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)', padding: '40px 32px', borderRight: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                      <div>
+                        <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', margin: '0 0 8px' }}>
+                          {catId === 'Other' ? 'Notre Sélection' : (categoryMap[catId] || 'Collection')}
+                        </h2>
+                        <div style={{ width: '40px', height: '4px', background: primaryColor, borderRadius: '2px' }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Collections</span>
+                        {['All', 'Best Sellers', 'New Arrivals', 'Promotion', 'Liquidation'].map(tag => {
+                          const isSelected = (activeCollection[catId] || 'All') === tag;
+                          return (
+                            <div key={tag} onClick={() => setActiveCollection(prev => ({ ...prev, [catId]: tag }))} style={{ fontSize: '15px', color: isSelected ? primaryColor : '#475569', cursor: 'pointer', fontWeight: isSelected ? 800 : 700, display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}>
+                              <ChevronRight size={14} strokeWidth={isSelected ? 3 : 2} /> {tag}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1px', background: '#E5E7EB' }}>
+                      {items.filter((p: any) => (activeCollection[catId] || 'All') === 'All' || Math.random() > 0.3).slice(0, 8).map((p: any) => (
+                        <div key={p.id} style={{ background: '#fff', padding: '24px', transition: 'all 0.2s' }}>
+                          <MarketplaceProductCard product={p} isVendor={isVendor} hidePrice={isVendor} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              ))}
+           </div>
+         )}
+
+         {activeTab === 'Franchises' && (
+           <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '32px', height: '700px' }}>
+              <div style={{ background: '#fff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #E5E7EB', position: 'relative' }}>
+                 <div ref={mapContainerRef} style={{ width: '100%', height: '100%', zIndex: 1 }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'hidden' }}>
+                 <div style={{ paddingBottom: '16px', borderBottom: '1px solid #E5E7EB' }}>
+                   <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#111827', margin: '0 0 12px' }}>Points de Vente</h3>
+                   <div style={{ position: 'relative' }}>
+                      <input 
+                        type="text" 
+                        placeholder="Chercher un article en stock..." 
+                        value={stockSearch}
+                        onChange={e => setStockSearch(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: '12px', border: '1px solid #E5E7EB', fontSize: '13px', outline: 'none' }}
+                      />
+                      <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+                   </div>
+                 </div>
+
+                 <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
+                   {(vendor.posList || []).map((pos: any) => (
+                     <div 
+                      key={pos.id} 
+                      onClick={() => {
+                        setSelectedPos(pos);
+                        if (mapRef.current && pos.lat && pos.lng) {
+                          mapRef.current.setView([pos.lat, pos.lng], 14);
+                        }
+                      }}
+                      style={{ 
+                        background: selectedPos?.id === pos.id ? '#fff' : '#F9FAFB', 
+                        padding: '16px', 
+                        borderRadius: '20px', 
+                        border: selectedPos?.id === pos.id ? `2px solid ${primaryColor}` : '1px solid #E5E7EB',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                     >
+                       <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#111827', margin: '0 0 4px' }}>{pos.name}</h4>
+                       <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                         <MapPin size={12} /> {pos.address || pos.city}
+                       </p>
+                       
+                       <div style={{ background: '#fff', padding: '10px', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                             {(pos.stockItems || [])
+                               .filter((s: any) => {
+                                 const vp = vendor.vendorProducts.find((p: any) => p.id === s.vendorProductId);
+                                 if (!vp) return false;
+                                 if (!stockSearch) return true;
+                                 return vp.name.toLowerCase().includes(stockSearch.toLowerCase());
+                               })
+                               .slice(0, selectedPos?.id === pos.id ? 10 : 3)
+                               .map((s: any) => {
+                                 const vp = vendor.vendorProducts.find((p: any) => p.id === s.vendorProductId);
+                                 const qty = Number(s.quantity);
+                                 return (
+                                   <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                     <span style={{ fontSize: '11px', fontWeight: 600, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{vp?.name}</span>
+                                     <span style={{ fontSize: '11px', fontWeight: 800, color: qty > 0 ? '#10B981' : '#EF4444' }}>{qty} {vp?.unit}</span>
+                                   </div>
+                                 );
+                               })}
+                             {(!stockSearch && (pos.stockItems?.length || 0) > (selectedPos?.id === pos.id ? 10 : 3)) && (
+                               <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 700, textAlign: 'center', display: 'block', paddingTop: '4px' }}>
+                                 {selectedPos?.id === pos.id ? `+ ${(pos.stockItems?.length || 0) - 10} autres` : `Voir les ${pos.stockItems?.length} articles`}
+                               </span>
+                             )}
+                             {(stockSearch && pos.stockItems?.length === 0) && <span style={{ fontSize: '10px', color: '#94A3B8', textAlign: 'center' }}>Aucun article trouvé</span>}
+                          </div>
                        </div>
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', marginBottom: 12 }}>Siège Social</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#111827', fontWeight: 600 }}>
-                       <MapPin size={18} /> {vendor.city}
-                    </div>
-                  </div>
-                </div>
+                     </div>
+                   ))}
+                 </div>
               </div>
+           </div>
+         )}
 
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', marginBottom: 16 }}>Localisation de l'établissement</div>
-                <div ref={mapContainerRef} style={{ width: '100%', height: '400px', borderRadius: 4, border: '1px solid #E5E7EB', overflow: 'hidden', zIndex: 1 }} />
-              </div>
+         {activeTab === 'Products' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '24px' }}>
+               {products.map((p: any) => <MarketplaceProductCard key={p.id} product={p} isVendor={isVendor} hidePrice={isVendor} />)}
             </div>
-          </div>
-        )}
-      </div>
+         )}
+      </main>
 
       <MarketplaceFooter />
+
+      <style jsx global>{`
+        .hover-shadow-premium:hover { box-shadow: 0 12px 24px rgba(0,0,0,0.1); transform: translateY(-4px); }
+      `}</style>
     </div>
   );
 }

@@ -1,0 +1,482 @@
+'use client';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import {
+  ShoppingBag, Store, ChevronRight, Sparkles, Percent, Award, Package,
+  Navigation, MapPin, Search, Heart, ShoppingCart, ArrowLeft, LayoutGrid
+} from 'lucide-react';
+import { useCart } from './CartContext';
+import MarketplaceHeader from './components/MarketplaceHeader';
+import MarketplaceFooter from './components/MarketplaceFooter';
+import './marketplace-mic.css';
+import { sanitizeUrl } from '../lib/imageUtils';
+
+/* ─── Helpers ─── */
+const fmt = (n: any) => Number(n).toFixed(3);
+
+const getMockDistance = (vendorId: string) => {
+  if (!vendorId) return 5;
+  const s = String(vendorId);
+  const sum = s.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return (sum % 12) + 5; 
+};
+
+const tunisianCities = [
+  "Tunis", "Ariana", "Ben Arous", "Manouba", "Nabeul", "Zaghouan", "Bizerte",
+  "Béja", "Jendouba", "Le Kef", "Siliana", "Kairouan", "Kasserine", "Sidi Bouzid",
+  "Sousse", "Monastir", "Mahdia", "Sfax", "Gafsa", "Tozeur", "Kebili", "Gabès",
+  "Medenine", "Tataouine"
+];
+
+/* ─── Components ─── */
+function Stars({ avg = 0, total = 0, size = 12 }: any) {
+  if (!total) return <span className="mkt-cocote-stars-empty">Nouveau vendeur</span>;
+  return (
+    <div className="mkt-cocote-stars">
+      <span className="mkt-cocote-stars-star">★</span>
+      <span className="mkt-cocote-stars-avg">{Number(avg).toFixed(1)}</span>
+      <span className="mkt-cocote-stars-total">({total})</span>
+    </div>
+  );
+}
+
+function ProductCard({ product, onAdd, isVendor }: any) {
+  const [showBranches, setShowBranches] = React.useState(false);
+  const avg = product.vendor?.ratings?.overallAvg || 0;
+  const total = product.vendor?.ratings?.totalReviews || 0;
+  const hasDiscount = product.discountPrice && product.discountPrice < product.price;
+  
+  const branches = product.vendor?.branches || [];
+  const isMultiFranchise = branches.length > 1;
+  
+  let minDistance = product.distance || 0;
+  if (minDistance === 0) {
+    const distances = branches.length > 0 
+      ? branches.map((b: any) => getMockDistance(b.id || product.vendorId))
+      : [getMockDistance(product.vendorId)];
+    minDistance = Math.min(...distances);
+  }
+  
+  const formattedDistance = typeof minDistance === 'number' ? minDistance.toFixed(1) : minDistance;
+  
+  const isPremium = product.vendor?.email === 'vendor3@cafe.tn' || product.isFeatured;
+  const vendorLogo = product.vendor?.customization?.logoUrl ?? undefined;
+
+  return (
+    <div className={`mkt-cocote-card group ${isPremium ? 'is-premium' : ''}`}>
+      <Link href={`/marketplace/product/${product.id}`} className="mkt-cocote-card-img-wrap">
+        <img
+          src={sanitizeUrl(product.image) ?? 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'}
+          alt={product.name}
+          className="mkt-cocote-card-img"
+        />
+        {isPremium && (
+          <div className="mkt-cocote-premium-badge">
+            <Sparkles size={10} /> {isMultiFranchise ? 'Multi-Franchise' : 'Premium'}
+          </div>
+        )}
+        {hasDiscount && <span className="mkt-cocote-badge-discount">-{Math.round((1 - product.discountPrice/product.price)*100)}%</span>}
+        <button className="mkt-cocote-wish" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+          <Heart size={16} />
+        </button>
+      </Link>
+      <div className="mkt-cocote-card-body">
+        <div className="mkt-cocote-card-meta">
+          <Link href={`/marketplace/vendor/${product.vendor?.id}`} className="mkt-cocote-vendor-link">
+            <Store size={12} /> {product.vendor?.companyName}
+          </Link>
+          <span className="mkt-cocote-distance">
+            <Navigation size={10} /> {formattedDistance} km
+          </span>
+        </div>
+
+        {(product.mktCategory || product.categoryName) && (
+          <div className="mkt-cocote-card-cat">
+            {product.mktCategory?.name || product.categoryName}
+          </div>
+        )}
+
+        <Link href={`/marketplace/product/${product.id}`} className="mkt-cocote-card-link">
+          <h3 className="mkt-cocote-card-title">{product.name}</h3>
+        </Link>
+
+        <Stars avg={avg} total={total} size={11} />
+        
+        <div className="mkt-cocote-card-footer">
+          <div className="mkt-cocote-price-wrap">
+            {hasDiscount && <span className="mkt-cocote-old-price">{fmt(product.price)}</span>}
+            <span className="mkt-cocote-price">{fmt(hasDiscount ? product.discountPrice : product.price)}</span>
+            <span className="mkt-cocote-unit">DT</span>
+          </div>
+          {!isVendor && (
+            <button className="mkt-cocote-add-btn" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAdd(product); }}>
+              <ShoppingCart size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VendorCard({ vendor, distance }: any) {
+  const avg = vendor.ratings?.overallAvg || 0;
+  const total = vendor.ratings?.totalReviews || 0;
+  const logo = vendor.customization?.logoUrl ? sanitizeUrl(vendor.customization.logoUrl) : null;
+
+  return (
+    <Link href={`/marketplace/vendor/${vendor.id}`} className="mkt-cocote-vendor-card">
+      <div className="mkt-cocote-vendor-logo">
+        {logo ? (
+          <img src={logo} alt={vendor.companyName} />
+        ) : (
+          <Store size={24} color="#6B7280" />
+        )}
+      </div>
+
+      <div className="mkt-cocote-vendor-info">
+        <h4 className="mkt-cocote-vendor-name">{vendor.companyName}</h4>
+        
+        <div className="mkt-cocote-vendor-meta">
+          <Stars avg={avg} total={total} size={11} />
+          
+          {(vendor.city || vendor.governorate) && (
+            <span className="mkt-cocote-vendor-location">
+              <MapPin size={10} />
+              {vendor.city || vendor.governorate || 'Tunis'}
+              {distance && ` · ${distance} km`}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <ChevronRight size={16} color="#CBD5E1" />
+    </Link>
+  );
+}
+
+/* ── Helpers ── */
+const CATEGORY_IMAGES: Record<string, string> = {
+  'matieres-premieres': 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=600',
+  'produits-semi-finis': 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=600',
+  'produits-finis-b2b-revente': 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?q=80&w=600',
+  'equipements-materiel': 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=600',
+  'emballages': 'https://images.unsplash.com/photo-1589939705384-5185138a04b9?q=80&w=600',
+  'hygiene-nettoyage': 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=600',
+  'services': 'https://images.unsplash.com/photo-1521791136366-39851946a095?q=80&w=600',
+};
+
+const getCategoryImage = (cat: any) => {
+  if (cat.image) return cat.image;
+  return CATEGORY_IMAGES[cat.slug] || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=600';
+};
+
+/* ─── MAIN CLIENT ─── */
+export default function MarketplaceClient({ initialData, isVendor = false }: { initialData: any; isVendor?: boolean }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentRadius = parseInt(searchParams.get('radius') || '500');
+  const currentLocation = searchParams.get('loc') || 'Tunis';
+  const search = searchParams.get('search') || '';
+  
+  const { products = [], categories = [], flashSales = [], banners = [] } = initialData || {};
+  
+  const mainHero = banners.find((b: any) => b.position === 'HERO');
+  const heroAds = banners.filter((b: any) => b.position !== 'HERO' && b.position?.startsWith('ADS_')).slice(0, 2);
+
+  const { addToCart, cartCount } = useCart();
+
+  // Derived Data
+  const vendorsMap = new Map();
+  products.forEach((p: any) => { if (p.vendor) vendorsMap.set(p.vendor.id, p.vendor); });
+  const vendors = Array.from(vendorsMap.values());
+  
+  const brands = useMemo(() => {
+    const bSet = new Set<string>();
+    products.forEach((p: any) => { if (p.brand) bSet.add(p.brand); });
+    return Array.from(bSet).slice(0, 12);
+  }, [products]);
+
+  const promosLocales = flashSales.length > 0 ? flashSales : products.filter((p: any) => p.discountPrice).slice(0, 5);
+  const displayPromos = promosLocales.length > 0 ? promosLocales : products.slice(0, 5);
+
+  const searchType = searchParams.get('type') || 'all';
+
+  const searchResultsProducts = search && (searchType === 'all' || searchType === 'products')
+    ? products.filter((p: any) => p.name.toLowerCase().includes(search.toLowerCase()) || p.vendor?.companyName?.toLowerCase().includes(search.toLowerCase()))
+    : [];
+
+  const searchResultsVendors = search && (searchType === 'all' || searchType === 'vendors')
+    ? vendors.filter((v: any) => v.companyName?.toLowerCase().includes(search.toLowerCase()))
+    : [];
+
+  return (
+    <div className="mkt-page cocote-theme">
+       
+      <MarketplaceHeader isVendor={isVendor} categories={categories} />
+
+      {/* Hero / Concept Banner */}
+      {!search && (
+        <div 
+          className="mkt-cocote-hero"
+          style={{ backgroundImage: `url('${mainHero?.imageUrl ? sanitizeUrl(mainHero.imageUrl) : 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1400'}')` }}
+        >
+          <div className="mkt-cocote-hero-overlay" />
+          <div className="mkt-cocote-hero-content">
+            {mainHero?.badgeText && (
+              <span className="mkt-cocote-hero-badge" style={{ background: mainHero.bgColor || '#6366F1' }}>{mainHero.badgeText}</span>
+            )}
+            <h1 className="mkt-cocote-hero-title">{mainHero?.title || 'Le Marché B2B de Proximité'}</h1>
+            <p className="mkt-cocote-hero-subtitle">{mainHero?.subtitle || 'Commandez en gros auprès des fournisseurs de votre région.'}</p>
+            {mainHero?.buttonText && mainHero?.buttonLink && (
+              <a href={mainHero.buttonLink} className="mkt-cocote-hero-btn">
+                {mainHero.buttonText}
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Banners from Superadmin */}
+      {heroAds.length > 0 && !search && (
+        <div className="mkt-container mkt-cocote-banners">
+          <div className={`mkt-cocote-banners-grid ${heroAds.length === 2 ? 'mkt-cocote-banners-2' : ''}`}>
+            {heroAds.map((ad: any) => (
+              <a key={ad.id} href={ad.buttonLink || '#'} target="_blank" rel="noopener noreferrer" className="mkt-cocote-banner-link">
+                <img src={sanitizeUrl(ad.imageUrl) || ''} alt={ad.title} className="mkt-cocote-banner-img" />
+                <div className="mkt-cocote-banner-overlay">
+                  {ad.badgeText && <span className="mkt-cocote-banner-badge" style={{ background: ad.bgColor || '#6366F1' }}>{ad.badgeText}</span>}
+                  <h3 className="mkt-cocote-banner-title">{ad.title}</h3>
+                  {ad.subtitle && <p className="mkt-cocote-banner-text">{ad.subtitle}</p>}
+                  {ad.buttonText && <span className="mkt-cocote-banner-link-text">{ad.buttonText}</span>}
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="mkt-container mkt-cocote-main">
+
+        {search && (
+          <div className="mkt-cocote-search-results">
+            <h2 className="mkt-cocote-search-title">Résultats pour "{search}"</h2>
+            
+            {searchResultsVendors.length > 0 && (
+              <div className="mkt-cocote-search-section">
+                <h3 className="mkt-cocote-search-subtitle"><Store size={18} /> Vendeurs correspondants</h3>
+                <div className="mkt-cocote-vendor-grid">
+                  {searchResultsVendors.map((v: any) => (
+                    <VendorCard key={v.id} vendor={v} distance={v.distance || getMockDistance(v.id)} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {searchResultsProducts.length > 0 && (
+              <div className="mkt-cocote-search-section">
+                <h3 className="mkt-cocote-search-subtitle"><ShoppingBag size={18} /> Produits correspondants</h3>
+                <div className="mkt-cocote-grid">
+                  {searchResultsProducts.map((p: any) => (
+                    <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {searchResultsVendors.length === 0 && searchResultsProducts.length === 0 && (
+              <div className="mkt-cocote-empty">
+                <Search size={48} className="mkt-cocote-empty-icon" />
+                <h3 className="mkt-cocote-empty-title">Aucun résultat trouvé</h3>
+                <p className="mkt-cocote-empty-text">Essayez de modifier votre recherche ou de changer le type de filtre.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Sélections Stratégiques */}
+        {!search && (
+          <section className="mkt-cocote-section">
+            <div className="mkt-cocote-section-header-center">
+              <div className="mkt-cocote-section-label">
+                <Sparkles size={14} /> Solutions Métiers
+              </div>
+              <h2 className="mkt-cocote-section-title-lg">Expertise & Solutions Professionnelles</h2>
+              <p className="mkt-cocote-section-desc">Des sélections stratégiques conçues par nos experts pour maximiser la rentabilité de votre établissement.</p>
+            </div>
+            
+            <div className="mkt-cocote-selection-grid">
+               
+              {/* Card 1: Pack Ouverture */}
+              <Link href="/marketplace?q=starter" className="mkt-cocote-selection-card">
+                <div className="mkt-cocote-selection-icon">
+                  <Package size={32} />
+                </div>
+                <div className="mkt-cocote-selection-label">Optimisation de lancement</div>
+                <h3 className="mkt-cocote-selection-title">Pack Ouverture & Relance</h3>
+                <p className="mkt-cocote-selection-desc">L'essentiel des équipements et du stock initial pour démarrer votre activité en toute sérénité.</p>
+                <div className="mkt-cocote-selection-link">
+                  Voir la sélection <ChevronRight size={14} />
+                </div>
+              </Link>
+
+              {/* Card 2: Top Pâtisserie */}
+              <Link href="/marketplace?q=premium" className="mkt-cocote-selection-card">
+                <div className="mkt-cocote-selection-icon">
+                  <Award size={32} />
+                </div>
+                <div className="mkt-cocote-selection-label">Sélection d'exception</div>
+                <h3 className="mkt-cocote-selection-title">Ingrédients Pâtisserie Premium</h3>
+                <p className="mkt-cocote-selection-desc">Chocolats de couverture, beurres techniques et purées de fruits pour les professionnels exigeants.</p>
+                <div className="mkt-cocote-selection-link">
+                  Explorer les produits <ChevronRight size={14} />
+                </div>
+              </Link>
+
+              {/* Card 3: Bundles Barista */}
+              <Link href="/marketplace?category=bundles" className="mkt-cocote-selection-card">
+                <div className="mkt-cocote-selection-icon">
+                  <ShoppingBag size={32} />
+                </div>
+                <div className="mkt-cocote-selection-label">Économie de volume</div>
+                <h3 className="mkt-cocote-selection-title">Packs Barista & Consommables</h3>
+                <p className="mkt-cocote-selection-desc">Réduisez vos coûts d'exploitation avec nos bundles optimisés sur les gobelets, pailles et laits.</p>
+                <div className="mkt-cocote-selection-link">
+                  Voir les offres en lot <ChevronRight size={14} />
+                </div>
+              </Link>
+               
+            </div>
+          </section>
+        )}
+
+        {/* Promos Locales */}
+        {!search && (
+          <section className="mkt-cocote-section">
+            <div className="mkt-cocote-section-header">
+              <h2 className="mkt-cocote-section-title"><Percent size={20} /> Promos Locales</h2>
+              {displayPromos.length > 0 && <Link href="/marketplace" className="mkt-cocote-see-all">Voir tout <ChevronRight size={14} /></Link>}
+            </div>
+            {displayPromos.length > 0 ? (
+              <div className="mkt-cocote-grid">
+                {displayPromos.map((p: any) => (
+                  <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />
+                ))}
+              </div>
+            ) : (
+              <div className="mkt-cocote-empty-promo">
+                <div className="mkt-cocote-empty-promo-content">
+                  <div className="mkt-cocote-empty-promo-icon"><Sparkles size={32} /></div>
+                  <div>
+                    <h3>Prochainement : Nouvelles offres locales</h3>
+                    <p>Découvrez bientôt des promotions exclusives de vos commerçants de proximité.</p>
+                  </div>
+                </div>
+                <button className="mkt-cocote-empty-promo-btn">Être notifié</button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Commerces de Proximité */}
+        {!search && (
+          <section className="mkt-cocote-section">
+            <div className="mkt-cocote-section-header">
+              <h2 className="mkt-cocote-section-title"><Store size={20} /> Commerces de proximité</h2>
+              <Link href="/marketplace/vendors" className="mkt-cocote-see-all">Explorer <ChevronRight size={14} /></Link>
+            </div>
+            <div className="mkt-cocote-vendor-grid">
+              {vendors.slice(0, 6).map((v: any, i: number) => (
+                <VendorCard key={v.id} vendor={v} distance={v.distance || getMockDistance(v.id)} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Catégories Populaires */}
+        {!search && (
+          <section className="mkt-cocote-section">
+            <div className="mkt-cocote-section-header-center">
+              <h2 className="mkt-cocote-section-title-lg">Explorez nos univers</h2>
+              <p className="mkt-cocote-section-desc">Découvrez les meilleures sélections par métier.</p>
+            </div>
+            <div className="mkt-cocote-category-grid">
+              {categories.slice(0, 8).map((cat: any) => {
+                const href = `/marketplace/category/${cat.slug || cat.id}`;
+                const img = getCategoryImage(cat);
+                
+                return (
+                  <Link 
+                    key={cat.id} 
+                    href={href}
+                    className="mkt-cocote-category-card"
+                  >
+                    <img 
+                      src={img} 
+                      className="mkt-cocote-category-img" 
+                      alt={cat.name} 
+                    />
+                    <div className="mkt-cocote-category-overlay" />
+                    <div className="mkt-cocote-category-content">
+                      <div className="mkt-cocote-category-icon">{cat.icon || '📦'}</div>
+                      <h3 className="mkt-cocote-category-name">{cat.name}</h3>
+                      <p className="mkt-cocote-category-link">Voir les produits</p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Meilleures Ventes */}
+        {!search && (
+          <section className="mkt-cocote-section">
+            <div className="mkt-cocote-section-header">
+              <h2 className="mkt-cocote-section-title"><Award size={20} /> Meilleures ventes autour de vous</h2>
+            </div>
+            <div className="mkt-cocote-grid">
+              {products.slice(0, 5).map((p: any) => (
+                <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Marques */}
+        {!search && brands.length > 0 && (
+          <section className="mkt-cocote-section">
+            <h2 className="mkt-cocote-section-title">Les marques les plus recherchées</h2>
+            <div className="mkt-cocote-brands">
+              {brands.map((b: string) => (
+                <Link key={b} href={`/marketplace?brand=${encodeURIComponent(b)}`} className="mkt-cocote-brand-tag">
+                  {b}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Villes */}
+        {!search && (
+          <section className="mkt-cocote-section">
+            <h2 className="mkt-cocote-section-title"><MapPin size={20} /> Découvrez les commerces par région</h2>
+            <div className="mkt-cocote-cities-grid">
+              {tunisianCities.map(city => (
+                <Link key={city} href={`/marketplace?loc=${encodeURIComponent(city)}`} className="mkt-cocote-city-link">
+                  {city}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+      </div>
+
+      <MarketplaceFooter />
+    </div>
+  );
+}

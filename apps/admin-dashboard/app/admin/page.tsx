@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { 
   ShoppingCart, ShoppingBag, TrendingUp, AlertTriangle, Coffee, ArrowRight, Package, 
   Layers, Users, Zap, ArrowUpRight, User, Wallet, Truck, Boxes, FileText, 
-  Settings, Activity, LayoutGrid 
+  Settings, Activity, LayoutGrid, Star 
 } from 'lucide-react';
 
 import { redirect } from 'next/navigation';
@@ -48,7 +48,14 @@ export default async function AdminDashboardPage() {
 
   const recentSales = await prisma.sale.findMany({
     where: { storeId: store.id },
-    include: { barista: true, takenBy: true, items: { include: { product: true } } },
+    select: {
+      id: true,
+      total: true,
+      createdAt: true,
+      barista: { select: { id: true, name: true } },
+      takenBy: { select: { id: true, name: true } },
+      items: { include: { product: true } }
+    },
     orderBy: { createdAt: 'desc' },
     take: 6,
   });
@@ -104,6 +111,33 @@ export default async function AdminDashboardPage() {
           <h1 style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-1px' }}>Bonjour, {store.name} 👋</h1>
           <p style={{ fontSize: '15px', color: '#64748B', marginTop: '6px', fontWeight: 500 }}>Voici l'état de performance de votre établissement aujourd'hui.</p>
         </div>
+
+        {/* Marketplace Preview Banner */}
+        <Link href="/marketplace" style={{ 
+          flex: 1, 
+          maxWidth: '500px',
+          background: 'linear-gradient(135deg, #E31E24 0%, #991B1B 100%)', 
+          borderRadius: '20px', 
+          padding: '20px 24px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          textDecoration: 'none',
+          color: '#fff',
+          boxShadow: '0 10px 25px rgba(227, 30, 36, 0.2)',
+          border: '1px solid rgba(255,255,255,0.1)'
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <Star size={16} fill="#fff" />
+              <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Aperçu Marketplace B2B</span>
+            </div>
+            <div style={{ fontSize: '18px', fontWeight: 900 }}>Accès Grossistes Direct</div>
+          </div>
+          <div style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ArrowRight size={20} />
+          </div>
+        </Link>
         <div style={{ display: 'flex', gap: '12px' }}>
           <Link href="/admin/metrics" className="btn" style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid #E2E8F0', color: '#1E293B', fontWeight: 700 }}>
              <TrendingUp size={16} /> Analyser
@@ -259,6 +293,7 @@ export default async function AdminDashboardPage() {
             { label: 'Reporting & Clôtures', sub: 'Exports & Rapports', icon: FileText, color: '#EC4899', href: '/admin/reports', bg: '#FDF2F8', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
             { label: 'Dépenses & Finance', sub: 'Suivi des coûts nets', icon: Wallet, color: '#06B6D4', href: '/admin/expenses', bg: '#ECFEFF', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
             { label: 'Live Tracker', sub: 'Ventes en temps réel', icon: Activity, color: '#EF4444', href: '/admin/live', bg: '#FEF2F2', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
+            { label: 'Abonnement & Wallet', sub: 'Gérer mon solde & plan', icon: Wallet, color: '#8B5CF6', href: '/admin/subscription', bg: '#F5F3FF', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
             { label: 'Configuration', sub: 'Paramètres & Terminaux', icon: Settings, color: '#64748B', href: '/admin/configuration', bg: '#F8FAFC', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
           ].filter(m => !m.industries || m.industries.includes((store as any).industry || 'COFFEE_SHOP')).map((mod, i) => (
             <Link key={i} href={mod.href} style={{ 

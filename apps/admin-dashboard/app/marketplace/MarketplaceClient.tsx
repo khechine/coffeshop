@@ -1,551 +1,1137 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import {
-  ShoppingCart, ShoppingBag, Search, X, Plus, Heart, 
-  ChevronRight, ArrowRight, LayoutGrid, MapPin, Store, 
-  Tag, Award, Navigation, Percent, Sparkles, Package
+import { useRouter, useSearchParams } from 'next/navigation';
+import { 
+  Search, Menu, ChevronRight, ChevronLeft, ChevronDown,
+  User, MessageSquare, HelpCircle, Smartphone, 
+  Languages, ShoppingBag, ShieldCheck, Trophy, 
+  Users, ArrowRight, Grid, Camera, Star,
+  CheckCircle2, Globe, Rocket, Heart, ShoppingCart,
+  Target, ShieldAlert, Zap, Headphones, ArrowUp,
+  FileText, Calendar, Leaf, MapPin, Award
 } from 'lucide-react';
+import { useVault } from './VaultContext';
 import { useCart } from './CartContext';
+import { sanitizeUrl } from '../lib/imageUtils';
+import MarketplaceProductCard from './components/MarketplaceProductCard';
 import MarketplaceHeader from './components/MarketplaceHeader';
 import MarketplaceFooter from './components/MarketplaceFooter';
-import './marketplace.css';
-import { sanitizeUrl } from '../lib/imageUtils';
+import MarketplaceRFQModal from './components/MarketplaceRFQModal';
+import MarketplaceMobile from './components/MarketplaceMobile';
+import MarketplaceReferralModal from './components/MarketplaceReferralModal';
+import './marketplace-responsive.css';
 
-/* ─── Helpers ─── */
-const fmt = (n: any) => Number(n).toFixed(3);
-
-const getMockDistance = (vendorId: string) => {
-  if (!vendorId) return 5;
-  const s = String(vendorId);
-  const sum = s.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return (sum % 12) + 5; 
+const normalize = (str: string) => {
+  if (!str) return '';
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
-const tunisianCities = [
-  "Tunis", "Ariana", "Ben Arous", "Manouba", "Nabeul", "Zaghouan", "Bizerte",
-  "Béja", "Jendouba", "Le Kef", "Siliana", "Kairouan", "Kasserine", "Sidi Bouzid",
-  "Sousse", "Monastir", "Mahdia", "Sfax", "Gafsa", "Tozeur", "Kebili", "Gabès",
-  "Medenine", "Tataouine"
-];
+/* --- UI Components --- */
+const BannerBadge = ({ children, color = '#E31E24' }: any) => (
+  <span style={{ 
+    background: color, 
+    color: '#fff', 
+    padding: '4px 12px', 
+    borderRadius: '100px', 
+    fontSize: '11px', 
+    fontWeight: 800, 
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em'
+  }}>
+    {children}
+  </span>
+);
 
-/* ─── Components ─── */
-function Stars({ avg = 0, total = 0, size = 12 }: any) {
-  if (!total) return <span style={{ fontSize: size, color: '#94A3B8', fontWeight: 600 }}>Nouveau vendeur</span>;
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <span style={{ color: '#10B981', fontSize: size }}>★</span>
-      <span style={{ fontSize: size, fontWeight: 700, color: '#1E293B' }}>{Number(avg).toFixed(1)}</span>
-      <span style={{ fontSize: size - 1, color: '#64748B' }}>({total})</span>
-    </div>
-  );
-}
 
-function ProductCard({ product, onAdd, isVendor }: any) {
-  const [showBranches, setShowBranches] = React.useState(false);
-  const avg = product.vendor?.ratings?.overallAvg || 0;
-  const total = product.vendor?.ratings?.totalReviews || 0;
-  const hasDiscount = product.discountPrice && product.discountPrice < product.price;
+export default function MarketplaceClient({ initialData, store, blogPosts = [], user }: { initialData: any; store?: any; blogPosts?: any[]; user?: any }) {
+  const { addToCart } = useCart();
+  const isVendor = user?.role === 'VENDOR';
+  const hidePrices = isVendor;
+  const [rfqOpen, setRfqOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  const { categories = [], products = [], banners = [] } = initialData || {};
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchScope, setSearchScope] = useState('PRODUCT');
+  const [shuffledTags, setShuffledTags] = useState<string[]>([]);
+  const [homeTab, setHomeTab] = useState('Top Ventes');
+  const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
+  const [showReferralModal, setShowReferralModal] = useState(false);
   
-    const branches = product.vendor?.branches || [];
-    const isMultiFranchise = branches.length > 1;
+  // Advanced Filters State
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [minRating, setMinRating] = useState<number>(0);
+
+  const router = useRouter();
+
+  // URL State
+  const searchParams = useSearchParams();
+  const urlSearch = searchParams.get('search');
+  const urlScope = searchParams.get('scope') || 'PRODUCT';
+  const urlRadius = searchParams.get('radius') || 'all';
+
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!searchQuery.trim()) return;
+    router.push(`/marketplace?search=${encodeURIComponent(searchQuery.trim())}&scope=${searchScope}`);
+  };
+
+  const searchData = useMemo(() => {
+    if (!urlSearch) return { results: [], totalFound: 0, outsideRadius: 0 };
+    const q = normalize(urlSearch);
     
-    // Calculate nearest distance if branches exist
-    let minDistance = product.distance || 0;
-    if (minDistance === 0) {
-      const distances = branches.length > 0 
-        ? branches.map((b: any) => getMockDistance(b.id || product.vendorId))
-        : [getMockDistance(product.vendorId)];
-      minDistance = Math.min(...distances);
+    // 500km is treated as National (Infinity) to avoid confusion with null distances
+    const maxD = (urlRadius === 'all' || urlRadius === '500') ? Infinity : parseFloat(urlRadius);
+
+    let allMatches = [];
+    if (urlScope === 'PRODUCT') {
+      const productMatches = products.filter((p: any) => 
+        normalize(p.name).includes(q) || 
+        normalize(p.description || '').includes(q) ||
+        normalize(p.vendor?.companyName || '').includes(q)
+      );
+      const bundleMatches = (initialData.bundles || []).filter((b: any) => 
+        normalize(b.name).includes(q) || 
+        normalize(b.description || '').includes(q) ||
+        normalize(b.vendor?.companyName || '').includes(q)
+      ).map((b: any) => ({ ...b, isBundle: true }));
+      allMatches = [...productMatches, ...bundleMatches];
+    } else if (urlScope === 'VENDOR') {
+      const vendors = Array.from(new Set(products.map((p: any) => p.vendor?.id)))
+        .map(id => products.find((p: any) => p.vendor?.id === id)?.vendor)
+        .filter(Boolean);
+      allMatches = vendors.filter((v: any) => normalize(v.companyName).includes(q));
+    } else if (urlScope === 'CATEGORY') {
+      const allCats: any[] = [];
+      const traverse = (cats: any[]) => {
+        cats.forEach(c => {
+          allCats.push(c);
+          if (c.children) traverse(c.children);
+        });
+      };
+      traverse(categories);
+      allMatches = allCats.filter((c: any) => normalize(c.name).includes(q));
     }
+
+    const filtered = allMatches.filter((item: any) => {
+      const distMatch = maxD === Infinity || (item.distance !== null && item.distance <= maxD);
+      const priceMatch = (minPrice === '' || item.price >= parseFloat(minPrice)) && 
+                         (maxPrice === '' || item.price <= parseFloat(maxPrice));
+      const ratingMatch = minRating === 0 || (item.vendor?.ratings?.overallAvg >= minRating);
+      
+      return distMatch && priceMatch && ratingMatch;
+    });
+
+    return {
+      results: filtered,
+      totalFound: allMatches.length,
+      outsideRadius: allMatches.length - filtered.length,
+      allMatches // For similarity suggestions
+    };
+  }, [urlSearch, urlScope, urlRadius, products, initialData.bundles, categories, minPrice, maxPrice, minRating]);
+
+  const marketplaceSegments = categories;
+
+  const heroBanners = banners.filter((b: any) => b.position === 'HERO');
+  if (heroBanners.length === 0) {
+    heroBanners.push({
+      title: 'Achats Intelligents : Affaires Prêtes',
+      subtitle: 'Vision Globale, Achats Précis, Efficacité Maximale',
+      imageUrl: '/marketplace_hero_banner.png',
+      badgeText: 'B2B Platform'
+    });
+  }
+
+  const [activeBannerIdx, setActiveBannerIdx] = useState(0);
+
+  useEffect(() => {
+    if (heroBanners.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveBannerIdx(prev => (prev + 1) % heroBanners.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [heroBanners.length]);
+
+  useEffect(() => {
+    const names: string[] = [];
+    const traverse = (cats: any[]) => {
+      cats.forEach(cat => {
+        names.push(cat.name);
+        if (cat.children && cat.children.length > 0) {
+          traverse(cat.children);
+        }
+      });
+    };
+    traverse(categories);
     
-    // Explicit format for distance
-    const formattedDistance = typeof minDistance === 'number' ? minDistance.toFixed(1) : minDistance;
-    
-    const isPremium = product.vendor?.email === 'vendor3@cafe.tn' || product.isFeatured;
-    const vendorLogo = product.vendor?.customization?.logoUrl ?? undefined;
-    
-    const locationNames = branches.length > 0 
-      ? branches.map((b: any) => b.city || b.name) 
-      : [product.vendor?.city || 'Tunis'];
+    const finalNames = names.length > 0 ? Array.from(new Set(names)) : ["Nouveautés", "Promotions", "Vérifiés", "Stock"];
+    const shuffled = [...finalNames].sort(() => Math.random() - 0.5);
+    setShuffledTags(shuffled);
+  }, [categories]);
 
-    return (
-      <div className={`mkt-cocote-card group ${isPremium ? 'is-premium' : ''}`} style={isPremium ? { '--premium-color': product.vendor?.customization?.color || '#6366F1' } as any : {}}>
-        <Link href={`/marketplace/product/${product.id}`} className="mkt-cocote-card-img-wrap">
-          <img
-            src={sanitizeUrl(product.image) ?? '/images/elkassa-placeholder.png'}
-            alt={product.name}
-            className="mkt-cocote-card-img"
-          />
-          {isPremium && (
-            <div className="mkt-cocote-premium-badge">
-              <Sparkles size={10} /> {isMultiFranchise ? 'Multi-Franchise' : 'Premium'}
-            </div>
-          )}
-          {isPremium && vendorLogo && (
-            <div className="mkt-cocote-vendor-logo-overlay">
-              <img src={sanitizeUrl(vendorLogo as string) ?? undefined} alt={product.vendor?.companyName} />
-            </div>
-          )}
-          {hasDiscount && <span className="mkt-cocote-badge-discount">-{Math.round((1 - product.discountPrice/product.price)*100)}%</span>}
-          <button className="mkt-cocote-wish"><Heart size={16} /></button>
-        </Link>
-      <div className="mkt-cocote-card-body">
-        <div className="mkt-cocote-card-meta">
-          <Link href={`/marketplace/vendor/${product.vendor?.id}`} className="mkt-cocote-vendor-link" style={{ textTransform: 'uppercase' }}>
-            <Store size={12} /> {product.vendor?.companyName}
-          </Link>
-          <span className="mkt-cocote-distance">
-            <Navigation size={10} /> 
-            {formattedDistance} km
-          </span>
-        </div>
+  // Proximity Filtered Data
+  const maxD = (urlRadius === 'all' || urlRadius === '500') ? Infinity : parseFloat(urlRadius);
+  const filteredProducts = useMemo(() => 
+    products.filter((p: any) => maxD === Infinity || (p.distance !== null && p.distance <= maxD)),
+    [products, maxD]
+  );
+  
+  const historyProducts = filteredProducts.length > 0 ? filteredProducts.slice(0, 7) : [];
 
-        {/* Category Label */}
-        {(product.mktCategory || product.categoryName) && (
-          <div className="text-[9px] font-black uppercase tracking-tighter mb-1" style={{ color: product.mktCategory?.color || '#6366F1', opacity: 0.8 }}>
-            {product.mktCategory?.name || product.categoryName} {product.mktSubcategory ? `› ${product.mktSubcategory.name}` : ''}
-          </div>
-        )}
+  // blog posts from DB or fallback
+  const perspectives = blogPosts.length > 0
+    ? blogPosts.map((p: any, i: number) => ({
+        id: p.id,
+        title: p.title,
+        author: p.author,
+        date: p.publishedAt ? new Date(p.publishedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
+        image: p.coverImage || `https://images.unsplash.com/photo-${['1518770660439-4636190af475','1523170335258-f5ed11844a49','1544244015-0cd4b3ffc6b0','1515562141207-7a88fb7ce338'][i % 4]}?w=200`,
+        slug: p.slug,
+      }))
+    : [
+        { id: 1, title: "Quels sont les avantages des pilotes de moteur pour répondre aux besoin...", author: "Kaylee Watson", date: "05/05/2026", image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=200", slug: null },
+        { id: 2, title: "3 façons d'équilibrer le coût et la fonctionnalité lors du choix d'une...", author: "Jadyn Moyer", date: "05/05/2026", image: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=200", slug: null },
+        { id: 3, title: "Ai-je besoin d'un HDD et d'un SSD ?", author: "Ramon Beasley", date: "05/05/2026", image: "https://images.unsplash.com/photo-1544244015-0cd4b3ffc6b0?w=200", slug: null },
+        { id: 4, title: "Conception de bijoux plaqués or : guide complet...", author: "Joshua Price", date: "05/05/2026", image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=200", slug: null },
+      ];
 
-        <Link href={`/marketplace/product/${product.id}`} style={{ textDecoration: 'none' }}>
-          <h3 className="mkt-cocote-card-title" style={{ textTransform: 'uppercase' }}>{product.name}</h3>
-        </Link>
+  if (isMobile) {
+    return <MarketplaceMobile initialData={initialData} store={store} setRfqOpen={setRfqOpen} blogPosts={blogPosts} isVendor={isVendor} hidePrices={hidePrices} />;
+  }
 
-        {product.tags && product.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            {product.tags.slice(0, 3).map((t: string) => {
-              let bg = '#F8FAFC', color = '#64748B', border = '#E2E8F0';
-              if (t.includes('Éco-responsable') || t.toLowerCase().includes('bio')) {
-                bg = '#F0FDF4'; color = '#166534'; border = '#DCFCE7';
-              } else if (t.includes('Tunisien')) {
-                bg = '#FEF2F2'; color = '#991B1B'; border = '#FEE2E2';
-              }
-              return (
-                <span key={t} style={{ fontSize: 8, fontWeight: 900, textTransform: 'uppercase', background: bg, color: color, padding: '2px 6px', borderRadius: 4, border: `1px solid ${border}` }}>
-                  {t}
-                </span>
-              );
-            })}
-          </div>
-        )}
+  return (
+    <div className="mkt-page" style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', scrollBehavior: 'smooth' }}>
+      
+      <MarketplaceHeader isVendor={isVendor} store={store} allCategories={categories} />
 
-        <Stars avg={avg} total={total} size={11} />
+      {/* Main Layout */}
+      <main className="mkt-main">
         
-        {isPremium && (
-          <div className="relative">
-            <div 
-              className="mkt-cocote-availability-badge cursor-pointer hover:bg-slate-200 transition-colors"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowBranches(!showBranches); }}
-            >
-              <MapPin size={8} /> {isMultiFranchise ? `${branches.length} points de vente` : 'Disponible à'} <span className="mkt-cocote-availability-tag">{locationNames.slice(0, 2).join(', ')}{locationNames.length > 2 ? '...' : ''}</span>
+        {urlSearch ? (
+          <div style={{ minHeight: '60vh' }}>
+            <div className="mkt-search-header">
+              <div>
+                <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: 0 }}>
+                  Résultats pour "{urlSearch}" 
+                </h1>
+                <div style={{ height: '4px', width: '60px', background: '#E31E24', marginTop: '12px', borderRadius: '10px' }} />
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ color: '#111827', fontSize: '18px', fontWeight: 900 }}>
+                  {searchData.results.length} {urlScope.toLowerCase()}s
+                </span>
+                {searchData.outsideRadius > 0 && (
+                  <div style={{ color: '#E31E24', fontSize: '13px', fontWeight: 700, marginTop: '4px' }}>
+                    + {searchData.outsideRadius} hors de votre rayon ({urlRadius} km)
+                  </div>
+                )}
+              </div>
             </div>
 
-            {showBranches && branches.length > 0 && (
-              <div className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-100 p-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 border-bottom pb-2">Nos établissements</div>
-                <div className="flex flex-col gap-3">
-                  {branches.map((b: any, idx: number) => (
-                    <div key={idx} className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                        <MapPin size={10} className="text-indigo-600" />
+            <div className="mkt-search-layout">
+               {/* Sidebar Filters */}
+               <aside className="mkt-search-sidebar">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', color: '#111827' }}>
+                    <Menu size={20} />
+                    <h2 style={{ fontSize: '18px', fontWeight: 900 }}>Filtres</h2>
+                  </div>
+
+                  {/* Distance Filter */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#111827', marginBottom: '16px' }}>Distance</h4>
+                    <select 
+                      value={urlRadius}
+                      onChange={(e) => {
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.set('radius', e.target.value);
+                        router.push(`/marketplace?${params.toString()}`);
+                      }}
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #E5E7EB', fontSize: '13px', fontWeight: 600, outline: 'none' }}
+                    >
+                      <option value="all">Toute la Tunisie</option>
+                      <option value="5">Rayon 5 km</option>
+                      <option value="10">Rayon 10 km</option>
+                      <option value="25">Rayon 25 km</option>
+                      <option value="50">Rayon 50 km</option>
+                      <option value="100">Rayon 100 km</option>
+                      <option value="500">Rayon 500 km</option>
+                    </select>
+                  </div>
+
+                  {/* Price Filter */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#111827', marginBottom: '16px' }}>Prix (DT)</h4>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input 
+                        type="number" 
+                        placeholder="Min" 
+                        value={minPrice}
+                        onChange={(e) => setMinPrice(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E5E7EB', fontSize: '13px', outline: 'none' }}
+                      />
+                      <span style={{ color: '#9CA3AF' }}>-</span>
+                      <input 
+                        type="number" 
+                        placeholder="Max" 
+                        value={maxPrice}
+                        onChange={(e) => setMaxPrice(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E5E7EB', fontSize: '13px', outline: 'none' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Rating Filter */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#111827', marginBottom: '16px' }}>Note Fournisseur</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {[4, 3, 2].map((stars) => (
+                        <label key={stars} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#4B5563' }}>
+                          <input 
+                            type="radio" 
+                            name="rating" 
+                            checked={minRating === stars}
+                            onChange={() => setMinRating(stars)}
+                            style={{ accentColor: '#E31E24' }} 
+                          />
+                          <div style={{ display: 'flex', gap: '2px' }}>
+                            {[...Array(5)].map((_, i) => (
+                              <Star key={i} size={14} fill={i < stars ? "#F59E0B" : "none"} color={i < stars ? "#F59E0B" : "#D1D5DB"} />
+                            ))}
+                          </div>
+                          <span>& plus</span>
+                        </label>
+                      ))}
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#4B5563' }}>
+                        <input 
+                          type="radio" 
+                          name="rating" 
+                          checked={minRating === 0}
+                          onChange={() => setMinRating(0)}
+                          style={{ accentColor: '#E31E24' }} 
+                        />
+                        Toutes les notes
+                      </label>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => { setMinPrice(''); setMaxPrice(''); setMinRating(0); }}
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #E5E7EB', background: 'transparent', color: '#111827', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}
+                  >
+                    Réinitialiser
+                  </button>
+               </aside>
+
+               {/* Results Area */}
+               <section>
+                {searchData.results.length > 0 ? (
+                  <div className={`mkt-grid ${urlScope === 'PRODUCT' ? 'mkt-grid-4' : 'mkt-grid-3'}`}>
+                    {urlScope === 'PRODUCT' && searchData.results.map((p: any) => (
+                      <MarketplaceProductCard 
+                        key={p.id} 
+                        product={p} 
+                        hidePrice={hidePrices}
+                      />
+                    ))}
+
+                    {urlScope === 'VENDOR' && searchData.results.map((v: any) => {
+                      const { maskName, identityVisible } = useVault(v.id, v.isPremium);
+                      return (
+                        <Link 
+                          key={v.id} 
+                          href={`/marketplace/vendor/${v.id}`}
+                          style={{ background: '#fff', borderRadius: '16px', padding: '24px', border: '1px solid #F1F5F9', textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px', transition: 'all 0.2s' }}
+                          className="vendor-card"
+                        >
+                          <div style={{ width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', border: '1px solid #E5E7EB', filter: identityVisible ? 'none' : 'blur(4px)' }}>
+                            <img src={v.logoUrl || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=200'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                          <div>
+                            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#111827', margin: 0 }}>{maskName(v.companyName)}</h3>
+                            <p style={{ fontSize: '13px', color: '#6B7280', margin: '4px 0' }}>{identityVisible ? v.city : 'Ville masquée'}, {v.sector}</p>
+                          </div>
+                          <button style={{ background: '#F3F4F6', color: '#111827', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '12px' }}>Voir la boutique</button>
+                        </Link>
+                      );
+                    })}
+
+                    {urlScope === 'CATEGORY' && searchData.results.map((c: any) => (
+                      <Link 
+                        key={c.id} 
+                        href={`/marketplace/category/${c.id}`}
+                        style={{ background: '#fff', borderRadius: '16px', padding: '24px', border: '1px solid #F1F5F9', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '16px', transition: 'all 0.2s' }}
+                        className="cat-card"
+                      >
+                        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E31E24' }}>
+                          <Grid size={24} />
+                        </div>
+                        <span style={{ fontSize: '16px', fontWeight: 800, color: '#111827' }}>{c.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '100px 20px', background: '#fff', borderRadius: '24px', border: '2px dashed #E5E7EB' }}>
+                    <div style={{ width: '80px', height: '80px', background: '#F9FAFB', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                      <Search size={40} color="#D1D5DB" />
+                    </div>
+                    <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#111827' }}>Aucun résultat exact</h3>
+                    <p style={{ color: '#6B7280', marginTop: '8px', maxWidth: '400px', margin: '8px auto 0', lineHeight: 1.6 }}>
+                      Ajustez vos filtres ou élargissez votre rayon de recherche pour voir plus de résultats.
+                      {searchData.outsideRadius > 0 && (
+                        <span style={{ display: 'block', marginTop: '12px', color: '#E31E24', fontWeight: 700 }}>
+                          Note : {searchData.outsideRadius} résultats existent en dehors de votre rayon de {urlRadius} km.
+                        </span>
+                      )}
+                    </p>
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '32px' }}>
+                      <button 
+                        onClick={() => { setMinPrice(''); setMaxPrice(''); setMinRating(0); }}
+                        style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '14px 28px', borderRadius: '100px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        Réinitialiser les filtres
+                      </button>
+                      {searchData.outsideRadius > 0 && (
+                        <button 
+                          onClick={() => {
+                            const params = new URLSearchParams(searchParams.toString());
+                            params.set('radius', 'all');
+                            router.push(`/marketplace?${params.toString()}`);
+                          }}
+                          style={{ background: '#fff', border: '1px solid #E5E7EB', color: '#111827', padding: '14px 28px', borderRadius: '100px', fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          Élargir le rayon (National)
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Similar Products Suggestions */}
+                {searchData.allMatches && searchData.allMatches.length > searchData.results.length && (
+                  <div style={{ marginTop: '64px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                      <Zap size={24} color="#E31E24" fill="#E31E24" />
+                      <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#111827' }}>Produits similaires (Plus loin)</h2>
+                    </div>
+                    <div className="mkt-grid mkt-grid-4">
+                      {searchData.allMatches.filter((m: any) => !searchData.results.includes(m)).slice(0, 8).map((p: any) => (
+                        <MarketplaceProductCard 
+                          key={p.id} 
+                          product={p} 
+                          hidePrice={hidePrices}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+               </section>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Top Part: Sidebar + Hero */}
+            <div className="mkt-home-top">
+              {/* Sidebar Categories with Mega Menu */}
+              <aside 
+                className="mkt-categories-sidebar"
+                onMouseLeave={() => setHoveredSegment(null)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#111827' }}>
+                  <Menu size={20} />
+                  <h2 style={{ fontSize: '18px', fontWeight: 900 }}>Catégories</h2>
+                </div>
+                <div className="mkt-cat-list" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {marketplaceSegments.map((seg: any) => (
+                    <Link 
+                      key={seg.id} 
+                      href={`/marketplace/category/${seg.id}`}
+                      style={{ 
+                        padding: '10px 14px', 
+                        borderRadius: '8px', 
+                        fontSize: '14px', 
+                        color: hoveredSegment === seg.id ? '#E31E24' : '#4B5563', 
+                        background: hoveredSegment === seg.id ? '#FEF2F2' : 'transparent',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        transition: 'all 0.2s',
+                        textDecoration: 'none'
+                      }}
+                      onMouseEnter={() => setHoveredSegment(seg.id)}
+                    >
+                      <span>{seg.name}</span>
+                      <ChevronRight size={14} opacity={hoveredSegment === seg.id ? 1 : 0.5} />
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Mega Menu Overlay — Alibaba-style grouped subcategories */}
+                {hoveredSegment && (() => {
+                  const hoveredCat = marketplaceSegments.find((s: any) => s.id === hoveredSegment);
+                  const children = hoveredCat?.children || [];
+                  
+                  // Group children by groupTitle
+                  const grouped: Record<string, any[]> = {};
+                  children.forEach((child: any) => {
+                    const group = child.groupTitle || 'Autres';
+                    if (!grouped[group]) grouped[group] = [];
+                    grouped[group].push(child);
+                  });
+                  const groupEntries = Object.entries(grouped);
+
+                  if (children.length === 0) return (
+                    <div className="mkt-mega-overlay" style={{ 
+                      position: 'absolute', left: '280px', top: 0, width: '400px', minHeight: '200px',
+                      background: '#fff', boxShadow: '20px 0 40px rgba(0,0,0,0.1)', zIndex: 50, 
+                      borderRadius: '0 16px 16px 0', borderLeft: '1px solid #F1F5F9', padding: '40px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px'
+                    }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 12, background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                        {hoveredCat?.icon || '📦'}
+                      </div>
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#9CA3AF' }}>Aucune sous-catégorie</span>
+                      <Link 
+                        href={`/marketplace/category/${hoveredCat?.slug || hoveredCat?.id}`}
+                        style={{ fontSize: '13px', color: '#E31E24', fontWeight: 800, textDecoration: 'none' }}
+                      >
+                        Voir la catégorie →
+                      </Link>
+                    </div>
+                  );
+
+                  return (
+                    <div className="mkt-mega-overlay" style={{ 
+                      position: 'absolute', left: '280px', top: 0, width: '720px', minHeight: '100%',
+                      background: '#fff', boxShadow: '20px 0 40px rgba(0,0,0,0.1)', zIndex: 50, 
+                      borderRadius: '0 16px 16px 0', borderLeft: '1px solid #F1F5F9', padding: '28px 32px',
+                    }}>
+                      {/* Category title bar */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid #F3F4F6' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#111827', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                          <span style={{ color: hoveredCat?.color || '#E31E24' }}>{hoveredCat?.icon || '•'}</span>
+                          {hoveredCat?.name}
+                        </h3>
+                        <Link 
+                          href={`/marketplace/category/${hoveredCat?.slug || hoveredCat?.id}`}
+                          style={{ fontSize: '12px', color: '#E31E24', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          Tout voir <ArrowRight size={12} />
+                        </Link>
+                      </div>
+
+                      {/* Grouped subcategories grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '28px', alignItems: 'start' }}>
+                        {groupEntries.map(([groupName, items]: [string, any[]]) => (
+                          <div key={groupName}>
+                            <h4 style={{ 
+                              fontSize: '13px', fontWeight: 900, color: '#111827', marginBottom: '14px', 
+                              textTransform: 'uppercase', letterSpacing: '0.04em',
+                              paddingBottom: '8px', borderBottom: '2px solid #E31E24',
+                              display: 'inline-block'
+                            }}>
+                              {groupName}
+                            </h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {items.map((child: any) => (
+                                <Link 
+                                  key={child.id} 
+                                  href={`/marketplace/category/${child.slug || child.id}`}
+                                  style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600, cursor: 'pointer', transition: 'color 0.15s', textDecoration: 'none', lineHeight: 1.3 }} 
+                                  onMouseEnter={e => e.currentTarget.style.color = '#E31E24'} 
+                                  onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}
+                                >
+                                  {child.name}
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div className="mkt-cat-all-btn" style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #F3F4F6' }}>
+                  <button style={{ 
+                    width: '100%', 
+                    background: '#F9FAFB', 
+                    border: '1px solid #E5E7EB', 
+                    padding: '12px', 
+                    borderRadius: '10px', 
+                    fontSize: '13px', 
+                    fontWeight: 700, 
+                    color: '#374151',
+                    cursor: 'pointer'
+                  }}>
+                    Toutes les Catégories
+                  </button>
+                </div>
+              </aside>
+
+              {/* Hero + Featured Area */}
+              <div className="mkt-home-content">
+                {/* Hero Section Carousel */}
+                <div className="mkt-hero-row">
+                  <div className="mkt-hero-carousel">
+                    {heroBanners.map((banner: any, idx: number) => (
+                      <div 
+                        key={banner.id || idx}
+                        style={{ 
+                          position: 'absolute', 
+                          inset: 0, 
+                          opacity: activeBannerIdx === idx ? 1 : 0,
+                          visibility: activeBannerIdx === idx ? 'visible' : 'hidden',
+                          transition: 'all 0.8s ease-in-out',
+                          background: banner.bgColor || '#1E1B4B'
+                        }}
+                      >
+                        <img 
+                          src={banner.imageUrl || '/marketplace_hero_banner.png'} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          alt={banner.title}
+                        />
+                        <div className="mkt-hero-inner" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.6), transparent)', display: 'flex', alignItems: 'center', padding: '60px' }}>
+                          <div style={{ maxWidth: '450px', transform: activeBannerIdx === idx ? 'translateX(0)' : 'translateX(-20px)', opacity: activeBannerIdx === idx ? 1 : 0, transition: 'all 0.6s ease-out 0.2s' }}>
+                            <BannerBadge color={banner.badgeColor || "#E31E24"}>{banner.badgeText || "B2B Platform"}</BannerBadge>
+                            <h1 style={{ fontSize: '48px', fontWeight: 900, color: '#fff', lineHeight: 1.1, margin: '20px 0' }}>
+                              {banner.title}
+                            </h1>
+                            <p style={{ fontSize: '20px', color: 'rgba(255,255,255,0.9)', marginBottom: '32px', fontWeight: 500 }}>
+                              {banner.subtitle}
+                            </p>
+                            <div style={{ display: 'flex', gap: '16px' }}>
+                              <Link href={banner.buttonLink || "/register"} style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '14px 36px', borderRadius: '100px', fontWeight: 800, fontSize: '16px', cursor: 'pointer', textDecoration: 'none' }}>
+                                {banner.buttonText || "S'inscrire Gratuitement"}
+                              </Link>
+                              <button onClick={() => setRfqOpen(true)} style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', padding: '14px 36px', borderRadius: '100px', fontWeight: 800, fontSize: '16px', cursor: 'pointer' }}>
+                                Publier RFQ
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Carousel Controls */}
+                    {heroBanners.length > 1 && (
+                      <>
+                        <button 
+                          onClick={() => setActiveBannerIdx(prev => (prev - 1 + heroBanners.length) % heroBanners.length)}
+                          style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', width: '40px', height: '40px', borderRadius: '50%', color: '#fff', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <ChevronLeft size={24} />
+                        </button>
+                        <button 
+                          onClick={() => setActiveBannerIdx(prev => (prev + 1) % heroBanners.length)}
+                          style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', width: '40px', height: '40px', borderRadius: '50%', color: '#fff', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <ChevronRight size={24} />
+                        </button>
+                        <div style={{ position: 'absolute', bottom: '30px', left: '60px', display: 'flex', gap: '8px', zIndex: 10 }}>
+                          {heroBanners.map((_: any, i: number) => (
+                            <button 
+                              key={i}
+                              onClick={() => setActiveBannerIdx(i)}
+                              style={{ 
+                                width: activeBannerIdx === i ? '24px' : '8px', 
+                                height: '8px', 
+                                borderRadius: '4px', 
+                                background: activeBannerIdx === i ? '#E31E24' : 'rgba(255,255,255,0.4)', 
+                                border: 'none', 
+                                cursor: 'pointer',
+                                transition: 'all 0.3s'
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="mkt-hero-side">
+                    <div style={{ background: '#fff', borderRadius: '20px', padding: '24px', flex: 1, border: '1px solid #E31E24', borderLeftWidth: '6px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#111827', marginBottom: '12px' }}>Sourcing Garanti</h3>
+                      <p style={{ fontSize: '13px', color: '#6B7280', lineHeight: 1.5, marginBottom: '20px' }}>Accès exclusif à des fournisseurs vérifiés et accompagnement personnalisé pour vos achats B2B.</p>
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                         <div style={{ width: '40px', height: '40px', background: '#FEF2F2', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E31E24' }}>
+                           <ShieldCheck size={24} />
+                         </div>
+                         <div style={{ width: '40px', height: '40px', background: '#F0F9FF', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284C7' }}>
+                           <CheckCircle2 size={24} />
+                         </div>
+                         <div style={{ width: '40px', height: '40px', background: '#F0FDF4', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16A34A' }}>
+                           <Award size={24} />
+                         </div>
+                      </div>
+                    </div>
+                    <div style={{ background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)', borderRadius: '20px', padding: '24px', color: '#fff', flex: 1, position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ position: 'absolute', right: '-10px', top: '-10px', opacity: 0.2 }}>
+                         <Users size={80} />
+                      </div>
+                      <h3 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '12px', position: 'relative' }}>Parrainez un Pro</h3>
+                      <p style={{ fontSize: '13px', opacity: 0.9, lineHeight: 1.5, marginBottom: '20px', position: 'relative' }}>Invitez un confrère sur ElKassa et profitez d'avantages exclusifs sur vos prochaines commandes.</p>
+                      <button 
+                        onClick={() => setShowReferralModal(true)}
+                        style={{ width: '100%', background: '#fff', color: '#4F46E5', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', position: 'relative' }}
+                      >
+                        Inviter maintenant
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {showReferralModal && (
+                  <MarketplaceReferralModal 
+                    onClose={() => setShowReferralModal(false)} 
+                    userEmail={isVendor ? "vendeur@elkassa.tn" : "client@elkassa.tn"} // Fallback placeholder
+                  />
+                )}
+
+                {/* Trusted Suppliers / Features */}
+                <div className="mkt-features-row">
+                  {[
+                    { icon: ShieldCheck, title: 'Fournisseurs Vérifiés', sub: 'Audités par ElKassa' },
+                    { icon: Globe, title: 'Réseau National', sub: 'Toute la Tunisie' },
+                    { icon: Trophy, title: 'Qualité Garantie', sub: 'Standards Pro' },
+                    { icon: Rocket, title: 'Logistique Rapide', sub: 'Livraison Express' },
+                  ].map((f, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#fff', padding: '16px', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                      <div style={{ width: '40px', height: '40px', background: '#FEF2F2', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E31E24' }}>
+                        <f.icon size={22} />
                       </div>
                       <div>
-                        <div className="text-[12px] font-bold text-slate-900">{b.name}</div>
-                        <div className="text-[10px] text-slate-500">{b.city}, {b.governorate}</div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#111827' }}>{f.title}</div>
+                        <div style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 500 }}>{f.sub}</div>
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="absolute -bottom-2 left-4 w-4 h-4 bg-white border-r border-b border-slate-100 rotate-45"></div>
               </div>
-            )}
-          </div>
-        )}
-        
-        <div className="mkt-cocote-card-footer">
-          <div className="mkt-cocote-price-wrap" style={isVendor ? { filter: 'blur(4px)', userSelect: 'none', pointerEvents: 'none' } : {}}>
-             {hasDiscount && <span className="mkt-cocote-old-price">{fmt(product.price)}</span>}
-             <span className="mkt-cocote-price">{fmt(hasDiscount ? product.discountPrice : product.price)}</span>
-             <span className="mkt-cocote-unit">DT</span>
-          </div>
-          {!isVendor && (
-            <button className="mkt-cocote-add-btn" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAdd(product); }}>
-              <ShoppingCart size={16} />
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function VendorCard({ vendor, distance }: any) {
-  const avg = vendor.ratings?.overallAvg || 0;
-  const total = vendor.ratings?.totalReviews || 0;
-  const logo = vendor.customization?.logoUrl ? sanitizeUrl(vendor.customization.logoUrl) : null;
-
-  return (
-    <Link href={`/marketplace/vendor/${vendor.id}`} className="mkt-cocote-vendor-card">
-      <div className="mkt-cocote-vendor-logo">
-        {logo ? <img src={logo} alt={vendor.companyName} /> : <Store size={24} color="#94A3B8" />}
-      </div>
-      <div className="mkt-cocote-vendor-info">
-        <h4 className="mkt-cocote-vendor-name" style={{ textTransform: 'uppercase' }}>{vendor.companyName}</h4>
-        <div className="mkt-cocote-vendor-meta">
-           <Stars avg={avg} total={total} size={11} />
-           <span className="mkt-cocote-vendor-dist">
-             <MapPin size={10} /> 
-             {vendor.lat && vendor.lng ? `${distance} km · ` : ''}{vendor.city || vendor.governorate || 'Tunis'}
-           </span>
-        </div>
-      </div>
-      <ChevronRight size={16} color="#CBD5E1" />
-    </Link>
-  );
-}
-
-/* ── Helpers ── */
-const CATEGORY_IMAGES: Record<string, string> = {
-  'matieres-premieres': '/images/elkassa-placeholder.png',
-  'produits-semi-finis': '/images/elkassa-placeholder.png',
-  'produits-finis-b2b-revente': '/images/elkassa-placeholder.png',
-  'equipements-materiel': '/images/elkassa-placeholder.png',
-  'emballages': '/images/elkassa-placeholder.png',
-  'hygiene-nettoyage': '/images/elkassa-placeholder.png',
-  'services': '/images/elkassa-placeholder.png',
-};
-
-const getCategoryImage = (cat: any) => {
-  if (cat.image) return cat.image;
-  return CATEGORY_IMAGES[cat.slug] || '/images/elkassa-placeholder.png';
-};
-
-/* ─── MAIN CLIENT ─── */
-export default function MarketplaceClient({ initialData, isVendor = false }: { initialData: any; isVendor?: boolean }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const currentRadius = parseInt(searchParams.get('radius') || '500');
-  const currentLocation = searchParams.get('loc') || 'Tunis';
-  const search = searchParams.get('search') || '';
-  
-  const { products = [], categories = [], flashSales = [], banners = [] } = initialData || {};
-  
-  const mainHero = banners.find((b: any) => b.position === 'HERO');
-  const heroAds = banners.filter((b: any) => b.position !== 'HERO' && b.position?.startsWith('ADS_')).slice(0, 2);
-
-  const { addToCart, cartCount } = useCart();
-
-  // Derived Data
-  const vendorsMap = new Map();
-  products.forEach((p: any) => { if (p.vendor) vendorsMap.set(p.vendor.id, p.vendor); });
-  const vendors = Array.from(vendorsMap.values());
-  
-  const brands = useMemo(() => {
-    const bSet = new Set<string>();
-    products.forEach((p: any) => { if (p.brand) bSet.add(p.brand); });
-    return Array.from(bSet).slice(0, 12);
-  }, [products]);
-
-  const promosLocales = flashSales.length > 0 ? flashSales : products.filter((p: any) => p.discountPrice).slice(0, 5);
-  // Fallback if no discounts:
-  const displayPromos = promosLocales.length > 0 ? promosLocales : products.slice(0, 5);
-
-  const searchType = searchParams.get('type') || 'all';
-
-  const searchResultsProducts = search && (searchType === 'all' || searchType === 'products')
-    ? products.filter((p: any) => p.name.toLowerCase().includes(search.toLowerCase()) || p.vendor?.companyName?.toLowerCase().includes(search.toLowerCase()))
-    : [];
-
-  const searchResultsVendors = search && (searchType === 'all' || searchType === 'vendors')
-    ? vendors.filter((v: any) => v.companyName?.toLowerCase().includes(search.toLowerCase()))
-    : [];
-
-  return (
-    <div className="mkt-page cocote-theme">
-      
-      <MarketplaceHeader isVendor={isVendor} categories={categories} />
-
-      {/* Hero / Concept Banner (FULL WIDTH COMPACT) */}
-      {!search && (
-        <div className="mkt-category-hero-premium" style={{ 
-          backgroundImage: `url('${mainHero?.imageUrl ? sanitizeUrl(mainHero.imageUrl) : 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1400'}')`,
-          minHeight: '320px',
-          borderRadius: 0,
-          marginBottom: 0
-        }}>
-          <div className="mkt-category-hero-overlay" />
-          <div className="mkt-category-hero-content" style={{ padding: '40px 20px' }}>
-            {mainHero?.badgeText && (
-              <span style={{ display: 'inline-block', background: mainHero.bgColor || '#6366F1', color: '#fff', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', padding: '6px 12px', borderRadius: '4px', marginBottom: '16px' }}>{mainHero.badgeText}</span>
-            )}
-            <h1 className="text-white" style={{ fontSize: '42px' }}>{mainHero?.title || 'Le Marché B2B de Proximité'}</h1>
-            <p className="text-white/90 text-base max-w-xl mx-auto" style={{ marginTop: '16px' }}>
-              {mainHero?.subtitle || 'Commandez en gros auprès des fournisseurs de votre région.'}
-            </p>
-            {mainHero?.buttonText && mainHero?.buttonLink && (
-              <a href={mainHero.buttonLink} style={{ display: 'inline-block', marginTop: '24px', padding: '12px 24px', background: '#fff', color: '#0F172A', fontWeight: 800, borderRadius: '8px', textDecoration: 'none' }}>
-                {mainHero.buttonText}
-              </a>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Banners from Superadmin ── */}
-      {heroAds.length > 0 && !search && (
-        <div className="mkt-container" style={{ marginTop: '32px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: heroAds.length === 2 ? '1fr 1fr' : '1fr', gap: '24px' }}>
-            {heroAds.map((ad: any) => (
-              <a key={ad.id} href={ad.buttonLink || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'block', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E2E8F0', position: 'relative', aspectRatio: '21/9' }} className="group">
-                <img src={sanitizeUrl(ad.imageUrl) || ''} alt={ad.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }} className="group-hover:scale-105" />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.2))', padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  {ad.badgeText && <span style={{ background: ad.bgColor || '#6366F1', color: '#fff', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', padding: '4px 8px', borderRadius: '4px', width: 'fit-content', marginBottom: '12px' }}>{ad.badgeText}</span>}
-                  <h3 style={{ color: '#fff', fontSize: '24px', fontWeight: 900, marginBottom: '8px' }}>{ad.title}</h3>
-                  {ad.subtitle && <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px', marginBottom: '16px' }}>{ad.subtitle}</p>}
-                  {ad.buttonText && <span style={{ color: '#fff', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', textDecoration: 'underline' }}>{ad.buttonText}</span>}
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Main Content ── */}
-      <div className="mkt-container mkt-cocote-main" style={{ paddingTop: 24 }}>
-        
-        {search && (
-          <div style={{ marginBottom: '40px' }}>
-            <h2 className="text-2xl font-black text-slate-900 mb-6">Résultats pour "{search}"</h2>
-            
-            {searchResultsVendors.length > 0 && (
-              <div className="mb-12">
-                <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2"><Store size={18} /> Vendeurs correspondants</h3>
-                <div className="mkt-cocote-vendor-grid">
-                  {searchResultsVendors.map((v: any) => (
-                    <VendorCard key={v.id} vendor={v} distance={v.distance || getMockDistance(v.id)} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {searchResultsProducts.length > 0 && (
-              <div>
-                <h3 className="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2"><ShoppingBag size={18} /> Produits correspondants</h3>
-                <div className="mkt-cocote-grid">
-                  {searchResultsProducts.map((p: any) => (
-                    <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {searchResultsVendors.length === 0 && searchResultsProducts.length === 0 && (
-              <div className="text-center py-20 bg-slate-50 rounded-2xl border border-slate-100">
-                <Search size={48} className="mx-auto text-slate-300 mb-4" />
-                <h3 className="text-xl font-bold text-slate-700 mb-2">Aucun résultat trouvé</h3>
-                <p className="text-slate-500">Essayez de modifier votre recherche ou de changer le type de filtre.</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Sélections Stratégiques (Axes Intelligents) */}
-        {/* Sélections Stratégiques (Sober Section) */}
-        {!search && (
-          <section className="mkt-cocote-section" style={{ padding: '40px 0 64px 0' }}>
-            <div className="mkt-cocote-section-header" style={{ marginBottom: '56px', textAlign: 'center' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '100px', background: '#EEF2FF', color: '#6366F1', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>
-                <Sparkles size={14} /> Solutions Métiers
-              </div>
-              <h2 className="text-4xl font-black text-slate-900 tracking-tight" style={{ marginBottom: '16px' }}>
-                Expertise & Solutions Professionnelles
-              </h2>
-              <p className="text-slate-500 max-w-2xl mx-auto text-lg">Des sélections stratégiques conçues par nos experts pour maximiser la rentabilité de votre établissement.</p>
             </div>
-            
-            <div className="mkt-cocote-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px' }}>
+
+            {/* Bottom Part: Full Width Sections */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '64px' }}>
               
-              {/* Card 1: Pack Ouverture */}
-              <Link href="/marketplace?q=starter" style={{ textDecoration: 'none' }}>
-                <div style={{ background: '#fff', padding: '40px', borderRadius: '8px', border: '1px solid #E2E8F0', height: '100%', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative', overflow: 'hidden' }} className="group hover:border-indigo-600 hover:shadow-xl hover:-translate-y-2">
-                  <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', background: '#6366F1', opacity: 0 }} className="group-hover:opacity-100 transition-opacity" />
-                  <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: '#F8FAFC', color: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', border: '1px solid #F1F5F9' }} className="group-hover:bg-indigo-600 group-hover:color-white transition-colors">
-                    <Package size={32} />
+              {/* Products Section */}
+              <section>
+                <div className="mkt-section-header">
+                  <div>
+                    <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827' }}>Sélectionnés pour vous</h2>
+                    <div style={{ height: '4px', width: '60px', background: '#E31E24', marginTop: '8px', borderRadius: '10px' }} />
                   </div>
-                  <div style={{ fontSize: '10px', fontWeight: 900, color: '#6366F1', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Optimisation de lancement</div>
-                  <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', marginBottom: '16px' }}>Pack Ouverture & Relance</h3>
-                  <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, marginBottom: '24px' }}>L'essentiel des équipements et du stock initial pour démarrer votre activité en toute sérénité.</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, color: '#111827' }}>
-                    Voir la sélection <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </div>
-              </Link>
-
-              {/* Card 2: Top Pâtisserie */}
-              <Link href="/marketplace?q=premium" style={{ textDecoration: 'none' }}>
-                <div style={{ background: '#fff', padding: '40px', borderRadius: '8px', border: '1px solid #E2E8F0', height: '100%', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative', overflow: 'hidden' }} className="group hover:border-indigo-600 hover:shadow-xl hover:-translate-y-2">
-                  <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', background: '#6366F1', opacity: 0 }} className="group-hover:opacity-100 transition-opacity" />
-                  <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: '#F8FAFC', color: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', border: '1px solid #F1F5F9' }} className="group-hover:bg-indigo-600 group-hover:color-white transition-colors">
-                    <Award size={32} />
-                  </div>
-                  <div style={{ fontSize: '10px', fontWeight: 900, color: '#6366F1', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Sélection d'exception</div>
-                  <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', marginBottom: '16px' }}>Ingrédients Pâtisserie Premium</h3>
-                  <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, marginBottom: '24px' }}>Chocolats de couverture, beurres techniques et purées de fruits pour les professionnels exigeants.</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, color: '#111827' }}>
-                    Explorer les produits <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                     {['Nouveautés', 'Top Ventes'].map(tab => (
+                       <button 
+                        key={tab}
+                        onClick={() => setHomeTab(tab)}
+                        style={{ 
+                          padding: '8px 24px', borderRadius: '100px', 
+                          background: homeTab === tab ? '#E31E24' : '#fff', 
+                          border: homeTab === tab ? 'none' : '1px solid #E5E7EB', 
+                          color: homeTab === tab ? '#fff' : '#6B7280', 
+                          fontSize: '14px', fontWeight: 800, cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                       >
+                         {tab}
+                       </button>
+                     ))}
                   </div>
                 </div>
-              </Link>
 
-              {/* Card 3: Bundles Barista */}
-              <Link href="/marketplace?category=bundles" style={{ textDecoration: 'none' }}>
-                <div style={{ background: '#fff', padding: '40px', borderRadius: '8px', border: '1px solid #E2E8F0', height: '100%', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative', overflow: 'hidden' }} className="group hover:border-indigo-600 hover:shadow-xl hover:-translate-y-2">
-                  <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', background: '#6366F1', opacity: 0 }} className="group-hover:opacity-100 transition-opacity" />
-                  <div style={{ width: '64px', height: '64px', borderRadius: '12px', background: '#F8FAFC', color: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', border: '1px solid #F1F5F9' }} className="group-hover:bg-indigo-600 group-hover:color-white transition-colors">
-                    <ShoppingBag size={32} />
-                  </div>
-                  <div style={{ fontSize: '10px', fontWeight: 900, color: '#6366F1', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Économie de volume</div>
-                  <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', marginBottom: '16px' }}>Packs Barista & Consommables</h3>
-                  <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, marginBottom: '24px' }}>Réduisez vos coûts d'exploitation avec nos bundles optimisés sur les gobelets, pailles et laits.</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, color: '#111827' }}>
-                    Voir les offres en lot <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </div>
-              </Link>
-              
-            </div>
-          </section>
-        )}
-
-        {/* Promos Locales */}
-        {!search && (
-          <section className="mkt-cocote-section">
-            <div className="mkt-cocote-section-header">
-              <h2 className="mkt-cocote-section-title"><Percent size={20} className="text-rose-500" /> Promos Locales</h2>
-              {displayPromos.length > 0 && <Link href="/marketplace" className="mkt-cocote-see-all">Voir tout <ChevronRight size={14} /></Link>}
-            </div>
-            {displayPromos.length > 0 ? (
-              <div className="mkt-cocote-grid">
-                {displayPromos.map((p: any) => (
-                  <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />
-                ))}
-              </div>
-            ) : (
-              <div className="mkt-cocote-empty-promo-banner">
-                <div className="mkt-cocote-banner-content">
-                  <div className="mkt-cocote-banner-icon"><Sparkles size={32} /></div>
-                  <div className="mkt-cocote-banner-text">
-                    <h3>Prochainement : Nouvelles offres locales</h3>
-                    <p>Découvrez bientôt des promotions exclusives de vos commerçants de proximité.</p>
-                  </div>
-                </div>
-                <button className="mkt-cocote-banner-btn">Être notifié</button>
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* Commerces de Proximité */}
-        {!search && (
-          <section className="mkt-cocote-section">
-            <div className="mkt-cocote-section-header">
-              <h2 className="mkt-cocote-section-title"><Store size={20} className="text-emerald-500" /> Commerces de proximité</h2>
-              <Link href="/marketplace/vendors" className="mkt-cocote-see-all">Explorer la carte <ChevronRight size={14} /></Link>
-            </div>
-            <div className="mkt-cocote-vendor-grid">
-              {vendors.slice(0, 6).map((v: any, i: number) => (
-                <VendorCard key={v.id} vendor={v} distance={v.distance || getMockDistance(v.id)} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Catégories Populaires / Universes (Faire Style) */}
-        {!search && (
-          <section className="mkt-cocote-section" style={{ marginTop: 80 }}>
-            <div style={{ textAlign: 'center', marginBottom: 48 }}>
-              <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight uppercase">Explorez nos univers</h2>
-              <p className="text-slate-500 mt-2 text-lg">Découvrez les meilleures sélections par métier.</p>
-            </div>
-            <div className="mkt-cocote-category-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
-              {categories.slice(0, 8).map((cat: any) => {
-                const href = `/marketplace/category/${cat.slug || cat.id}`;
-                const img = getCategoryImage(cat);
-                
-                return (
-                  <Link 
-                    key={cat.id} 
-                    href={href}
-                    className="relative block aspect-[4/5] overflow-hidden group rounded-[4px] border border-slate-200"
-                  >
-                    <img 
-                      src={img} 
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                      alt={cat.name} 
+                <div className="mkt-grid mkt-grid-5">
+                  {(homeTab === 'Nouveautés' ? [...products].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : products).slice(0, 10).map((p: any) => (
+                    <MarketplaceProductCard 
+                      key={p.id} 
+                      product={p} 
+                      hidePrice={hidePrices}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    <div className="absolute inset-0 p-8 flex flex-col justify-end">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-2xl">{cat.icon || '📦'}</span>
-                        <h3 className="text-white text-xl font-bold leading-tight m-0">{cat.name}</h3>
+                  ))}
+                </div>
+              </section>
+
+              {/* Packs & Bundles Section */}
+              {initialData.bundles?.length > 0 && (
+                <section style={{ marginBottom: '64px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#E31E24', fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+                        <Zap size={14} /> Offres Groupées
                       </div>
-                      <p className="text-white/70 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">Voir les produits</p>
+                      <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', margin: 0 }}>Nos Packs & Bundles</h2>
+                      <p style={{ color: '#64748B', fontSize: '15px', marginTop: '8px', fontWeight: 500 }}>Optimisez vos achats avec nos sélections thématiques</p>
                     </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
+                  </div>
+                  <div 
+                    style={{ 
+                      display: 'flex', 
+                      gap: '24px', 
+                      overflowX: 'auto', 
+                      padding: '8px 4px 32px', 
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none',
+                      scrollSnapType: 'x mandatory'
+                    }}
+                    className="no-scrollbar"
+                  >
+                    {initialData.bundles.map((bundle: any) => {
+                      const { maskName } = useVault(bundle.vendorId, bundle.vendor?.isPremium);
+                      return (
+                        <div 
+                          key={bundle.id} 
+                          style={{ 
+                            flex: '0 0 340px',
+                            scrollSnapAlign: 'start',
+                            background: '#fff', 
+                            borderRadius: '24px', 
+                            border: '1px solid #F1F5F9', 
+                            padding: '24px', 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: '20px',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                            position: 'relative'
+                          }}
+                        >
+                           <Link href={`/marketplace/product/${bundle.id}?isBundle=true`} style={{ textDecoration: 'none', display: 'block' }}>
+                             <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '16px', overflow: 'hidden', background: '#F8FAFC' }}>
+                                <img 
+                                  src={bundle.image || 'https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600&auto=format&fit=crop'} 
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} 
+                                />
+                                {bundle.discountPercent && (
+                                  <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#E31E24', color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900, boxShadow: '0 4px 12px rgba(227,30,36,0.3)' }}>
+                                    -{bundle.discountPercent}%
+                                  </div>
+                                )}
+                             </div>
+                             <div style={{ marginTop: '20px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 900, color: '#E31E24', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{maskName(bundle.vendor?.companyName)}</span>
+                                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', margin: '4px 0 8px', height: '24px', overflow: 'hidden' }}>{bundle.name}</h3>
+                                <p style={{ fontSize: '13px', color: '#64748B', margin: 0, height: '40px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.5 }}>{bundle.description}</p>
+                             </div>
+                           </Link>
 
-        {/* Meilleures Ventes Locales */}
-        {!search && (
-          <section className="mkt-cocote-section">
-            <div className="mkt-cocote-section-header">
-              <h2 className="mkt-cocote-section-title"><Award size={20} className="text-amber-500" /> Meilleures ventes autour de vous</h2>
-            </div>
-            <div className="mkt-cocote-grid">
-              {products.slice(0, 5).map((p: any) => (
-                <ProductCard key={p.id} product={p} onAdd={addToCart} isVendor={isVendor} />
-              ))}
-            </div>
-          </section>
-        )}
+                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #F1F5F9' }}>
+                              <div>
+                                 <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 700, textDecoration: 'line-through' }}>{((Number(bundle.price) * 100) / (100 - (bundle.discountPercent || 0))).toFixed(2)} DT</span>
+                                 <div style={{ fontSize: '20px', fontWeight: 900, color: '#111827' }}>{Number(bundle.price).toFixed(2)} <span style={{ fontSize: '13px' }}>DT</span></div>
+                              </div>
+                              <button 
+                                onClick={() => addToCart({ ...bundle, unit: 'Pack' }, 1)}
+                                style={{ height: '44px', padding: '0 20px', borderRadius: '12px', background: '#111827', color: '#fff', border: 'none', fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
+                              >
+                                 Panier <ArrowRight size={18} />
+                              </button>
+                           </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
 
-        {/* Marques */}
-        {!search && brands.length > 0 && (
-          <section className="mkt-cocote-section">
-            <h2 className="mkt-cocote-section-title">Les marques les plus recherchées</h2>
-            <div className="mkt-cocote-brands-flex">
-              {brands.map((b: string) => (
-                <Link key={b} href={`/marketplace?brand=${encodeURIComponent(b)}`} className="mkt-cocote-brand-tag">
-                  {b}
+              {/* Special Categories / Collections */}
+              <section className="mkt-collections-row">
+                <Link href="/marketplace/tunisia" style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)', borderRadius: '24px', padding: '40px', position: 'relative', overflow: 'hidden', display: 'block', minHeight: '200px' }}>
+                  {/* Tunisia Map - local asset */}
+                  <img
+                    src="/tunisia-flag-map.png"
+                    alt="Tunisia Flag Map"
+                    style={{ 
+                      position: 'absolute', right: '-10px', top: '50%', transform: 'translateY(-50%)',
+                      height: '130%', width: 'auto', opacity: 0.25,
+                      pointerEvents: 'none',
+                      filter: 'drop-shadow(0 4px 12px rgba(227,30,36,0.2))'
+                    }}
+                  />
+                  <div style={{ position: 'relative', zIndex: 1, maxWidth: '60%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '20px' }}>🇹🇳</span>
+                      <span style={{ color: '#E31E24', fontWeight: 800, fontSize: '14px', letterSpacing: '0.05em' }}>MADE IN TUNISIA</span>
+                    </div>
+                    <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: '0 0 8px', lineHeight: 1.2 }}>Soutenons nos producteurs locaux</h2>
+                    <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '20px' }}>Découvrez des produits authentiques, fabriqués en Tunisie par des artisans et producteurs locaux.</p>
+                    <div style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', display: 'inline-block' }}>
+                      Explorer →
+                    </div>
+                  </div>
                 </Link>
-              ))}
-            </div>
-          </section>
-        )}
 
-        {/* Villes de Tunisie Index */}
-        {!search && (
-          <section className="mkt-cocote-section mkt-cocote-cities">
-            <h2 className="mkt-cocote-section-title"><MapPin size={20} className="text-indigo-500" /> Découvrez les commerces par région</h2>
-            <div className="mkt-cocote-cities-grid">
-              {tunisianCities.map(city => (
-                <Link key={city} href={`/marketplace?loc=${encodeURIComponent(city)}`} className="mkt-cocote-city-link">
-                  {city}
+                <Link href="/marketplace/eco" style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)', borderRadius: '24px', padding: '40px', position: 'relative', overflow: 'hidden', display: 'block', minHeight: '200px' }}>
+                  <div style={{ position: 'absolute', right: '-10px', bottom: '-30px', color: '#10B981', opacity: 0.15 }}>
+                    <Leaf size={220} strokeWidth={0.8} />
+                  </div>
+                  <div style={{ position: 'absolute', right: '60px', top: '20px', color: '#10B981', opacity: 0.2, transform: 'rotate(20deg)' }}>
+                    <Leaf size={60} strokeWidth={1} />
+                  </div>
+                  <div style={{ position: 'relative', zIndex: 1, maxWidth: '65%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '20px' }}>🌱</span>
+                      <span style={{ color: '#10B981', fontWeight: 800, fontSize: '14px', letterSpacing: '0.05em' }}>BIO & LOCAL</span>
+                    </div>
+                    <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: '0 0 8px', lineHeight: 1.2 }}>Sourcing Responsable Tunisie</h2>
+                    <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '20px' }}>Produits bio, éco-responsables et cultivés localement pour un approvisionnement durable.</p>
+                    <div style={{ background: '#10B981', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', display: 'inline-block' }}>
+                      Explorer →
+                    </div>
+                  </div>
                 </Link>
-              ))}
-            </div>
-          </section>
-        )}
+              </section>
 
-      </div>
+              {/* Basé sur votre Navigation */}
+              {historyProducts.length > 0 && (
+                <section>
+                  <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', marginBottom: '24px' }}>Basé sur votre Navigation</h2>
+                  <div style={{ display: 'flex', gap: '24px', overflowX: 'auto', paddingBottom: '16px', scrollbarWidth: 'none' }}>
+                    {Array.from(new Map(historyProducts.map((p: any) => [p.id, p])).values()).map((p: any) => {
+                      const cleanName = p.name.split(' - ')[0].split(' #')[0];
+                      return (
+                        <Link 
+                          key={p.id} 
+                          href={`/marketplace/product/${p.id}`}
+                          style={{ flex: '0 0 auto', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textDecoration: 'none', width: '160px' }}
+                        >
+                          <div style={{ 
+                            width: '120px', 
+                            height: '120px', 
+                            borderRadius: '50%', 
+                            overflow: 'hidden', 
+                            background: '#fff', 
+                            boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
+                            border: '1px solid #F1F5F9',
+                            transition: 'all 0.3s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                            e.currentTarget.style.borderColor = '#E31E24';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.borderColor = '#F1F5F9';
+                          }}
+                          >
+        <img 
+          src={sanitizeUrl(p.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} 
+          alt={p.name} 
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} 
+          className="product-card-image"
+        />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span style={{ 
+                              fontSize: '13px', 
+                              fontWeight: 800, 
+                              color: '#1F2937', 
+                              maxWidth: '140px', 
+                              display: '-webkit-box', 
+                              WebkitLineClamp: 1, 
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              lineHeight: 1.3
+                            }}>
+                              {cleanName}
+                            </span>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: hidePrices ? '#E31E24' : '#111827' }}>
+                              {hidePrices ? 'Prix sur demande' : `${Number(p.price).toFixed(2)} DT`}
+                            </span>
+                            {!hidePrices && (
+                              <div style={{ fontSize: '10px', color: '#6B7280', fontWeight: 600 }}>
+                                {p.minOrderQty} {p.unit || 'Pièce'}(s) (MOQ)
+                              </div>
+                            )}
+                            {p.vendor?.city && (
+                              <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'center' }}>
+                                <MapPin size={8} /> {p.vendor.city}
+                              </div>
+                            )}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {/* Service Commercial Section */}
+              <section>
+                 <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', marginBottom: '32px' }}>Service Commercial</h2>
+                 <div className="mkt-service-grid">
+                    <div style={{ background: 'linear-gradient(to bottom, #fff, #F9FAFB)', borderRadius: '20px', padding: '40px', border: '1px solid #F1F5F9', boxShadow: '0 10px 30px rgba(0,0,0,0.03)' }}>
+                      <div style={{ width: '60px', height: '60px', borderRadius: '15px', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E31E24', marginBottom: '24px' }}>
+                        <Target size={32} />
+                      </div>
+                      <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', marginBottom: '16px' }}>Acheter Facile</h3>
+                      <p style={{ fontSize: '15px', color: '#6B7280', lineHeight: 1.6, marginBottom: '32px', minHeight: '80px' }}>
+                        Un service de sourcing en ligne pour que les acheteurs obtiennent des devis exacts de fournisseurs correspondants.
+                      </p>
+                      <button style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', fontSize: '14px', fontWeight: 700, color: '#111827', cursor: 'pointer' }}>
+                        Voir plus <ArrowRight size={16} />
+                      </button>
+                    </div>
+
+                    <div style={{ background: 'linear-gradient(to bottom, #fff, #F9FAFB)', borderRadius: '20px', padding: '40px', border: '1px solid #F1F5F9', boxShadow: '0 10px 30px rgba(0,0,0,0.03)' }}>
+                      <div style={{ width: '60px', height: '60px', borderRadius: '15px', background: '#FFFBEB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706', marginBottom: '24px' }}>
+                        <ShieldCheck size={32} />
+                      </div>
+                      <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', marginBottom: '16px' }}>Fournisseur Audité</h3>
+                      <p style={{ fontSize: '15px', color: '#6B7280', lineHeight: 1.6, marginBottom: '32px', minHeight: '80px' }}>
+                        Un fournisseur audité est authentique et a déjà été vérifié sur site. Il sera marqué avec le logo "Fournisseur audité".
+                      </p>
+                      <button style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', fontSize: '14px', fontWeight: 700, color: '#111827', cursor: 'pointer' }}>
+                        Voir plus <ArrowRight size={16} />
+                      </button>
+                    </div>
+
+                    <div style={{ background: 'linear-gradient(to bottom, #fff, #F9FAFB)', borderRadius: '20px', padding: '40px', border: '1px solid #F1F5F9', boxShadow: '0 10px 30px rgba(0,0,0,0.03)' }}>
+                      <div style={{ width: '60px', height: '60px', borderRadius: '15px', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB', marginBottom: '24px' }}>
+                        <MessageSquare size={32} />
+                      </div>
+                      <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', marginBottom: '16px' }}>TradeMessager</h3>
+                      <p style={{ fontSize: '15px', color: '#6B7280', lineHeight: 1.6, marginBottom: '32px', minHeight: '80px' }}>
+                        Communiquez en toute sécurité avec les fournisseurs pour valider vos stocks et spécificités techniques. 
+                        Négociez vos conditions de sourcing sans partager vos coordonnées personnelles.
+                      </p>
+                      <button style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', fontSize: '14px', fontWeight: 700, color: '#111827', cursor: 'pointer' }}>
+                        Voir plus <ArrowRight size={16} />
+                      </button>
+                    </div>
+                 </div>
+              </section>
+
+              {/* Perspectives Commerciales Section */}
+              <section>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                    <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#111827' }}>Perspectives Commerciales</h2>
+                    <Link href="/marketplace/blog" style={{ background: 'transparent', border: 'none', fontSize: '14px', fontWeight: 700, color: '#6B7280', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}>
+                      Voir plus <ChevronRight size={16} />
+                    </Link>
+                 </div>
+                 <div className="mkt-grid mkt-blog-grid">
+                     {perspectives.slice(0, 4).map((item: any) => (
+                       <Link key={item.id} href={item.slug ? `/marketplace/blog/${item.slug}` : '#'} style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #F1F5F9', transition: 'transform 0.3s', textDecoration: 'none', display: 'block' }}>
+                         <div style={{ height: '160px', overflow: 'hidden', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                           <img src={item.image} alt={item.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                         </div>
+                         <div style={{ padding: '20px' }}>
+                           <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#111827', marginBottom: '16px', lineHeight: 1.4, height: '44px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                             {item.title}
+                           </h3>
+                           <div style={{ fontSize: '12px', color: '#9CA3AF', fontWeight: 500 }}>
+                             Par {item.author} · {item.date}
+                           </div>
+                         </div>
+                       </Link>
+                     ))}
+                  </div>
+              </section>
+
+              {/* Produits Populaires Section */}
+              <section style={{ paddingBottom: '100px' }}>
+                 <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', marginBottom: '24px' }}>Produits Populaires</h2>
+                 <div style={{ 
+                   display: 'flex', 
+                   flexWrap: 'wrap', 
+                   gap: '12px', 
+                   maxHeight: '144px',
+                   overflow: 'hidden'
+                 }}>
+                    {(() => {
+                      // Build flat lookup: name -> { slug, id }
+                      const catLookup = new Map<string, { slug?: string; id: string }>();
+                      const traverse = (cats: any[]) => {
+                        cats.forEach(cat => {
+                          catLookup.set(cat.name, { slug: cat.slug, id: cat.id });
+                          if (cat.children) traverse(cat.children);
+                        });
+                      };
+                      traverse(categories);
+
+                      return shuffledTags.map((tag, i) => {
+                        const catInfo = catLookup.get(tag);
+                        const href = catInfo 
+                          ? `/marketplace/category/${catInfo.slug || catInfo.id}` 
+                          : `/marketplace?search=${encodeURIComponent(tag)}&scope=CATEGORY`;
+                        
+                        return (
+                          <Link 
+                            key={i} 
+                            href={href}
+                            style={{ 
+                              padding: '0 20px', 
+                              height: '40px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              borderRadius: '100px', 
+                              border: '1px solid #E5E7EB', 
+                              background: '#fff', 
+                              fontSize: '13px', 
+                              fontWeight: 600, 
+                              color: '#374151',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              whiteSpace: 'nowrap',
+                              textDecoration: 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = '#E31E24';
+                              e.currentTarget.style.color = '#E31E24';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = '#E5E7EB';
+                              e.currentTarget.style.color = '#374151';
+                            }}
+                          >
+                            {tag}
+                          </Link>
+                        );
+                      });
+                    })()}
+                 </div>
+              </section>
+            </div>
+          </>
+        )}
+      </main>
 
       <MarketplaceFooter />
+
+      {/* Floating Buttons */}
+      <div className="mkt-fab" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+         <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', overflow: 'hidden', border: '1px solid #F1F5F9' }}>
+           <button onClick={() => setRfqOpen(true)} style={{ width: '60px', height: '60px', border: 'none', background: '#fff', borderBottom: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', cursor: 'pointer' }}>
+              <MessageSquare size={20} color="#E31E24" />
+              <span style={{ fontSize: '10px', fontWeight: 800 }}>RFQ</span>
+           </button>
+           <Link href="/marketplace/help" style={{ width: '60px', height: '60px', border: 'none', background: '#fff', borderBottom: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', cursor: 'pointer', textDecoration: 'none' }}>
+              <Headphones size={20} color="#6B7280" />
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#111827' }}>Aide</span>
+           </Link>
+           <button 
+             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+             style={{ width: '60px', height: '60px', border: 'none', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+           >
+              <ArrowUp size={24} color="#9CA3AF" />
+           </button>
+         </div>
+      </div>
+
+      {rfqOpen && <MarketplaceRFQModal onClose={() => setRfqOpen(false)} />}
     </div>
   );
 }

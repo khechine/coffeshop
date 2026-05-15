@@ -79,5 +79,5 @@ volumes:
 networks:
   default:
   marketplace_default:
-    external: true
+#    external: true
 

@@ -10,13 +10,13 @@ export default function PlansClient({ initialPlans = [] }: { initialPlans: any[]
   const [isPending, startTransition] = useTransition();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
-  const [form, setForm] = useState({ name: '', price: 0, maxStores: 1, maxProducts: 50, hasMarketplace: true });
+  const [form, setForm] = useState({ name: '', price: 0, maxStores: 1, maxProducts: 50, hasMarketplace: true, defaultCommissionRate: 0.02 });
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', price: 0, maxStores: 1, maxProducts: 50, hasMarketplace: true });
+    setForm({ name: '', price: 0, maxStores: 1, maxProducts: 50, hasMarketplace: true, defaultCommissionRate: 0.02 });
     setModalOpen(true);
   };
 
@@ -27,7 +27,8 @@ export default function PlansClient({ initialPlans = [] }: { initialPlans: any[]
       price: Number(plan.price), 
       maxStores: plan.maxStores, 
       maxProducts: plan.maxProducts,
-      hasMarketplace: plan.hasMarketplace ?? true
+      hasMarketplace: plan.hasMarketplace ?? true,
+      defaultCommissionRate: plan.defaultCommissionRate ?? 0.02
     });
     setModalOpen(true);
   };
@@ -130,6 +131,7 @@ export default function PlansClient({ initialPlans = [] }: { initialPlans: any[]
                   { label: 'Points de Vente', value: plan.maxStores, icon: Store },
                   { label: 'Produits Max.', value: plan.maxProducts, icon: Package },
                   { label: 'Marketplace', value: plan.hasMarketplace ? 'Inclus' : 'Non', icon: ShoppingCart },
+                  { label: 'Comm. Marketplace', value: `${(Number(plan.defaultCommissionRate || 0) * 100).toFixed(1)}%`, icon: CreditCard },
                 ].map(feat => (
                   <div key={feat.label} className="flex justify-between items-center p-4 bg-slate-50/50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-slate-800 transition-colors hover:bg-white dark:hover:bg-slate-900 hover:border-indigo-500/20">
                     <div className="flex items-center gap-3">
@@ -231,6 +233,23 @@ export default function PlansClient({ initialPlans = [] }: { initialPlans: any[]
             />
             <label htmlFor="hasMarketplace" className="text-sm font-black text-slate-900 dark:text-white cursor-pointer">Inclure l'accès au Marketplace B2B</label>
           </div>
+
+          {form.hasMarketplace && (
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Taux de Commission Marketplace (%)</label>
+              <div className="relative">
+                <input 
+                  type="number" 
+                  step="0.1"
+                  value={form.defaultCommissionRate * 100} 
+                  onChange={e => setForm(f => ({ ...f, defaultCommissionRate: parseFloat(e.target.value) / 100 }))} 
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-black focus:ring-2 focus:ring-indigo-500 outline-none"
+                  required 
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 uppercase">% PAR COMMANDE</span>
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-4 pt-4">
             <button type="button" className="flex-1 py-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-slate-400 font-black text-sm" onClick={() => setModalOpen(false)}>Annuler</button>

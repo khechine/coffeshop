@@ -25,11 +25,11 @@ async function main() {
     });
 
     console.log(`Users in store ${storeId}:`);
-    users.forEach(u => {
+    users.forEach((u: any) => {
       console.log(`- ${u.name} (Role: ${u.role}, PIN: ${u.pinCode})`);
     });
 
-    const matchingPin = users.find(u => u.pinCode === pin);
+    const matchingPin = users.find((u: any) => u.pinCode === pin);
     if (matchingPin) {
       console.log(`MATCH FOUND: User ${matchingPin.name} has PIN ${pin}`);
     } else {
