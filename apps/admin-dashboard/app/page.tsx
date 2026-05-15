@@ -144,7 +144,7 @@ export default function HomePage() {
                border: '1px solid #F1F5F9'
              }}>
                <img 
-                 src="https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&q=80" 
+                 src="/images/elkassa-logo.png" 
                  style={{ width: '100%', borderRadius: isMobile ? '16px' : '24px', display: 'block' }}
                  alt="Dashboard Preview"
                />
@@ -238,7 +238,7 @@ export default function HomePage() {
                {!isMobile && (
                 <div style={{ flex: 1, position: 'relative' }}>
                     <img 
-                      src="https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800&q=80" 
+                      src="/images/elkassa-logo.png" 
                       style={{ width: '100%', borderRadius: '40px', filter: 'grayscale(0.2)' }}
                       alt="Vendor advantage"
                     />
@@ -253,7 +253,7 @@ export default function HomePage() {
                {!isMobile && (
                  <div style={{ flex: 1, position: 'relative' }}>
                     <img 
-                      src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&q=80" 
+                      src="/images/elkassa-logo.png" 
                       style={{ width: '100%', borderRadius: '40px', filter: 'grayscale(0.2)' }}
                       alt="Buyer advantage"
                     />

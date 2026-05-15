@@ -188,7 +188,7 @@ async function main() {
           price: price,
           minOrderQty: i % 10 === 0 ? 10 : 1,
           stockStatus: 'IN_STOCK',
-          image: `https://images.unsplash.com/photo-${1500000000000 + (i * 1000)}?q=80&w=600&auto=format&fit=crop`,
+          image: `/images/elkassa-logo.png1000)}?q=80&w=600&auto=format&fit=crop`,
           description: `Qualité professionnelle pour ${cat.name}. Idéal pour usage intensif.`
         }
       });

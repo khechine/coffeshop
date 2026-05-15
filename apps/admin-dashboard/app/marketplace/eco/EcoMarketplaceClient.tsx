@@ -100,7 +100,7 @@ export default function EcoMarketplaceClient({ initialData, store, user }: any) 
           </div>
           <div style={{ borderRadius: '24px', overflow: 'hidden', height: '400px' }}>
             <img 
-              src="https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=800" 
+              src="/images/elkassa-logo.png" 
               style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
               alt="Eco Farming"
             />

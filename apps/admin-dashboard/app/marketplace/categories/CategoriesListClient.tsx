@@ -88,7 +88,7 @@ export default function CategoriesListClient({ categories, user }: any) {
                           >
                             <div style={{ width: '100%', aspectRatio: '16/9', overflow: 'hidden', background: '#F1F5F9' }}>
                               <img 
-                                src={sanitizeUrl(sub.image) || 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=400'} 
+                                src={sanitizeUrl(sub.image) || '/images/elkassa-logo.png'} 
                                 alt={sub.name} 
                                 style={{ 
                                   width: '100%', 

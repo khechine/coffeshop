@@ -18,7 +18,7 @@ export default function VendorStorefrontMobile({ vendor, products = [], isVendor
   
   const cust = vendor.customization || {};
   const logoUrl = sanitizeUrl(cust.logoUrl);
-  const bannerUrl = sanitizeUrl(cust.bannerUrl) || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600';
+  const bannerUrl = sanitizeUrl(cust.bannerUrl) || '/images/elkassa-logo.png';
   const primaryColor = vendor.isPremium ? (cust.primaryColor || '#E31E24') : '#111827';
 
   return (

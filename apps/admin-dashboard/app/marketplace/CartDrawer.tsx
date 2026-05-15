@@ -16,7 +16,7 @@ const VendorGroup = ({ group, updateQty, removeItem }: any) => {
     <div key={group.vendor?.id || 'v'}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
         <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#F3F4F6', overflow: 'hidden', border: '1px solid #E5E7EB', filter: identityVisible ? 'none' : 'blur(4px)' }}>
-          <img src={maskLogo(group.vendor?.logoUrl) || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=100'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={maskLogo(group.vendor?.logoUrl) || '/images/elkassa-logo.png'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

@@ -17,7 +17,7 @@ const BANNER_DEFAULTS = {
   subtitle: '',
   buttonText: 'Découvrir',
   buttonLink: '#',
-  imageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1600',
+  imageUrl: '/images/elkassa-logo.png',
   position: 'HERO',
   bgColor: '#1E1B4B',
   badgeText: 'OFFRE EXCLUSIVE',
@@ -346,9 +346,9 @@ export default function BannersClient({ banners: initialBanners }: { banners: an
                   <label style={{ fontSize: 12, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 12 }}>Presets d'Images Rapides</label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                     {[
-                      { url: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1600', label: '☕ Café' },
-                      { url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=1600', label: '🍴 Resto' },
-                      { url: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=1600', label: '🏪 Bistro' },
+                      { url: '/images/elkassa-logo.png', label: '☕ Café' },
+                      { url: '/images/elkassa-logo.png', label: '🍴 Resto' },
+                      { url: '/images/elkassa-logo.png', label: '🏪 Bistro' },
                     ].map(preset => (
                       <button
                         key={preset.url}

@@ -165,7 +165,7 @@ export default function CategoryViewClient({ category, products = [], allCategor
                       >
                         <div style={{ width: '100%', aspectRatio: '16/10', overflow: 'hidden', background: '#F1F5F9' }}>
                           <img 
-                            src={sanitizeUrl(sub.image) || 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=400'} 
+                            src={sanitizeUrl(sub.image) || '/images/elkassa-logo.png'} 
                             alt={sub.name} 
                             style={{ 
                               width: '100%', 
@@ -230,7 +230,7 @@ export default function CategoryViewClient({ category, products = [], allCategor
                   <Link key={child.id} href={`/marketplace/category/${child.id}`} style={{ background: '#fff', padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', textDecoration: 'none' }} className="hover-shadow-inner category-card-premium">
                     <div style={{ minHeight: '48px', position: 'relative', zIndex: 10 }}><span style={{ fontSize: '14px', fontWeight: 700, color: '#374151' }}>{child.name}</span></div>
                     <div style={{ width: '100%', aspectRatio: '16/10', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '8px' }}>
-                      <img src={sanitizeUrl(child.image) || 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=400'} alt={child.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} className="category-img" />
+                      <img src={sanitizeUrl(child.image) || '/images/elkassa-logo.png'} alt={child.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} className="category-img" />
                     </div>
                   </Link>
                 ))}

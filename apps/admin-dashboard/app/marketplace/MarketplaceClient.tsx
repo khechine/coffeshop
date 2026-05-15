@@ -194,14 +194,14 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
         title: p.title,
         author: p.author,
         date: p.publishedAt ? new Date(p.publishedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
-        image: p.coverImage || `https://images.unsplash.com/photo-${['1518770660439-4636190af475','1523170335258-f5ed11844a49','1544244015-0cd4b3ffc6b0','1515562141207-7a88fb7ce338'][i % 4]}?w=200`,
+        image: p.coverImage || `/images/elkassa-logo.png`,
         slug: p.slug,
       }))
     : [
-        { id: 1, title: "Quels sont les avantages des pilotes de moteur pour répondre aux besoin...", author: "Kaylee Watson", date: "05/05/2026", image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=200", slug: null },
-        { id: 2, title: "3 façons d'équilibrer le coût et la fonctionnalité lors du choix d'une...", author: "Jadyn Moyer", date: "05/05/2026", image: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=200", slug: null },
-        { id: 3, title: "Ai-je besoin d'un HDD et d'un SSD ?", author: "Ramon Beasley", date: "05/05/2026", image: "https://images.unsplash.com/photo-1544244015-0cd4b3ffc6b0?w=200", slug: null },
-        { id: 4, title: "Conception de bijoux plaqués or : guide complet...", author: "Joshua Price", date: "05/05/2026", image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=200", slug: null },
+        { id: 1, title: "Quels sont les avantages des pilotes de moteur pour répondre aux besoin...", author: "Kaylee Watson", date: "05/05/2026", image: "/images/elkassa-logo.png", slug: null },
+        { id: 2, title: "3 façons d'équilibrer le coût et la fonctionnalité lors du choix d'une...", author: "Jadyn Moyer", date: "05/05/2026", image: "/images/elkassa-logo.png", slug: null },
+        { id: 3, title: "Ai-je besoin d'un HDD et d'un SSD ?", author: "Ramon Beasley", date: "05/05/2026", image: "/images/elkassa-logo.png", slug: null },
+        { id: 4, title: "Conception de bijoux plaqués or : guide complet...", author: "Joshua Price", date: "05/05/2026", image: "/images/elkassa-logo.png", slug: null },
       ];
 
   if (isMobile) {
@@ -353,7 +353,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                           className="vendor-card"
                         >
                           <div style={{ width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', border: '1px solid #E5E7EB', filter: identityVisible ? 'none' : 'blur(4px)' }}>
-                            <img src={v.logoUrl || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=200'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={v.logoUrl || '/images/elkassa-logo.png'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
                           <div>
                             <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#111827', margin: 0 }}>{maskName(v.companyName)}</h3>
@@ -808,7 +808,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                            <Link href={`/marketplace/product/${bundle.id}?isBundle=true`} style={{ textDecoration: 'none', display: 'block' }}>
                              <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '16px', overflow: 'hidden', background: '#F8FAFC' }}>
                                 <img 
-                                  src={bundle.image || 'https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600&auto=format&fit=crop'} 
+                                  src={bundle.image || '/images/elkassa-logo.png'} 
                                   style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} 
                                 />
                                 {bundle.discountPercent && (

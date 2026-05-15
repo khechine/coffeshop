@@ -7,7 +7,7 @@ const categoryTree = [
     name: "Matières Premières",
     icon: "🌾",
     color: "#D97706",
-    image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=800",
+    image: "/images/elkassa-logo.png",
     children: [
       {
         name: "Café en grains",
@@ -52,7 +52,7 @@ const categoryTree = [
     name: "Produits Semi-Finis",
     icon: "🥣",
     color: "#059669",
-    image: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800",
+    image: "/images/elkassa-logo.png",
     children: [
       { name: "Bases boissons (frappé, smoothie)" },
       { name: "Sauces prêtes (chocolat, caramel)" },
@@ -67,7 +67,7 @@ const categoryTree = [
     name: "Produits Finis (B2B / Revente)",
     icon: "🥐",
     color: "#E11D48",
-    image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?q=80&w=800",
+    image: "/images/elkassa-logo.png",
     children: [
       { name: "Capsules café" },
       { name: "Boissons prêtes (RTD)" },
@@ -84,7 +84,7 @@ const categoryTree = [
     name: "Équipements & Matériel",
     icon: "⚙️",
     color: "#4F46E5",
-    image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=800",
+    image: "/images/elkassa-logo.png",
     children: [
       {
         name: "Matériel Coffeeshop",
@@ -104,23 +104,23 @@ const categoryTree = [
     name: "Emballages",
     icon: "📦",
     color: "#8B5CF6",
-    image: "https://images.unsplash.com/photo-1589939705384-5185138a04b9?q=80&w=1200",
+    image: "/images/elkassa-logo.png",
     children: [
-      { name: "Gobelets & Couvercles", image: "https://images.unsplash.com/photo-1517254456976-ee8682099819?q=80&w=600" },
-      { name: "Pailles", image: "https://images.unsplash.com/photo-1574279603932-f3d60361826c?q=80&w=600" },
-      { name: "Sacs takeaway", image: "https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600" },
-      { name: "Sachets pain & Papier alimentaire", image: "https://images.unsplash.com/photo-1614032684758-299161db433f?q=80&w=600" },
-      { name: "Boîtes & Barquettes", image: "https://images.unsplash.com/photo-1603596065029-afca2938c567?q=80&w=600" },
-      { name: "Supports cake", image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=600" },
-      { name: "Packaging premium", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600" },
-      { name: "Écologique (kraft, biodégradable)", image: "https://images.unsplash.com/photo-1605600611284-19561ad7e612?q=80&w=600" }
+      { name: "Gobelets & Couvercles", image: "/images/elkassa-logo.png" },
+      { name: "Pailles", image: "/images/elkassa-logo.png" },
+      { name: "Sacs takeaway", image: "/images/elkassa-logo.png" },
+      { name: "Sachets pain & Papier alimentaire", image: "/images/elkassa-logo.png" },
+      { name: "Boîtes & Barquettes", image: "/images/elkassa-logo.png" },
+      { name: "Supports cake", image: "/images/elkassa-logo.png" },
+      { name: "Packaging premium", image: "/images/elkassa-logo.png" },
+      { name: "Écologique (kraft, biodégradable)", image: "/images/elkassa-logo.png" }
     ]
   },
   {
     name: "Hygiène & Nettoyage",
     icon: "🧼",
     color: "#0284C7",
-    image: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=800",
+    image: "/images/elkassa-logo.png",
     children: [
       { name: "Détergents cuisine" },
       { name: "Désinfectants" },
@@ -133,7 +133,7 @@ const categoryTree = [
     name: "Services",
     icon: "🤝",
     color: "#C026D3",
-    image: "https://images.unsplash.com/photo-1521791136366-39851946a095?q=80&w=800",
+    image: "/images/elkassa-logo.png",
     children: [
       { name: "Livraison" },
       { name: "Maintenance machines" },

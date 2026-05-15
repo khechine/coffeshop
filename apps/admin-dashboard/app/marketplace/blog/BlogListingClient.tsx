@@ -44,7 +44,7 @@ export default function BlogListingClient({ initialPosts }: { initialPosts: any[
                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
               >
                 <div style={{ height: '240px', overflow: 'hidden' }}>
-                  <img src={post.coverImage || 'https://images.unsplash.com/photo-1542435503-956c469947f6?w=800'} alt={post.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={post.coverImage || '/images/elkassa-logo.png'} alt={post.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>

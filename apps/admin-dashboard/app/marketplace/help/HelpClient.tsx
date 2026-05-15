@@ -23,7 +23,7 @@ export default function HelpClient({ store }: { store: any }) {
         "Historique des commandes centralisé",
         "Re-commande rapide en un clic"
       ],
-      image: "https://images.unsplash.com/photo-1557821552-17105176677c?q=80&w=1000&auto=format&fit=crop"
+      image: "/images/elkassa-logo.png"
     },
     {
       id: 'rfq',
@@ -36,7 +36,7 @@ export default function HelpClient({ store }: { store: any }) {
         "Négociation directe sur le prix",
         "Acceptation et paiement sécurisé"
       ],
-      image: "https://images.unsplash.com/photo-1454165833767-027ffea9e787?q=80&w=1000&auto=format&fit=crop"
+      image: "/images/elkassa-logo.png"
     },
     {
       id: 'messaging',
@@ -49,7 +49,7 @@ export default function HelpClient({ store }: { store: any }) {
         "Notifications en temps réel",
         "Filtrage anti-fraude intégré"
       ],
-      image: "https://images.unsplash.com/photo-1577563908411-5077b6ac7624?q=80&w=1000&auto=format&fit=crop"
+      image: "/images/elkassa-logo.png"
     },
     {
       id: 'security',
@@ -62,7 +62,7 @@ export default function HelpClient({ store }: { store: any }) {
         "Protection contre les fuites de données",
         "Support dédié en cas de litige"
       ],
-      image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1000&auto=format&fit=crop"
+      image: "/images/elkassa-logo.png"
     }
   ];
 

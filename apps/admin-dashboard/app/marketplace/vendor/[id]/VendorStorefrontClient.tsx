@@ -117,7 +117,7 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
   const accentColor = isPremium ? (cust.secondaryColor || '#475569') : '#F3F4F6';
   
   const logoUrl = sanitizeUrl(cust.logoUrl);
-  const bannerUrl = sanitizeUrl(cust.bannerUrl) || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1600';
+  const bannerUrl = sanitizeUrl(cust.bannerUrl) || '/images/elkassa-logo.png';
 
   const products = (vendor.vendorProducts || []).map((vp: any) => ({
     id: vp.id,

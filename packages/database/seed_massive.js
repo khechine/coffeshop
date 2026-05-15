@@ -54,8 +54,8 @@ async function main() {
   ];
 
   const safeImages = [
-    'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=600',
-    'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=600'
+    '/images/elkassa-logo.png',
+    '/images/elkassa-logo.png'
   ];
 
   // 3. SEED VENDORS

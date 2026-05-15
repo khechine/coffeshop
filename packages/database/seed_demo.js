@@ -86,7 +86,7 @@ async function main() {
       name: 'Café Premium Robusta 1kg',
       price: 28.500,
       unit: 'kg',
-      image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400',
+      image: '/images/elkassa-logo.png',
       vendorId: vendorProfile.id,
       categoryId: catCafe.id,
       isFeatured: true
@@ -101,7 +101,7 @@ async function main() {
       name: 'Lait Entier Professionnel 1L',
       price: 1.450,
       unit: 'L',
-      image: 'https://images.unsplash.com/photo-1563636619-e9108b4af196?q=80&w=400',
+      image: '/images/elkassa-logo.png',
       vendorId: vendorProfile.id,
       categoryId: catLait.id
     }
