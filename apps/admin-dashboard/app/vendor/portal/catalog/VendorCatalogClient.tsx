@@ -17,7 +17,7 @@ import { sanitizeUrl } from '../../../lib/imageUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type SubCategory = { id: string; name: string; icon?: string | null };
-type RootCategory = SubCategory & { subcategories?: SubCategory[] };
+type RootCategory = SubCategory & { children?: SubCategory[] };
 type BenchmarkRow = {
   categoryId: string | null;
   categoryName: string;
@@ -521,7 +521,7 @@ export default function VendorCatalogClient({
             return (
               <div key={p.id} className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col hover:shadow-2xl transition-all group">
                 <div className="h-48 bg-slate-100 dark:bg-slate-950 relative overflow-hidden">
-                  <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                  <img src={p.image || '/images/elkassa-placeholder.png'} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                   <div className="absolute top-4 right-4 flex flex-col gap-2">
                     {p.isFeatured && <div className="bg-amber-500 text-white px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg">Vedette</div>}
                     {p.isFlashSale && <div className="bg-rose-500 text-white px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg">-{p.discount}%</div>}
@@ -558,7 +558,7 @@ export default function VendorCatalogClient({
           {initialBundles.map((b: any) => (
             <div key={b.id} className="bg-white rounded-[40px] border border-slate-100 p-8 flex flex-col hover:shadow-2xl transition-all group">
               <div className="h-56 bg-slate-100 rounded-3xl relative mb-6 overflow-hidden">
-                <img src={b.image || 'https://images.unsplash.com/photo-1541167760496-162955ed8a9f?q=80&w=400&auto=format&fit=crop'} className="w-full h-full object-cover" />
+                <img src={b.image || '/images/elkassa-placeholder.png'} className="w-full h-full object-cover" />
                 <div className="absolute top-4 left-4 bg-indigo-600 text-white px-3 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-xl"><Sparkles size={14} /> Pack Promo</div>
                 <button onClick={() => handleDeleteBundle(b.id)} className="absolute top-4 right-4 p-3 bg-white/90 backdrop-blur rounded-2xl text-rose-500 shadow-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-500 hover:text-white"><Trash2 size={18} /></button>
               </div>

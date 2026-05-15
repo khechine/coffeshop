@@ -75,7 +75,7 @@ function ProductCard({ product, onAdd, isVendor }: any) {
       <div className={`mkt-cocote-card group ${isPremium ? 'is-premium' : ''}`} style={isPremium ? { '--premium-color': product.vendor?.customization?.color || '#6366F1' } as any : {}}>
         <Link href={`/marketplace/product/${product.id}`} className="mkt-cocote-card-img-wrap">
           <img
-            src={sanitizeUrl(product.image) ?? 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'}
+            src={sanitizeUrl(product.image) ?? '/images/elkassa-placeholder.png'}
             alt={product.name}
             className="mkt-cocote-card-img"
           />
@@ -209,18 +209,18 @@ function VendorCard({ vendor, distance }: any) {
 
 /* ── Helpers ── */
 const CATEGORY_IMAGES: Record<string, string> = {
-  'matieres-premieres': 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=600',
-  'produits-semi-finis': 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=600',
-  'produits-finis-b2b-revente': 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?q=80&w=600',
-  'equipements-materiel': 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=600',
-  'emballages': 'https://images.unsplash.com/photo-1589939705384-5185138a04b9?q=80&w=600',
-  'hygiene-nettoyage': 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=600',
-  'services': 'https://images.unsplash.com/photo-1521791136366-39851946a095?q=80&w=600',
+  'matieres-premieres': '/images/elkassa-placeholder.png',
+  'produits-semi-finis': '/images/elkassa-placeholder.png',
+  'produits-finis-b2b-revente': '/images/elkassa-placeholder.png',
+  'equipements-materiel': '/images/elkassa-placeholder.png',
+  'emballages': '/images/elkassa-placeholder.png',
+  'hygiene-nettoyage': '/images/elkassa-placeholder.png',
+  'services': '/images/elkassa-placeholder.png',
 };
 
 const getCategoryImage = (cat: any) => {
   if (cat.image) return cat.image;
-  return CATEGORY_IMAGES[cat.slug] || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=600';
+  return CATEGORY_IMAGES[cat.slug] || '/images/elkassa-placeholder.png';
 };
 
 /* ─── MAIN CLIENT ─── */

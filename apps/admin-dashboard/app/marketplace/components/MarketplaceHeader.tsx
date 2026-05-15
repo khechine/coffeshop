@@ -66,15 +66,8 @@ export default function MarketplaceHeader({ isVendor = false, categories = [] }:
           </button>
 
           {/* Logo */}
-          <Link href="/marketplace" className="mkt-cocote-logo">
-            <div className="mkt-cocote-logo-icon">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" />
-                <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            ElKassa <span>Marketplace</span>
+          <Link href="/marketplace" className="mkt-cocote-logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <img src="/images/elkassa-logo.png" alt="ElKassa Marketplace" style={{ height: '32px', width: 'auto' }} />
           </Link>
 
           {/* Search - Desktop */}
@@ -339,7 +332,7 @@ function MegaMenuPanel({ rootCategory }: { rootCategory: any }) {
         <div className="mkt-mega-v2-featured">
           <div className="mkt-mega-v2-featured-img">
             <img 
-              src={activeSub?.image || rootCategory.image || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=800'} 
+              src={activeSub?.image || rootCategory.image || '/images/elkassa-placeholder.png'} 
               alt={activeSub?.name} 
             />
           </div>

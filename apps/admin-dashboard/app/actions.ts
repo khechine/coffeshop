@@ -3140,15 +3140,20 @@ export async function getMarketplaceCategories() {
 }
 
 export async function updateVendorSectorsAction(vendorId: string, sectorIds: string[]) {
-  await (prisma as any).vendorProfile.update({
-    where: { id: vendorId },
-    data: {
-      mktSectors: {
-        set: sectorIds.map((id: string) => ({ id }))
+  try {
+    await (prisma as any).vendorProfile.update({
+      where: { id: vendorId },
+      data: {
+        mktSectors: {
+          set: sectorIds.map((id: string) => ({ id }))
+        }
       }
-    }
-  });
-  revalidatePath('/vendor/portal/settings');
+    });
+    revalidatePath('/vendor/portal/settings');
+  } catch (error) {
+    console.error("ERROR IN updateVendorSectorsAction:", error);
+    throw error;
+  }
 }
 
 export async function updateVendorActivityPolesAction(vendorId: string, activityPoleIds: string[]) {
@@ -3164,20 +3169,25 @@ export async function updateVendorActivityPolesAction(vendorId: string, activity
 }
 
 export async function updateVendorProfileAction(vendorId: string, data: any) {
-  await (prisma as any).vendorProfile.update({
-    where: { id: vendorId },
-    data: {
-      companyName: data.companyName?.toUpperCase(),
-      description: data.description,
-      address: data.address,
-      city: data.city,
-      governorate: data.governorate,
-      phone: data.phone,
-      lat: data.lat,
-      lng: data.lng,
-    }
-  });
-  revalidatePath('/vendor/portal/settings');
+  try {
+    await (prisma as any).vendorProfile.update({
+      where: { id: vendorId },
+      data: {
+        companyName: data.companyName?.toUpperCase(),
+        description: data.description,
+        address: data.address,
+        city: data.city,
+        governorate: data.governorate,
+        phone: data.phone,
+        lat: data.lat,
+        lng: data.lng,
+      }
+    });
+    revalidatePath('/vendor/portal/settings');
+  } catch (error) {
+    console.error("ERROR IN updateVendorProfileAction:", error);
+    throw error;
+  }
 }
 
 export async function deleteMarketplaceProductAction(id: string) {
@@ -4563,26 +4573,31 @@ export async function updateVendorCustomizationAction(data: {
   fontFamily?: string;
   welcomeMessage?: string;
 }) {
-  const userId = cookies().get('userId')?.value;
-  if (!userId) throw new Error('Non authentifié');
+  try {
+    const userId = cookies().get('userId')?.value;
+    if (!userId) throw new Error('Non authentifié');
 
-  // User table has no vendorProfileId column — look up via VendorProfile.userId
-  const vendorProfile = await (prisma as any).vendorProfile.findFirst({
-    where: { userId }
-  });
-  if (!vendorProfile) throw new Error('Non autorisé — profil vendeur introuvable');
+    const vendorProfile = await (prisma as any).vendorProfile.findFirst({
+      where: { userId }
+    });
+    if (!vendorProfile) throw new Error('Non autorisé — profil vendeur introuvable');
 
-  const customization = await (prisma as any).vendorCustomization.upsert({
-    where: { vendorId: vendorProfile.id },
-    update: data,
-    create: {
-      ...data,
-      vendorId: vendorProfile.id
-    }
-  });
+    const customization = await (prisma as any).vendorCustomization.upsert({
+      where: { vendorId: vendorProfile.id },
+      update: data,
+      create: {
+        ...data,
+        vendorId: vendorProfile.id
+      }
+    });
 
-  revalidatePath('/marketplace');
-  return customization;
+    revalidatePath('/marketplace');
+    revalidatePath('/vendor/portal/settings');
+    return customization;
+  } catch (error) {
+    console.error("ERROR IN updateVendorCustomizationAction:", error);
+    throw error;
+  }
 }
 
 

@@ -10,14 +10,7 @@ export default function MarketplaceFooter() {
           
           <div style={{ maxWidth: '400px' }}>
             <Link href="/marketplace" className="mkt-cocote-logo" style={{ color: '#fff', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '24px', fontWeight: 950, textDecoration: 'none' }}>
-              <div className="mkt-cocote-logo-icon" style={{ background: '#6366F1', color: '#fff', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" />
-                  <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M2 12L17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              ElKassa <span style={{ color: '#6366F1' }}>Marketplace</span>
+              <img src="/images/elkassa-logo.png" alt="ElKassa Marketplace" style={{ height: '40px', width: 'auto' }} />
             </Link>
             <p style={{ fontSize: '15px', lineHeight: '1.7', color: '#94A3B8', marginBottom: '32px' }}>
               La première place de marché B2B dédiée à la proximité en Tunisie. Connectez votre établissement aux meilleurs fournisseurs locaux en quelques clics.

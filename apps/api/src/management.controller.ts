@@ -252,10 +252,15 @@ export class ManagementController {
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
       destination: (req, file, cb) => {
-        // Use process.cwd() so this works whether the app is launched via
-        // `nest start` (cwd=/app) or `node dist/main` (cwd=/app/apps/api).
-        // The UPLOAD_DIR env var lets us override this in Docker.
-        const base = process.env.UPLOAD_DIR || join(process.cwd(), 'apps', 'api', 'public', 'uploads');
+        // More robust path detection: check if we are in apps/api or root
+        let base = process.env.UPLOAD_DIR;
+        if (!base) {
+          const isAtRoot = existsSync(join(process.cwd(), 'apps', 'api'));
+          base = isAtRoot 
+            ? join(process.cwd(), 'apps', 'api', 'public', 'uploads')
+            : join(process.cwd(), 'public', 'uploads');
+        }
+
         if (!existsSync(base)) {
           mkdirSync(base, { recursive: true });
         }
