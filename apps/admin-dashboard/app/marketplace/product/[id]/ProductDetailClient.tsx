@@ -23,7 +23,7 @@ export default function ProductDetailClient({ product, isVendor = false }: { pro
   const primaryColor = cust.primaryColor || '#1E1B4B';
   const fontFamily = cust.fontFamily || 'Inter';
 
-  const imageUrl = sanitizeUrl(product.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800';
+  const imageUrl = sanitizeUrl(product.image) || '/images/elkassa-placeholder.png';
   
   const gallery = [imageUrl, ...(product.images || []).map((img: string) => sanitizeUrl(img))].filter(Boolean);
   const [activeImage, setActiveImage] = useState(gallery[0]);

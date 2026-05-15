@@ -2510,59 +2510,69 @@ export async function createMarketplaceBundleAction(data: {
   image?: string;
   items: { vendorProductId: string; quantity: number }[];
 }) {
-  const userId = cookies().get('userId')?.value;
-  if (!userId) throw new Error('Non authentifié');
+  try {
+    const userId = cookies().get('userId')?.value;
+    if (!userId) throw new Error('Non authentifié');
 
-  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
-  if (!user) throw new Error('Utilisateur non trouvé');
+    const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error('Utilisateur non trouvé');
 
-  const vendor = await (prisma as any).vendorProfile.findFirst({
-    where: { userId: user.id }
-  });
-  if (!vendor) throw new Error('Profil vendeur introuvable');
+    const vendor = await (prisma as any).vendorProfile.findFirst({
+      where: { userId: user.id }
+    });
+    if (!vendor) throw new Error('Profil vendeur introuvable');
 
-  const bundle = await (prisma as any).mktBundle.create({
-    data: {
-      name: data.name,
-      description: data.description,
-      price: data.price,
-      discountPercent: data.discountPercent,
-      image: data.image,
-      vendorId: vendor.id,
-      items: {
-        create: data.items.map(it => ({
-          vendorProductId: it.vendorProductId,
-          quantity: it.quantity
-        }))
+    const bundle = await (prisma as any).mktBundle.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        discountPercent: data.discountPercent,
+        image: data.image,
+        vendorId: vendor.id,
+        items: {
+          create: data.items.map(it => ({
+            vendorProductId: it.vendorProductId,
+            quantity: it.quantity
+          }))
+        }
       }
-    }
-  });
+    });
 
-  revalidatePath('/vendor/portal/catalog');
-  revalidatePath('/marketplace');
-  return bundle;
+    revalidatePath('/vendor/portal/catalog');
+    revalidatePath('/marketplace');
+    return bundle;
+  } catch (error) {
+    console.error("ERROR IN createMarketplaceBundleAction:", error);
+    throw error;
+  }
 }
 
 export async function deleteMarketplaceBundleAction(id: string) {
-  const userId = cookies().get('userId')?.value;
-  if (!userId) throw new Error('Non authentifié');
+  try {
+    const userId = cookies().get('userId')?.value;
+    if (!userId) throw new Error('Non authentifié');
 
-  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
-  if (!user) throw new Error('Utilisateur non trouvé');
+    const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error('Utilisateur non trouvé');
 
-  const vendor = await (prisma as any).vendorProfile.findFirst({
-    where: { userId: user.id }
-  });
-  if (!vendor) throw new Error('Profil vendeur introuvable');
+    const vendor = await (prisma as any).vendorProfile.findFirst({
+      where: { userId: user.id }
+    });
+    if (!vendor) throw new Error('Profil vendeur introuvable');
 
-  // Verify ownership
-  const bundle = await (prisma as any).mktBundle.findUnique({ where: { id } });
-  if (!bundle || bundle.vendorId !== vendor.id) throw new Error('Non autorisé');
+    // Verify ownership
+    const bundle = await (prisma as any).mktBundle.findUnique({ where: { id } });
+    if (!bundle || bundle.vendorId !== vendor.id) throw new Error('Non autorisé');
 
-  await (prisma as any).mktBundle.delete({ where: { id } });
+    await (prisma as any).mktBundle.delete({ where: { id } });
 
-  revalidatePath('/vendor/portal/catalog');
-  revalidatePath('/marketplace');
+    revalidatePath('/vendor/portal/catalog');
+    revalidatePath('/marketplace');
+  } catch (error) {
+    console.error("ERROR IN deleteMarketplaceBundleAction:", error);
+    throw error;
+  }
 }
 
 export async function approveMarketplaceOrderAction(orderId: string, role: 'VENDOR' | 'SUPERADMIN') {
@@ -2784,66 +2794,72 @@ export async function processDepositRequestAction(requestId: string, status: 'AP
 }
 
 export async function createMarketplaceProductAction(data: any) {
-  const userId = cookies().get('userId')?.value;
-  if (!userId) throw new Error('Non authentifié');
+  try {
+    const userId = cookies().get('userId')?.value;
+    if (!userId) throw new Error('Non authentifié');
 
-  const user = await (prisma as any).user.findUnique({ where: { id: userId } });
-  if (!user) throw new Error('Utilisateur non trouvé');
+    const user = await (prisma as any).user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error('Utilisateur non trouvé');
 
-  const vendor = await (prisma as any).vendorProfile.findFirst({
-    where: { userId: user.id }
-  });
-  if (!vendor) throw new Error('Profil vendeur introuvable');
+    const vendor = await (prisma as any).vendorProfile.findFirst({
+      where: { userId: user.id }
+    });
+    if (!vendor) throw new Error('Profil vendeur introuvable');
 
-  // Handle image: use preview (base64) if available, otherwise use URL
-  const image = data.imagePreview || data.image || null;
+    // Handle image: use preview (base64) if available, otherwise use URL
+    const image = data.imagePreview || data.image || null;
 
-  // Limits verification for non-premium vendors
-  if (!vendor.isPremium) {
-    if (data.isFlashSale) {
-      const promoCount = await (prisma as any).vendorProduct.count({
-        where: { vendorId: vendor.id, isFlashSale: true }
-      });
-      if (promoCount >= 3) {
-        throw new Error("Limite de promotions (3) atteinte pour votre plan actuel. Passez au pack Premium pour en ajouter plus !");
+    // Limits verification for non-premium vendors
+    if (!vendor.isPremium) {
+      if (data.isFlashSale) {
+        const promoCount = await (prisma as any).vendorProduct.count({
+          where: { vendorId: vendor.id, isFlashSale: true }
+        });
+        if (promoCount >= 3) {
+          throw new Error("Limite de promotions (3) atteinte pour votre plan actuel. Passez au pack Premium pour en ajouter plus !");
+        }
+      }
+      if (data.isFeatured) {
+        const featuredCount = await (prisma as any).vendorProduct.count({
+          where: { vendorId: vendor.id, isFeatured: true }
+        });
+        if (featuredCount >= 5) {
+          throw new Error("Limite de produits vedettes (5) atteinte pour votre plan actuel. Passez au pack Premium pour en ajouter plus !");
+        }
       }
     }
-    if (data.isFeatured) {
-      const featuredCount = await (prisma as any).vendorProduct.count({
-        where: { vendorId: vendor.id, isFeatured: true }
-      });
-      if (featuredCount >= 5) {
-        throw new Error("Limite de produits vedettes (5) atteinte pour votre plan actuel. Passez au pack Premium pour en ajouter plus !");
+
+    await (prisma as any).vendorProduct.create({
+      data: {
+        name: data.name?.toUpperCase(),
+        price: data.price,
+        unit: data.unit,
+        categoryId: data.categoryId,
+        subcategoryId: data.subcategoryId || null,
+        vendorId: vendor.id,
+        image: image,
+        images: Array.isArray(data.images) ? data.images : [],
+        description: data.description || null,
+        tags: [
+          ...(Array.isArray(data.tags) ? data.tags : (data.tags ? data.tags.split(',').map((t: string) => t.trim()) : [])),
+          ...(data.brand ? [data.brand] : [])
+        ],
+        stockQuantity: data.stockQuantity ? Number(data.stockQuantity) : 0,
+        isFeatured: data.isFeatured || false,
+        isFlashSale: data.isFlashSale || false,
+        discountPrice: data.discount || null,
+        minOrderQty: data.minOrderQty ? Number(data.minOrderQty) : 1,
+        collections: data.collectionIds && data.collectionIds.length > 0 ? {
+          connect: data.collectionIds.map((id: string) => ({ id }))
+        } : undefined
       }
-    }
+    });
+    revalidatePath('/vendor/portal/catalog');
+    revalidatePath('/marketplace');
+  } catch (error) {
+    console.error("ERROR IN createMarketplaceProductAction:", error);
+    throw error;
   }
-
-  await (prisma as any).vendorProduct.create({
-    data: {
-      name: data.name?.toUpperCase(),
-      price: data.price,
-      unit: data.unit,
-      categoryId: data.categoryId,
-      subcategoryId: data.subcategoryId || null,
-      vendorId: vendor.id,
-      image: image,
-      images: Array.isArray(data.images) ? data.images : [],
-      description: data.description || null,
-      tags: [
-        ...(Array.isArray(data.tags) ? data.tags : (data.tags ? data.tags.split(',').map((t: string) => t.trim()) : [])),
-        ...(data.brand ? [data.brand] : [])
-      ],
-      stockQuantity: data.stockQuantity ? Number(data.stockQuantity) : 0,
-      isFeatured: data.isFeatured || false,
-      isFlashSale: data.isFlashSale || false,
-      discountPrice: data.discount || null,
-      minOrderQty: data.minOrderQty ? Number(data.minOrderQty) : 1,
-      collections: data.collectionIds && data.collectionIds.length > 0 ? {
-        connect: data.collectionIds.map((id: string) => ({ id }))
-      } : undefined
-    }
-  });
-  revalidatePath('/vendor/portal/catalog');
 }
 
 export async function importCsvProductsAction(rows: {

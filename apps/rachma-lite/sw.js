@@ -39,6 +39,9 @@ self.addEventListener('fetch', (event) => {
 
     const url = new URL(event.request.url);
 
+    // Only handle http/https requests. Ignore chrome-extension:// and others that Cache API doesn't support.
+    if (!url.protocol.startsWith('http')) return;
+
     // Always fetch API calls from network (never cache)
     if (url.pathname.includes('/management/') || url.hostname.includes('api.')) {
         event.respondWith(
@@ -58,9 +61,18 @@ self.addEventListener('fetch', (event) => {
             return fetch(event.request).then((response) => {
                 if (!response || response.status !== 200) return response;
                 const clone = response.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                caches.open(CACHE_NAME).then((cache) => {
+                    if (event.request.url.startsWith('http')) {
+                        cache.put(event.request, clone).catch(() => {});
+                    }
+                });
                 return response;
+            }).catch(() => {
+                // Return a basic fallback if both cache and network fail
+                return new Response('Ressource indisponible hors ligne', { status: 503 });
             });
+        }).catch(() => {
+            return new Response('Erreur interne du Service Worker', { status: 500 });
         })
     );
 });
