@@ -46,9 +46,10 @@ interface ProductFormProps {
   categories: Category[];
   stockItems: StockItem[];
   globalUnits: any[];
+  token?: string | null;
 }
 
-export default function ProductForm({ initialData, categories, stockItems, globalUnits }: ProductFormProps) {
+export default function ProductForm({ initialData, categories, stockItems, globalUnits, token }: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 

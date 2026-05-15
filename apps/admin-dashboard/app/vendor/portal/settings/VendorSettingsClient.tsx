@@ -26,13 +26,15 @@ export default function VendorSettingsClient({
   mktCategories,
   globalUnits,
   userEmail = '',
-  notificationPrefs = { notifyEmailMessages: true, notifyEmailOrders: true, notifyEmailRFQs: true }
+  notificationPrefs = { notifyEmailMessages: true, notifyEmailOrders: true, notifyEmailRFQs: true },
+  token
 }: {
   portalData: any;
   mktCategories: { id: string; name: string; icon?: string | null }[];
   globalUnits: { id: string; name: string }[];
   userEmail?: string;
   notificationPrefs?: { notifyEmailMessages: boolean; notifyEmailOrders: boolean; notifyEmailRFQs: boolean };
+  token?: string | null;
 }) {
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ show: boolean; message: string } | null>(null);
@@ -83,6 +85,7 @@ export default function VendorSettingsClient({
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
       const res = await fetch(`${API_URL}/management/upload`, {
         method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData,
       });
       const data = await res.json();

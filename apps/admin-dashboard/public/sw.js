@@ -37,6 +37,9 @@ self.addEventListener('activate', (event) => {
 
 // Fetch Event: Stale-while-revalidate strategy for GET requests
 self.addEventListener('fetch', (event) => {
+  // Ignore non-HTTP(S) schemes (like chrome-extension)
+  if (!event.request.url.startsWith('http')) return;
+
   if (event.request.method !== 'GET') return;
 
   event.respondWith(

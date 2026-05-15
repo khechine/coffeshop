@@ -114,6 +114,13 @@ export async function getStore() {
   return null;
 }
 
+export async function getMarketplaceToken() {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) return null;
+  // Temporary token format expected by MarketplaceAuthGuard: "user-jwt-{userId}-{timestamp}"
+  return `user-jwt-${userId}-${Date.now()}`;
+}
+
 export async function getConfirmedVendorIds() {
   try {
     const store = await getStore();

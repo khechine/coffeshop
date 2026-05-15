@@ -1,4 +1,4 @@
-import { getVendorPortalData, getMarketplaceBenchmarkData, getMarketplaceCategoryTree } from '../../../actions';
+import { getVendorPortalData, getMarketplaceBenchmarkData, getMarketplaceCategoryTree, getMarketplaceToken } from '../../../actions';
 import { prisma } from '@coffeeshop/database';
 import VendorCatalogClient from './VendorCatalogClient';
 
@@ -6,10 +6,11 @@ export const dynamic = 'force-dynamic';
 
 export default async function VendorCatalogPage() {
   const portalData = await getVendorPortalData();
-  const [globalUnits, categoryTree, benchmarkData] = await Promise.all([
+  const [globalUnits, categoryTree, benchmarkData, token] = await Promise.all([
     prisma.globalUnit.findMany({ orderBy: { name: 'asc' } }),
     getMarketplaceCategoryTree(),
     portalData ? getMarketplaceBenchmarkData(portalData.id) : Promise.resolve([]),
+    getMarketplaceToken(),
   ]);
 
   return (
@@ -35,6 +36,7 @@ export default async function VendorCatalogPage() {
         isPremium={portalData?.isPremium || false}
         mktSectors={JSON.parse(JSON.stringify(portalData?.mktSectors || []))}
         collections={JSON.parse(JSON.stringify(portalData?.collections || []))}
+        token={token}
       />
     </div>
   );

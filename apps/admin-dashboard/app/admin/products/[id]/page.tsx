@@ -1,12 +1,15 @@
 import { prisma } from '@coffeeshop/database';
-import { getStore } from '../../../actions';
+import { getStore, getMarketplaceToken } from '../../../actions';
 import { redirect, notFound } from 'next/navigation';
 import ProductForm from '../ProductForm';
 
 export const dynamic = 'force-dynamic';
 
 export default async function EditProductPage({ params }: { params: { id: string } }) {
-  const store = await getStore();
+  const [store, token] = await Promise.all([
+    getStore(),
+    getMarketplaceToken(),
+  ]);
   if (!store) redirect('/login');
 
   const product = await prisma.product.findUnique({

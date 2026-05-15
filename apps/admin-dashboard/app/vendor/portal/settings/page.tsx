@@ -1,4 +1,4 @@
-import { getVendorPortalData } from '../../../actions';
+import { getVendorPortalData, getMarketplaceToken } from '../../../actions';
 import { prisma } from '@coffeeshop/database';
 import VendorSettingsClient from './VendorSettingsClient';
 import { AlertCircle } from 'lucide-react';
@@ -7,7 +7,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function VendorSettingsPage() {
   try {
-    const portalData = await getVendorPortalData();
+    const [portalData, token] = await Promise.all([
+      getVendorPortalData(),
+      getMarketplaceToken(),
+    ]);
     const [mktCategories, globalUnits] = await Promise.all([
       (prisma as any).mktCategory.findMany({ where: { status: 'ACTIVE' }, orderBy: { name: 'asc' } }),
       prisma.globalUnit.findMany({ orderBy: { name: 'asc' } }),
@@ -47,6 +50,7 @@ export default async function VendorSettingsPage() {
       globalUnits={JSON.parse(JSON.stringify(globalUnits))}
       userEmail={userEmail}
       notificationPrefs={notificationPrefs}
+      token={token}
     />;
   } catch (error: any) {
     console.error("CRITICAL ERROR IN VENDOR SETTINGS PAGE:", error);

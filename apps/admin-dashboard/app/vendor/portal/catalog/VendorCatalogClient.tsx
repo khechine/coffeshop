@@ -131,7 +131,7 @@ function CategorySelector({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function VendorCatalogClient({
-  initialProducts, initialBundles = [], categoryTree, globalUnits, benchmarkData = [], vendorId, isPremium = false, mktSectors = [], collections = [],
+  initialProducts, initialBundles = [], categoryTree, globalUnits, benchmarkData = [], vendorId, isPremium = false, mktSectors = [], collections = [], token
 }: {
   initialProducts: any[];
   initialBundles?: any[];
@@ -142,6 +142,7 @@ export default function VendorCatalogClient({
   isPremium?: boolean;
   mktSectors?: any[];
   collections?: any[];
+  token?: string | null;
 }) {
   const [activeTab, setActiveTab]           = useState<'catalog' | 'benchmark' | 'bundles' | 'collections'>('catalog');
   const [modalOpen, setModalOpen]           = useState(false);
@@ -215,6 +216,7 @@ export default function VendorCatalogClient({
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
       const res = await fetch(`${API_URL}/management/upload`, {
         method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData,
       });
       const data = await res.json();

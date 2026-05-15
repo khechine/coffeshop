@@ -31,8 +31,10 @@ type Category = {
 
 export default function CategoryManagementClient({
   categoryTree,
+  token
 }: {
   categoryTree: Category[];
+  token?: string | null;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -72,6 +74,7 @@ export default function CategoryManagementClient({
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
       const res = await fetch(`${API_URL}/management/upload`, {
         method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData,
       });
       const data = await res.json();
