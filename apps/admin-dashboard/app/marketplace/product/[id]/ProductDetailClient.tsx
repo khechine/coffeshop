@@ -39,7 +39,7 @@ export default function ProductDetailClient({ product, isVendor = false, related
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const imageUrl = sanitizeUrl(product.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=800';
+  const imageUrl = sanitizeUrl(product.image) || '/images/elkassa-logo.png';
   const gallery = [imageUrl, ...(product.images || []).map((img: string) => sanitizeUrl(img))].filter(Boolean);
   const [activeImage, setActiveImage] = useState(gallery[0]);
 
@@ -440,7 +440,7 @@ export default function ProductDetailClient({ product, isVendor = false, related
                       padding: '12px'
                     }}>
                       <img 
-                        src={sanitizeUrl(p.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=200'} 
+                        src={sanitizeUrl(p.image) || '/images/elkassa-logo.png'} 
                         alt={p.name || ''} 
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                       />

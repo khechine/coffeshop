@@ -32,7 +32,7 @@ const VendorGroup = ({ group, updateQty, removeItem }: any) => {
         {group.items.map((item: any) => (
           <div key={item.id} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
             <div style={{ width: '70px', height: '70px', borderRadius: '12px', background: '#F9FAFB', border: '1px solid #F1F5F9', overflow: 'hidden', flexShrink: 0 }}>
-              <img src={sanitizeUrl(item.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={sanitizeUrl(item.image) || '/images/elkassa-logo.png'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{item.name}</div>
@@ -73,7 +73,7 @@ const RecommendationCard = ({ prod, addItem, fmt }: any) => {
       }}
     >
       <div style={{ width: '100%', aspectRatio: '1', borderRadius: '10px', overflow: 'hidden', background: '#F9FAFB' }}>
-        <img src={sanitizeUrl(prod.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=200'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src={sanitizeUrl(prod.image) || '/images/elkassa-logo.png'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
       <div>
         <div style={{ fontSize: '12px', fontWeight: 800, color: '#111827', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3, height: '32px' }}>

@@ -274,7 +274,7 @@ export default function MarketplaceMapClient({ data, isVendor = false }: { data:
                     {selectedVendor.products?.map((p: any) => (
                       <div key={p.id} style={{ display: 'flex', gap: '12px', padding: '12px', borderRadius: '16px', border: '1px solid #F1F5F9', background: '#fff' }}>
                          <div style={{ width: 44, height: 44, borderRadius: '8px', overflow: 'hidden', background: '#F8FAFC' }}>
-                            <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100&auto=format&fit=crop'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={p.image || '/images/elkassa-logo.png'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                          </div>
                          <div>
                             <div style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B' }}>{p.name}</div>

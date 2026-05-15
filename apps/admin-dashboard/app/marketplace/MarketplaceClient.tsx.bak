@@ -155,7 +155,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
   const ProductCardHorizontal = ({ p }: { p: any }) => (
     <div key={p.id} className={`premium-card ${p.isFeatured ? 'featured' : ''}`} style={{ minWidth: '240px', maxWidth: '240px', scrollSnapAlign: 'start' }}>
       <div className="product-image-container">
-        <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} className="product-image" />
+        <img src={p.image || '/images/elkassa-logo.png'} className="product-image" />
         {p.isFlashSale && (
           <div className="badge-base badge-flash" style={{ left: '12px' }}>
             <Zap size={10} fill="currentColor" /> Flash
@@ -391,7 +391,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
             {filteredProducts.map((p: MarketplaceProduct) => (
               <div key={p.id} className={`product-card ${p.isFeatured ? 'featured' : ''}`}>
                 <div className="product-image-container">
-                  <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} className="product-image" />
+                  <img src={p.image || '/images/elkassa-logo.png'} className="product-image" />
                   {p.isFlashSale && (
                     <div className="badge-base badge-flash" style={{ left: '12px' }}>
                       <Zap size={10} fill="currentColor" /> Vente Flash
@@ -465,7 +465,7 @@ export default function MarketplaceClient({ initialData }: { initialData: any })
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {cart.map(item => (
                   <div key={item.id} style={{ display: 'flex', gap: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '24px', position: 'relative' }}>
-                    <img src={item.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100&auto=format&fit=crop'} style={{ width: '70px', height: '70px', borderRadius: '12px', objectFit: 'cover' }} />
+                    <img src={item.image || '/images/elkassa-logo.png'} style={{ width: '70px', height: '70px', borderRadius: '12px', objectFit: 'cover' }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '14px', fontWeight: 800, color: '#1E1B4B', marginBottom: '4px' }}>{item.name}</div>
                       <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600, marginBottom: '12px' }}>{item.vendor.companyName}</div>

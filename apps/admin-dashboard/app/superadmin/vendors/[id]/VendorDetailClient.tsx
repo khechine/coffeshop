@@ -442,7 +442,7 @@ export default function VendorDetailClient({ vendor, rules }: { vendor: any, rul
                           <td className="p-6 first:pl-8">
                             <div className="flex items-center gap-4">
                               <div className="w-12 h-12 bg-slate-50 dark:bg-slate-950 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 transition-transform group-hover:scale-105">
-                                <img src={p.image || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=100&auto=format&fit=crop'} className="w-full h-full object-cover" />
+                                <img src={p.image || '/images/elkassa-logo.png'} className="w-full h-full object-cover" />
                               </div>
                               <div>
                                 <div className="text-sm font-black text-slate-900 dark:text-white leading-tight">{p.name}</div>

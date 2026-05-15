@@ -68,7 +68,7 @@ function ProductCard({ product, onAdd, isVendor }: any) {
     <div className={`mkt-cocote-card group ${isPremium ? 'is-premium' : ''}`}>
       <Link href={`/marketplace/product/${product.id}`} className="mkt-cocote-card-img-wrap">
         <img
-          src={sanitizeUrl(product.image) ?? 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400'}
+          src={sanitizeUrl(product.image) ?? '/images/elkassa-logo.png'}
           alt={product.name}
           className="mkt-cocote-card-img"
         />
@@ -160,7 +160,7 @@ function VendorCard({ vendor, distance }: any) {
 /* ── Helpers ── */
 const CATEGORY_IMAGES: Record<string, string> = {
   'matieres-premieres': 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=600',
-  'produits-semi-finis': 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=600',
+  'produits-semi-finis': '/images/elkassa-logo.png',
   'produits-finis-b2b-revente': 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?q=80&w=600',
   'equipements-materiel': 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=600',
   'emballages': 'https://images.unsplash.com/photo-1589939705384-5185138a04b9?q=80&w=600',

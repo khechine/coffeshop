@@ -927,7 +927,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                           }}
                           >
         <img 
-          src={sanitizeUrl(p.image) || 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=400&auto=format&fit=crop'} 
+          src={sanitizeUrl(p.image) || '/images/elkassa-logo.png'} 
           alt={p.name} 
           style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} 
           className="product-card-image"

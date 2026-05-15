@@ -71,7 +71,7 @@ async function main() {
       minOrderQty: 10,
       vendorId: vendorPrem.id,
       categoryId: cat1.id,
-      image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400'
+      image: '/images/elkassa-logo.png'
     }
   });
 
