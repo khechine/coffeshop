@@ -29,9 +29,11 @@ export class MarketplaceAuthGuard implements CanActivate {
 
     // ── Temporary token format: "user-jwt-{userId}-{timestamp}" ──────────
     if (token.startsWith('user-jwt-')) {
-      const parts = token.split('-');
-      // format: user-jwt-<cuid>-<timestamp>  → parts[2] is the userId
-      const userId = parts[2];
+      // CUIDs may contain hyphens, so we can't simply split by '-'
+      // Instead, strip the prefix and extract userId and timestamp
+      const tokenBody = token.replace('user-jwt-', '');
+      const lastDash = tokenBody.lastIndexOf('-');
+      const userId = lastDash > 0 ? tokenBody.substring(0, lastDash) : tokenBody;
       if (!userId) {
         throw new UnauthorizedException('Token malformé.');
       }
