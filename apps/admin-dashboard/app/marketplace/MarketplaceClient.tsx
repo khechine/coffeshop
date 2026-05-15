@@ -21,6 +21,7 @@ import MarketplaceFooter from './components/MarketplaceFooter';
 import MarketplaceRFQModal from './components/MarketplaceRFQModal';
 import MarketplaceMobile from './components/MarketplaceMobile';
 import MarketplaceReferralModal from './components/MarketplaceReferralModal';
+import './marketplace-responsive.css';
 
 const normalize = (str: string) => {
   if (!str) return '';
@@ -208,16 +209,16 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
   }
 
   return (
-    <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', scrollBehavior: 'smooth' }}>
+    <div className="mkt-page" style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', scrollBehavior: 'smooth' }}>
       
       <MarketplaceHeader isVendor={isVendor} store={store} allCategories={categories} />
 
       {/* Main Layout */}
-      <main style={{ maxWidth: '1400px', margin: '24px auto', padding: '0 24px' }}>
+      <main className="mkt-main">
         
         {urlSearch ? (
           <div style={{ minHeight: '60vh' }}>
-            <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div className="mkt-search-header">
               <div>
                 <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: 0 }}>
                   Résultats pour "{urlSearch}" 
@@ -236,9 +237,9 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '32px', alignItems: 'start' }}>
+            <div className="mkt-search-layout">
                {/* Sidebar Filters */}
-               <aside style={{ background: '#fff', borderRadius: '20px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'sticky', top: '100px' }}>
+               <aside className="mkt-search-sidebar">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', color: '#111827' }}>
                     <Menu size={20} />
                     <h2 style={{ fontSize: '18px', fontWeight: 900 }}>Filtres</h2>
@@ -333,11 +334,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                {/* Results Area */}
                <section>
                 {searchData.results.length > 0 ? (
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: urlScope === 'PRODUCT' ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', 
-                    gap: '24px' 
-                  }}>
+                  <div className={`mkt-grid ${urlScope === 'PRODUCT' ? 'mkt-grid-4' : 'mkt-grid-3'}`}>
                     {urlScope === 'PRODUCT' && searchData.results.map((p: any) => (
                       <MarketplaceProductCard 
                         key={p.id} 
@@ -425,7 +422,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                       <Zap size={24} color="#E31E24" fill="#E31E24" />
                       <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#111827' }}>Produits similaires (Plus loin)</h2>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+                    <div className="mkt-grid mkt-grid-4">
                       {searchData.allMatches.filter((m: any) => !searchData.results.includes(m)).slice(0, 8).map((p: any) => (
                         <MarketplaceProductCard 
                           key={p.id} 
@@ -442,17 +439,17 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
         ) : (
           <>
             {/* Top Part: Sidebar + Hero */}
-            <div style={{ display: 'flex', gap: '24px', marginBottom: '48px' }}>
+            <div className="mkt-home-top">
               {/* Sidebar Categories with Mega Menu */}
               <aside 
-                style={{ width: '280px', flexShrink: 0, background: '#fff', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', height: 'fit-content', position: 'relative' }}
+                className="mkt-categories-sidebar"
                 onMouseLeave={() => setHoveredSegment(null)}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#111827' }}>
                   <Menu size={20} />
                   <h2 style={{ fontSize: '18px', fontWeight: 900 }}>Catégories</h2>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div className="mkt-cat-list" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {marketplaceSegments.map((seg: any) => (
                     <Link 
                       key={seg.id} 
@@ -494,7 +491,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                   const groupEntries = Object.entries(grouped);
 
                   if (children.length === 0) return (
-                    <div style={{ 
+                    <div className="mkt-mega-overlay" style={{ 
                       position: 'absolute', left: '280px', top: 0, width: '400px', minHeight: '200px',
                       background: '#fff', boxShadow: '20px 0 40px rgba(0,0,0,0.1)', zIndex: 50, 
                       borderRadius: '0 16px 16px 0', borderLeft: '1px solid #F1F5F9', padding: '40px',
@@ -514,7 +511,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                   );
 
                   return (
-                    <div style={{ 
+                    <div className="mkt-mega-overlay" style={{ 
                       position: 'absolute', left: '280px', top: 0, width: '720px', minHeight: '100%',
                       background: '#fff', boxShadow: '20px 0 40px rgba(0,0,0,0.1)', zIndex: 50, 
                       borderRadius: '0 16px 16px 0', borderLeft: '1px solid #F1F5F9', padding: '28px 32px',
@@ -565,7 +562,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                   );
                 })()}
 
-                <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #F3F4F6' }}>
+                <div className="mkt-cat-all-btn" style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #F3F4F6' }}>
                   <button style={{ 
                     width: '100%', 
                     background: '#F9FAFB', 
@@ -583,10 +580,10 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
               </aside>
 
               {/* Hero + Featured Area */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '32px' }}>
+              <div className="mkt-home-content">
                 {/* Hero Section Carousel */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px' }}>
-                  <div style={{ position: 'relative', height: '480px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
+                <div className="mkt-hero-row">
+                  <div className="mkt-hero-carousel">
                     {heroBanners.map((banner: any, idx: number) => (
                       <div 
                         key={banner.id || idx}
@@ -604,7 +601,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           alt={banner.title}
                         />
-                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.6), transparent)', display: 'flex', alignItems: 'center', padding: '60px' }}>
+                        <div className="mkt-hero-inner" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.6), transparent)', display: 'flex', alignItems: 'center', padding: '60px' }}>
                           <div style={{ maxWidth: '450px', transform: activeBannerIdx === idx ? 'translateX(0)' : 'translateX(-20px)', opacity: activeBannerIdx === idx ? 1 : 0, transition: 'all 0.6s ease-out 0.2s' }}>
                             <BannerBadge color={banner.badgeColor || "#E31E24"}>{banner.badgeText || "B2B Platform"}</BannerBadge>
                             <h1 style={{ fontSize: '48px', fontWeight: 900, color: '#fff', lineHeight: 1.1, margin: '20px 0' }}>
@@ -662,7 +659,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div className="mkt-hero-side">
                     <div style={{ background: '#fff', borderRadius: '20px', padding: '24px', flex: 1, border: '1px solid #E31E24', borderLeftWidth: '6px' }}>
                       <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#111827', marginBottom: '12px' }}>Sourcing Garanti</h3>
                       <p style={{ fontSize: '13px', color: '#6B7280', lineHeight: 1.5, marginBottom: '20px' }}>Accès exclusif à des fournisseurs vérifiés et accompagnement personnalisé pour vos achats B2B.</p>
@@ -702,7 +699,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                 )}
 
                 {/* Trusted Suppliers / Features */}
-                <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+                <div className="mkt-features-row">
                   {[
                     { icon: ShieldCheck, title: 'Fournisseurs Vérifiés', sub: 'Audités par ElKassa' },
                     { icon: Globe, title: 'Réseau National', sub: 'Toute la Tunisie' },
@@ -728,7 +725,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
               
               {/* Products Section */}
               <section>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
+                <div className="mkt-section-header">
                   <div>
                     <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827' }}>Sélectionnés pour vous</h2>
                     <div style={{ height: '4px', width: '60px', background: '#E31E24', marginTop: '8px', borderRadius: '10px' }} />
@@ -753,7 +750,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '24px' }}>
+                <div className="mkt-grid mkt-grid-5">
                   {(homeTab === 'Nouveautés' ? [...products].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : products).slice(0, 10).map((p: any) => (
                     <MarketplaceProductCard 
                       key={p.id} 
@@ -847,7 +844,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
               )}
 
               {/* Special Categories / Collections */}
-              <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
+              <section className="mkt-collections-row">
                 <Link href="/marketplace/tunisia" style={{ textDecoration: 'none', background: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)', borderRadius: '24px', padding: '40px', position: 'relative', overflow: 'hidden', display: 'block', minHeight: '200px' }}>
                   {/* Tunisia Map - local asset */}
                   <img
@@ -974,7 +971,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
               {/* Service Commercial Section */}
               <section>
                  <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', marginBottom: '32px' }}>Service Commercial</h2>
-                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+                 <div className="mkt-service-grid">
                     <div style={{ background: 'linear-gradient(to bottom, #fff, #F9FAFB)', borderRadius: '20px', padding: '40px', border: '1px solid #F1F5F9', boxShadow: '0 10px 30px rgba(0,0,0,0.03)' }}>
                       <div style={{ width: '60px', height: '60px', borderRadius: '15px', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E31E24', marginBottom: '24px' }}>
                         <Target size={32} />
@@ -1025,7 +1022,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                       Voir plus <ChevronRight size={16} />
                     </Link>
                  </div>
-                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+                 <div className="mkt-grid mkt-blog-grid">
                      {perspectives.slice(0, 4).map((item: any) => (
                        <Link key={item.id} href={item.slug ? `/marketplace/blog/${item.slug}` : '#'} style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #F1F5F9', transition: 'transform 0.3s', textDecoration: 'none', display: 'block' }}>
                          <div style={{ height: '160px', overflow: 'hidden', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1115,7 +1112,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
       <MarketplaceFooter />
 
       {/* Floating Buttons */}
-      <div style={{ position: 'fixed', right: '30px', bottom: '30px', display: 'flex', flexDirection: 'column', gap: '12px', zIndex: 1000 }}>
+      <div className="mkt-fab" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
          <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', overflow: 'hidden', border: '1px solid #F1F5F9' }}>
            <button onClick={() => setRfqOpen(true)} style={{ width: '60px', height: '60px', border: 'none', background: '#fff', borderBottom: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', cursor: 'pointer' }}>
               <MessageSquare size={20} color="#E31E24" />

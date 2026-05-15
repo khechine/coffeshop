@@ -19,6 +19,7 @@ import { sendTradeMessageAction } from '../../../actions';
 
 
 import ProductMobile from './ProductMobile';
+import '../../marketplace-responsive.css';
 
 const fmt = (n: any) => Number(n).toFixed(2);
 
@@ -80,10 +81,10 @@ export default function ProductDetailClient({ product, isVendor = false, related
   }
 
   return (
-    <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div className="mkt-page" style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <MarketplaceHeader isVendor={isVendor} allCategories={allCategories} />
 
-      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
+      <main className="mkt-main">
         
         {/* Breadcrumbs */}
         <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#6B7280', marginBottom: '24px' }}>
@@ -96,10 +97,10 @@ export default function ProductDetailClient({ product, isVendor = false, related
           </span>
         </nav>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 500px', gap: '48px', alignItems: 'start', marginBottom: '48px' }}>
+        <div className="mkt-product-layout">
           
           {/* Left Column: Media & Gallery */}
-          <div style={{ position: 'sticky', top: '100px', alignSelf: 'start' }}>
+          <div className="mkt-product-gallery">
             <div style={{ background: '#fff', borderRadius: '24px', padding: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid #F1F5F9' }}>
               <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: '#fff', borderRadius: '16px', overflow: 'hidden', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                  <img 
@@ -213,7 +214,7 @@ export default function ProductDetailClient({ product, isVendor = false, related
           </div>
 
           {/* Right Column: Info & Actions */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div className="mkt-product-info">
             
             <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
@@ -285,7 +286,7 @@ export default function ProductDetailClient({ product, isVendor = false, related
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+              <div className="mkt-product-actions">
                 <button 
                   onClick={() => {
                     addToCart(product, qty);
@@ -504,9 +505,9 @@ export default function ProductDetailClient({ product, isVendor = false, related
       </main>
 
       {/* Floating Messenger Bar */}
-      <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '16px' }}>
+      <div className="mkt-trade-float">
          {tradeMessagerOpen && (
-           <div style={{ width: '380px', background: '#fff', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' }}>
+           <div className="mkt-trade-panel" style={{ background: '#fff', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', overflow: 'hidden', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' }}>
              <div style={{ background: '#111827', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                  <MessageSquare size={18} />

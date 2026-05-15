@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, LogOut, Settings, CreditCard, ShieldCheck, ChevronRight } from 'lucide-react';
 import { getStore, getUser } from '../../actions';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,10 +10,10 @@ export default async function MobileProfilePage() {
   const user = await getUser();
 
   const menuItems = [
-    { label: 'Informations du Café', icon: User, color: '#4F46E5' },
-    { label: 'Abonnement & Facturation', icon: CreditCard, color: '#10B981' },
-    { label: 'Sécurité & Accès', icon: ShieldCheck, color: '#F59E0B' },
-    { label: 'Préférences', icon: Settings, color: '#6B7280' },
+    { label: 'Informations du Café', icon: User, color: '#4F46E5', href: '/mobile/profile/info' },
+    { label: 'Abonnement & Facturation', icon: CreditCard, color: '#10B981', href: '/mobile/profile/billing' },
+    { label: 'Sécurité & Accès', icon: ShieldCheck, color: '#F59E0B', href: '/mobile/profile/security' },
+    { label: 'Préférences', icon: Settings, color: '#6B7280', href: '/mobile/profile/preferences' },
   ];
 
   return (
@@ -33,13 +34,15 @@ export default async function MobileProfilePage() {
       {/* Settings Menu */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {menuItems.map((item, i) => (
-          <div key={i} style={{ background: '#fff', borderRadius: '20px', padding: '16px 20px', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: `${item.color}15`, color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <item.icon size={20} />
+          <Link href={item.href} key={i} style={{ textDecoration: 'none' }}>
+            <div style={{ background: '#fff', borderRadius: '20px', padding: '16px 20px', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.01)' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: `${item.color}15`, color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <item.icon size={20} />
+              </div>
+              <span style={{ flex: 1, fontSize: '15px', fontWeight: 800, color: '#111827' }}>{item.label}</span>
+              <ChevronRight size={20} color="#9CA3AF" />
             </div>
-            <span style={{ flex: 1, fontSize: '15px', fontWeight: 800, color: '#111827' }}>{item.label}</span>
-            <ChevronRight size={20} color="#9CA3AF" />
-          </div>
+          </Link>
         ))}
       </div>
 

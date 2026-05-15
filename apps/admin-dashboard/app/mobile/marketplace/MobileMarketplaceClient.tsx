@@ -7,18 +7,19 @@ import { useCart } from '../../marketplace/CartContext';
 import { useVault } from '../../marketplace/VaultContext';
 import CartDrawer from '../../marketplace/CartDrawer';
 
-const ProductItem = ({ p, addToCart }: { p: any, addToCart: any }) => {
-  const { maskName, identityVisible } = useVault(p.vendor?.id, p.vendor?.isPremium);
+const ProductItem = ({ p, addToCart, onOpenDetails }: { p: any, addToCart: any, onOpenDetails: (p: any) => void }) => {
+  const { maskName } = useVault(p.vendor?.id, p.vendor?.isPremium);
   
   return (
     <div 
+      onClick={() => onOpenDetails(p)}
       style={{ 
         background: '#fff', borderRadius: '24px', padding: '12px',
         border: '1px solid #F3F4F6', display: 'flex', gap: '16px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
+        boxShadow: '0 4px 6px rgba(0,0,0,0.02)', cursor: 'pointer'
       }}
     >
-      <div style={{ width: '100px', height: '100px', borderRadius: '16px', overflow: 'hidden', background: '#F9FAFB', flexShrink: 0, filter: identityVisible ? 'none' : 'blur(4px)' }}>
+      <div style={{ width: '100px', height: '100px', borderRadius: '16px', overflow: 'hidden', background: '#F9FAFB', flexShrink: 0 }}>
         <img src={sanitizeUrl(p.image)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -35,7 +36,10 @@ const ProductItem = ({ p, addToCart }: { p: any, addToCart: any }) => {
              {Number(p.price).toFixed(2)} <span style={{ fontSize: '12px' }}>DT</span>
           </div>
           <button 
-            onClick={() => addToCart(p, 1)}
+            onClick={(e) => {
+              e.stopPropagation();
+              addToCart(p, 1);
+            }}
             style={{ 
               width: '36px', height: '36px', borderRadius: '12px', 
               background: '#E31E24', color: '#fff', border: 'none',
@@ -56,6 +60,7 @@ export default function MobileMarketplaceClient({ initialData }: { initialData: 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCat, setSelectedCat] = useState('all');
   const [cartOpen, setCartOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
   const { products = [], categories = [] } = initialData || {};
 
@@ -133,7 +138,7 @@ export default function MobileMarketplaceClient({ initialData }: { initialData: 
       {/* Product List - Optimized Vertical View */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {filteredProducts.map((p: any) => (
-          <ProductItem key={p.id} p={p} addToCart={addToCart} />
+          <ProductItem key={p.id} p={p} addToCart={addToCart} onOpenDetails={setSelectedProduct} />
         ))}
         {filteredProducts.length === 0 && (
           <div style={{ padding: '60px 20px', textAlign: 'center', color: '#9CA3AF' }}>
@@ -168,6 +173,64 @@ export default function MobileMarketplaceClient({ initialData }: { initialData: 
 
       {/* Cart Drawer */}
       {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
+
+      {/* Product Details Modal (Bottom Sheet) */}
+      {selectedProduct && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', zIndex: 2000,
+          display: 'flex', flexDirection: 'column', justifyContent: 'flex-end'
+        }} onClick={() => setSelectedProduct(null)}>
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff', borderTopLeftRadius: '32px', borderTopRightRadius: '32px',
+              padding: '24px', paddingBottom: '40px', maxHeight: '85vh', overflowY: 'auto',
+              animation: 'slideUp 0.3s ease-out', position: 'relative'
+            }}
+          >
+            <div style={{ width: '40px', height: '4px', background: '#E5E7EB', borderRadius: '2px', margin: '0 auto 20px' }} />
+            
+            <div style={{ width: '100%', height: '240px', borderRadius: '20px', background: '#F9FAFB', overflow: 'hidden', marginBottom: '20px' }}>
+              <img src={sanitizeUrl(selectedProduct.image)} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+              <h2 style={{ fontSize: '22px', fontWeight: 950, color: '#111827', margin: 0 }}>{selectedProduct.name}</h2>
+              <div style={{ fontSize: '20px', fontWeight: 950, color: '#111827' }}>
+                 {Number(selectedProduct.price).toFixed(2)} <span style={{ fontSize: '14px' }}>DT</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'inline-block', background: '#F3F4F6', color: '#4B5563', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, marginBottom: '20px' }}>
+              Unité : {selectedProduct.unit}
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#111827', margin: '0 0 8px' }}>Description</h3>
+              <p style={{ fontSize: '15px', color: '#6B7280', lineHeight: 1.5, margin: 0 }}>
+                {selectedProduct.description || "Aucune description détaillée n'est disponible pour ce produit."}
+              </p>
+            </div>
+
+            <button 
+              onClick={() => {
+                addToCart(selectedProduct, 1);
+                setSelectedProduct(null);
+              }}
+              style={{ 
+                width: '100%', padding: '16px', borderRadius: '16px', 
+                background: '#E31E24', color: '#fff', border: 'none',
+                fontSize: '16px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                boxShadow: '0 10px 25px rgba(227,30,36,0.2)'
+              }}
+            >
+              <ShoppingCart size={20} />
+              Ajouter au panier
+            </button>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .no-scrollbar::-webkit-scrollbar {

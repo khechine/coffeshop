@@ -15,6 +15,7 @@ import MarketplaceProductCard from '../../components/MarketplaceProductCard';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 
 import CategoryMobile from './CategoryMobile';
+import '../../marketplace-responsive.css';
 
 const fmt = (n: any) => Number(n).toFixed(2);
 
@@ -61,10 +62,10 @@ export default function CategoryViewClient({ category, products = [], allCategor
   }
 
   return (
-    <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div className="mkt-page" style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <MarketplaceHeader isVendor={isVendor} store={store} allCategories={allCategories} />
 
-      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
+      <main className="mkt-main">
         
         <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#6B7280', marginBottom: '24px' }}>
           <Link href="/marketplace" style={{ color: '#6B7280', textDecoration: 'none' }}>Accueil</Link>
@@ -75,18 +76,7 @@ export default function CategoryViewClient({ category, products = [], allCategor
         </nav>
 
         {/* Category Hero Banner */}
-        <div style={{ 
-          width: '100%', 
-          height: '240px', 
-          borderRadius: '24px', 
-          marginBottom: '32px', 
-          position: 'relative', 
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '48px',
-          background: category.color || '#111827'
-        }}>
+        <div className="mkt-category-hero" style={{ background: category.color || '#111827' }}>
           {category.image && (
             <img 
               src={sanitizeUrl(category.image)} 
@@ -103,10 +93,10 @@ export default function CategoryViewClient({ category, products = [], allCategor
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '32px', marginBottom: '64px' }}>
+        <div className="mkt-category-layout">
           
           {/* Sidebar with grouping */}
-          <aside style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E7EB', height: 'fit-content', position: 'sticky', top: '100px' }}>
+          <aside className="mkt-category-sidebar">
             <div style={{ padding: '24px', borderBottom: '1px solid #F3F4F6', background: category.color || '#111827', color: '#fff' }}>
               <h2 style={{ fontSize: '18px', fontWeight: 900, margin: 0 }}>{category.name}</h2>
             </div>
@@ -155,7 +145,7 @@ export default function CategoryViewClient({ category, products = [], allCategor
                     <div style={{ flex: 1, height: '1px', background: '#E5E7EB' }} />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '24px' }}>
+                  <div className="mkt-subcat-grid">
                     {items.map((sub: any) => (
                       <Link 
                         key={sub.id} 
@@ -210,9 +200,9 @@ export default function CategoryViewClient({ category, products = [], allCategor
                 <button onClick={() => scrollSpotlight('right')} style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#fff', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><ChevronRight size={20} /></button>
               </div>
            </div>
-           <div ref={scrollRef} style={{ display: 'flex', gap: '20px', overflowX: 'hidden', scrollBehavior: 'smooth', padding: '4px' }}>
+           <div ref={scrollRef} className="mkt-spotlight-track">
               {products.map((p: any) => (
-                <div key={p.id} style={{ flex: '0 0 calc(25% - 15px)' }}>
+                <div key={p.id} className="mkt-spotlight-item">
                   <MarketplaceProductCard 
                     product={p} 
                     isVendor={isVendor} 
@@ -226,8 +216,8 @@ export default function CategoryViewClient({ category, products = [], allCategor
         {/* ── Related Categories ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
           {relatedMainCategories.map((rel: any) => (
-            <div key={rel.id} style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '24px', border: '1px solid #E5E7EB', background: '#fff', borderRadius: '8px', overflow: 'hidden' }}>
-              <div style={{ padding: '32px 24px', borderRight: '1px solid #F3F4F6' }}>
+            <div key={rel.id} className="mkt-related-row">
+              <div className="mkt-related-sidebar">
                 <h3 style={{ fontSize: '18px', fontWeight: 900, color: rel.color || '#111827', marginBottom: '24px' }}>Plus de {rel.name}</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {(rel.children || []).slice(0, 8).map((child: any) => (
@@ -235,7 +225,7 @@ export default function CategoryViewClient({ category, products = [], allCategor
                   ))}
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: '#F3F4F6' }}>
+              <div className="mkt-related-grid">
                 {(rel.children || []).slice(0, 8).map((child: any) => (
                   <Link key={child.id} href={`/marketplace/category/${child.id}`} style={{ background: '#fff', padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', textDecoration: 'none' }} className="hover-shadow-inner category-card-premium">
                     <div style={{ minHeight: '48px', position: 'relative', zIndex: 10 }}><span style={{ fontSize: '14px', fontWeight: 700, color: '#374151' }}>{child.name}</span></div>

@@ -1,0 +1,610 @@
+/* Marketplace web — responsive layout (tablette & petit desktop) */
+
+.mkt-page {
+  overflow-x: hidden;
+}
+
+.mkt-main {
+  max-width: 1400px;
+  margin: 24px auto;
+  padding: 0 24px;
+}
+
+/* --- Grilles produits --- */
+.mkt-grid {
+  display: grid;
+  gap: 24px;
+}
+
+.mkt-grid-5 {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.mkt-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.mkt-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.mkt-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* --- Page recherche --- */
+.mkt-search-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.mkt-search-sidebar {
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 100px;
+}
+
+.mkt-search-header {
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* --- Accueil : sidebar catégories + hero --- */
+.mkt-home-top {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 48px;
+}
+
+.mkt-categories-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  height: fit-content;
+  position: relative;
+}
+
+.mkt-home-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.mkt-hero-row {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+}
+
+.mkt-hero-carousel {
+  position: relative;
+  height: 480px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.mkt-hero-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mkt-features-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.mkt-collections-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.mkt-service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.mkt-blog-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.mkt-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.mkt-hero-carousel .mkt-hero-inner > div > div:last-child {
+  flex-wrap: wrap;
+}
+
+.mkt-fab {
+  position: fixed;
+  right: 30px;
+  bottom: 30px;
+  z-index: 1000;
+}
+
+/* Mega-menu latéral : masqué si pas assez de place */
+@media (max-width: 1200px) {
+  .mkt-categories-sidebar .mkt-mega-overlay {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1280px) {
+  .mkt-grid-5 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .mkt-grid-4 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .mkt-blog-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .mkt-home-top {
+    flex-direction: column;
+  }
+
+  .mkt-categories-sidebar {
+    width: 100%;
+    max-height: none;
+  }
+
+  .mkt-categories-sidebar .mkt-cat-list {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mkt-categories-sidebar .mkt-cat-list > a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .mkt-categories-sidebar .mkt-cat-all-btn {
+    display: none;
+  }
+
+  .mkt-hero-row {
+    grid-template-columns: 1fr;
+  }
+
+  .mkt-hero-side {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .mkt-hero-side > * {
+    flex: 1 1 280px;
+  }
+
+  .mkt-features-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .mkt-main {
+    padding: 0 16px;
+    margin: 16px auto;
+  }
+
+  .mkt-grid-5,
+  .mkt-grid-4 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .mkt-search-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .mkt-search-sidebar {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .mkt-search-sidebar > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .mkt-search-sidebar button[type="button"],
+  .mkt-search-sidebar > button {
+    grid-column: 1 / -1;
+  }
+
+  .mkt-hero-carousel {
+    height: 380px;
+  }
+
+  .mkt-hero-carousel h1 {
+    font-size: 36px !important;
+  }
+
+  .mkt-hero-carousel p {
+    font-size: 16px !important;
+  }
+
+  .mkt-service-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mkt-blog-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mkt-collections-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .mkt-grid-5,
+  .mkt-grid-4,
+  .mkt-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mkt-search-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .mkt-hero-carousel {
+    height: 320px;
+  }
+
+  .mkt-hero-carousel .mkt-hero-inner {
+    padding: 32px 24px !important;
+  }
+
+  .mkt-hero-carousel h1 {
+    font-size: 28px !important;
+    margin: 12px 0 !important;
+  }
+
+  .mkt-hero-side {
+    flex-direction: column;
+  }
+
+  .mkt-features-row {
+    grid-template-columns: 1fr;
+  }
+
+  .mkt-fab {
+    right: 16px;
+    bottom: 16px;
+  }
+}
+
+/* Header marketplace (complément au styled-jsx existant) */
+@media (max-width: 1100px) {
+  .mkt-header .header-flex {
+    gap: 20px !important;
+  }
+
+  .mkt-header .search-form {
+    max-width: 100% !important;
+  }
+
+  .mkt-header .top-links {
+    gap: 12px !important;
+    flex-wrap: wrap;
+  }
+
+  .mkt-header .mega-menu-dropdown {
+    width: min(96vw, 720px) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .mkt-header .main-header {
+    padding: 12px 16px !important;
+  }
+
+  .mkt-header .header-flex {
+    gap: 12px !important;
+    flex-wrap: wrap;
+  }
+
+  .mkt-header .logo-text span:first-child {
+    font-size: 18px !important;
+  }
+
+  .mkt-header .search-form {
+    order: 3;
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+    height: 44px !important;
+  }
+
+  .mkt-header .actions-container {
+    gap: 12px !important;
+  }
+
+  .mkt-header .action-item span {
+    display: none;
+  }
+
+  .mkt-header .top-bar {
+    padding: 6px 16px !important;
+  }
+
+  .mkt-header .top-links span:last-child {
+    display: none;
+  }
+}
+
+/* --- Page catégorie --- */
+.mkt-category-hero {
+  width: 100%;
+  height: 240px;
+  border-radius: 24px;
+  margin-bottom: 32px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding: 48px;
+}
+
+.mkt-category-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 32px;
+  margin-bottom: 64px;
+}
+
+.mkt-category-sidebar {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #E5E7EB;
+  height: fit-content;
+  position: sticky;
+  top: 100px;
+}
+
+.mkt-subcat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.mkt-spotlight-track {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 4px;
+  scrollbar-width: none;
+}
+
+.mkt-spotlight-track::-webkit-scrollbar {
+  display: none;
+}
+
+.mkt-spotlight-item {
+  flex: 0 0 calc(25% - 15px);
+  min-width: 200px;
+}
+
+.mkt-related-row {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  border: 1px solid #E5E7EB;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mkt-related-sidebar {
+  padding: 32px 24px;
+  border-right: 1px solid #F3F4F6;
+}
+
+.mkt-related-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: #F3F4F6;
+}
+
+@media (max-width: 1280px) {
+  .mkt-spotlight-item {
+    flex: 0 0 calc(33.333% - 14px);
+  }
+
+  .mkt-related-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .mkt-category-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .mkt-category-sidebar {
+    position: static;
+  }
+
+  .mkt-related-row {
+    grid-template-columns: 1fr;
+  }
+
+  .mkt-related-sidebar {
+    border-right: none;
+    border-bottom: 1px solid #F3F4F6;
+  }
+
+  .mkt-related-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .mkt-category-hero {
+    height: 200px;
+    padding: 32px;
+  }
+
+  .mkt-category-hero h1 {
+    font-size: 32px !important;
+  }
+
+  .mkt-spotlight-item {
+    flex: 0 0 calc(50% - 10px);
+  }
+}
+
+@media (max-width: 900px) {
+  .mkt-category-hero {
+    height: auto;
+    min-height: 160px;
+    padding: 24px;
+  }
+
+  .mkt-category-hero h1 {
+    font-size: 26px !important;
+  }
+
+  .mkt-subcat-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .mkt-related-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mkt-spotlight-item {
+    flex: 0 0 85%;
+    min-width: 0;
+  }
+}
+
+/* --- Page produit --- */
+.mkt-product-layout {
+  display: grid;
+  grid-template-columns: 1fr 500px;
+  gap: 48px;
+  align-items: start;
+  margin-bottom: 48px;
+}
+
+.mkt-product-gallery {
+  position: sticky;
+  top: 100px;
+  align-self: start;
+}
+
+.mkt-product-info {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.mkt-product-actions {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.mkt-product-actions button {
+  flex: 1;
+  min-width: 0;
+}
+
+.mkt-trade-float {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.mkt-trade-panel {
+  width: 380px;
+  max-width: calc(100vw - 32px);
+}
+
+@media (max-width: 1280px) {
+  .mkt-product-layout {
+    grid-template-columns: 1fr 420px;
+    gap: 32px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .mkt-product-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .mkt-product-gallery {
+    position: static;
+  }
+}
+
+@media (max-width: 900px) {
+  .mkt-product-actions {
+    flex-direction: column;
+  }
+
+  .mkt-product-actions button {
+    width: 100%;
+  }
+
+  .mkt-trade-float {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    align-items: stretch;
+  }
+
+  .mkt-trade-panel {
+    width: 100%;
+  }
+}

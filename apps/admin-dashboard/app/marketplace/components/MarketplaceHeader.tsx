@@ -76,7 +76,7 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
 
   return (
     <>
-      <header style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, zIndex: 1000 }}>
+      <header className="mkt-header" style={{ background: '#fff', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, zIndex: 1000 }}>
         {/* Top Slim Bar - Visible everywhere except main landing page for non-authenticated users */}
         {(!minimal || store) && (
           <div className="top-bar" style={{ background: '#F9FAFB', borderBottom: '1px solid #F1F5F9', padding: '6px 24px' }}>
@@ -103,7 +103,7 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
                   </Link>
 
                   {isMegaMenuOpen && !minimal && allCategories.length > 0 && (
-                    <div style={{ 
+                    <div className="mega-menu-dropdown" style={{ 
                       position: 'absolute', top: '100%', left: 0, 
                       display: 'flex',
                       width: '960px', 
@@ -357,13 +357,28 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
       </header>
 
       <style jsx>{`
+        @media (max-width: 1100px) {
+          .top-links span:last-child { display: none; }
+          .top-links { gap: 12px !important; flex-wrap: wrap; }
+        }
+        @media (max-width: 900px) {
+          .main-header { padding: 12px 16px !important; }
+          .header-flex { gap: 12px !important; flex-wrap: wrap; }
+          .search-form {
+            order: 3;
+            flex: 1 1 100% !important;
+            max-width: 100% !important;
+            height: 44px !important;
+          }
+          .action-item span { display: none; }
+          .actions-container { gap: 12px !important; }
+          .logo-text span:first-child { font-size: 18px !important; }
+        }
         @media (max-width: 768px) {
           .top-bar { display: none !important; }
-          .main-header { padding: 12px 16px !important; }
-          .header-flex { gap: 12px !important; justify-content: space-between; }
+          .header-flex { justify-content: space-between; }
           .logo-text { display: none !important; }
           .search-form { display: none !important; }
-          .actions-container { gap: 16px !important; }
           .pos-detail { display: none !important; }
           .spacer { display: none !important; }
         }
