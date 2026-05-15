@@ -113,7 +113,7 @@ export async function GET() {
                 unit: 'KG',
                 stockQuantity: 100,
                 description: `Qualité professionnelle certifiée par ${companyName}. Idéal pour coffeeshops et restaurants.`,
-                image: `/images/elkassa-logo.png
+                image: `/images/elkassa-logo.png`,
                 tags: ['Premium', region.city, 'Local'],
                 isFeatured: Math.random() > 0.7,
                 isFlashSale: Math.random() > 0.8,
