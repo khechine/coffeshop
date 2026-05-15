@@ -1,31 +1,59 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Link from 'next/link';
-import { 
-  ArrowLeft, Share2, Heart, ShoppingCart, 
+import {
+  ArrowLeft, Share2, Heart, ShoppingCart,
   MessageSquare, ChevronRight, Star, ShieldCheck,
-  CheckCircle2, Building2, MapPin, Zap, Truck,
-  Plus, Minus, X
+  Building2, Plus, Minus, X,
 } from 'lucide-react';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 import { sendTradeMessageAction } from '../../../actions';
 import { useVault } from '../../VaultContext';
-import VaultReveal from '../../components/VaultReveal';
+import { useCart } from '../../CartContext';
+import CartDrawer from '../../CartDrawer';
+import '../../marketplace-mobile-mic.css';
 
 const fmt = (n: any) => Number(n).toFixed(2);
 
 export default function ProductMobile({ product, isVendor, relatedProducts = [] }: any) {
-  const [qty, setQty] = useState(1);
+  const minQty = product.minOrderQty ? Number(product.minOrderQty) : 1;
+  const [qty, setQty] = useState(minQty);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [tradeMessagerOpen, setTradeMessagerOpen] = useState(false);
   const [tradeMessage, setTradeMessage] = useState('');
   const [isSendingMsg, setIsSendingMsg] = useState(false);
-  
+  const [cartOpen, setCartOpen] = useState(false);
+  const galleryRef = useRef<HTMLDivElement>(null);
+
+  const { addToCart, cartCount } = useCart();
   const { maskName, identityVisible } = useVault(product.vendorId, product.vendor?.isPremium);
 
+  const gallery = [
+    sanitizeUrl(product.image),
+    ...(product.images || []).map((img: string) => sanitizeUrl(img)),
+  ].filter(Boolean) as string[];
 
-  const gallery = [product.image, ...(product.images || [])].filter(Boolean);
+  const specs = product.specifications
+    ? Object.entries(product.specifications)
+    : [
+        ['Catégorie', product.category?.name || '—'],
+        ['Unité', product.unit || 'pièce'],
+        ['Origine', product.vendor?.city || 'Tunisie'],
+      ];
+
+  const scrollToImage = (idx: number) => {
+    setActiveImageIdx(idx);
+    if (galleryRef.current) {
+      galleryRef.current.scrollTo({ left: idx * galleryRef.current.clientWidth, behavior: 'smooth' });
+    }
+  };
+
+  const handleGalleryScroll = () => {
+    if (!galleryRef.current) return;
+    const idx = Math.round(galleryRef.current.scrollLeft / galleryRef.current.clientWidth);
+    setActiveImageIdx(idx);
+  };
 
   const handleSendTradeMessage = async () => {
     if (!tradeMessage.trim()) return;
@@ -34,180 +62,236 @@ export default function ProductMobile({ product, isVendor, relatedProducts = [] 
       const res = await sendTradeMessageAction({
         receiverId: product.vendor?.userId || '',
         productId: product.id,
-        content: tradeMessage
+        content: tradeMessage,
       });
       if (res.success) {
-        alert("Message envoyé !");
+        alert('Message envoyé !');
         setTradeMessagerOpen(false);
         setTradeMessage('');
       }
     } catch (e: any) {
-      alert("Erreur: " + e.message);
+      alert('Erreur : ' + e.message);
     } finally {
       setIsSendingMsg(false);
     }
   };
 
+  const handleAddToCart = () => {
+    addToCart(product, qty);
+    setCartOpen(true);
+  };
+
+  const displayPrice = product.discountPrice || product.price;
+
   return (
-    <div style={{ background: '#F4F4F4', minHeight: '100vh', paddingBottom: '100px', fontFamily: '-apple-system, system-ui, sans-serif' }}>
-      
-      {/* Top Header */}
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: '60px', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', zIndex: 1000, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-        <Link href="/marketplace" style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827', textDecoration: 'none' }}>
-          <ArrowLeft size={22} />
+    <div className="mic-pdp">
+      <div className="mic-pdp-top">
+        <Link href={product.categoryId ? `/marketplace/category/${product.category?.slug || product.categoryId}` : '/marketplace'} aria-label="Retour">
+          <ArrowLeft size={20} />
         </Link>
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <button style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#F9FAFB', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827' }}>
-            <Share2 size={20} />
+        <div className="mic-pdp-top-actions">
+          <button type="button" aria-label="Partager">
+            <Share2 size={18} />
           </button>
-          <button style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#F9FAFB', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827' }}>
-            <Heart size={20} />
+          <button type="button" aria-label="Favoris">
+            <Heart size={18} />
           </button>
-          <Link href="/marketplace/cart" style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827', textDecoration: 'none' }}>
-            <ShoppingCart size={20} />
-          </Link>
+          <button type="button" onClick={() => setCartOpen(true)} aria-label="Panier" style={{ position: 'relative' }}>
+            <ShoppingCart size={18} />
+            {cartCount > 0 && (
+              <span style={{ position: 'absolute', top: -4, right: -4, background: '#e31e24', color: '#fff', fontSize: 9, fontWeight: 900, width: 16, height: 16, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {cartCount}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Image Carousel */}
-      <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', background: '#fff', marginTop: '50px' }}>
-        <div style={{ width: '100%', height: '100%', display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }} className="no-scrollbar">
+      <section className="mic-pdp-gallery">
+        <div
+          ref={galleryRef}
+          className="mic-pdp-gallery-track mic-no-scrollbar"
+          onScroll={handleGalleryScroll}
+        >
           {gallery.map((img, i) => (
-            <div key={i} style={{ minWidth: '100%', height: '100%', scrollSnapAlign: 'start' }}>
-              <img src={sanitizeUrl(img)} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="prod" />
+            <div key={i} className="mic-pdp-gallery-slide">
+              <img src={img} alt={product.name} />
             </div>
           ))}
         </div>
-        <div style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '2px 8px', borderRadius: '100px', fontSize: '11px', fontWeight: 700 }}>
-          {activeImageIdx + 1} / {gallery.length}
-        </div>
-      </div>
-
-      {/* Product Info Section */}
-      <div style={{ background: '#fff', padding: '16px', marginBottom: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '8px' }}>
-          <span style={{ fontSize: '24px', fontWeight: 900, color: '#E31E24' }}>{fmt(product.discountPrice || product.price)}</span>
-          <span style={{ fontSize: '14px', fontWeight: 800, color: '#E31E24' }}>DT</span>
-          <span style={{ fontSize: '12px', color: '#999', marginLeft: '4px' }}>/ {product.unit || 'pièce'}</span>
-        </div>
-        
-        <div style={{ fontSize: '13px', color: '#666', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ background: '#F9FAFB', padding: '4px 8px', borderRadius: '4px' }}>Min. Order: {product.minOrderQty} {product.unit || 'unit'}(s)</span>
-        </div>
-
-        <h1 style={{ fontSize: '16px', fontWeight: 800, color: '#111827', lineHeight: 1.4, margin: '0 0 12px' }}>
-          {product.name}
-        </h1>
-
-        <div style={{ display: 'flex', gap: '12px' }}>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#F0FDF4', color: '#16A34A', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 800 }}>
-             <ShieldCheck size={12} /> Verified
-           </div>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#FEF2F2', color: '#E31E24', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 800 }}>
-             <Star size={12} fill="#E31E24" /> 4.8 (120+)
-           </div>
-        </div>
-      </div>
-
-      {/* Vendor Section */}
-      <Link href={`/marketplace/vendor/${product.vendor?.id}`} style={{ background: '#fff', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', textDecoration: 'none' }}>
-        <div style={{ width: '40px', height: '40px', background: '#F9FAFB', borderRadius: '8px', border: '1px solid #eee', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Building2 size={24} color="#666" />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '14px', fontWeight: 800, color: '#111827' }}>
-            {maskName(product.vendor?.companyName)}
+        {gallery.length > 1 && (
+          <span className="mic-pdp-counter">
+            {activeImageIdx + 1} / {gallery.length}
+          </span>
+        )}
+        {gallery.length > 1 && (
+          <div className="mic-pdp-thumbs mic-no-scrollbar">
+            {gallery.map((img, i) => (
+              <button
+                key={i}
+                type="button"
+                className={`mic-pdp-thumb ${activeImageIdx === i ? 'active' : ''}`}
+                onClick={() => scrollToImage(i)}
+              >
+                <img src={img} alt="" />
+              </button>
+            ))}
           </div>
-          <div style={{ fontSize: '12px', color: '#999' }}>{identityVisible ? product.vendor?.city : 'Ville masquée'} • {identityVisible ? 'Diamond Member' : 'Membre Vérifié'}</div>
-        </div>
-        <ChevronRight size={20} color="#ccc" />
-      </Link>
+        )}
+      </section>
 
-      {/* Specifications */}
-      <div style={{ background: '#fff', padding: '16px', marginBottom: '8px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: 900, marginBottom: '16px' }}>Specifications</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-           {[
-             { label: 'Matériau', value: 'Acier Inoxydable' },
-             { label: 'Certification', value: 'CE, ISO9001' },
-             { label: 'Garantie', value: '2 Ans' },
-             { label: 'Origine', value: 'Tunisie' }
-           ].map((spec, i) => (
-             <div key={i} style={{ display: 'flex', fontSize: '13px' }}>
-               <span style={{ width: '120px', color: '#999', fontWeight: 600 }}>{spec.label}</span>
-               <span style={{ color: '#333', fontWeight: 700 }}>{spec.value}</span>
-             </div>
-           ))}
+      <section className="mic-pdp-block">
+        {!isVendor ? (
+          <>
+            <div className="mic-pdp-price">
+              {fmt(displayPrice)} <span>DT / {product.unit || 'pièce'}</span>
+            </div>
+            {product.discountPrice && Number(product.discountPrice) < Number(product.price) && (
+              <div style={{ fontSize: 13, color: '#999', textDecoration: 'line-through', marginBottom: 6 }}>
+                {fmt(product.price)} DT
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="mic-pdp-price" style={{ fontSize: 16 }}>Prix sur demande</div>
+        )}
+        <div className="mic-pdp-moq">
+          Commande min. : {product.minOrderQty || 1} {product.unit || 'unité'}(s)
         </div>
-      </div>
+        <h1 className="mic-pdp-title">{product.name}</h1>
+        <div className="mic-pdp-badges">
+          <span className="mic-pdp-badge" style={{ background: '#ecfdf5', color: '#166534' }}>
+            <ShieldCheck size={12} /> Fournisseur vérifié
+          </span>
+          <span className="mic-pdp-badge" style={{ background: '#fef2f2', color: '#e31e24' }}>
+            <Star size={12} fill="#e31e24" /> 4.8
+          </span>
+        </div>
+        {!isVendor && (
+          <div className="mic-pdp-qty">
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#666' }}>Quantité</span>
+            <button type="button" onClick={() => setQty(Math.max(minQty, qty - 1))} aria-label="Moins">
+              <Minus size={16} />
+            </button>
+            <span>{qty}</span>
+            <button type="button" onClick={() => setQty(qty + 1)} aria-label="Plus">
+              <Plus size={16} />
+            </button>
+          </div>
+        )}
+      </section>
 
-      {/* Recommendation Section */}
-      <div style={{ padding: '16px' }}>
-        <h3 style={{ fontSize: '15px', fontWeight: 900, marginBottom: '16px' }}>Produits Similaires</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          {relatedProducts.slice(0, 4).map((p: any, i: number) => (
-            <Link key={i} href={`/marketplace/product/${p.id}`} style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', textDecoration: 'none' }}>
-              <div style={{ width: '100%', aspectRatio: '1/1' }}>
-                <img src={sanitizeUrl(p.image)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="rel" />
+      {product.vendor && (
+        <section className="mic-pdp-block">
+          <Link href={`/marketplace/vendor/${product.vendor.id}`} className="mic-pdp-vendor">
+            <div className="mic-pdp-vendor-logo">
+              {product.vendor.logoUrl ? (
+                <img src={sanitizeUrl(product.vendor.logoUrl)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <Building2 size={22} color="#999" />
+              )}
+            </div>
+            <div style={{ flex: 1 }}>
+              <h4>{maskName(product.vendor.companyName)}</h4>
+              <p>
+                {identityVisible ? product.vendor.city : 'Ville masquée'} ·{' '}
+                {identityVisible ? 'Membre premium' : 'Membre vérifié'}
+              </p>
+            </div>
+            <ChevronRight size={18} color="#ccc" />
+          </Link>
+        </section>
+      )}
+
+      {(product.description || specs.length > 0) && (
+        <section className="mic-pdp-block">
+          <h3 style={{ fontSize: 14, fontWeight: 900, margin: '0 0 12px' }}>Détails du produit</h3>
+          {product.description && (
+            <p className="mic-pdp-desc" style={{ marginBottom: specs.length ? 16 : 0 }}>
+              {product.description}
+            </p>
+          )}
+          <dl style={{ margin: 0 }}>
+            {specs.map(([key, value]: [string, any]) => (
+              <div key={key} className="mic-pdp-spec-row">
+                <dt>{key}</dt>
+                <dd>{String(value)}</dd>
               </div>
-              <div style={{ padding: '10px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#333', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '32px' }}>{p.name}</div>
-                <div style={{ fontSize: '14px', fontWeight: 900, color: '#E31E24', marginTop: '4px' }}>{fmt(p.price)} DT</div>
-              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+
+      {relatedProducts.length > 0 && (
+        <section className="mic-section">
+          <div className="mic-section-title-row">
+            <h2 className="mic-section-title" style={{ margin: 0 }}>Produits similaires</h2>
+            <Link href={`/marketplace/category/${product.category?.slug || product.categoryId}`} className="mic-see-all">
+              Voir plus
             </Link>
-          ))}
-        </div>
-      </div>
+          </div>
+          <div className="mic-product-grid" style={{ padding: 0 }}>
+            {relatedProducts.slice(0, 6).map((p: any) => (
+              <Link key={p.id} href={`/marketplace/product/${p.id}`} className="mic-product-card">
+                <div className="mic-p-img">
+                  <img src={sanitizeUrl(p.image)} alt={p.name} />
+                </div>
+                <div className="mic-p-body">
+                  <h4>{p.name}</h4>
+                  {!isVendor && <div className="mic-p-price">{fmt(p.price)} DT</div>}
+                  <div className="mic-p-moq">MOQ {p.minOrderQty || 1}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* Bottom Sticky CTA */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', borderTop: '1px solid #F1F5F9', padding: '16px 20px', display: 'flex', gap: '12px', zIndex: 1000, boxShadow: '0 -10px 25px rgba(0,0,0,0.05)' }}>
-        <div 
-          onClick={() => setTradeMessagerOpen(true)}
-          style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#F9FAFB', border: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5', flexShrink: 0, cursor: 'pointer' }}
+      <div className="mic-pdp-sticky">
+        <button type="button" className="mic-pdp-sticky-chat" onClick={() => setTradeMessagerOpen(true)} aria-label="Discuter">
+          <MessageSquare size={22} />
+        </button>
+        <button
+          type="button"
+          className="mic-pdp-sticky-cart"
+          onClick={isVendor ? () => setTradeMessagerOpen(true) : handleAddToCart}
         >
-          <MessageSquare size={24} />
-        </div>
-        <button 
-          style={{ flex: 1, height: '56px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 900, boxShadow: '0 8px 16px rgba(227,30,36,0.2)' }}
-        >
-          {isVendor ? 'Contacter' : 'Ajouter au Panier'}
+          {isVendor ? 'Contacter le fournisseur' : 'Ajouter au panier'}
         </button>
       </div>
 
-      {/* TradeMessager Mobile Drawer */}
       {tradeMessagerOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'flex-end' }}>
-           <div style={{ width: '100%', background: '#fff', borderRadius: '24px 24px 0 0', padding: '32px 24px', position: 'relative', animation: 'slideUp 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                 <h3 style={{ fontSize: '20px', fontWeight: 950, color: '#111827' }}>Contacter le fournisseur</h3>
-                 <button onClick={() => setTradeMessagerOpen(false)} style={{ background: '#F9FAFB', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111827' }}><X size={20} /></button>
-              </div>
-              <div style={{ background: '#EEF2FF', padding: '14px 16px', borderRadius: '14px', marginBottom: '24px', fontSize: '13px', color: '#4338CA', border: '1px solid #C7D2FE', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <ShieldCheck size={18} />
-                <span>Vos coordonnées sont protégées et masquées automatiquement.</span>
-              </div>
-              <textarea 
-                value={tradeMessage}
-                onChange={e => setTradeMessage(e.target.value)}
-                placeholder="Ex: Bonjour, je souhaiterais obtenir plus d'informations sur ce produit..."
-                style={{ width: '100%', height: '140px', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '16px', outline: 'none', fontSize: '15px', fontFamily: 'inherit', resize: 'none', background: '#F9FAFB' }}
-              />
-              <button 
-                onClick={handleSendTradeMessage}
-                disabled={isSendingMsg || !tradeMessage.trim()}
-                style={{ width: '100%', height: '58px', background: '#E31E24', color: '#fff', borderRadius: '16px', fontWeight: 900, border: 'none', marginTop: '20px', fontSize: '16px', boxShadow: '0 8px 20px rgba(227,30,36,0.25)', opacity: isSendingMsg ? 0.7 : 1 }}
-              >
-                {isSendingMsg ? 'Envoi en cours...' : 'Envoyer la demande'}
+        <div className="mic-pdp-sheet-overlay" onClick={() => setTradeMessagerOpen(false)} role="presentation">
+          <div className="mic-pdp-sheet" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0 }}>Contacter le fournisseur</h3>
+              <button type="button" onClick={() => setTradeMessagerOpen(false)} style={{ background: '#f5f5f5', border: 'none', width: 32, height: 32, borderRadius: 4, cursor: 'pointer' }}>
+                <X size={18} />
               </button>
-           </div>
+            </div>
+            <div className="mic-pdp-sheet-notice">
+              <ShieldCheck size={16} style={{ flexShrink: 0 }} />
+              <span>Vos coordonnées sont protégées et masquées automatiquement sur la plateforme.</span>
+            </div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#444', margin: '0 0 8px' }}>Sujet : {product.name}</p>
+            <textarea
+              value={tradeMessage}
+              onChange={(e) => setTradeMessage(e.target.value)}
+              placeholder="Bonjour, je souhaite obtenir un devis pour ce produit…"
+            />
+            <button
+              type="button"
+              className="mic-pdp-sheet-send"
+              onClick={handleSendTradeMessage}
+              disabled={isSendingMsg || !tradeMessage.trim()}
+            >
+              {isSendingMsg ? 'Envoi…' : 'Envoyer la demande'}
+            </button>
+          </div>
         </div>
       )}
 
-      <style jsx>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
+      {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} />}
     </div>
   );
 }
-
