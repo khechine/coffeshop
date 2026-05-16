@@ -436,6 +436,19 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
                {products.map((p: any) => <MarketplaceProductCard key={p.id} product={p} isVendor={isVendor} hidePrice={isVendor} />)}
             </div>
          )}
+         
+         {['About Us', 'Solutions', 'Discover', 'Contact Us'].includes(activeTab) && (
+           <div style={{ background: '#fff', borderRadius: '32px', padding: '64px', border: '1px solid #E5E7EB', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+              <h2 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', marginBottom: '32px', textAlign: 'center' }}>{activeTab}</h2>
+              <div 
+                className="prose prose-slate max-w-none"
+                style={{ fontSize: '18px', lineHeight: 1.8, color: '#475569' }}
+                dangerouslySetInnerHTML={{ 
+                  __html: (cust.themeConfig?.[activeTab.charAt(0).toLowerCase() + activeTab.slice(1).replace(' ', '')] || `<p style="text-align: center; color: #94A3B8;">Cette section n'a pas encore été configurée par le vendeur.</p>`) 
+                }} 
+              />
+           </div>
+         )}
       </main>
 
       <MarketplaceFooter />

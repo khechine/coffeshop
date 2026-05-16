@@ -76,15 +76,16 @@ export default function VendorStorefrontMobile({ vendor, products = [], isVendor
       </div>
 
       {/* Tabs */}
-      <div style={{ background: '#fff', display: 'flex', borderBottom: '1px solid #eee', position: 'sticky', top: '45px', zIndex: 999 }}>
-        {['Home', 'Products', 'Franchises', 'About'].map(tab => (
+      <div style={{ background: '#fff', display: 'flex', borderBottom: '1px solid #eee', position: 'sticky', top: '45px', zIndex: 999, overflowX: 'auto' }}>
+        {(vendor.isPremium ? ['Home', 'Products', 'Franchises', 'About Us', 'Solutions', 'Discover', 'Contact Us'] : ['Home', 'Products', 'About Us']).map(tab => (
           <div 
             key={tab} 
             onClick={() => setActiveTab(tab)}
             style={{ 
-              flex: 1, textAlign: 'center', padding: '12px 0', fontSize: '13px', fontWeight: activeTab === tab ? 800 : 600, 
+              flex: '0 0 auto', padding: '12px 16px', fontSize: '13px', fontWeight: activeTab === tab ? 800 : 600, 
               color: activeTab === tab ? primaryColor : '#666',
-              position: 'relative'
+              position: 'relative',
+              whiteSpace: 'nowrap'
             }}
           >
             {tab}
@@ -168,32 +169,40 @@ export default function VendorStorefrontMobile({ vendor, products = [], isVendor
           </div>
         )}
 
-        {activeTab === 'About' && (
+        {['About Us', 'Solutions', 'Discover', 'Contact Us'].includes(activeTab) && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ background: '#fff', borderRadius: '16px', padding: '16px' }}>
-               <h3 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '12px' }}>À propos</h3>
-               <p style={{ fontSize: '14px', color: '#374151', lineHeight: 1.6 }}>{vendor.description || 'Aucune description disponible.'}</p>
+               <h3 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '12px' }}>{activeTab}</h3>
+               <div 
+                  className="prose prose-sm max-w-none"
+                  style={{ fontSize: '14px', color: '#374151', lineHeight: 1.6 }}
+                  dangerouslySetInnerHTML={{ 
+                    __html: (cust.themeConfig?.[activeTab.charAt(0).toLowerCase() + activeTab.slice(1).replace(' ', '')] || vendor.description || `<p style="color: #9CA3AF;">Cette section n'a pas encore été configurée par le vendeur.</p>`) 
+                  }}
+               />
             </div>
             
-            <div style={{ background: '#fff', borderRadius: '16px', padding: '16px' }}>
-               <h3 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '12px' }}>Coordonnées Directes</h3>
-               <VaultReveal vendorId={vendor.id} levelRequired={3}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Globe size={16} />
+            {activeTab === 'About Us' && (
+              <div style={{ background: '#fff', borderRadius: '16px', padding: '16px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '12px' }}>Coordonnées Directes</h3>
+                <VaultReveal vendorId={vendor.id} levelRequired={3}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Globe size={16} />
+                        </div>
+                        <span style={{ fontSize: '14px', fontWeight: 700 }}>{vendor.email || 'Email non renseigné'}</span>
                       </div>
-                      <span style={{ fontSize: '14px', fontWeight: 700 }}>{vendor.email || 'Email non renseigné'}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <MapPin size={16} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <MapPin size={16} />
+                        </div>
+                        <span style={{ fontSize: '14px', fontWeight: 700 }}>{vendor.address || 'Adresse non renseignée'}</span>
                       </div>
-                      <span style={{ fontSize: '14px', fontWeight: 700 }}>{vendor.address || 'Adresse non renseignée'}</span>
                     </div>
-                  </div>
-               </VaultReveal>
-            </div>
+                </VaultReveal>
+              </div>
+            )}
           </div>
         )}
       </div>
