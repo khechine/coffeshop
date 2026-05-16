@@ -3377,6 +3377,57 @@ export async function deleteMarketplaceBundleAction(id: string) {
   revalidatePath('/marketplace');
 }
 
+export async function updateMarketplaceBundleAction(
+  bundleId: string,
+  data: {
+    name: string;
+    description?: string;
+    price: number;
+    discountPercent?: number;
+    image?: string;
+    items: { vendorProductId: string; quantity: number }[];
+  }
+) {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+
+  const user = await (prisma as any).user.findUnique({ where: { id: userId }, select: { id: true, role: true, name: true, email: true } });
+  if (!user) throw new Error('Utilisateur non trouvé');
+
+  const vendor = await (prisma as any).vendorProfile.findFirst({
+    where: { userId: user.id }
+  });
+  if (!vendor) throw new Error('Profil vendeur introuvable');
+
+  // Verify ownership
+  const existing = await (prisma as any).mktBundle.findUnique({ where: { id: bundleId } });
+  if (!existing || existing.vendorId !== vendor.id) throw new Error('Non autorisé');
+
+  // Delete old items and recreate
+  await (prisma as any).mktBundleItem.deleteMany({ where: { bundleId } });
+
+  const bundle = await (prisma as any).mktBundle.update({
+    where: { id: bundleId },
+    data: {
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      discountPercent: data.discountPercent,
+      image: data.image,
+      items: {
+        create: data.items.map(it => ({
+          vendorProductId: it.vendorProductId,
+          quantity: it.quantity
+        }))
+      }
+    }
+  });
+
+  revalidatePath('/vendor/portal/catalog');
+  revalidatePath('/marketplace');
+  return bundle;
+}
+
 export async function approveMarketplaceOrderAction(orderId: string, role: 'VENDOR' | 'SUPERADMIN') {
   const userId = cookies().get('userId')?.value;
   if (!userId) throw new Error('Non authentifié');

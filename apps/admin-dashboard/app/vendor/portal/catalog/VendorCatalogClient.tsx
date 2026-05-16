@@ -5,13 +5,14 @@ import Link from 'next/link';
 import {
   Plus, Edit2, Trash2, Package, Clock, FileSpreadsheet, Download,
   CheckCircle2, AlertCircle, Loader2, BarChart3, TrendingUp, TrendingDown,
-  Minus, ChevronDown, Tag, Sparkles, ShoppingBag, Search, X
+  Minus, ChevronDown, Tag, Sparkles, ShoppingBag, Search, X, Upload, Image as ImageIcon
 } from 'lucide-react';
 import Modal from '../../../../components/Modal';
 import {
   createMarketplaceProductAction, updateMarketplaceProductAction,
   deleteMarketplaceProductAction, importCsvProductsAction,
-  proposeSubCategoryAction, createMarketplaceBundleAction, deleteMarketplaceBundleAction
+  proposeSubCategoryAction, createMarketplaceBundleAction, deleteMarketplaceBundleAction,
+  updateMarketplaceBundleAction
 } from '../../../actions';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 
@@ -147,6 +148,8 @@ export default function VendorCatalogClient({
   const [activeTab, setActiveTab]           = useState<'catalog' | 'benchmark' | 'bundles' | 'collections'>('catalog');
   const [modalOpen, setModalOpen]           = useState(false);
   const [bundleModalOpen, setBundleModalOpen] = useState(false);
+  const [editingBundleId, setEditingBundleId] = useState<string | null>(null);
+  const [bundleSearchQuery, setBundleSearchQuery] = useState('');
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [proposeModalOpen, setProposeModalOpen] = useState(false);
   const [rayonModalOpen, setRayonModalOpen]     = useState(false);
@@ -421,18 +424,59 @@ export default function VendorCatalogClient({
     else { setProposeStatus('done'); showToast('Proposition envoyée — en attente de validation admin'); }
   };
 
-  const handleCreateBundle = async (e: React.FormEvent) => {
+  const handleBundleUpload = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
+      const res = await fetch(`${API_URL}/management/upload`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.url) {
+        const cleanUrl = sanitizeUrl(data.url);
+        setBundleForm((f: any) => ({ ...f, image: cleanUrl, imagePreview: cleanUrl }));
+      }
+    } catch (e) {
+      alert('Erreur upload image du pack');
+    }
+  };
+
+  const handleSaveBundle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (bundleForm.items.length === 0) return alert('Ajoutez au moins un produit au pack');
     startTransition(async () => {
-      await createMarketplaceBundleAction({
+      const payload = {
         name: bundleForm.name, description: bundleForm.description,
         price: parseFloat(bundleForm.price), image: bundleForm.imagePreview || bundleForm.image,
         items: bundleForm.items
-      });
+      };
+      if (editingBundleId) {
+        await updateMarketplaceBundleAction(editingBundleId, payload);
+        showToast('Pack mis à jour ✓');
+      } else {
+        await createMarketplaceBundleAction(payload);
+        showToast('Pack créé avec succès ✓');
+      }
       setBundleModalOpen(false);
-      showToast('Pack créé avec succès ✓');
+      setEditingBundleId(null);
     });
+  };
+
+  const handleEditBundle = (b: any) => {
+    setEditingBundleId(b.id);
+    setBundleForm({
+      name: b.name || '',
+      description: b.description || '',
+      price: String(b.price || ''),
+      image: b.image || '',
+      imagePreview: b.image || '',
+      showUrlInput: false,
+      items: (b.items || []).map((it: any) => ({ vendorProductId: it.vendorProductId || it.vendorProduct?.id, quantity: Number(it.quantity) || 1 }))
+    });
+    setBundleModalOpen(true);
   };
 
   const handleDeleteBundle = (id: string) => {
@@ -459,6 +503,11 @@ export default function VendorCatalogClient({
       items: bundleForm.items.map((it: any) => it.vendorProductId === productId ? { ...it, quantity: Math.max(1, qty) } : it)
     });
   };
+
+  const filteredBundleProducts = useMemo(() => {
+    if (!bundleSearchQuery) return initialProducts;
+    return initialProducts.filter(p => p.name?.toLowerCase().includes(bundleSearchQuery.toLowerCase()));
+  }, [initialProducts, bundleSearchQuery]);
 
   const benchCats  = useMemo(() => Array.from(new Set(benchmarkData.map(r => r.displayCategory).filter(Boolean))), [benchmarkData]);
   const benchBrands = useMemo(() => Array.from(new Set(benchmarkData.map(r => r.brand).filter(Boolean))) as string[], [benchmarkData]);
@@ -497,7 +546,7 @@ export default function VendorCatalogClient({
               </>
             )}
             {activeTab === 'bundles' && (
-               <button onClick={() => { setBundleForm({name:'', description:'', price:'', image:'', items:[]}); setBundleModalOpen(true); }} className="px-8 py-3.5 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-xl shadow-indigo-600/20"><Sparkles size={18} className="inline mr-2" /> Créer un Pack</button>
+               <button onClick={() => { setEditingBundleId(null); setBundleForm({name:'', description:'', price:'', image:'', imagePreview:'', showUrlInput:false, items:[]}); setBundleSearchQuery(''); setBundleModalOpen(true); }} className="px-8 py-3.5 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-xl shadow-indigo-600/20"><Sparkles size={18} className="inline mr-2" /> Créer un Pack</button>
             )}
             {activeTab === 'collections' && (
               <button onClick={() => { setSelectedCollection(null); setRayonModalOpen(true); }} className="px-8 py-3.5 rounded-2xl bg-violet-600 text-white font-black text-sm shadow-xl shadow-violet-600/20"><Plus size={18} className="inline mr-2" /> Nouveau Rayon</button>
@@ -558,16 +607,19 @@ export default function VendorCatalogClient({
       {activeTab === 'bundles' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {initialBundles.map((b: any) => (
-            <div key={b.id} className="bg-white rounded-[40px] border border-slate-100 p-8 flex flex-col hover:shadow-2xl transition-all group">
-              <div className="h-56 bg-slate-100 rounded-3xl relative mb-6 overflow-hidden">
+            <div key={b.id} className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-100 dark:border-slate-800 p-8 flex flex-col hover:shadow-2xl transition-all group">
+              <div className="h-56 bg-slate-100 dark:bg-slate-800 rounded-3xl relative mb-6 overflow-hidden">
                 <img src={b.image || '/images/elkassa-placeholder.png'} className="w-full h-full object-cover" />
                 <div className="absolute top-4 left-4 bg-indigo-600 text-white px-3 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-xl"><Sparkles size={14} /> Pack Promo</div>
-                <button onClick={() => handleDeleteBundle(b.id)} className="absolute top-4 right-4 p-3 bg-white/90 backdrop-blur rounded-2xl text-rose-500 shadow-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-500 hover:text-white"><Trash2 size={18} /></button>
+                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                  <button onClick={() => handleEditBundle(b)} className="p-3 bg-white/90 backdrop-blur rounded-2xl text-indigo-600 shadow-xl hover:bg-indigo-600 hover:text-white transition-colors"><Edit2 size={18} /></button>
+                  <button onClick={() => handleDeleteBundle(b.id)} className="p-3 bg-white/90 backdrop-blur rounded-2xl text-rose-500 shadow-xl hover:bg-rose-500 hover:text-white transition-colors"><Trash2 size={18} /></button>
+                </div>
               </div>
-              <h4 className="text-xl font-black text-slate-900 mb-2">{b.name}</h4>
+              <h4 className="text-xl font-black text-slate-900 dark:text-white mb-2">{b.name}</h4>
               <p className="text-slate-500 text-sm font-medium mb-6 line-clamp-2">{b.description || 'Offre groupée'}</p>
               <div className="space-y-2 mb-8">
-                {b.items?.map((it: any, i: number) => <div key={i} className="text-xs font-bold text-slate-600 flex items-center justify-between"><span>• {it.vendorProduct?.name}</span><span className="text-indigo-600">x{it.quantity}</span></div>)}
+                {b.items?.map((it: any, i: number) => <div key={i} className="text-xs font-bold text-slate-600 dark:text-slate-400 flex items-center justify-between"><span>• {it.vendorProduct?.name}</span><span className="text-indigo-600">x{Number(it.quantity)}</span></div>)}
               </div>
               <div className="mt-auto flex justify-between items-center"><div className="text-3xl font-black text-indigo-600">{Number(b.price).toFixed(3)} DT</div><div className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${b.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}`}>{b.isActive ? 'Actif' : 'Off'}</div></div>
             </div>
@@ -734,22 +786,68 @@ export default function VendorCatalogClient({
       </Modal>
 
       {/* MODAL BUNDLE */}
-      <Modal open={bundleModalOpen} onClose={() => setBundleModalOpen(false)} title="Créer un Pack Promo" width={800}>
-        <form onSubmit={handleCreateBundle} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <Modal open={bundleModalOpen} onClose={() => { setBundleModalOpen(false); setEditingBundleId(null); }} title={editingBundleId ? 'Modifier le Pack' : 'Créer un Pack Promo'} width={900}>
+        <form onSubmit={handleSaveBundle} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
            <div className="space-y-6">
-              <div><label className={labelClass}>Nom du Pack</label><input className={inputClass} value={bundleForm.name} onChange={e => setBundleForm({...bundleForm, name: e.target.value})} required /></div>
-              <div><label className={labelClass}>Prix du Pack (DT)</label><input className={inputClass} type="number" step="0.001" value={bundleForm.price} onChange={e => setBundleForm({...bundleForm, price: e.target.value})} required /></div>
-              <div className="flex gap-4"><button type="button" className="flex-1 py-4 bg-slate-50 text-slate-500 rounded-2xl font-black text-sm" onClick={() => setBundleModalOpen(false)}>Annuler</button><button type="submit" className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl">Créer le Pack</button></div>
+              {/* Image Upload */}
+              <div>
+                <label className={labelClass}>Image du Pack</label>
+                <div className="relative h-48 bg-slate-50 dark:bg-slate-800 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden group/img cursor-pointer hover:border-indigo-400 transition-colors">
+                  {bundleForm.imagePreview ? (
+                    <>
+                      <img src={bundleForm.imagePreview.startsWith('/uploads') ? `${process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com'}${bundleForm.imagePreview}` : bundleForm.imagePreview} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-xs font-black">Changer l'image</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full gap-3">
+                      <Upload size={32} className="text-slate-400" />
+                      <span className="text-xs font-black text-slate-400">Cliquez ou glissez une image</span>
+                    </div>
+                  )}
+                  <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => { const f = e.target.files?.[0]; if (f) handleBundleUpload(f); }} />
+                </div>
+              </div>
+              <div><label className={labelClass}>Nom du Pack</label><input className={inputClass} value={bundleForm.name} onChange={e => setBundleForm({...bundleForm, name: e.target.value})} required placeholder="ex: Pack Démarrage Café" /></div>
+              <div><label className={labelClass}>Description</label><textarea className={inputClass} rows={3} value={bundleForm.description || ''} onChange={e => setBundleForm({...bundleForm, description: e.target.value})} placeholder="Décrivez votre pack..." style={{resize: 'none'}} /></div>
+              <div><label className={labelClass}>Prix du Pack (DT)</label><input className={inputClass} type="number" step="0.001" value={bundleForm.price} onChange={e => setBundleForm({...bundleForm, price: e.target.value})} required placeholder="0.000" /></div>
+              <div className="flex gap-4">
+                <button type="button" className="flex-1 py-4 bg-slate-50 dark:bg-slate-800 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-100 transition-colors" onClick={() => { setBundleModalOpen(false); setEditingBundleId(null); }}>Annuler</button>
+                <button type="submit" disabled={isPending} className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                  {isPending ? <Loader2 size={18} className="inline animate-spin mr-2" /> : null}
+                  {editingBundleId ? 'Enregistrer les modifications' : 'Créer le Pack'}
+                </button>
+              </div>
            </div>
-           <div className="bg-slate-50 p-6 rounded-[32px] border border-slate-100 overflow-y-auto max-h-[400px]">
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Produits inclus</div>
+           <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-[32px] border border-slate-100 dark:border-slate-700 overflow-y-auto max-h-[560px]">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Produits inclus ({bundleForm.items.length})</div>
+              {bundleForm.items.length === 0 && (
+                <div className="text-center py-8 text-slate-400">
+                  <Package size={32} className="mx-auto mb-3 opacity-50" />
+                  <p className="text-xs font-bold">Aucun produit ajouté</p>
+                  <p className="text-[10px] mt-1">Sélectionnez des produits ci-dessous</p>
+                </div>
+              )}
               {bundleForm.items.map((item: any) => (
-                <div key={item.vendorProductId} className="bg-white p-3 rounded-2xl mb-2 flex items-center justify-between border border-slate-100">
-                  <span className="text-xs font-black truncate max-w-[150px]">{initialProducts.find(p => p.id === item.vendorProductId)?.name}</span>
-                  <div className="flex items-center gap-2"><button type="button" onClick={() => updateBundleItemQty(item.vendorProductId, item.quantity - 1)} className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">-</button><span className="text-xs font-black">{item.quantity}</span><button type="button" onClick={() => updateBundleItemQty(item.vendorProductId, item.quantity + 1)} className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">+</button></div>
+                <div key={item.vendorProductId} className="bg-white dark:bg-slate-900 p-3 rounded-2xl mb-2 flex items-center justify-between border border-slate-100 dark:border-slate-700">
+                  <span className="text-xs font-black truncate max-w-[150px] text-slate-900 dark:text-white">{initialProducts.find(p => p.id === item.vendorProductId)?.name}</span>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => updateBundleItemQty(item.vendorProductId, item.quantity - 1)} className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-black hover:bg-slate-200 transition-colors">-</button>
+                    <span className="text-xs font-black w-6 text-center">{item.quantity}</span>
+                    <button type="button" onClick={() => updateBundleItemQty(item.vendorProductId, item.quantity + 1)} className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-black hover:bg-slate-200 transition-colors">+</button>
+                    <button type="button" onClick={() => removeProductFromBundle(item.vendorProductId)} className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-500 hover:bg-rose-100 transition-colors ml-1"><X size={14} /></button>
+                  </div>
                 </div>
               ))}
-              <div className="mt-4 pt-4 border-t border-slate-200"><div className="flex flex-wrap gap-2">{initialProducts.slice(0, 10).map(p => <button key={p.id} type="button" onClick={() => addProductToBundle(p.id)} className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black hover:border-indigo-500">+ {p.name}</button>)}</div></div>
+              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <div className="mb-3"><input type="text" placeholder="Rechercher un produit..." value={bundleSearchQuery} onChange={e => setBundleSearchQuery(e.target.value)} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none" /></div>
+                <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto">
+                  {filteredBundleProducts.filter(p => !bundleForm.items.find((it: any) => it.vendorProductId === p.id)).map(p => (
+                    <button key={p.id} type="button" onClick={() => addProductToBundle(p.id)} className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-black hover:border-indigo-500 hover:text-indigo-600 transition-colors">+ {p.name}</button>
+                  ))}
+                </div>
+              </div>
            </div>
         </form>
       </Modal>
