@@ -8,7 +8,7 @@ import {
   ChevronRight, Building2, LayoutGrid, ShoppingBag,
   Heart, Share2, Play, CheckCircle2, ChevronDown, 
   MapPin, Globe, Headphones, ArrowUp, ChevronLeft, X,
-  FileText, Calendar, Leaf, Award, Shield
+  FileText, Calendar, Leaf, Award, Shield, Package
 } from 'lucide-react';
 import { useVault } from '../../VaultContext';
 import { useCart } from '../../CartContext';
@@ -344,6 +344,29 @@ export default function ProductDetailClient({ product, isVendor = false, related
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Bundle Items Section */}
+            {product.isBundle && product.items && product.items.length > 0 && (
+              <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', marginBottom: '24px' }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                   <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#111827' }}>Contenu du pack</h2>
+                   <Package size={18} color="#9CA3AF" />
+                 </div>
+                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                    {product.items.map((item: any, i: number) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#F9FAFB', padding: '16px', borderRadius: '12px', border: '1px solid #F1F5F9' }}>
+                        <div style={{ width: '64px', height: '64px', borderRadius: '8px', background: '#fff', padding: '4px', border: '1px solid #E5E7EB' }}>
+                          <img src={sanitizeUrl(item.vendorProduct?.image)} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#111827', margin: '0 0 4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.vendorProduct?.name}</h4>
+                          <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: 600 }}>Quantité : {Number(item.quantity)} {item.vendorProduct?.unit || 'unité'}</span>
+                        </div>
+                      </div>
+                    ))}
+                 </div>
               </div>
             )}
 

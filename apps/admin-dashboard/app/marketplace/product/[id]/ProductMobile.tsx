@@ -212,13 +212,33 @@ export default function ProductMobile({ product, isVendor, relatedProducts = [] 
             </p>
           )}
           <dl style={{ margin: 0 }}>
-            {specs.map(([key, value]: [string, any]) => (
+            {specs.map(([key, value]: any) => (
               <div key={key} className="mic-pdp-spec-row">
                 <dt>{key}</dt>
                 <dd>{String(value)}</dd>
               </div>
             ))}
           </dl>
+        </section>
+      )}
+
+      {/* Bundle Items Section */}
+      {product.isBundle && product.items && product.items.length > 0 && (
+        <section className="mic-pdp-block">
+          <h3 style={{ fontSize: 14, fontWeight: 900, margin: '0 0 12px' }}>Contenu du pack</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {product.items.map((item: any, i: number) => (
+              <div key={i} style={{ display: 'flex', gap: '12px', padding: '12px', background: '#F9FAFB', borderRadius: '8px', border: '1px solid #eee' }}>
+                <div style={{ width: '48px', height: '48px', background: '#fff', borderRadius: '4px', padding: '2px', border: '1px solid #E5E7EB' }}>
+                  <img src={sanitizeUrl(item.vendorProduct?.image)} alt={item.vendorProduct?.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#333', marginBottom: '4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.vendorProduct?.name}</div>
+                  <div style={{ fontSize: '12px', color: '#666', fontWeight: 600 }}>Qté: {Number(item.quantity)} {item.vendorProduct?.unit || 'unité'}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
       )}
 

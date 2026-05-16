@@ -23,7 +23,7 @@ export default async function ProductPage({
        product.isBundle = true;
        // Bundles don't have a categoryId directly in schema usually, or it's shared
        // We can use a default or first item's category
-       product.categoryId = product.items?.[0]?.product?.categoryId;
+       product.categoryId = product.items?.[0]?.vendorProduct?.categoryId;
     }
   } else {
     product = await getMarketplaceProductAction(id);

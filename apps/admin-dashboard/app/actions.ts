@@ -2275,7 +2275,7 @@ export async function getMarketplaceBundleAction(id: string) {
       where: { id },
       include: {
         vendor: { include: { customization: true } },
-        items: { include: { product: true } }
+        items: { include: { vendorProduct: true } }
       }
     });
     return bundle;
