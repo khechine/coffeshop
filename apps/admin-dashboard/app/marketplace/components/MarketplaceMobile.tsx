@@ -331,14 +331,19 @@ export default function MarketplaceMobile({
                     <img src={sanitizeUrl(p.image ?? undefined)} alt="" />
                     <div>
                       <h4>{p.name}</h4>
-                      <span>{countLabel(products.length)}</span>
+                      <span>{!hidePrices ? `${Number(p.price).toFixed(2)} DT` : 'Prix sur demande'}</span>
                     </div>
                   </Link>
                 ))}
               </div>
-              <Link href="/marketplace?scope=PRODUCT" className="mic-hub-more" style={{ marginTop: 10 }}>
+              <button 
+                type="button" 
+                onClick={() => setRfqOpen(true)} 
+                className="mic-hub-more" 
+                style={{ marginTop: 10, background: 'none', border: 'none', width: '100%', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
                 Publier une demande si aucun produit ne convient →
-              </Link>
+              </button>
             </section>
           )}
 
@@ -363,7 +368,7 @@ export default function MarketplaceMobile({
           </section>
 
           {/* Hubs par catégorie — "Source Now" MiC */}
-          {categoryHubs.map(({ cat, items, total }) =>
+          {categoryHubs.map(({ cat, items, total }: any) =>
             items.length > 0 ? (
               <div key={cat.id} className="mic-hub">
                 <div className="mic-hub-header">
