@@ -1,5 +1,6 @@
 import React from 'react';
 import PremiumClient from './PremiumClient';
+import { getVendorProfile } from '../../../actions';
 
 export const metadata = {
   title: 'Devenir Premium | Elkassa Marketplace',
@@ -8,6 +9,7 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic';
 
-export default function Page() {
-  return <PremiumClient />;
+export default async function Page() {
+  const profile = await getVendorProfile();
+  return <PremiumClient isPremium={profile?.isPremium || false} />;
 }
