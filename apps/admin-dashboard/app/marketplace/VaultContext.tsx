@@ -72,7 +72,7 @@ export function useVault(vendorId?: string | null, isPremium: boolean = false) {
     identityVisible,
     isNameVisible: identityVisible,
     isLogoVisible: identityVisible,
-    isContactVisible: level >= 3,
+    isContactVisible: level >= 3 || isPremium,
     maskName: (name: string) => identityVisible ? name : "Fournisseur Vérifié",
     maskLogo: (logo: string | null | undefined) => identityVisible ? logo : null,
     maskCity: (city: string | null | undefined) => identityVisible ? (city || 'Tunisie') : 'Ville masquée',

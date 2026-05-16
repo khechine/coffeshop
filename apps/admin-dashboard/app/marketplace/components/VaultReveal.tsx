@@ -11,6 +11,7 @@ interface VaultRevealProps {
   placeholder?: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
+  isPremium?: boolean;
 }
 
 export default function VaultReveal({ 
@@ -19,10 +20,12 @@ export default function VaultReveal({
   children, 
   placeholder, 
   className,
-  style 
+  style,
+  isPremium = false
 }: VaultRevealProps) {
-  const { level } = useVault(vendorId);
-  const isLocked = level < levelRequired;
+  const { level, identityVisible } = useVault(vendorId, isPremium);
+  // Premium vendors are never locked
+  const isLocked = !isPremium && level < levelRequired;
 
   const message = levelRequired === 2 
     ? "Ajoutez un produit au panier pour révéler l'identité" 

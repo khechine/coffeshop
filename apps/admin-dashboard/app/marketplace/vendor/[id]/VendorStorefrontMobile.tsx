@@ -39,6 +39,7 @@ export default function VendorStorefrontMobile({ vendor, products = [], isVendor
         <VaultReveal 
           vendorId={vendor.id} 
           levelRequired={2}
+          isPremium={vendor.isPremium}
           placeholder={vendor.isPremium ? (logoUrl ? <img src={logoUrl} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <Building2 size={40} color="#E5E7EB" />) : null}
           style={{ position: 'absolute', bottom: '-40px', left: '16px', width: '80px', height: '80px', background: '#fff', borderRadius: '12px', padding: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid #eee', overflow: 'hidden' }}
         >
@@ -120,7 +121,7 @@ export default function VendorStorefrontMobile({ vendor, products = [], isVendor
                <div style={{ position: 'absolute', right: '-20px', top: '-20px', width: '100px', height: '100px', background: primaryColor, opacity: 0.3, borderRadius: '50%' }} />
                <h3 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '8px' }}>Besoins de sur-mesure ?</h3>
                <p style={{ fontSize: '13px', opacity: 0.8, marginBottom: '16px' }}>Demandez un devis personnalisé pour vos volumes pro.</p>
-               <VaultReveal vendorId={vendor.id} levelRequired={3}>
+               <VaultReveal vendorId={vendor.id} levelRequired={3} isPremium={vendor.isPremium}>
                   <button style={{ background: '#fff', color: '#111827', border: 'none', padding: '10px 20px', borderRadius: '100px', fontSize: '13px', fontWeight: 800 }}>
                     Envoyer RFQ
                   </button>
@@ -152,7 +153,7 @@ export default function VendorStorefrontMobile({ vendor, products = [], isVendor
               Ce fournisseur possède <strong>{vendor.posList?.length || 0} points de vente</strong> actifs.
             </p>
             
-            <VaultReveal vendorId={vendor.id} levelRequired={3}>
+            <VaultReveal vendorId={vendor.id} levelRequired={3} isPremium={vendor.isPremium}>
                <div style={{ height: '200px', background: '#eee', borderRadius: '12px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                  <MapPin size={32} color="#999" />
                  <span style={{ fontSize: '12px', color: '#999', fontWeight: 700, marginLeft: '8px' }}>Interactive Map Loaded</span>
@@ -185,7 +186,7 @@ export default function VendorStorefrontMobile({ vendor, products = [], isVendor
             {activeTab === 'About Us' && (
               <div style={{ background: '#fff', borderRadius: '16px', padding: '16px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 900, marginBottom: '12px' }}>Coordonnées Directes</h3>
-                <VaultReveal vendorId={vendor.id} levelRequired={3}>
+                <VaultReveal vendorId={vendor.id} levelRequired={3} isPremium={vendor.isPremium}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -212,7 +213,7 @@ export default function VendorStorefrontMobile({ vendor, products = [], isVendor
 
       {/* Fixed Bottom Action Bar */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', borderTop: '1px solid #eee', padding: '12px 16px', display: 'flex', gap: '12px', zIndex: 1001 }}>
-        <VaultReveal vendorId={vendor.id} levelRequired={3} style={{ flex: 1 }}>
+        <VaultReveal vendorId={vendor.id} levelRequired={3} isPremium={vendor.isPremium} style={{ flex: 1 }}>
           <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#666' }}>
               <MessageSquare size={22} />
