@@ -73,6 +73,7 @@ export default function EcoMarketplaceClient({ initialData, store, user }: any) 
               <MarketplaceProductCard 
                 key={p.id} 
                 product={p} 
+                isVendor={isVendor}
                 hidePrice={hidePrices}
               />
             ))}

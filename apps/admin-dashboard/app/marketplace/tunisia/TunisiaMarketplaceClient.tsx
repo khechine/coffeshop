@@ -73,6 +73,7 @@ export default function TunisiaMarketplaceClient({ initialData, store, user }: a
               <MarketplaceProductCard 
                 key={p.id} 
                 product={p} 
+                isVendor={isVendor}
                 hidePrice={hidePrices}
               />
             ))}

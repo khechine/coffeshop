@@ -339,6 +339,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                       <MarketplaceProductCard 
                         key={p.id} 
                         product={p} 
+                        isVendor={isVendor}
                         hidePrice={hidePrices}
                       />
                     ))}
@@ -427,6 +428,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                         <MarketplaceProductCard 
                           key={p.id} 
                           product={p} 
+                          isVendor={isVendor}
                           hidePrice={hidePrices}
                         />
                       ))}
@@ -755,6 +757,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                     <MarketplaceProductCard 
                       key={p.id} 
                       product={p} 
+                      isVendor={isVendor}
                       hidePrice={hidePrices}
                     />
                   ))}
