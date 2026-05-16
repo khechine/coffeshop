@@ -2278,6 +2278,18 @@ export async function getMarketplaceBundleAction(id: string) {
         items: { include: { vendorProduct: true } }
       }
     });
+
+    if (bundle && bundle.items && bundle.items.length > 0) {
+      const catId = bundle.items[0].vendorProduct?.categoryId;
+      if (catId) {
+        const category = await (prisma as any).marketplaceCategory.findUnique({
+          where: { id: catId }
+        });
+        (bundle as any).category = category;
+        (bundle as any).categoryId = catId;
+      }
+    }
+
     return bundle;
   } catch (e) {
     console.error("getMarketplaceBundleAction Error:", e);
