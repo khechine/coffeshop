@@ -39,18 +39,22 @@ interface VendorCrmClientProps {
   initialCampaigns: any[];
   initialLists: any[];
   initialTemplates: any[];
+  initialStockAlerts?: any[];
+  isPremium?: boolean;
 }
 
 export default function VendorCrmClient({ 
   initialCustomers, 
   initialCampaigns, 
   initialLists,
-  initialTemplates
+  initialTemplates,
+  initialStockAlerts = [],
+  isPremium = false
 }: VendorCrmClientProps) {
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
   
-  const [activeTab, setActiveTab] = useState<'customers' | 'campaigns' | 'lists' | 'templates'>('customers');
+  const [activeTab, setActiveTab] = useState<'customers' | 'campaigns' | 'lists' | 'templates' | 'intelligence'>('customers');
   const [customers, setCustomers] = useState(initialCustomers);
   const [campaigns, setCampaigns] = useState(initialCampaigns);
   const [lists, setLists] = useState(initialLists);
@@ -311,6 +315,14 @@ export default function VendorCrmClient({
           >
             Modèles
           </button>
+          {isPremium && (
+            <button 
+              onClick={() => setActiveTab('intelligence')}
+              className={`px-8 py-3 rounded-xl text-sm font-black transition-all flex items-center gap-2 ${activeTab === 'intelligence' ? 'bg-gradient-to-r from-amber-400 to-amber-600 text-white shadow-md shadow-amber-500/20' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <Zap size={16} /> Intelligence
+            </button>
+          )}
         </div>
 
       {activeTab === 'customers' && (
@@ -600,6 +612,78 @@ export default function VendorCrmClient({
                 <button className="text-slate-300 hover:text-slate-500"><ChevronRight size={20} /></button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'intelligence' && (
+        <div className="bg-white rounded-[40px] shadow-xl shadow-slate-200/40 border border-slate-100 p-8">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shadow-inner">
+              <Zap size={32} />
+            </div>
+            <div>
+              <h2 className="font-black text-2xl text-slate-900 flex items-center gap-2">
+                Intelligence Prédictive <span className="bg-gradient-to-r from-amber-400 to-amber-600 text-white text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full shadow-md shadow-amber-500/20">Premium</span>
+              </h2>
+              <p className="text-slate-500 font-bold text-sm">Détectez les ruptures de stock de vos clients en temps réel pour leur proposer un réassort immédiat.</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {initialStockAlerts.length === 0 ? (
+              <div className="text-center py-24 bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-200">
+                <ShieldAlert size={48} className="mx-auto text-slate-300 mb-4" />
+                <h3 className="font-black text-slate-900 text-lg mb-2">Tout est en ordre</h3>
+                <p className="text-slate-500 text-sm font-medium max-w-sm mx-auto">Aucun de vos clients ne manque de stock sur les produits que vous leur fournissez.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {initialStockAlerts.map((alert: any) => {
+                  const qty = Number(alert.quantity || 0);
+                  const minTh = Number(alert.minThreshold || 0);
+                  const isCritical = qty === 0;
+
+                  return (
+                    <div key={alert.id} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all relative overflow-hidden group">
+                      <div className={`absolute top-0 left-0 w-1 h-full ${isCritical ? 'bg-rose-500' : 'bg-amber-400'}`} />
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <div className={`text-[10px] font-black tracking-widest uppercase mb-1 px-2 py-0.5 rounded-md inline-block ${isCritical ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+                            {isCritical ? 'Rupture' : 'Stock Bas'}
+                          </div>
+                          <h4 className="font-black text-slate-900 text-lg leading-tight">{alert.name}</h4>
+                        </div>
+                        <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center font-black text-slate-400">
+                          {qty}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl">
+                          <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center font-black text-sm">
+                            {(alert.store?.name || '?').charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-slate-900 text-sm truncate">{alert.store?.name}</p>
+                            <p className="text-[10px] font-bold text-slate-400 truncate">{alert.store?.city || 'Non renseigné'}</p>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center text-xs font-bold text-slate-500">
+                          <span>Seuil min: {minTh}</span>
+                          <span className="text-slate-300">•</span>
+                          <span>Qté actuelle: {qty}</span>
+                        </div>
+                      </div>
+
+                      <button className="w-full mt-6 py-3 bg-slate-900 text-white rounded-xl font-black text-sm shadow-md shadow-slate-900/10 hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+                        <MessageCircle size={16} /> Proposer réassort
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { getVendorPortalData, getVendorClientListsAction, getVendorMarketingTemplatesAction } from '../../../actions';
+import { getVendorPortalData, getVendorClientListsAction, getVendorMarketingTemplatesAction, getVendorPremiumStockAlertsAction } from '../../../actions';
 import { redirect } from 'next/navigation';
 import VendorCrmClient from './VendorCrmClient';
 
@@ -12,6 +12,11 @@ export default async function VendorCrmPage() {
 
   if (!portalData) {
     redirect('/login');
+  }
+
+  let initialStockAlerts: any[] = [];
+  if (portalData.isPremium) {
+    initialStockAlerts = await getVendorPremiumStockAlertsAction();
   }
 
   // Serialize complex objects before passing to client component
@@ -54,6 +59,8 @@ export default async function VendorCrmPage() {
           initialCampaigns={serializedCampaigns} 
           initialLists={initialLists}
           initialTemplates={initialTemplates}
+          initialStockAlerts={initialStockAlerts}
+          isPremium={portalData.isPremium}
         />
       </React.Suspense>
     </div>

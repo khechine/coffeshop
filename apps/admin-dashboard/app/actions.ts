@@ -3097,6 +3097,44 @@ export async function getVendorOrdersWithAlertsAction() {
 
 
 
+export async function getVendorPremiumStockAlertsAction() {
+  const userId = cookies().get('userId')?.value;
+  if (!userId) throw new Error('Non authentifié');
+  
+  const vendor = await (prisma as any).vendorProfile.findFirst({ where: { userId }});
+  if (!vendor || !vendor.isPremium) throw new Error('Accès réservé aux vendeurs premium');
+
+  const orders = await (prisma as any).supplierOrder.findMany({
+    where: { vendorId: vendor.id, status: { in: ['DELIVERED', 'PAID'] } },
+    select: { storeId: true }
+  });
+  const storeIds = Array.from(new Set(orders.map((o: any) => o.storeId)));
+
+  if (storeIds.length === 0) return [];
+
+  const vendorProducts = await (prisma as any).vendorProduct.findMany({
+    where: { vendorId: vendor.id },
+    include: { productStandard: true }
+  });
+  const vendorProductNames = vendorProducts.map((p: any) => p.name || p.productStandard?.name).filter(Boolean);
+
+  const stockItems = await (prisma as any).stockItem.findMany({
+    where: { storeId: { in: storeIds } },
+    include: { store: true }
+  });
+
+  const alerts = stockItems.filter((item: any) => {
+    const qty = Number(item.quantity || 0);
+    const minTh = Number(item.minThreshold || 0);
+    
+    if (qty > minTh && qty > 0) return false;
+    if (item.preferredVendorId === vendor.id) return true;
+    return vendorProductNames.includes(item.name);
+  });
+
+  return JSON.parse(JSON.stringify(alerts));
+}
+
 export async function getVendorPortalData() {
   const userId = cookies().get('userId')?.value;
   if (!userId) return null;
@@ -3461,7 +3499,8 @@ export async function approveMarketplaceOrderAction(orderId: string, role: 'VEND
   // 1. Handle Settlement Creation if missing
   let currentSettlement = order.settlement;
   if (!currentSettlement) {
-    const commissionAmount = Number(order.total) * Number(order.vendor.commissionRate || 0);
+    const effectiveCommissionRate = Number(order.vendor?.commissionRate) || 0.01;
+    const commissionAmount = Number(order.total) * effectiveCommissionRate;
     currentSettlement = await (prisma as any).marketplaceSettlement.create({
       data: {
         orderId: order.id,
