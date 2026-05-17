@@ -69,8 +69,15 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
         />
         
         {/* Favorite Icon */}
-        <button style={{ position: 'absolute', top: '12px', right: '12px', width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}>
-          <Heart size={16} color="#6B7280" />
+        <button 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (useCart().toggleWishlist) useCart().toggleWishlist(product);
+          }}
+          style={{ position: 'absolute', top: '12px', right: '12px', width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}
+        >
+          <Heart size={16} color={useCart().isInWishlist?.(product.id) ? "#E31E24" : "#6B7280"} fill={useCart().isInWishlist?.(product.id) ? "#E31E24" : "none"} />
         </button>
 
         {/* Eco Badge */}

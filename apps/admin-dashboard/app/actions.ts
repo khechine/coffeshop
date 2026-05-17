@@ -6949,3 +6949,20 @@ export async function getVendorInquiriesAction() {
     return [];
   }
 }
+
+export async function getPublicProductUpsellsAction(sourceProductId: string) {
+  try {
+    const upsells = await (prisma as any).vendorProductUpsell.findMany({
+      where: { sourceProductId },
+      include: {
+        targetProduct: {
+          select: { id: true, name: true, price: true, image: true, unit: true, vendorId: true }
+        }
+      }
+    });
+    return upsells;
+  } catch (err) {
+    console.error("getPublicProductUpsellsAction error", err);
+    return [];
+  }
+}

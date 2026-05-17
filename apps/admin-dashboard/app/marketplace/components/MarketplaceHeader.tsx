@@ -8,7 +8,7 @@ import {
   ShoppingBag, Search, LayoutGrid, ShoppingCart, 
   MapPin, ChevronRight, X, Menu, User, ArrowRight,
   ChevronDown, Globe, HelpCircle, Smartphone, Languages,
-  MessageSquare, Target, Bell
+  MessageSquare, Target, Bell, Heart
 } from 'lucide-react';
 import { useCart } from '../CartContext';
 import CartDrawer from '../CartDrawer';
@@ -326,19 +326,29 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
                      </div>
                      
                      {!isVendor && (
-                       <div 
-                         onClick={() => setCartOpen(true)}
-                         className="action-item"
-                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151', position: 'relative' }}
-                       >
-                         <ShoppingCart size={24} />
-                         <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Panier</span>
-                         {cartCount > 0 && (
-                           <span style={{ position: 'absolute', top: -5, right: -2, background: '#E31E24', color: '#fff', fontSize: '9px', width: 16, height: 16, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, border: '2px solid #fff' }}>
-                             {cartCount}
-                           </span>
-                         )}
-                       </div>
+                       <>
+                         <Link 
+                           href="/marketplace/wishlist"
+                           className="action-item"
+                           style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151', position: 'relative' }}
+                         >
+                           <Heart size={24} />
+                           <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Favoris</span>
+                         </Link>
+                         <div 
+                           onClick={() => setCartOpen(true)}
+                           className="action-item"
+                           style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151', position: 'relative' }}
+                         >
+                           <ShoppingCart size={24} />
+                           <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Panier</span>
+                           {cartCount > 0 && (
+                             <span style={{ position: 'absolute', top: -5, right: -2, background: '#E31E24', color: '#fff', fontSize: '9px', width: 16, height: 16, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, border: '2px solid #fff' }}>
+                               {cartCount}
+                             </span>
+                           )}
+                         </div>
+                       </>
                      )}
                    </>
                  )}
