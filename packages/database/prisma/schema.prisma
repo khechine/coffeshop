@@ -482,10 +482,35 @@ model VendorProduct {
   // Catégories Internes (Collections)
   collections     VendorCollection[]
   
+  // Upsells
+  upsellsProposed VendorProductUpsell[] @relation("SourceProductUpsells")
+  upsellsTargeted VendorProductUpsell[] @relation("TargetProductUpsells")
+  
   @@unique([productStandardId, vendorId])
   @@index([vendorId])
   @@index([stockStatus])
   @@index([categoryId])
+}
+
+model VendorProductUpsell {
+  id              String   @id @default(cuid())
+  sourceProductId String
+  sourceProduct   VendorProduct @relation("SourceProductUpsells", fields: [sourceProductId], references: [id], onDelete: Cascade)
+  
+  targetProductId String
+  targetProduct   VendorProduct @relation("TargetProductUpsells", fields: [targetProductId], references: [id], onDelete: Cascade)
+  
+  quantity        Decimal?
+  discountPercent Decimal?
+  text            String?
+  
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([sourceProductId, targetProductId])
+  @@index([sourceProductId])
+  @@index([targetProductId])
 }
 
 model MktBundle {

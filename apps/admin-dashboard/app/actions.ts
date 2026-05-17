@@ -6518,6 +6518,83 @@ export async function getVendorProductsForUpsellAction() {
   });
 }
 
+export async function getVendorProductUpsellsAction(sourceProductId: string) {
+  const user = await getUserContext();
+  if (!user || user.role !== 'VENDOR') return [];
+  
+  return await (prisma as any).vendorProductUpsell.findMany({
+    where: { sourceProductId },
+    include: {
+      targetProduct: { select: { id: true, name: true, price: true, image: true, unit: true } }
+    }
+  });
+}
+
+export async function configureVendorProductUpsellAction(data: {
+  sourceProductId: string;
+  targetProductId: string;
+  quantity?: number;
+  discountPercent?: number;
+  text?: string;
+  isActive?: boolean;
+}) {
+  const user = await getUserContext();
+  if (!user || user.role !== 'VENDOR') throw new Error('Non autorisé');
+
+  const vendor = await (prisma as any).vendorProfile.findUnique({
+    where: { userId: user.id }
+  });
+  if (!vendor) throw new Error('Profil vendeur introuvable');
+
+  const sourceProduct = await (prisma as any).vendorProduct.findUnique({
+    where: { id: data.sourceProductId }
+  });
+  if (!sourceProduct || sourceProduct.vendorId !== vendor.id) throw new Error('Accès refusé');
+
+  const upsell = await (prisma as any).vendorProductUpsell.upsert({
+    where: {
+      sourceProductId_targetProductId: {
+        sourceProductId: data.sourceProductId,
+        targetProductId: data.targetProductId
+      }
+    },
+    update: {
+      quantity: data.quantity,
+      discountPercent: data.discountPercent,
+      text: data.text,
+      isActive: data.isActive !== undefined ? data.isActive : true,
+    },
+    create: {
+      sourceProductId: data.sourceProductId,
+      targetProductId: data.targetProductId,
+      quantity: data.quantity,
+      discountPercent: data.discountPercent,
+      text: data.text,
+      isActive: data.isActive !== undefined ? data.isActive : true,
+    }
+  });
+
+  return { success: true, upsell };
+}
+
+export async function deleteVendorProductUpsellAction(id: string) {
+  const user = await getUserContext();
+  if (!user || user.role !== 'VENDOR') throw new Error('Non autorisé');
+  
+  const upsell = await (prisma as any).vendorProductUpsell.findUnique({
+    where: { id },
+    include: { sourceProduct: true }
+  });
+  
+  if (!upsell) return { success: false, error: 'Introuvable' };
+  
+  const vendor = await (prisma as any).vendorProfile.findUnique({ where: { userId: user.id } });
+  if (!vendor || upsell.sourceProduct.vendorId !== vendor.id) throw new Error('Accès refusé');
+  
+  await (prisma as any).vendorProductUpsell.delete({ where: { id } });
+  return { success: true };
+}
+
 
 export async function vendorConvertDiscussionToOrderAction(data: {
   buyerUserId: string;
