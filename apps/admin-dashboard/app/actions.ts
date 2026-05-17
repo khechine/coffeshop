@@ -6882,3 +6882,70 @@ export async function getVendorOrderDetailsForWalletAction(orderId: string) {
     return { success: false, error: error.message };
   }
 }
+
+export async function sendVendorInquiryAction(data: { vendorId: string, subject: string, message: string }) {
+  try {
+    const user = await getUserContext();
+    if (!user) throw new Error('Vous devez être connecté');
+    const store = await (prisma as any).store.findFirst({ where: { userId: user.id } });
+    if (!store) throw new Error('Seuls les professionnels peuvent envoyer des demandes (Boutique requise)');
+
+    const interaction = await (prisma as any).vendorInteraction.create({
+      data: {
+        storeId: store.id,
+        vendorId: data.vendorId,
+        type: 'INQUIRY',
+        metadata: {
+          subject: data.subject,
+          message: data.message,
+          status: 'PENDING'
+        }
+      }
+    });
+
+    const txNotif = (prisma as any).tradeNotification ?? (prisma as any).TradeNotification;
+    if (txNotif) {
+      const vendorProfile = await (prisma as any).vendorProfile.findUnique({ where: { id: data.vendorId } });
+      if (vendorProfile?.userId) {
+        await txNotif.create({
+          data: {
+            userId: vendorProfile.userId,
+            type: 'INQUIRY_NEW',
+            title: 'Nouvelle demande d\'information',
+            content: `${store.name} vous a envoyé une demande: ${data.subject}`,
+            metadata: { inquiryId: interaction.id },
+            isRead: false
+          }
+        });
+      }
+    }
+    
+    return { success: true, id: interaction.id };
+  } catch (error: any) {
+    console.error("sendVendorInquiryAction Error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getVendorInquiriesAction() {
+  try {
+    const user = await getUserContext();
+    if (!user || user.role !== 'VENDOR') throw new Error('Non autorisé');
+    
+    const vendor = await (prisma as any).vendorProfile.findUnique({ where: { userId: user.id } });
+    if (!vendor) throw new Error('Profil vendeur introuvable');
+
+    const inquiries = await (prisma as any).vendorInteraction.findMany({
+      where: { vendorId: vendor.id, type: 'INQUIRY' },
+      include: {
+        store: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    return inquiries;
+  } catch (error: any) {
+    console.error("getVendorInquiriesAction Error:", error);
+    return [];
+  }
+}

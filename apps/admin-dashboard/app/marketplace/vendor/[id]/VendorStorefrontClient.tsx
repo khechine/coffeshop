@@ -41,6 +41,11 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
   const [tradeMessage, setTradeMessage] = useState('');
   const [isSendingMsg, setIsSendingMsg] = useState(false);
 
+  const [inquiryModalOpen, setInquiryModalOpen] = useState(false);
+  const [inquirySubject, setInquirySubject] = useState('');
+  const [inquiryMessage, setInquiryMessage] = useState('');
+  const [isInquirySending, setIsInquirySending] = useState(false);
+
   // Franchises / POS state
   const [selectedPos, setSelectedPos] = useState<any>(null);
   const mapRef = useRef<any>(null);
@@ -111,6 +116,31 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
     }
   };
 
+  const handleSendInquiry = async () => {
+    if (!inquirySubject.trim() || !inquiryMessage.trim()) return;
+    setIsInquirySending(true);
+    try {
+      const { sendVendorInquiryAction } = await import('../../../actions');
+      const res = await sendVendorInquiryAction({
+        vendorId: vendor.id,
+        subject: inquirySubject,
+        message: inquiryMessage
+      });
+      if (res.success) {
+        showToast("Demande d'information envoyée avec succès.");
+        setInquiryModalOpen(false);
+        setInquirySubject('');
+        setInquiryMessage('');
+      } else {
+        showToast("Erreur: " + res.error, 'error');
+      }
+    } catch (e: any) {
+      showToast("Erreur lors de l'envoi de la demande.", 'error');
+    } finally {
+      setIsInquirySending(false);
+    }
+  };
+
   const isPremium = vendor.isPremium;
   const cust = vendor.customization || {};
   const primaryColor = isPremium ? (cust.primaryColor || '#E31E24') : '#111827';
@@ -119,29 +149,52 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
   const logoUrl = sanitizeUrl(cust.logoUrl);
   const bannerUrl = sanitizeUrl(cust.bannerUrl) || '/images/elkassa-logo.png';
 
-  const products = (vendor.vendorProducts || []).map((vp: any) => ({
-    id: vp.id,
-    name: vp.name || vp.productStandard?.name,
-    price: vp.price,
-    unit: vp.unit || vp.productStandard?.unit,
-    image: vp.image || vp.productStandard?.image,
-    categoryId: vp.categoryId || vp.productStandard?.categoryId,
-    minOrderQty: vp.minOrderQty,
+  const packs = (vendor.bundles || []).map((b: any) => ({
+    id: b.id,
+    name: b.name,
+    price: b.price,
+    unit: 'pack',
+    image: b.image || (b.images && b.images[0]),
+    categoryId: 'packs',
+    minOrderQty: 1,
     vendorId: vendor.id,
     vendor: {
       id: vendor.id,
       userId: vendor.userId,
-      companyName: vendor.companyName, // Pass raw name, child will mask if needed
-      city: vendor.city || 'Tunisie', // Pass raw city
+      companyName: vendor.companyName,
+      city: vendor.city || 'Tunisie',
       isEcoResponsible: vendor.isEcoResponsible,
       isPremium: vendor.isPremium
     },
     distance: null 
   }));
 
+  const products = [
+    ...packs,
+    ...(vendor.vendorProducts || []).map((vp: any) => ({
+      id: vp.id,
+      name: vp.name || vp.productStandard?.name,
+      price: vp.price,
+      unit: vp.unit || vp.productStandard?.unit,
+      image: vp.image || vp.productStandard?.image,
+      categoryId: vp.categoryId || vp.productStandard?.categoryId,
+      minOrderQty: vp.minOrderQty,
+      vendorId: vendor.id,
+      vendor: {
+        id: vendor.id,
+        userId: vendor.userId,
+        companyName: vendor.companyName, // Pass raw name, child will mask if needed
+        city: vendor.city || 'Tunisie', // Pass raw city
+        isEcoResponsible: vendor.isEcoResponsible,
+        isPremium: vendor.isPremium
+      },
+      distance: null 
+    }))
+  ];
+
   const { productsByCategory, categoryMap } = useMemo(() => {
      const groups: Record<string, any[]> = {};
-     const map: Record<string, string> = {};
+     const map: Record<string, string> = { 'packs': 'Packs & Bundles' };
      allCategories.forEach((c: any) => { map[c.id] = c.name; });
      products.forEach((p: any) => {
         const catId = p.categoryId || 'Other';
@@ -223,7 +276,7 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
                </div>
             </div>
             <div style={{ display: 'flex', gap: '12px', position: 'relative' }}>
-               <button style={{ height: '32px', padding: '0 16px', border: `1px solid ${primaryColor}`, color: primaryColor, borderRadius: '4px', background: 'transparent', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>Send Inquiry</button>
+               <button onClick={() => setInquiryModalOpen(true)} style={{ height: '32px', padding: '0 16px', border: `1px solid ${primaryColor}`, color: primaryColor, borderRadius: '4px', background: 'transparent', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>Send Inquiry</button>
                <button onClick={() => setTradeMessagerOpen(!tradeMessagerOpen)} style={{ height: '32px', padding: '0 16px', border: 'none', color: '#fff', borderRadius: '100px', background: '#2563EB', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                  <MessageCircle size={14} /> TradeMessager
                </button>
@@ -257,6 +310,48 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
                      >
                        {isSendingMsg ? 'Envoi...' : 'Envoyer le message'}
                      </button>
+                   </div>
+                 </div>
+               )}
+
+               {inquiryModalOpen && (
+                 <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                   <div style={{ background: '#fff', borderRadius: '24px', width: '500px', maxWidth: '90vw', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                     <div style={{ background: '#111827', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                         <Mail size={20} />
+                         <span style={{ fontWeight: 900, fontSize: '18px' }}>Send Inquiry</span>
+                       </div>
+                       <button onClick={() => setInquiryModalOpen(false)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer' }}><X size={20} /></button>
+                     </div>
+                     <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                       <div>
+                         <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#374151', marginBottom: '8px' }}>Objet de la demande</label>
+                         <input 
+                           type="text"
+                           value={inquirySubject}
+                           onChange={e => setInquirySubject(e.target.value)}
+                           placeholder="Ex: Demande de partenariat, Devis personnalisé..."
+                           style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #E5E7EB', fontSize: '14px', outline: 'none' }}
+                         />
+                       </div>
+                       <div>
+                         <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#374151', marginBottom: '8px' }}>Votre message</label>
+                         <textarea 
+                           value={inquiryMessage}
+                           onChange={e => setInquiryMessage(e.target.value)}
+                           placeholder="Décrivez votre besoin en détail..."
+                           style={{ width: '100%', height: '120px', padding: '12px', borderRadius: '12px', border: '1px solid #E5E7EB', fontSize: '14px', resize: 'none', outline: 'none' }}
+                         />
+                       </div>
+                       <button 
+                         onClick={handleSendInquiry}
+                         disabled={isInquirySending || !inquirySubject.trim() || !inquiryMessage.trim()}
+                         style={{ width: '100%', padding: '16px', background: primaryColor, color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 900, marginTop: '8px', cursor: isInquirySending || !inquirySubject.trim() || !inquiryMessage.trim() ? 'not-allowed' : 'pointer', opacity: isInquirySending || !inquirySubject.trim() || !inquiryMessage.trim() ? 0.5 : 1 }}
+                       >
+                         {isInquirySending ? 'Envoi...' : 'Envoyer la demande'}
+                       </button>
+                     </div>
                    </div>
                  </div>
                )}
@@ -339,13 +434,33 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
                         })}
                       </div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1px', background: '#E5E7EB' }}>
-                      {items.filter((p: any) => (activeCollection[catId] || 'All') === 'All' || Math.random() > 0.3).slice(0, 8).map((p: any) => (
-                        <div key={p.id} style={{ background: '#fff', padding: '24px', transition: 'all 0.2s' }}>
-                          <MarketplaceProductCard product={p} isVendor={isVendor} hidePrice={isVendor} />
+                    {(() => {
+                      const filteredItems = items.filter((p: any) => (activeCollection[catId] || 'All') === 'All' || Math.random() > 0.3).slice(0, 8);
+                      const isScrollable = filteredItems.length > 4;
+                      return (
+                        <div className="custom-scrollbar" style={{ 
+                          display: isScrollable ? 'flex' : 'grid', 
+                          gridTemplateColumns: isScrollable ? 'none' : 'repeat(auto-fill, minmax(260px, 1fr))', 
+                          gap: '1px', 
+                          background: '#E5E7EB',
+                          overflowX: isScrollable ? 'auto' : 'visible',
+                          WebkitOverflowScrolling: 'touch',
+                          paddingBottom: isScrollable ? '8px' : '0'
+                        }}>
+                          {filteredItems.map((p: any) => (
+                            <div key={p.id} style={{ 
+                              background: '#fff', 
+                              padding: '24px', 
+                              transition: 'all 0.2s',
+                              minWidth: isScrollable ? '260px' : 'auto',
+                              flex: isScrollable ? '0 0 280px' : 'none'
+                            }}>
+                              <MarketplaceProductCard product={p} isVendor={isVendor} hidePrice={isVendor} />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })()}
                   </div>
                 </section>
               ))}

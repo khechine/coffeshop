@@ -12,7 +12,8 @@ import {
   createMarketplaceProductAction, updateMarketplaceProductAction,
   deleteMarketplaceProductAction, importCsvProductsAction,
   proposeSubCategoryAction, createMarketplaceBundleAction, deleteMarketplaceBundleAction,
-  updateMarketplaceBundleAction
+  updateMarketplaceBundleAction, getVendorProductsForUpsellAction, getVendorProductUpsellsAction,
+  configureVendorProductUpsellAction, deleteVendorProductUpsellAction
 } from '../../../actions';
 import { sanitizeUrl } from '../../../lib/imageUtils';
 
@@ -177,6 +178,17 @@ export default function VendorCatalogClient({
   const [proposeParentId, setProposeParentId]   = useState('');
   const [proposeSubName, setProposeSubName]     = useState('');
   const [proposeStatus, setProposeStatus]       = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+
+  // Upsell Modal State
+  const [isUpsellModalOpen, setIsUpsellModalOpen] = useState(false);
+  const [selectedUpsellProduct, setSelectedUpsellProduct] = useState<any>(null);
+  const [upsells, setUpsells] = useState<any[]>([]);
+  const [availableProducts, setAvailableProducts] = useState<any[]>([]);
+  const [isLoadingUpsells, setIsLoadingUpsells] = useState(false);
+  const [targetProductId, setTargetProductId] = useState('');
+  const [upsellQuantity, setUpsellQuantity] = useState(1);
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [upsellText, setUpsellText] = useState('');
 
   const showToast = (message: string, error = false) => {
     setToast({ show: true, message, error });
@@ -504,6 +516,64 @@ export default function VendorCatalogClient({
     });
   };
 
+  const openUpsellModal = async (product: any) => {
+    setSelectedUpsellProduct(product);
+    setIsUpsellModalOpen(true);
+    setIsLoadingUpsells(true);
+    try {
+      const [allProducts, existingUpsells] = await Promise.all([
+        getVendorProductsForUpsellAction(),
+        getVendorProductUpsellsAction(product.id)
+      ]);
+      setAvailableProducts(allProducts.filter((p: any) => p.id !== product.id));
+      setUpsells(existingUpsells);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingUpsells(false);
+    }
+  };
+
+  const handleAddUpsell = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUpsellProduct || !targetProductId) return;
+    
+    startTransition(async () => {
+      try {
+        await configureVendorProductUpsellAction({
+          sourceProductId: selectedUpsellProduct.id,
+          targetProductId,
+          quantity: upsellQuantity,
+          discountPercent,
+          text: upsellText
+        });
+        
+        const updatedUpsells = await getVendorProductUpsellsAction(selectedUpsellProduct.id);
+        setUpsells(updatedUpsells);
+        
+        setTargetProductId('');
+        setUpsellQuantity(1);
+        setDiscountPercent(0);
+        setUpsellText('');
+        showToast('Upsell configuré avec succès');
+      } catch (e) {
+        alert("Erreur lors de l'ajout de l'upsell");
+      }
+    });
+  };
+
+  const handleDeleteUpsell = async (id: string) => {
+    startTransition(async () => {
+      try {
+        await deleteVendorProductUpsellAction(id);
+        setUpsells(upsells.filter(u => u.id !== id));
+        showToast('Upsell supprimé');
+      } catch (e) {
+        alert("Erreur lors de la suppression");
+      }
+    });
+  };
+
   const filteredBundleProducts = useMemo(() => {
     if (!bundleSearchQuery) return initialProducts;
     return initialProducts.filter(p => p.name?.toLowerCase().includes(bundleSearchQuery.toLowerCase()));
@@ -592,6 +662,7 @@ export default function VendorCatalogClient({
                       <div className="mt-2 text-[10px] font-black text-slate-500 flex items-center gap-1.5"><div className={`w-2 h-2 rounded-full ${Number(p.stockQuantity) > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} /> Stock: {p.stockQuantity}</div>
                     </div>
                     <div className="flex gap-1.5">
+                      <button onClick={() => openUpsellModal(p)} className="p-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 hover:text-indigo-700 rounded-2xl transition-all border border-indigo-100 dark:border-indigo-800" title="Configurer Upsell"><Sparkles size={16} /></button>
                       <button onClick={() => handleEdit(p)} className="p-3 bg-slate-50 dark:bg-slate-950 text-slate-400 hover:text-blue-600 rounded-2xl transition-all border border-slate-100 dark:border-slate-800"><Edit2 size={16} /></button>
                       <button onClick={() => handleDelete(p.id)} className="p-3 bg-slate-50 dark:bg-slate-950 text-slate-400 hover:text-rose-500 rounded-2xl transition-all border border-slate-100 dark:border-slate-800"><Trash2 size={16} /></button>
                     </div>
@@ -783,6 +854,68 @@ export default function VendorCatalogClient({
 
           <div className="flex gap-4 pt-4"><button type="button" className="flex-1 py-4 bg-slate-50 text-slate-500 rounded-2xl font-black text-sm" onClick={() => setModalOpen(false)}>Annuler</button><button type="submit" className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl font-black text-sm shadow-xl" disabled={isPending}>{isPending ? <Loader2 className="animate-spin mx-auto" /> : (editingId ? 'Mettre à jour' : 'Publier')}</button></div>
         </form>
+      </Modal>
+
+      {/* MODAL UPSELL */}
+      <Modal open={isUpsellModalOpen} onClose={() => setIsUpsellModalOpen(false)} title="Configuration Upsell" width={600}>
+        <div className="space-y-6">
+          <p className="text-slate-500 text-sm">Pour le produit: <span className="font-bold text-slate-900">{selectedUpsellProduct?.name}</span></p>
+
+          {isLoadingUpsells ? (
+            <div className="py-12 text-center text-slate-400"><Loader2 className="animate-spin mx-auto mb-2" size={24} /> Chargement...</div>
+          ) : (
+            <div className="space-y-8">
+              {upsells.length > 0 && (
+                <div>
+                  <h4 className="font-bold text-slate-900 mb-4">Upsells Actifs</h4>
+                  <div className="space-y-2">
+                    {upsells.map(u => (
+                      <div key={u.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between items-center">
+                        <div>
+                          <div className="font-bold text-slate-900">{u.targetProduct?.name}</div>
+                          <div className="text-xs text-slate-500 mt-1">Qté: {Number(u.quantity)} | -{Number(u.discountPercent)}% {u.text && `| "${u.text}"`}</div>
+                        </div>
+                        <button onClick={() => handleDeleteUpsell(u.id)} className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"><Trash2 size={16} /></button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleAddUpsell} className="bg-indigo-50/50 border border-indigo-100 rounded-[24px] p-6 space-y-4">
+                <h4 className="font-bold text-indigo-900 flex items-center gap-2"><Plus size={16} /> Ajouter une recommandation</h4>
+                
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Produit à proposer</label>
+                  <select required value={targetProductId} onChange={e => setTargetProductId(e.target.value)} className="w-full p-3 rounded-xl border border-slate-200 text-sm">
+                    <option value="">Sélectionner un produit...</option>
+                    {availableProducts.map(p => <option key={p.id} value={p.id}>{p.name} - {Number(p.price)} DT</option>)}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Quantité</label>
+                    <input type="number" min="1" required value={upsellQuantity} onChange={e => setUpsellQuantity(Number(e.target.value))} className="w-full p-3 rounded-xl border border-slate-200 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Remise (%)</label>
+                    <input type="number" min="0" max="100" required value={discountPercent} onChange={e => setDiscountPercent(Number(e.target.value))} className="w-full p-3 rounded-xl border border-slate-200 text-sm" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Message d'accroche (Optionnel)</label>
+                  <input type="text" placeholder="Ex: Profitez de 10% sur le sucre !" value={upsellText} onChange={e => setUpsellText(e.target.value)} className="w-full p-3 rounded-xl border border-slate-200 text-sm" />
+                </div>
+
+                <button type="submit" disabled={isPending} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors">
+                  {isPending ? 'Sauvegarde...' : 'Ajouter Upsell'}
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
       </Modal>
 
       {/* MODAL BUNDLE */}

@@ -18,6 +18,7 @@ export default async function VendorStorefrontPage({ params }: { params: Promise
       vendorProducts: {
         include: { productStandard: true }
       },
+      bundles: true,
       posList: {
         where: { isActive: true },
         include: {

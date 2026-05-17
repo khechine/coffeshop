@@ -31,17 +31,20 @@ export default function VendorPortalLayout({ children }: { children: React.React
     }
   };
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [vendorId, setVendorId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchNotifs = async () => {
-      const { getUserNotificationsAction } = await import('../../actions');
+    const fetchNotifsAndProfile = async () => {
+      const { getUserNotificationsAction, getVendorProfile } = await import('../../actions');
       try {
         const notifs = await getUserNotificationsAction();
         setNotifications(notifs);
+        const profile = await getVendorProfile();
+        if (profile) setVendorId(profile.id);
       } catch (e) {}
     };
-    fetchNotifs();
-    const interval = setInterval(fetchNotifs, 10000);
+    fetchNotifsAndProfile();
+    const interval = setInterval(fetchNotifsAndProfile, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -55,6 +58,7 @@ export default function VendorPortalLayout({ children }: { children: React.React
     { id: 'orders', label: 'Commandes', icon: ShoppingBag, href: '/vendor/portal/orders' },
     { id: 'rfq', label: 'Demandes (RFQ)', icon: MessageSquare, href: '/vendor/portal/rfq', badge: notifications.filter(n => n.type === 'RFQ_NEW').length },
     { id: 'premium', label: 'Devenir Premium', icon: Star, href: '/vendor/portal/premium' },
+    { id: 'mystore', label: 'Ma Boutique', icon: ShoppingBag, href: vendorId ? `/marketplace/vendor/${vendorId}` : '/marketplace' },
     { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, href: '/marketplace' },
     { id: 'profile', label: 'Profil', icon: Settings, href: '/vendor/portal/settings' },
   ];

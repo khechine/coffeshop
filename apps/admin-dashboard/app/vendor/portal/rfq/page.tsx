@@ -1,4 +1,4 @@
-import { getMarketplaceRFQs, getVendorProfile } from '../../../actions';
+import { getMarketplaceRFQs, getVendorProfile, getVendorInquiriesAction } from '../../../actions';
 import VendorRfqClient from './VendorRfqClient';
 import { redirect } from 'next/navigation';
 
@@ -8,9 +8,12 @@ export default async function VendorRfqPage() {
     redirect('/login');
   }
 
-  const rfqs = await getMarketplaceRFQs(vendor.id);
+  const [rfqs, inquiries] = await Promise.all([
+    getMarketplaceRFQs(vendor.id),
+    getVendorInquiriesAction()
+  ]);
 
   return (
-    <VendorRfqClient rfqs={rfqs} vendorId={vendor.id} />
+    <VendorRfqClient rfqs={rfqs} inquiries={inquiries} vendorId={vendor.id} />
   );
 }
