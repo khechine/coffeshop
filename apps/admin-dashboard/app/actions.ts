@@ -2509,7 +2509,7 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
   return order;
 }
 
-export async function updateVendorCustomerAction(customerId: string, data: { category?: string; tags?: string[] }) {
+export async function updateVendorCustomerAction(customerId: string, data: { name?: string; email?: string; phone?: string; category?: string; tags?: string[] }) {
   const userId = cookies().get('userId')?.value;
   if (!userId) throw new Error('Unauthorized');
 

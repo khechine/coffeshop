@@ -14,6 +14,7 @@ interface CartItem {
   quantity: number;
   image?: string;
   unit: string;
+  minOrderQty?: number;
   vendor?: {
     id: string;
     companyName: string;
@@ -92,6 +93,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addToCart = (p: any, q: number = 1) => {
     const vendorInfo = p.vendor || p.vendorInfo;
+    const minQty = p.minOrderQty ? Number(p.minOrderQty) : 1;
+    const qtyToAdd = Math.max(minQty, q);
+
     const productToTrack = { 
       id: p.id, 
       name: p.name, 
@@ -99,7 +103,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       originalPrice: p.discountPrice && Number(p.discountPrice) < Number(p.price) ? Number(p.price) : undefined,
       image: p.image, 
       unit: p.unit,
-      quantity: q, 
+      minOrderQty: minQty,
+      quantity: qtyToAdd, 
       vendor: vendorInfo ? { id: vendorInfo.id, companyName: vendorInfo.companyName } : undefined
     };
 
@@ -114,7 +119,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateQty = (id: string, delta: number) =>
-    setCart(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i));
+    setCart(prev => prev.map(i => {
+      if (i.id === id) {
+        const minQty = i.minOrderQty || 1;
+        const newQty = i.quantity + delta;
+        return { ...i, quantity: Math.max(minQty, newQty) };
+      }
+      return i;
+    }));
 
   const removeItem = (id: string) => setCart(prev => prev.filter(i => i.id !== id));
 

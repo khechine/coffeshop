@@ -6,7 +6,7 @@ import {
   Users, TrendingUp, Mail, Filter, Star, ShieldAlert, 
   Tag as TagIcon, Plus, Send, Phone, MessageCircle, 
   ExternalLink, ChevronRight, Search, LayoutGrid, X,
-  Upload, FileText, Download, Save, Trash2, Info, ListPlus, Zap
+  Upload, FileText, Download, Save, Trash2, Info, ListPlus, Zap, User, MapPin, ShoppingBag
 } from 'lucide-react';
 import { 
   updateVendorCustomerAction, 
@@ -107,7 +107,7 @@ export default function VendorCrmClient({
   const [tagInput, setTagInput] = useState('');
 
 
-  const handleUpdateCustomer = (id: string, data: { category?: string; tags?: string[] }) => {
+  const handleUpdateCustomer = (id: string, data: { name?: string; email?: string; phone?: string; category?: string; tags?: string[] }) => {
     startTransition(async () => {
       await updateVendorCustomerAction(id, data);
       setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
@@ -688,79 +688,169 @@ export default function VendorCrmClient({
         </div>
       )}
 
-      {/* Tag Modal */}
+      {/* Customer Profile Modal */}
       {selectedCust && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[40px] p-10 w-full max-w-md shadow-2xl">
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="font-black text-2xl text-slate-900">Taguer {selectedCust.store?.name || selectedCust.name}</h3>
-              <button onClick={() => setSelectedCust(null)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+          <div className="bg-white rounded-[40px] p-8 w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-black text-2xl">
+                  {(selectedCust.store?.name || selectedCust.name || '?').charAt(0)}
+                </div>
+                <div>
+                  <h3 className="font-black text-2xl text-slate-900 leading-tight">Fiche Client : {selectedCust.store?.name || selectedCust.name}</h3>
+                  <p className="text-slate-400 font-bold text-sm">Gérez les informations, les tags et consultez l'historique.</p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedCust(null)} className="text-slate-400 hover:text-slate-600 bg-slate-50 w-10 h-10 rounded-full flex items-center justify-center"><X size={20} /></button>
             </div>
-            <p className="text-slate-400 font-bold text-sm mb-8">Segmenter et taguer vos clients B2B.</p>
             
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Catégorie</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['VIP', 'REGULAR', 'CHURN_RISK'].map(cat => (
-                    <button 
-                      key={cat}
-                      onClick={() => handleUpdateCustomer(selectedCust.id, { category: cat })}
-                      className={`px-3 py-2 rounded-xl text-[10px] font-black border-2 transition-all ${selectedCust.category === cat ? 'border-rose-500 bg-rose-50 text-rose-600 shadow-md shadow-rose-500/10' : 'border-slate-100 text-slate-400 hover:border-slate-200'}`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left Column: Contact & Map */}
+              <div className="space-y-6">
+                <div className="bg-slate-50 p-6 rounded-[24px]">
+                  <h4 className="font-black text-sm text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <User size={16} className="text-slate-400" /> Coordonnées
+                  </h4>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nom / Enseigne</label>
+                      <input 
+                        type="text"
+                        value={selectedCust.name || ''}
+                        onChange={(e) => handleUpdateCustomer(selectedCust.id, { name: e.target.value })}
+                        placeholder={selectedCust.store?.name || "Nom du client"}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-sm text-slate-900 focus:ring-2 focus:ring-rose-500/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
+                      <input 
+                        type="email"
+                        value={selectedCust.email || ''}
+                        onChange={(e) => handleUpdateCustomer(selectedCust.id, { email: e.target.value })}
+                        placeholder={selectedCust.store?.email || "Email non renseigné"}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-sm text-slate-900 focus:ring-2 focus:ring-rose-500/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Téléphone</label>
+                      <input 
+                        type="tel"
+                        value={selectedCust.phone || ''}
+                        onChange={(e) => handleUpdateCustomer(selectedCust.id, { phone: e.target.value })}
+                        placeholder={selectedCust.store?.phone || "Téléphone non renseigné"}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-sm text-slate-900 focus:ring-2 focus:ring-rose-500/20"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tags personnalisés (séparés par virgule)</label>
-                <div className="flex gap-2">
-                  <input 
-                    type="text"
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    placeholder="Ex: Boulangerie, Sousse, GrosVolume"
-                    className="flex-1 px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-rose-500/20 font-bold text-slate-900"
-                  />
-                  <button 
-                    onClick={() => {
-                      const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
-                      handleUpdateCustomer(selectedCust.id, { tags });
-                    }}
-                    className="px-6 bg-rose-600 text-white rounded-2xl font-black text-xs hover:bg-rose-700 transition-all"
-                  >
-                    OK
-                  </button>
-                </div>
-                <p className="text-[10px] text-slate-400 font-bold">Appuyez sur OK pour sauvegarder les tags.</p>
-              </div>
-              {/* Order History */}
-              <div className="space-y-3 border-t border-slate-50 pt-6">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dernières Commandes</label>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                  {selectedCust.store?.supplierOrders?.length > 0 ? (
-                    selectedCust.store.supplierOrders.map((o: any) => (
-                      <div key={o.id} className="p-3 bg-slate-50 rounded-xl flex justify-between items-center text-xs font-bold">
-                        <div>
-                          <div className="text-slate-900">#{o.id.slice(-6).toUpperCase()}</div>
-                          <div className="text-slate-400 text-[10px]">{new Date(o.createdAt).toLocaleDateString()}</div>
-                        </div>
-                        <div className="text-indigo-600">{Number(o.total).toFixed(3)} DT</div>
+                {selectedCust.store?.address && (
+                  <div className="bg-slate-50 p-6 rounded-[24px]">
+                    <h4 className="font-black text-sm text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <MapPin size={16} className="text-slate-400" /> Localisation
+                    </h4>
+                    <p className="font-bold text-sm text-slate-900 mb-1">{selectedCust.store.address}</p>
+                    <p className="font-bold text-xs text-slate-500 mb-4">{selectedCust.store.city}, {selectedCust.store.governorate}</p>
+                    
+                    {selectedCust.store.lat && selectedCust.store.lng ? (
+                      <a 
+                        href={`https://www.google.com/maps/search/?api=1&query=${selectedCust.store.lat},${selectedCust.store.lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex w-full items-center justify-center gap-2 py-3 bg-white border border-slate-200 text-slate-900 rounded-xl font-black text-xs hover:bg-slate-100 transition-all shadow-sm"
+                      >
+                        <ExternalLink size={14} /> Ouvrir dans Google Maps
+                      </a>
+                    ) : (
+                      <div className="py-4 bg-slate-100 rounded-xl text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Position GPS non fournie
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-4 text-slate-400 text-[10px]">Aucune commande trouvée</div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
               </div>
 
+              {/* Right Column: Segmentation & History */}
+              <div className="space-y-6">
+                <div className="bg-slate-50 p-6 rounded-[24px]">
+                  <h4 className="font-black text-sm text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Filter size={16} className="text-slate-400" /> Segmentation
+                  </h4>
+                  
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Catégorie</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {['VIP', 'REGULAR', 'CHURN_RISK'].map(cat => (
+                          <button 
+                            key={cat}
+                            onClick={() => handleUpdateCustomer(selectedCust.id, { category: cat })}
+                            className={`px-3 py-2 rounded-xl text-[10px] font-black border-2 transition-all ${selectedCust.category === cat ? 'border-rose-500 bg-rose-50 text-rose-600 shadow-md shadow-rose-500/10' : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'}`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tags personnalisés</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text"
+                          value={tagInput}
+                          onChange={(e) => setTagInput(e.target.value)}
+                          placeholder="Ex: Boulangerie, Sousse"
+                          className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-sm text-slate-900"
+                        />
+                        <button 
+                          onClick={() => {
+                            const tags = tagInput.split(',').map(t => t.trim()).filter(Boolean);
+                            handleUpdateCustomer(selectedCust.id, { tags });
+                          }}
+                          className="px-6 bg-rose-600 text-white rounded-xl font-black text-xs hover:bg-rose-700 transition-all shadow-md shadow-rose-600/20"
+                        >
+                          Sauver
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-6 rounded-[24px]">
+                  <h4 className="font-black text-sm text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <ShoppingBag size={16} className="text-slate-400" /> Historique Commandes
+                  </h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                    {selectedCust.store?.supplierOrders?.length > 0 ? (
+                      selectedCust.store.supplierOrders.map((o: any) => (
+                        <div key={o.id} className="p-4 bg-white border border-slate-100 rounded-xl flex justify-between items-center text-xs font-bold shadow-sm">
+                          <div>
+                            <div className="text-slate-900 text-sm">#{o.id.slice(-6).toUpperCase()}</div>
+                            <div className="text-slate-400 text-[10px] mt-0.5">{new Date(o.createdAt).toLocaleDateString()}</div>
+                          </div>
+                          <div className="text-emerald-600 font-black text-sm">{Number(o.total).toFixed(3)} DT</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-slate-400 text-xs font-bold bg-white border border-slate-100 rounded-xl">
+                        Aucune commande B2B trouvée
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
               <button 
                 onClick={() => setSelectedCust(null)}
-                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all mt-4"
+                className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all"
               >
-                Terminer
+                Fermer
               </button>
             </div>
           </div>

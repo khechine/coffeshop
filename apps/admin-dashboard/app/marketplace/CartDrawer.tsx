@@ -48,10 +48,33 @@ const VendorGroup = ({ group, updateQty, removeItem }: any) => {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                <div style={{ display: 'flex', alignItems: 'center', background: '#F3F4F6', borderRadius: '8px', padding: '4px' }}>
-                  <button onClick={() => updateQty(item.id, -1)} style={{ width: '24px', height: '24px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+                  <button 
+                    onClick={() => {
+                      const minQty = item.minOrderQty || 1;
+                      if (item.quantity <= minQty) return;
+                      updateQty(item.id, -1);
+                    }} 
+                    disabled={item.quantity <= (item.minOrderQty || 1)}
+                    style={{ 
+                      width: '24px', 
+                      height: '24px', 
+                      border: 'none', 
+                      background: 'transparent', 
+                      cursor: item.quantity <= (item.minOrderQty || 1) ? 'not-allowed' : 'pointer', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      opacity: item.quantity <= (item.minOrderQty || 1) ? 0.3 : 1
+                    }}
+                  >
+                    -
+                  </button>
                   <span style={{ width: '30px', textAlign: 'center', fontSize: '13px', fontWeight: 800 }}>{item.quantity}</span>
                   <button onClick={() => updateQty(item.id, 1)} style={{ width: '24px', height: '24px', border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                </div>
+               {item.minOrderQty && item.minOrderQty > 1 && (
+                 <span style={{ fontSize: '9px', color: '#DC2626', fontWeight: 700 }}>MOQ: {item.minOrderQty}</span>
+               )}
                <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: 0 }}><X size={14} /></button>
             </div>
           </div>
