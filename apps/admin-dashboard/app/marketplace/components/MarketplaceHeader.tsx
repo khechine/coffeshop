@@ -21,6 +21,12 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
   const [hoveredRootId, setHoveredRootId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const hasUserId = document.cookie.split('; ').some(row => row.startsWith('userId='));
+    setIsLoggedIn(hasUserId);
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -118,7 +124,7 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
                 Fournisseurs
               </button>
             </div>
-            <Link href={isVendor ? '/vendor/portal' : '/admin'} style={{ padding: 4 }} aria-label="Compte">
+            <Link href={isLoggedIn ? (isVendor ? '/vendor/portal' : '/admin') : '/login'} style={{ padding: 4 }} aria-label="Compte">
               <User size={22} color="#333" />
             </Link>
           </div>
@@ -173,8 +179,8 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
                   <span>🛍️ Mes Commandes</span>
                   <ChevronRight size={16} color="#ccc" />
                 </Link>
-                <Link href={isVendor ? "/vendor/portal" : "/admin"} className="mic-drawer-link" onClick={() => setDrawerOpen(false)}>
-                  <span>👤 Mon Compte</span>
+                <Link href={isLoggedIn ? (isVendor ? "/vendor/portal" : "/admin") : "/login"} className="mic-drawer-link" onClick={() => setDrawerOpen(false)}>
+                  <span>👤 {isLoggedIn ? 'Mon Compte' : 'Connexion'}</span>
                   <ChevronRight size={16} color="#ccc" />
                 </Link>
               </div>
@@ -204,9 +210,9 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
             <Star size={22} />
             Messages
           </Link>
-          <Link href={isVendor ? '/vendor/portal' : '/admin'} className={pathname === '/admin' || pathname === '/vendor/portal' ? 'active' : ''}>
+          <Link href={isLoggedIn ? (isVendor ? '/vendor/portal' : '/admin') : '/login'} className={pathname === '/admin' || pathname === '/vendor/portal' ? 'active' : ''}>
             <User size={22} />
-            Compte
+            {isLoggedIn ? 'Compte' : 'Connexion'}
           </Link>
         </nav>
 
@@ -503,12 +509,12 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
                  )}
 
                  <Link 
-                   href={isVendor ? "/vendor/portal" : (minimal ? "/login" : "/admin")} 
+                   href={isLoggedIn ? (isVendor ? "/vendor/portal" : "/admin") : "/login"} 
                    className="action-item" 
                    style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151' }}
                  >
                    <User size={24} />
-                   <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>{minimal && !isVendor ? 'Connexion' : 'Compte'}</span>
+                   <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>{isLoggedIn ? 'Compte' : 'Connexion'}</span>
                  </Link>
                </div>
            </div>
