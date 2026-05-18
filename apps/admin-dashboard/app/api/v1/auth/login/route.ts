@@ -23,7 +23,9 @@ export async function POST(req: Request) {
         password: true,
         role: true,
         storeId: true,
-        vendorId: true,
+        vendorProfile: {
+          select: { id: true }
+        }
       }
     });
 
@@ -42,7 +44,7 @@ export async function POST(req: Request) {
       email: user.email,
       role: user.role,
       storeId: user.storeId,
-      vendorId: user.vendorId
+      vendorId: user.vendorProfile?.id || null
     };
 
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
@@ -57,7 +59,7 @@ export async function POST(req: Request) {
           email: user.email,
           role: user.role,
           storeId: user.storeId,
-          vendorId: user.vendorId
+          vendorId: user.vendorProfile?.id || null
         }
       }
     });

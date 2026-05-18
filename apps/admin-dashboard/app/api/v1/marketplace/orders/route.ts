@@ -67,15 +67,14 @@ export async function POST(req: Request) {
 
     // 4. Enregistrement transactionnel
     const createdOrders = [];
-    for (const [vendorId, orderData] of ordersByVendor.entries()) {
+    const vendorEntries = Array.from(ordersByVendor.entries());
+    for (const [vendorId, orderData] of vendorEntries) {
       const order = await prisma.supplierOrder.create({
         data: {
           storeId: orderData.storeId,
           vendorId: orderData.vendorId,
           total: orderData.total,
-          status: orderData.status,
-          paymentStatus: orderData.paymentStatus,
-          notes: notes,
+          status: orderData.status as any,
           items: {
             create: orderData.items
           }
