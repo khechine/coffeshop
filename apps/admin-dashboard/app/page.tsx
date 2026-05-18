@@ -164,14 +164,113 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── LOGO CLOUD (Trust) ── */}
-      <section style={{ padding: isMobile ? '40px 0' : '60px 0', borderBottom: '1px solid #F1F5F9' }}>
-         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', textAlign: 'center' }}>
-            <p style={{ fontSize: '12px', fontWeight: 700, color: '#9CA3AF', marginBottom: isMobile ? '24px' : '32px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>ILS NOUS FONT CONFIANCE</p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: isMobile ? '32px' : '80px', flexWrap: 'wrap', opacity: 0.5 }}>
-               {['Coca-Cola', 'Danone', 'Nestlé', 'SFBT'].map(brand => (
-                 <span key={brand} style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 900, color: '#111827', letterSpacing: '-1px' }}>{brand}</span>
-               ))}
+      {/* ── LOGO CLOUD (Trust with Infinite Scrolling) ── */}
+      <section style={{ padding: isMobile ? '40px 0' : '60px 0', borderBottom: '1px solid #F1F5F9', background: '#FAFAFA', overflow: 'hidden' }}>
+         <div style={{ maxWidth: '1400px', margin: '0 auto', textAlign: 'center' }}>
+            <p style={{ fontSize: '12px', fontWeight: 700, color: '#9CA3AF', marginBottom: isMobile ? '24px' : '36px', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+               ILS NOUS FONT CONFIANCE
+            </p>
+            
+            <style dangerouslySetInnerHTML={{__html: `
+              @keyframes infiniteScroll {
+                0% { transform: translate3d(0, 0, 0); }
+                100% { transform: translate3d(-33.33%, 0, 0); }
+              }
+              .scroll-container {
+                overflow: hidden;
+                width: 100%;
+                position: relative;
+                padding: 10px 0;
+              }
+              .scroll-container::before,
+              .scroll-container::after {
+                background: linear-gradient(to right, rgba(250, 250, 250, 1) 0%, rgba(250, 250, 250, 0) 100%);
+                content: "";
+                height: 100%;
+                position: absolute;
+                width: 150px;
+                z-index: 2;
+                pointer-events: none;
+              }
+              .scroll-container::before {
+                left: 0;
+                top: 0;
+              }
+              .scroll-container::after {
+                right: 0;
+                top: 0;
+                transform: rotateZ(180deg);
+              }
+              .scroll-track {
+                display: flex;
+                width: max-content;
+                animation: infiniteScroll 30s linear infinite;
+                gap: 90px;
+                align-items: center;
+              }
+              @media (max-width: 768px) {
+                .scroll-container::before,
+                .scroll-container::after {
+                  width: 60px;
+                }
+                .scroll-track {
+                  gap: 50px;
+                  animation-duration: 20s;
+                }
+              }
+            `}} />
+
+            <div className="scroll-container">
+               <div className="scroll-track">
+                  {[
+                    { type: 'text', name: 'Coca-Cola' },
+                    { type: 'image', src: '/images/logo-alamin.png', alt: 'Al Amin' },
+                    { type: 'text', name: 'Danone' },
+                    { type: 'text', name: 'Nestlé' },
+                    { type: 'image', src: '/images/logo-cakeland.png', alt: 'Cake Land' },
+                    { type: 'text', name: 'SFBT' }
+                  ].concat([
+                    { type: 'text', name: 'Coca-Cola' },
+                    { type: 'image', src: '/images/logo-alamin.png', alt: 'Al Amin' },
+                    { type: 'text', name: 'Danone' },
+                    { type: 'text', name: 'Nestlé' },
+                    { type: 'image', src: '/images/logo-cakeland.png', alt: 'Cake Land' },
+                    { type: 'text', name: 'SFBT' }
+                  ]).concat([
+                    { type: 'text', name: 'Coca-Cola' },
+                    { type: 'image', src: '/images/logo-alamin.png', alt: 'Al Amin' },
+                    { type: 'text', name: 'Danone' },
+                    { type: 'text', name: 'Nestlé' },
+                    { type: 'image', src: '/images/logo-cakeland.png', alt: 'Cake Land' },
+                    { type: 'text', name: 'SFBT' }
+                  ]).map((brand, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                       {brand.type === 'image' ? (
+                         <img 
+                           src={brand.src} 
+                           alt={brand.alt} 
+                           style={{ 
+                             height: isMobile ? '35px' : '50px', 
+                             objectFit: 'contain', 
+                             filter: 'grayscale(100%) contrast(90%) brightness(0.6)', 
+                             opacity: 0.65,
+                             transition: 'all 0.3s'
+                           }} 
+                         />
+                       ) : (
+                         <span style={{ 
+                           fontSize: isMobile ? '20px' : '28px', 
+                           fontWeight: 900, 
+                           color: '#1F2937', 
+                           letterSpacing: '-1px', 
+                           opacity: 0.6 
+                         }}>
+                           {brand.name}
+                         </span>
+                       )}
+                    </div>
+                  ))}
+               </div>
             </div>
          </div>
       </section>
