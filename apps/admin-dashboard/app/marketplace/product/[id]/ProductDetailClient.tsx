@@ -371,7 +371,20 @@ export default function ProductDetailClient({ product, isVendor = false, related
             )}
 
             {/* Vendor Card */}
-            <div style={{ background: '#F9FAFB', borderRadius: '16px', padding: '24px', border: '1px solid #F1F5F9' }}>
+            <Link 
+              href={`/marketplace/vendor/${product.vendorId}`}
+              style={{ 
+                textDecoration: 'none', 
+                display: 'block', 
+                background: '#F9FAFB', 
+                borderRadius: '16px', 
+                padding: '24px', 
+                border: '1px solid #F1F5F9',
+                transition: 'all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1)',
+                cursor: 'pointer'
+              }}
+              className="hover-vendor-card"
+            >
                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
                   <div style={{ width: '48px', height: '48px', background: '#fff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
                     <Building2 size={24} color="#E31E24" />
@@ -379,7 +392,7 @@ export default function ProductDetailClient({ product, isVendor = false, related
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#111827', margin: 0 }}>{maskName(product.vendor?.companyName)}</h4>
-                      <ChevronRight size={14} color="#9CA3AF" />
+                      <ChevronRight size={14} color="#E31E24" />
                     </div>
                     <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 600 }}>{identityVisible ? 'Société Commerciale' : 'Fournisseur Vérifié'}</span>
                   </div>
@@ -390,7 +403,7 @@ export default function ProductDetailClient({ product, isVendor = false, related
                   {[1,2,3,4].map(i => <Star key={i} size={14} fill="#E31E24" color="#E31E24" />)}
                   <Star size={14} fill="#E5E7EB" color="#E5E7EB" />
                   <span style={{ fontSize: '13px', fontWeight: 800, color: '#111827', marginLeft: '8px' }}>4.5</span>
-                  <ChevronRight size={14} color="#9CA3AF" />
+                  <ChevronRight size={14} color="#E31E24" />
                </div>
 
                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -404,7 +417,7 @@ export default function ProductDetailClient({ product, isVendor = false, related
                     <span style={{ color: '#111827' }}>{identityVisible ? 'Fournisseur Audité' : 'Qualité Garantie'}</span>
                   </div>
                </div>
-            </div>
+            </Link>
 
           </div>
         </div>
@@ -582,6 +595,12 @@ export default function ProductDetailClient({ product, isVendor = false, related
           transform: translateY(-8px);
           box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
           border-color: #E31E24 !important;
+        }
+        .hover-vendor-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 24px -10px rgba(227, 30, 36, 0.15);
+          border-color: #E31E24 !important;
+          background: #FFF8F8 !important;
         }
       `}</style>
     </div>

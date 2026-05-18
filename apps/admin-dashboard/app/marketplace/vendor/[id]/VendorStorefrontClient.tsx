@@ -157,6 +157,7 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
     image: b.image || (b.images && b.images[0]),
     categoryId: 'packs',
     minOrderQty: 1,
+    isBundle: true,
     vendorId: vendor.id,
     vendor: {
       id: vendor.id,

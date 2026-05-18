@@ -96,14 +96,14 @@ export default function ProductMobile({ product, isVendor, relatedProducts = [] 
           <button type="button" aria-label="Favoris">
             <Heart size={18} />
           </button>
-          <button type="button" onClick={() => setCartOpen(true)} aria-label="Panier" style={{ position: 'relative' }}>
+          <Link href="/marketplace/cart" aria-label="Panier" style={{ position: 'relative', display: 'flex', color: 'inherit', textDecoration: 'none' }}>
             <ShoppingCart size={18} />
             {cartCount > 0 && (
               <span style={{ position: 'absolute', top: -4, right: -4, background: '#e31e24', color: '#fff', fontSize: 9, fontWeight: 900, width: 16, height: 16, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {cartCount}
               </span>
             )}
-          </button>
+          </Link>
         </div>
       </div>
 

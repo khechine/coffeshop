@@ -123,7 +123,7 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
 
       {/* Content */}
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
-        <Link href={`/marketplace/product/${product.id}`} style={{ textDecoration: 'none' }}>
+        <Link href={product.isBundle ? `/marketplace/product/${product.id}?isBundle=true` : `/marketplace/product/${product.id}`} style={{ textDecoration: 'none' }}>
           <h3 style={{ 
             fontSize: '15px', 
             fontWeight: 800, 
@@ -173,7 +173,7 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
             </button>
           ) : (
             <Link 
-              href={`/marketplace/product/${product.id}`}
+              href={product.isBundle ? `/marketplace/product/${product.id}?isBundle=true` : `/marketplace/product/${product.id}`}
               className="btn-decouvrir"
               style={{ flex: 1, height: '36px', background: '#E31E24', color: '#fff', border: 'none', borderRadius: '100px', fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
             >

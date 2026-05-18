@@ -335,8 +335,8 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
                            <Heart size={24} />
                            <span style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>Favoris</span>
                          </Link>
-                         <div 
-                           onClick={() => setCartOpen(true)}
+                         <Link 
+                           href="/marketplace/cart"
                            className="action-item"
                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', color: '#374151', position: 'relative' }}
                          >
@@ -347,7 +347,7 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
                                {cartCount}
                              </span>
                            )}
-                         </div>
+                         </Link>
                        </>
                      )}
                    </>

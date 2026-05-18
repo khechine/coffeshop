@@ -235,11 +235,11 @@ function UpsellModal({ product, onClose }: { product: any; onClose: () => void }
   }, [product.id]);
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div style={{ background: '#fff', width: '100%', maxWidth: '720px', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', animation: 'scaleUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+    <div className="upsell-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div className="upsell-modal-content" style={{ background: '#fff', width: '100%', maxWidth: '720px', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', animation: 'scaleUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
         
         {/* Success Banner */}
-        <div style={{ background: '#F0FDF4', padding: '24px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #DCFCE7' }}>
+        <div className="upsell-modal-banner" style={{ background: '#F0FDF4', padding: '24px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #DCFCE7' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '40px', height: '40px', background: '#16A34A', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CheckCircle2 size={24} />
@@ -254,19 +254,19 @@ function UpsellModal({ product, onClose }: { product: any; onClose: () => void }
           </button>
         </div>
 
-        <div style={{ padding: '32px' }}>
+        <div className="upsell-modal-body" style={{ padding: '32px' }}>
           {/* Main Added Product */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '40px', background: '#F9FAFB', padding: '20px', borderRadius: '20px', border: '1px solid #F1F5F9' }}>
-            <div style={{ width: '100px', height: '100px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #E5E7EB', background: '#fff' }}>
+          <div className="upsell-main-product" style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '40px', background: '#F9FAFB', padding: '20px', borderRadius: '20px', border: '1px solid #F1F5F9' }}>
+            <div className="upsell-main-img" style={{ width: '100px', height: '100px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #E5E7EB', background: '#fff' }}>
               <img src={sanitizeUrl(product.image)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
-            <div style={{ flex: 1 }}>
+            <div className="upsell-main-info" style={{ flex: 1 }}>
               <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#111827', margin: '0 0 4px' }}>{product.name}</h4>
               <p style={{ fontSize: '14px', fontWeight: 700, color: '#6B7280', margin: 0 }}>{product.quantity} x {Number(product.price).toFixed(2)} DT</p>
             </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div className="upsell-main-actions" style={{ display: 'flex', gap: '12px' }}>
               <button onClick={onClose} style={{ padding: '12px 24px', borderRadius: '100px', border: '1px solid #E5E7EB', background: '#fff', color: '#374151', fontSize: '14px', fontWeight: 800, cursor: 'pointer' }}>Continuer</button>
-              <Link href="/marketplace?openCart=true" onClick={onClose} style={{ padding: '12px 24px', borderRadius: '100px', border: 'none', background: '#111827', color: '#fff', fontSize: '14px', fontWeight: 800, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Link href="/marketplace/cart" onClick={onClose} style={{ padding: '12px 24px', borderRadius: '100px', border: 'none', background: '#111827', color: '#fff', fontSize: '14px', fontWeight: 800, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 Panier <ArrowRight size={16} />
               </Link>
             </div>
@@ -284,11 +284,11 @@ function UpsellModal({ product, onClose }: { product: any; onClose: () => void }
                   const tp = u.targetProduct;
                   const finalPrice = Number(tp.price) * (1 - Number(u.discountPercent) / 100);
                   return (
-                    <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#F0FDF4', border: '1px solid #DCFCE7', padding: '16px', borderRadius: '16px' }}>
-                      <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', background: '#fff' }}>
+                    <div key={u.id} className="upsell-offer-row" style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#F0FDF4', border: '1px solid #DCFCE7', padding: '16px', borderRadius: '16px' }}>
+                      <div className="upsell-offer-img" style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', background: '#fff' }}>
                         <img src={sanitizeUrl(tp.image)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </div>
-                      <div style={{ flex: 1 }}>
+                      <div className="upsell-offer-info" style={{ flex: 1 }}>
                         <h5 style={{ fontSize: '14px', fontWeight: 800, color: '#111827', margin: '0 0 4px' }}>{tp.name}</h5>
                         {u.text && <p style={{ fontSize: '12px', color: '#166534', margin: '0 0 4px', fontWeight: 600 }}>{u.text}</p>}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -304,6 +304,7 @@ function UpsellModal({ product, onClose }: { product: any; onClose: () => void }
                           addToCart({ ...tp, discountPrice: finalPrice, vendor: { id: tp.vendorId } }, Number(u.quantity));
                           onClose();
                         }}
+                        className="upsell-offer-btn"
                         style={{ padding: '8px 16px', background: '#16A34A', color: '#fff', border: 'none', borderRadius: '100px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
                       >
                         Ajouter ({Number(u.quantity)})
@@ -327,7 +328,7 @@ function UpsellModal({ product, onClose }: { product: any; onClose: () => void }
                 {[1, 2, 3, 4].map(i => <div key={i} style={{ flex: 1, height: '180px', background: '#F9FAFB', borderRadius: '16px', animation: 'pulse 1.5s infinite' }} />)}
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+              <div className="upsell-recs-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                 {recommendations.map((p: any) => (
                   <Link 
                     key={p.id} 
@@ -358,6 +359,77 @@ function UpsellModal({ product, onClose }: { product: any; onClose: () => void }
           0% { opacity: 1; }
           50% { opacity: 0.5; }
           100% { opacity: 1; }
+        }
+        @media (max-width: 768px) {
+          .upsell-modal-overlay {
+            padding: 10px !important;
+          }
+          .upsell-modal-content {
+            border-radius: 20px !important;
+            max-height: 90vh;
+            overflow-y: auto;
+          }
+          .upsell-modal-banner {
+            padding: 16px 20px !important;
+          }
+          .upsell-modal-banner h3 {
+            font-size: 15px !important;
+          }
+          .upsell-modal-banner p {
+            font-size: 11px !important;
+          }
+          .upsell-modal-body {
+            padding: 16px !important;
+          }
+          .upsell-main-product {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 16px !important;
+            padding: 16px !important;
+            margin-bottom: 24px !important;
+          }
+          .upsell-main-img {
+            width: 80px !important;
+            height: 80px !important;
+            margin: 0 auto;
+          }
+          .upsell-main-info {
+            text-align: center !important;
+          }
+          .upsell-main-actions {
+            justify-content: center !important;
+            width: 100% !important;
+          }
+          .upsell-main-actions button, .upsell-main-actions a {
+            flex: 1 !important;
+            text-align: center !important;
+            justify-content: center !important;
+            font-size: 12px !important;
+            padding: 10px 16px !important;
+          }
+          .upsell-offer-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+            padding: 12px !important;
+            text-align: center !important;
+          }
+          .upsell-offer-img {
+            width: 50px !important;
+            height: 50px !important;
+            margin: 0 auto;
+          }
+          .upsell-offer-info div {
+            justify-content: center !important;
+          }
+          .upsell-offer-btn {
+            width: 100% !important;
+            padding: 10px !important;
+          }
+          .upsell-recs-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
         }
       `}</style>
     </div>
