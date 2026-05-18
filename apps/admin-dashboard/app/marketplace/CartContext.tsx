@@ -110,7 +110,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     setCart(prev => {
       const ex = prev.find(i => i.id === p.id);
-      if (ex) return prev.map(i => i.id === p.id ? { ...i, quantity: i.quantity + q } : i);
+      if (ex) return prev.map(i => i.id === p.id ? { ...i, minOrderQty: Math.max(i.minOrderQty || 1, minQty), quantity: i.quantity + q } : i);
       return [...prev, productToTrack];
     });
 
@@ -301,7 +301,7 @@ function UpsellModal({ product, onClose }: { product: any; onClose: () => void }
                       </div>
                       <button 
                         onClick={() => {
-                          addToCart({ ...tp, discountPrice: finalPrice, vendor: { id: tp.vendorId } }, Number(u.quantity));
+                          addToCart({ ...tp, discountPrice: finalPrice, minOrderQty: Number(u.quantity), vendor: { id: tp.vendorId } }, Number(u.quantity));
                           onClose();
                         }}
                         className="upsell-offer-btn"
