@@ -26,7 +26,7 @@ const fmt = (n: any) => Number(n).toFixed(2);
 export default function ProductDetailClient({ product, isVendor = false, relatedProducts = [], allCategories = [] }: { product: any; isVendor?: boolean; relatedProducts?: any[]; allCategories?: any[] }) {
   const minQty = product.minOrderQty ? Number(product.minOrderQty) : 1;
   const [qty, setQty] = useState(minQty);
-  const { addToCart } = useCart();
+  const { addToCart, toggleWishlist, isInWishlist } = useCart();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { level, maskName, identityVisible } = useVault(product.vendorId, product.vendor?.isPremium);
@@ -114,16 +114,14 @@ export default function ProductDetailClient({ product, isVendor = false, related
                  {/* Overlay Icons */}
                  <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', flexDirection: 'column', gap: '12px', zIndex: 10 }}>
                     <button 
-                      onClick={(e) => {
-                        const icon = e.currentTarget.querySelector('svg');
-                        if (icon) icon.style.fill = icon.style.fill === 'red' ? 'none' : 'red';
-                        if (icon) icon.style.stroke = icon.style.fill === 'red' ? 'red' : '#374151';
+                      onClick={() => {
+                        if (toggleWishlist) toggleWishlist(product);
                       }}
                       style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#fff', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'transform 0.2s' }}
                       onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
                       onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                     >
-                      <Heart size={22} color="#374151" />
+                      <Heart size={22} color={isInWishlist?.(product.id) ? "#E31E24" : "#374151"} fill={isInWishlist?.(product.id) ? "#E31E24" : "none"} />
                     </button>
                     
                     {/* Share Dropdown Trigger */}

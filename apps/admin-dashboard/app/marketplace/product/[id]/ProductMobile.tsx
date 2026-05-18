@@ -26,7 +26,7 @@ export default function ProductMobile({ product, isVendor, relatedProducts = [] 
   const [cartOpen, setCartOpen] = useState(false);
   const galleryRef = useRef<HTMLDivElement>(null);
 
-  const { addToCart, cartCount } = useCart();
+  const { addToCart, cartCount, toggleWishlist, isInWishlist } = useCart();
   const { maskName, identityVisible } = useVault(product.vendorId, product.vendor?.isPremium);
 
   const gallery = [
@@ -93,8 +93,14 @@ export default function ProductMobile({ product, isVendor, relatedProducts = [] 
           <button type="button" aria-label="Partager">
             <Share2 size={18} />
           </button>
-          <button type="button" aria-label="Favoris">
-            <Heart size={18} />
+          <button 
+            type="button" 
+            aria-label="Favoris" 
+            onClick={() => {
+              if (toggleWishlist) toggleWishlist(product);
+            }}
+          >
+            <Heart size={18} color={isInWishlist?.(product.id) ? "#E31E24" : "#374151"} fill={isInWishlist?.(product.id) ? "#E31E24" : "none"} />
           </button>
           <Link href="/marketplace/cart" aria-label="Panier" style={{ position: 'relative', display: 'flex', color: 'inherit', textDecoration: 'none' }}>
             <ShoppingCart size={18} />
