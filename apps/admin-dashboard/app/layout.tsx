@@ -23,6 +23,25 @@ export default async function Layout({ children }: { children: React.ReactNode }
   return (
     <html lang="fr">
       <head>
+        {/* Automatic recovery from Next.js ChunkLoadErrors after new deployments */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.addEventListener('error', function(e) {
+                if (e.message && (e.message.indexOf('ChunkLoadError') !== -1 || e.message.indexOf('Loading chunk') !== -1)) {
+                  console.warn('ChunkLoadError detected, forcing page reload to get the latest build chunks...');
+                  window.location.reload();
+                }
+              }, true);
+              window.addEventListener('unhandledrejection', function(e) {
+                if (e.reason && (e.reason.name === 'ChunkLoadError' || (e.reason.message && e.reason.message.indexOf('ChunkLoadError') !== -1))) {
+                  console.warn('Unhandled ChunkLoadError detected, forcing page reload to get the latest build chunks...');
+                  window.location.reload();
+                }
+              });
+            `
+          }}
+        />
         {/* Google Tag Manager */}
         <script
           dangerouslySetInnerHTML={{
