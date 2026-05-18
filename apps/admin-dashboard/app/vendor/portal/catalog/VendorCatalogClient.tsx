@@ -711,14 +711,28 @@ export default function VendorCatalogClient({
           <table className="w-full text-left">
             <thead className="bg-slate-50"><tr className="border-b border-slate-100">{['Segment', 'Mon Prix', 'Marché (Moy)', 'Position'].map(h => <th key={h} className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">{h}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredBenchmark.map((row, i) => (
-                <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-8 py-6"><div className="font-bold text-slate-900">{row.displayCategory}</div><div className="text-[10px] font-black text-slate-400 uppercase mt-0.5">{row.brand || 'Générique'} · {row.unit}</div></td>
-                  <td className="px-8 py-6 font-black text-slate-900">{row.myPrice ? `${row.myPrice.toFixed(3)} DT` : '—'}</td>
-                  <td className="px-8 py-6 font-black text-blue-600">{row.avg?.toFixed(3)} DT</td>
-                  <td className="px-8 py-6"><span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase ${positionConfig[row.position].bg} ${positionConfig[row.position].color}`}>{positionConfig[row.position].icon} {positionConfig[row.position].label}</span></td>
+              {filteredBenchmark.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-20 text-center bg-slate-50/50">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <BarChart3 size={40} className="text-slate-300 mx-auto" />
+                      <p className="text-slate-700 font-black text-sm">Aucune donnée d'analyse disponible</p>
+                      <p className="text-xs text-slate-400 font-semibold max-w-md mx-auto">
+                        Ajoutez vos premiers produits à votre catalogue pour comparer vos prix à la moyenne du marché B2B tunisien !
+                      </p>
+                    </div>
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                filteredBenchmark.map((row, i) => (
+                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-8 py-6"><div className="font-bold text-slate-900">{row.displayCategory}</div><div className="text-[10px] font-black text-slate-400 uppercase mt-0.5">{row.brand || 'Générique'} · {row.unit}</div></td>
+                    <td className="px-8 py-6 font-black text-slate-900">{row.myPrice ? `${row.myPrice.toFixed(3)} DT` : '—'}</td>
+                    <td className="px-8 py-6 font-black text-blue-600">{row.avg?.toFixed(3)} DT</td>
+                    <td className="px-8 py-6"><span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase ${positionConfig[row.position].bg} ${positionConfig[row.position].color}`}>{positionConfig[row.position].icon} {positionConfig[row.position].label}</span></td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

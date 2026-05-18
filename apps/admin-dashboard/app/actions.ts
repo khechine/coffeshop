@@ -1747,7 +1747,7 @@ export async function getStoreRFQs() {
 }
 
 export async function getMarketplaceRFQs(vendorId?: string) {
-  const where: any = {};
+  const where: any = { status: 'OPEN' };
 
   await autoExpireRFQs();
 
@@ -1884,7 +1884,7 @@ export async function getMarketplaceBenchmarkData(vendorId: string) {
   }
 
   const benchmarks = Array.from(grouped.values())
-    .filter(g => g.myPrice !== null || g.allPrices.length > 0)
+    .filter(g => g.myPrice !== null)
     .map(g => {
       const hasCompetitors = g.allPrices.length > 0;
       const competitorCount = g.vendorPrices.size;
