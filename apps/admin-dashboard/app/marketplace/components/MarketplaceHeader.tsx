@@ -2,22 +2,32 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { getUserNotificationsAction } from '../../actions';
 import {
   ShoppingBag, Search, LayoutGrid, ShoppingCart, 
   MapPin, ChevronRight, X, Menu, User, ArrowRight,
   ChevronDown, Globe, HelpCircle, Smartphone, Languages,
-  MessageSquare, Target, Bell, Heart
+  MessageSquare, Target, Bell, Heart, Camera, Star, Grid
 } from 'lucide-react';
 import { useCart } from '../CartContext';
 import CartDrawer from '../CartDrawer';
 import MarketplaceRFQModal from './MarketplaceRFQModal';
+import '../marketplace-mobile-mic.css';
 
 export default function MarketplaceHeader({ isVendor = false, store, minimal = false, allCategories = [] }: { isVendor?: boolean, store?: any, minimal?: boolean, allCategories?: any[] }) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
   const [hoveredRootId, setHoveredRootId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const fetchNotifs = async () => {
@@ -73,6 +83,145 @@ export default function MarketplaceHeader({ isVendor = false, store, minimal = f
     if (!groupedSubs[group]) groupedSubs[group] = [];
     groupedSubs[group].push(child);
   });
+
+  const pathname = usePathname() || '';
+
+  if (isMobile) {
+    return (
+      <>
+        <header className="mic-mkt-header">
+          <div className="mic-mkt-header-top">
+            <button 
+              type="button" 
+              onClick={() => setDrawerOpen(true)} 
+              style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer' }} 
+              aria-label="Menu"
+            >
+              <Menu size={22} color="#333" />
+            </button>
+            <Link href="/marketplace" className="mic-mkt-logo">
+              ElKassa<span>Market</span>
+            </Link>
+            <div className="mic-scope-pills">
+              <button
+                type="button"
+                className={`mic-scope-pill ${searchScope === 'PRODUCT' ? 'active' : ''}`}
+                onClick={() => setSearchScope('PRODUCT')}
+              >
+                Produits
+              </button>
+              <button
+                type="button"
+                className={`mic-scope-pill ${searchScope === 'VENDOR' ? 'active' : ''}`}
+                onClick={() => setSearchScope('VENDOR')}
+              >
+                Fournisseurs
+              </button>
+            </div>
+            <Link href={isVendor ? '/vendor/portal' : '/admin'} style={{ padding: 4 }} aria-label="Compte">
+              <User size={22} color="#333" />
+            </Link>
+          </div>
+
+          <form className="mic-mkt-search" onSubmit={handleSearch}>
+            <Search size={16} className="mic-search-icon" />
+            <input
+              type="search"
+              placeholder={searchScope === 'PRODUCT' ? 'Quel produit cherchez-vous ?' : 'Rechercher un fournisseur…'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <div className="mic-search-actions">
+              <Camera size={18} />
+            </div>
+          </form>
+        </header>
+
+        {/* Drawer Menu */}
+        {drawerOpen && (
+          <>
+            <div className="mic-drawer-overlay" onClick={() => setDrawerOpen(false)} />
+            <aside className="mic-drawer">
+              <div className="mic-drawer-head">
+                <span style={{ fontSize: 16, fontWeight: 900, color: '#e31e24' }}>Menu Principal</span>
+                <button type="button" onClick={() => setDrawerOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <X size={20} color="#666" />
+                </button>
+              </div>
+              <div className="mic-drawer-body">
+                <Link href="/marketplace" className="mic-drawer-link" onClick={() => setDrawerOpen(false)}>
+                  <span>🏠 Accueil</span>
+                  <ChevronRight size={16} color="#ccc" />
+                </Link>
+                <Link href="/marketplace/categories" className="mic-drawer-link" onClick={() => setDrawerOpen(false)}>
+                  <span>📦 Catégories</span>
+                  <ChevronRight size={16} color="#ccc" />
+                </Link>
+                <Link href="/marketplace/messages" className="mic-drawer-link" onClick={() => setDrawerOpen(false)}>
+                  <span>💬 Mes Messages</span>
+                  <ChevronRight size={16} color="#ccc" />
+                </Link>
+                <Link href="/marketplace/my-requests" className="mic-drawer-link" onClick={() => setDrawerOpen(false)}>
+                  <span>🎯 Mes Demandes B2B</span>
+                  <ChevronRight size={16} color="#ccc" />
+                </Link>
+                <Link href="/marketplace/cart" className="mic-drawer-link" onClick={() => setDrawerOpen(false)}>
+                  <span>🛒 Mon Panier B2B</span>
+                  <ChevronRight size={16} color="#ccc" />
+                </Link>
+                <Link href="/marketplace/orders" className="mic-drawer-link" onClick={() => setDrawerOpen(false)}>
+                  <span>🛍️ Mes Commandes</span>
+                  <ChevronRight size={16} color="#ccc" />
+                </Link>
+                <Link href={isVendor ? "/vendor/portal" : "/admin"} className="mic-drawer-link" onClick={() => setDrawerOpen(false)}>
+                  <span>👤 Mon Compte</span>
+                  <ChevronRight size={16} color="#ccc" />
+                </Link>
+              </div>
+            </aside>
+          </>
+        )}
+
+        {/* Bottom Nav */}
+        <nav className="mic-bottom-nav" aria-label="Navigation">
+          <Link href="/marketplace" className={pathname === '/marketplace' ? 'active' : ''}>
+            <ShoppingBag size={22} strokeWidth={2.5} />
+            Accueil
+          </Link>
+          <Link href="/marketplace/categories" className={pathname.startsWith('/marketplace/categories') ? 'active' : ''}>
+            <Grid size={22} />
+            Catégories
+          </Link>
+          <button
+            type="button"
+            onClick={() => setRfqOpen(true)}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, background: 'none', border: 'none', color: pathname.startsWith('/marketplace/my-requests') ? '#e31e24' : '#888', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: '4px 8px' }}
+          >
+            <MessageSquare size={22} />
+            RFQ
+          </button>
+          <Link href="/marketplace/messages" className={pathname.startsWith('/marketplace/messages') ? 'active' : ''}>
+            <Star size={22} />
+            Messages
+          </Link>
+          <Link href={isVendor ? '/vendor/portal' : '/admin'} className={pathname === '/admin' || pathname === '/vendor/portal' ? 'active' : ''}>
+            <User size={22} />
+            Compte
+          </Link>
+        </nav>
+
+        {/* Dynamic Global Bottom Padding on mobile */}
+        <style jsx global>{`
+          @media (max-width: 768px) {
+            body {
+              padding-bottom: 70px !important;
+            }
+          }
+        `}</style>
+        {rfqOpen && <MarketplaceRFQModal onClose={() => setRfqOpen(false)} />}
+      </>
+    );
+  }
 
   return (
     <>
