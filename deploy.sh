@@ -35,8 +35,9 @@ ssh $ssh_server << EOF
   echo "🧹 Cleaning up system to free disk space..."
   docker system prune -af --volumes
   
-  echo "🔨 Building fresh Docker images..."
-  docker compose build --no-cache || { echo "❌ Build failed"; exit 1; }
+  echo "🔨 Building fresh Docker images sequentially to prevent VPS out-of-memory crashes..."
+  export BUILDKIT_PARALLEL_LIMIT=1
+  docker compose build api && docker compose build dashboard || { echo "❌ Build failed"; exit 1; }
   
   echo "🚀 Starting containers..."
   docker compose up -d
