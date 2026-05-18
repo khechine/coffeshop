@@ -129,6 +129,10 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.phone || form.phone.trim().length < 8) {
+      alert("Le numéro de téléphone mobile est obligatoire et doit contenir au moins 8 chiffres.");
+      return;
+    }
     if (form.role === 'STORE_OWNER' && (subdomainStatus === 'taken' || subdomainStatus === 'forbidden')) {
       alert(subdomainStatus === 'forbidden' ? "Ce sous-domaine est réservé." : "Ce sous-domaine est déjà utilisé.");
       return;
@@ -473,7 +477,278 @@ export default function RegisterPage() {
                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className={labelClass}>Gouvernorat / Ville</label>
-                        <input className={inputClass} value={form.city} onChange={e => setForm({...form, city: e.target.value})} placeholder="Tunis" required />
+                        <select 
+                           className={`${inputClass} cursor-pointer bg-white`} 
+                           value={form.city} 
+                           onChange={e => setForm({...form, city: e.target.value})} 
+                           required
+                         >
+                           <option value="">Sélectionnez votre ville</option>
+                           <optgroup label="Tunis">
+                             <option value="Tunis">Tunis</option>
+                             <option value="Marsa">Marsa</option>
+                             <option value="Carthage">Carthage</option>
+                             <option value="Sidi Bou Saïd">Sidi Bou Saïd</option>
+                             <option value="Kram">Kram</option>
+                             <option value="Bardo">Bardo</option>
+                             <option value="La Kasbah (Tunis)">La Kasbah (Tunis)</option>
+                             <option value="La Goulette">La Goulette</option>
+                             <option value="Sidi Hassine">Sidi Hassine</option>
+                           </optgroup>
+                           <optgroup label="Ariana">
+                             <option value="Ariana">Ariana</option>
+                             <option value="Soukra">Soukra</option>
+                             <option value="Raoued">Raoued</option>
+                             <option value="Sidi Thabet">Sidi Thabet</option>
+                             <option value="Kalaat El Andalous">Kalaat El Andalous</option>
+                             <option value="Ettadhamen / Mnihla">Ettadhamen / Mnihla</option>
+                           </optgroup>
+                           <optgroup label="Manouba">
+                             <option value="Manouba">Manouba</option>
+                             <option value="Den Den">Den Den</option>
+                             <option value="Douar Hicher">Douar Hicher</option>
+                             <option value="Oued Ellil">Oued Ellil</option>
+                             <option value="Jedaida">Jedaida</option>
+                             <option value="Tebourba">Tebourba</option>
+                             <option value="El Battan">El Battan</option>
+                             <option value="Borj El Amri">Borj El Amri</option>
+                             <option value="Mornaguia">Mornaguia</option>
+                           </optgroup>
+                           <optgroup label="Ben Arous">
+                             <option value="Ben Arous">Ben Arous</option>
+                             <option value="El Mourouj">El Mourouj</option>
+                             <option value="Megrine">Megrine</option>
+                             <option value="Radès">Radès</option>
+                             <option value="Hammam Lif">Hammam Lif</option>
+                             <option value="Hammam Chott">Hammam Chott</option>
+                             <option value="Ezzahra">Ezzahra</option>
+                             <option value="Mornag">Mornag</option>
+                             <option value="Boumhel">Boumhel</option>
+                             <option value="Mohamedia / Fouchana">Mohamedia / Fouchana</option>
+                             <option value="Khalidia">Khalidia</option>
+                           </optgroup>
+                           <optgroup label="Nabeul">
+                             <option value="Nabeul">Nabeul</option>
+                             <option value="Dar Chaabane">Dar Chaabane</option>
+                             <option value="Béni Khiar">Béni Khiar</option>
+                             <option value="Somaa">Somaa</option>
+                             <option value="Maamoura">Maamoura</option>
+                             <option value="Tazarka">Tazarka</option>
+                             <option value="Korba">Korba</option>
+                             <option value="Mida">Mida</option>
+                             <option value="Menzel Horr">Menzel Horr</option>
+                             <option value="Menzel Temime">Menzel Temime</option>
+                             <option value="Kelibia">Kelibia</option>
+                             <option value="Azmour">Azmour</option>
+                             <option value="Hammam Khezaz">Hammam Khezaz</option>
+                             <option value="Dar Allouch">Dar Allouch</option>
+                             <option value="El Haouaria">El Haouaria</option>
+                             <option value="Takelsa">Takelsa</option>
+                             <option value="Korbous">Korbous</option>
+                             <option value="Soliman">Soliman</option>
+                             <option value="Menzel Bouzelfa">Menzel Bouzelfa</option>
+                             <option value="Béni Khalled">Béni Khalled</option>
+                             <option value="Zaouiet Jedidi">Zaouiet Jedidi</option>
+                             <option value="Grombalia">Grombalia</option>
+                             <option value="Bouargoub">Bouargoub</option>
+                             <option value="Hammamet">Hammamet</option>
+                           </optgroup>
+                           <optgroup label="Bizerte">
+                             <option value="Bizerte">Bizerte</option>
+                             <option value="Mateur">Mateur</option>
+                             <option value="Menzel Bourguiba">Menzel Bourguiba</option>
+                             <option value="Sejnane">Sejnane</option>
+                             <option value="Ras Jebel">Ras Jebel</option>
+                             <option value="Al Alia">Al Alia</option>
+                             <option value="Rafraf">Rafraf</option>
+                             <option value="Metline">Metline</option>
+                             <option value="Ghar El Melh">Ghar El Melh</option>
+                             <option value="Aousja">Aousja</option>
+                             <option value="Menzel Jemil">Menzel Jemil</option>
+                             <option value="Menzel Abderrahmane">Menzel Abderrahmane</option>
+                             <option value="Tinja">Tinja</option>
+                           </optgroup>
+                           <optgroup label="Zaghouan">
+                             <option value="Zaghouan">Zaghouan</option>
+                             <option value="El Fahs">El Fahs</option>
+                             <option value="Zriba">Zriba</option>
+                             <option value="Bir Mcherga">Bir Mcherga</option>
+                             <option value="Nadhour">Nadhour</option>
+                             <option value="Jebel Oust">Jebel Oust</option>
+                           </optgroup>
+                           <optgroup label="Sousse">
+                             <option value="Sousse">Sousse</option>
+                             <option value="Hammam Sousse">Hammam Sousse</option>
+                             <option value="Msaken">Msaken</option>
+                             <option value="Kalaa Kebira">Kalaa Kebira</option>
+                             <option value="Kalaa Seghira">Kalaa Seghira</option>
+                             <option value="Akouda">Akouda</option>
+                             <option value="Bouficha">Bouficha</option>
+                             <option value="Enfidha">Enfidha</option>
+                             <option value="Sidi Bou Ali">Sidi Bou Ali</option>
+                             <option value="Messaadine">Messaadine</option>
+                             <option value="Zaouia Sousse">Zaouia Sousse</option>
+                             <option value="Hergla">Hergla</option>
+                             <option value="Ezzouhour">Ezzouhour</option>
+                             <option value="Ksibet Sousse">Ksibet Sousse</option>
+                             <option value="Sidi El Heni">Sidi El Heni</option>
+                             <option value="Kondar">Kondar</option>
+                           </optgroup>
+                           <optgroup label="Monastir">
+                             <option value="Bekalta">Bekalta</option>
+                             <option value="Bouhjar">Bouhjar</option>
+                             <option value="Lamta">Lamta</option>
+                             <option value="Moknine">Moknine</option>
+                             <option value="Ksar Hellal">Ksar Hellal</option>
+                             <option value="Menzel Hayet">Menzel Hayet</option>
+                             <option value="Sahline">Sahline</option>
+                             <option value="Jemmal">Jemmal</option>
+                             <option value="Bembla">Bembla</option>
+                             <option value="Beni Hassen">Beni Hassen</option>
+                             <option value="Menzel Kamel">Menzel Kamel</option>
+                             <option value="Menzel Ennour">Menzel Ennour</option>
+                             <option value="Menzel Fersi">Menzel Fersi</option>
+                             <option value="Monastir">Monastir</option>
+                             <option value="Khniss">Khniss</option>
+                             <option value="Ouerdanine">Ouerdanine</option>
+                             <option value="Teboulba">Teboulba</option>
+                             <option value="Sayada">Sayada</option>
+                             <option value="Zeramdine">Zeramdine</option>
+                           </optgroup>
+                           <optgroup label="Mahdia">
+                             <option value="Mahdia">Mahdia</option>
+                             <option value="Rejiche">Rejiche</option>
+                             <option value="Ksour Essef">Ksour Essef</option>
+                             <option value="El Bradâa">El Bradâa</option>
+                             <option value="Sidi Alouane">Sidi Alouane</option>
+                             <option value="El Jem">El Jem</option>
+                             <option value="Boumerdes">Boumerdes</option>
+                             <option value="Chebba">Chebba</option>
+                             <option value="Melloulèche">Melloulèche</option>
+                             <option value="Souassi">Souassi</option>
+                             <option value="Chorbane">Chorbane</option>
+                             <option value="Hbira">Hbira</option>
+                           </optgroup>
+                           <optgroup label="Sfax">
+                             <option value="Sfax">Sfax</option>
+                             <option value="Sakiet Ezzit">Sakiet Ezzit</option>
+                             <option value="Sakiet Eddaier">Sakiet Eddaier</option>
+                             <option value="El Ain">El Ain</option>
+                             <option value="Thyna">Thyna</option>
+                             <option value="Gremda">Gremda</option>
+                             <option value="El Hencha">El Hencha</option>
+                             <option value="Jebiniana">Jebiniana</option>
+                             <option value="Skhira">Skhira</option>
+                             <option value="Mahres">Mahres</option>
+                             <option value="Agareb">Agareb</option>
+                             <option value="Bir Ali Ben Khalifa">Bir Ali Ben Khalifa</option>
+                             <option value="Kerkennah">Kerkennah</option>
+                           </optgroup>
+                           <optgroup label="Béja">
+                             <option value="Béja">Béja</option>
+                             <option value="Medjez El Bab">Medjez El Bab</option>
+                             <option value="Teboursouk">Teboursouk</option>
+                             <option value="Testour">Testour</option>
+                             <option value="Nefza">Nefza</option>
+                             <option value="Goubellat">Goubellat</option>
+                           </optgroup>
+                           <optgroup label="Jendouba">
+                             <option value="Jendouba">Jendouba</option>
+                             <option value="Bousalem">Bousalem</option>
+                             <option value="Tabarka">Tabarka</option>
+                             <option value="Ghardimaou">Ghardimaou</option>
+                             <option value="Ain Draham">Ain Draham</option>
+                             <option value="Fernana">Fernana</option>
+                             <option value="Oued Meliz">Oued Meliz</option>
+                           </optgroup>
+                           <optgroup label="Le Kef">
+                             <option value="Le Kef">Le Kef</option>
+                             <option value="Sers">Sers</option>
+                             <option value="Nebeur">Nebeur</option>
+                             <option value="Tajerouine">Tajerouine</option>
+                             <option value="Dahmani">Dahmani</option>
+                             <option value="Sakiet Sidi Youssef">Sakiet Sidi Youssef</option>
+                           </optgroup>
+                           <optgroup label="Siliana">
+                             <option value="Siliana">Siliana</option>
+                             <option value="Makthar">Makthar</option>
+                             <option value="Bou Arada">Bou Arada</option>
+                             <option value="Le Krib">Le Krib</option>
+                             <option value="Rouhia">Rouhia</option>
+                             <option value="Gaafour">Gaafour</option>
+                             <option value="Bargou">Bargou</option>
+                             <option value="Kesra">Kesra</option>
+                           </optgroup>
+                           <optgroup label="Kairouan">
+                             <option value="Kairouan">Kairouan</option>
+                             <option value="Sbikha">Sbikha</option>
+                             <option value="Oueslatia">Oueslatia</option>
+                             <option value="Chebika">Chebika</option>
+                             <option value="Haffouz">Haffouz</option>
+                             <option value="Nasrallah">Nasrallah</option>
+                             <option value="Bouhajla">Bouhajla</option>
+                           </optgroup>
+                           <optgroup label="Sidi Bouzid">
+                             <option value="Sidi Bouzid">Sidi Bouzid</option>
+                             <option value="Regueb">Regueb</option>
+                             <option value="Sidi Ali Ben Aoun">Sidi Ali Ben Aoun</option>
+                             <option value="Jelma">Jelma</option>
+                             <option value="Meknassy">Meknassy</option>
+                             <option value="Bir El Haffey">Bir El Haffey</option>
+                           </optgroup>
+                           <optgroup label="Kasserine">
+                             <option value="Kasserine">Kasserine</option>
+                             <option value="Sbeitla">Sbeitla</option>
+                             <option value="Feriana">Feriana</option>
+                             <option value="Foussana">Foussana</option>
+                             <option value="Sbiba">Sbiba</option>
+                             <option value="Thala">Thala</option>
+                             <option value="Hidra">Hidra</option>
+                           </optgroup>
+                           <optgroup label="Gabès">
+                             <option value="Gabès">Gabès</option>
+                             <option value="El Hamma">El Hamma</option>
+                             <option value="Mareth">Mareth</option>
+                             <option value="Ghannouch">Ghannouch</option>
+                             <option value="Metouia">Metouia</option>
+                             <option value="Oudhref">Oudhref</option>
+                           </optgroup>
+                           <optgroup label="Médenine">
+                             <option value="Médenine">Médenine</option>
+                             <option value="Zarzis">Zarzis</option>
+                             <option value="Djerba Houmt Souk">Djerba Houmt Souk</option>
+                             <option value="Djerba Midoun">Djerba Midoun</option>
+                             <option value="Djerba Ajim">Djerba Ajim</option>
+                             <option value="Ben Guerdane">Ben Guerdane</option>
+                             <option value="Beni Khedache">Beni Khedache</option>
+                           </optgroup>
+                           <optgroup label="Gafsa">
+                             <option value="Gafsa">Gafsa</option>
+                             <option value="Redeyef">Redeyef</option>
+                             <option value="Metlaoui">Metlaoui</option>
+                             <option value="Mdhilla">Mdhilla</option>
+                             <option value="Om Laarayes">Om Laarayes</option>
+                             <option value="El Guettar">El Guettar</option>
+                           </optgroup>
+                           <optgroup label="Tozeur">
+                             <option value="Tozeur">Tozeur</option>
+                             <option value="Nefta">Nefta</option>
+                             <option value="Degache">Degache</option>
+                             <option value="Tameghza">Tameghza</option>
+                           </optgroup>
+                           <optgroup label="Tataouine">
+                             <option value="Tataouine">Tataouine</option>
+                             <option value="Ghomrassen">Ghomrassen</option>
+                             <option value="Remada">Remada</option>
+                             <option value="Dhehiba">Dhehiba</option>
+                           </optgroup>
+                           <optgroup label="Kébili">
+                             <option value="Kébili">Kébili</option>
+                             <option value="Douz">Douz</option>
+                             <option value="Souk Lahad">Souk Lahad</option>
+                             <option value="Jemna">Jemna</option>
+                           </optgroup>
+                         </select>
                       </div>
                       <div>
                         <label className={labelClass}>Téléphone</label>
