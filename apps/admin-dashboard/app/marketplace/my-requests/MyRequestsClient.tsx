@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import MarketplaceHeader from '../components/MarketplaceHeader';
 import MarketplaceFooter from '../components/MarketplaceFooter';
-import { Target, Clock, MessageCircle, FileText, ChevronRight, User, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Target, Clock, MessageCircle, FileText, ChevronRight, User, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { acceptMarketplaceQuoteAction } from '../../actions';
 import Modal from '../../../components/Modal';
 import { useToast } from '../../components/Toast';
@@ -14,6 +14,7 @@ export default function MyRequestsClient({ rfqs, store }: any) {
   const [mounted, setMounted] = useState(false);
   const [loadingQuoteId, setLoadingQuoteId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState<{ quoteId: string } | null>(null);
+  const [mobileShowDetails, setMobileShowDetails] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export default function MyRequestsClient({ rfqs, store }: any) {
     <div style={{ background: '#F9FAFB', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <MarketplaceHeader store={store} />
 
-      <main style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 24px' }}>
+      <main className="rfq-main" style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
           <div style={{ width: '48px', height: '48px', background: '#111827', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
             <Target size={24} />
@@ -74,9 +75,9 @@ export default function MyRequestsClient({ rfqs, store }: any) {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '32px' }}>
+        <div className="rfq-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '32px' }}>
           {/* RFQ List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className={`rfq-list-pane ${mobileShowDetails ? 'hidden md:flex' : 'flex'} flex-col gap-[16px]`} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {rfqs.length === 0 ? (
               <div style={{ background: '#fff', borderRadius: '16px', padding: '40px', textAlign: 'center', border: '1px solid #E5E7EB' }}>
                 <p style={{ color: '#6B7280' }}>Vous n'avez pas encore créé de demande.</p>
@@ -85,7 +86,10 @@ export default function MyRequestsClient({ rfqs, store }: any) {
               rfqs.map((rfq: any) => (
                 <div 
                   key={rfq.id}
-                  onClick={() => setSelectedRfq(rfq)}
+                  onClick={() => {
+                    setSelectedRfq(rfq);
+                    setMobileShowDetails(true);
+                  }}
                   style={{ 
                     background: '#fff', 
                     borderRadius: '16px', 
@@ -122,9 +126,16 @@ export default function MyRequestsClient({ rfqs, store }: any) {
           </div>
 
           {/* Details & Quotes */}
-          <div style={{ background: '#fff', borderRadius: '24px', padding: '40px', border: '1px solid #E5E7EB', minHeight: '600px' }}>
+          <div className={`rfq-details-pane ${!mobileShowDetails ? 'hidden md:block' : 'block'}`} style={{ background: '#fff', borderRadius: '24px', padding: '40px', border: '1px solid #E5E7EB', minHeight: '600px' }}>
             {selectedRfq ? (
               <div>
+                {/* Mobile Back Button */}
+                <button 
+                  onClick={() => setMobileShowDetails(false)}
+                  className="md:hidden mb-6 flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm bg-slate-100 px-4 py-2 rounded-full border border-slate-200"
+                >
+                  <ArrowLeft size={16} /> Retour aux demandes
+                </button>
                 <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: '24px', marginBottom: '32px' }}>
                   <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', margin: '0 0 12px' }}>{selectedRfq.title}</h2>
                   <p style={{ color: '#4B5563', lineHeight: 1.6 }}>{selectedRfq.description}</p>
@@ -249,6 +260,29 @@ export default function MyRequestsClient({ rfqs, store }: any) {
           </div>
         </div>
       </Modal>
+
+      <style jsx global>{`
+        @media (max-width: 768px) {
+          .rfq-main {
+            margin: 20px auto !important;
+            padding: 0 16px !important;
+          }
+          .rfq-main h1 {
+            font-size: 22px !important;
+          }
+          .rfq-grid {
+            grid-template-columns: 1fr !important;
+            gap: 0 !important;
+          }
+          .rfq-details-pane {
+            padding: 20px !important;
+            border: none !important;
+            border-radius: 16px !important;
+            min-height: auto !important;
+            margin-top: 16px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -28,6 +28,7 @@ export default function MyMessagesClient({ store }: any) {
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [mobileShowChat, setMobileShowChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const prevMessagesLength = useRef(0);
@@ -41,6 +42,7 @@ export default function MyMessagesClient({ store }: any) {
       const found = conversations.find(c => c.otherUser.id === userIdParam);
       if (found && selectedConversation?.otherUser.id !== found.otherUser.id) {
         setSelectedConversation(found);
+        setMobileShowChat(true);
       }
     }
   }, [conversations, userIdParam, selectedConversation]);
@@ -166,11 +168,11 @@ export default function MyMessagesClient({ store }: any) {
     <div style={{ background: '#F9FAFB', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <MarketplaceHeader store={store} />
 
-      <main style={{ maxWidth: '1400px', margin: '40px auto', padding: '0 24px' }}>
-        <div className="bg-white rounded-[32px] border border-slate-200 overflow-hidden shadow-xl shadow-slate-200/50 flex h-[700px]">
+      <main className="messages-main" style={{ maxWidth: '1400px', margin: '40px auto', padding: '0 24px' }}>
+        <div className="messages-container bg-white rounded-[32px] border border-slate-200 overflow-hidden shadow-xl shadow-slate-200/50 flex h-[700px]">
           
           {/* Sidebar */}
-          <div className="w-[380px] border-r border-slate-100 flex flex-col bg-slate-50/30">
+          <div className={`messages-sidebar w-[380px] border-r border-slate-100 flex flex-col bg-slate-50/30 ${mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
             <div className="p-8 border-b border-slate-100">
                <div className="flex items-center gap-3 mb-6">
                  <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-200">
@@ -202,7 +204,10 @@ export default function MyMessagesClient({ store }: any) {
                     key={conv.otherUser.id}
                     conv={conv}
                     isSelected={selectedConversation?.otherUser.id === conv.otherUser.id}
-                    onSelect={() => setSelectedConversation(conv)}
+                    onSelect={() => {
+                      setSelectedConversation(conv);
+                      setMobileShowChat(true);
+                    }}
                   />
                 ))
               )}
@@ -210,10 +215,10 @@ export default function MyMessagesClient({ store }: any) {
           </div>
 
           {/* Chat area */}
-          <div className="flex-1 flex flex-col bg-white">
+          <div className={`messages-chat flex-1 flex flex-col bg-white ${!mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
             {selectedConversation ? (
               <>
-                <ChatHeader otherUser={selectedConversation.otherUser} />
+                <ChatHeader otherUser={selectedConversation.otherUser} onBack={() => setMobileShowChat(false)} />
 
                 <div 
                   ref={chatContainerRef}
@@ -289,6 +294,51 @@ export default function MyMessagesClient({ store }: any) {
       </main>
 
       <MarketplaceFooter />
+
+      <style jsx global>{`
+        @media (max-width: 768px) {
+          .messages-main {
+            margin: 10px auto !important;
+            padding: 0 12px !important;
+          }
+          .messages-container {
+            height: calc(100vh - 140px) !important;
+            border-radius: 20px !important;
+            border: 1px solid #E2E8F0 !important;
+          }
+          .messages-sidebar {
+            width: 100% !important;
+            border-right: none !important;
+          }
+          .messages-sidebar .p-8 {
+            padding: 16px !important;
+          }
+          .messages-sidebar h1 {
+            font-size: 18px !important;
+          }
+          .messages-chat {
+            width: 100% !important;
+          }
+          .messages-chat .p-8 {
+            padding: 16px !important;
+          }
+          .messages-chat .space-y-8 > * + * {
+            margin-top: 16px !important;
+          }
+          .messages-chat form {
+            gap: 8px !important;
+          }
+          .messages-chat form input {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+            height: 48px !important;
+          }
+          .messages-chat form button {
+            width: 48px !important;
+            height: 48px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -337,26 +387,32 @@ const ConversationItem = React.memo(({ conv, isSelected, onSelect }: { conv: any
   );
 });
 
-const ChatHeader = React.memo(({ otherUser }: { otherUser: any }) => {
+const ChatHeader = React.memo(({ otherUser, onBack }: { otherUser: any, onBack?: () => void }) => {
   const { maskName } = useVault(otherUser.vendorProfile?.id, otherUser.vendorProfile?.isPremium);
   
   return (
-    <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
-            <Store size={24} className="text-slate-900" />
+    <div className="p-4 md:p-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="flex items-center gap-2 md:gap-4">
+          {onBack && (
+            <button onClick={onBack} className="md:hidden p-1 mr-1 text-slate-500 hover:text-slate-900" aria-label="Retour">
+              <ArrowLeft size={22} />
+            </button>
+          )}
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0">
+            <Store size={20} className="text-slate-900 md:size-6" />
           </div>
           <div>
-            <h3 className="text-lg font-black text-slate-900">{maskName(otherUser.name)}</h3>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[10px] font-black text-green-600 uppercase tracking-widest">Vendeur Vérifié</span>
+            <h3 className="text-sm md:text-lg font-black text-slate-900">{maskName(otherUser.name)}</h3>
+            <div className="flex items-center gap-1 md:gap-2">
+              <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-[8px] md:text-[10px] font-black text-green-600 uppercase tracking-widest">Vendeur Vérifié</span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest">
-          <ShieldCheck size={14} className="text-red-500" />
-          Transaction Sécurisée
+        <div className="flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:px-4 md:py-2 bg-slate-900 text-white rounded-2xl text-[8px] md:text-[10px] font-black uppercase tracking-widest shrink-0">
+          <ShieldCheck size={12} className="text-red-500 md:size-3.5" />
+          <span className="hidden sm:inline">Transaction Sécurisée</span>
+          <span className="sm:hidden">Sécurisé</span>
         </div>
     </div>
   );

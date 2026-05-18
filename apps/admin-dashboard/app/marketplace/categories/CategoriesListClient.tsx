@@ -14,13 +14,13 @@ export default function CategoriesListClient({ categories, user }: any) {
     <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <MarketplaceHeader isVendor={isVendor} />
 
-      <main style={{ maxWidth: '1200px', margin: '48px auto', padding: '0 24px' }}>
+      <main className="categories-main" style={{ maxWidth: '1200px', margin: '48px auto', padding: '0 24px' }}>
         <div style={{ marginBottom: '40px' }}>
           <h1 style={{ fontSize: '32px', fontWeight: 900, color: '#111827', marginBottom: '8px' }}>Annuaire des Catégories</h1>
           <p style={{ fontSize: '16px', color: '#6B7280' }}>Explorez tout le catalogue professionnel par segment et sous-segment.</p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '80px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '80px' }} className="categories-list-container">
           {categories.map((cat: any) => {
             const children = cat.children || [];
             const grouped: Record<string, any[]> = {};
@@ -33,8 +33,8 @@ export default function CategoriesListClient({ categories, user }: any) {
 
             return (
               <section key={cat.id}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
-                  <div style={{ 
+                <div className="category-header-row" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+                  <div className="cat-icon-box" style={{ 
                     width: '60px', 
                     height: '60px', 
                     borderRadius: '16px', 
@@ -44,7 +44,8 @@ export default function CategoriesListClient({ categories, user }: any) {
                     justifyContent: 'center',
                     color: '#fff',
                     fontSize: '28px',
-                    boxShadow: `0 8px 16px ${cat.color ? cat.color + '33' : '#E31E2433'}`
+                    boxShadow: `0 8px 16px ${cat.color ? cat.color + '33' : '#E31E2433'}`,
+                    flexShrink: 0
                   }}>
                     {cat.icon || <Grid size={28} />}
                   </div>
@@ -68,7 +69,7 @@ export default function CategoriesListClient({ categories, user }: any) {
                         </div>
                       )}
                       
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+                      <div className="subcategories-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
                         {groupChildren.map((sub: any) => (
                           <Link 
                             key={sub.id} 
@@ -128,6 +129,57 @@ export default function CategoriesListClient({ categories, user }: any) {
         
         .category-card-premium:hover .category-img {
           transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+          .categories-main {
+            margin: 20px auto !important;
+            padding: 0 16px !important;
+          }
+          .categories-main h1 {
+            font-size: 24px !important;
+          }
+          .categories-main p {
+            font-size: 14px !important;
+          }
+          .categories-list-container {
+            gap: 40px !important;
+          }
+          .category-header-row {
+            margin-bottom: 20px !important;
+            gap: 12px !important;
+          }
+          .category-header-row .cat-icon-box {
+            width: 44px !important;
+            height: 44px !important;
+            border-radius: 12px !important;
+            font-size: 20px !important;
+          }
+          .category-header-row h2 {
+            font-size: 20px !important;
+          }
+          .category-header-row a {
+            font-size: 13px !important;
+          }
+          .subcategories-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+          .category-card-premium {
+            border-radius: 16px !important;
+          }
+          .category-card-premium span {
+            font-size: 13px !important;
+          }
+          .category-card-premium .arrow-box {
+            width: 24px !important;
+            height: 24px !important;
+            border-radius: 8px !important;
+          }
+          .category-card-premium .arrow-box svg {
+            width: 14px !important;
+            height: 14px !important;
+          }
         }
       `}</style>
     </div>
