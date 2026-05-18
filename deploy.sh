@@ -39,6 +39,9 @@ ssh $ssh_server << EOF
   export BUILDKIT_PARALLEL_LIMIT=1
   docker compose build api && docker compose build dashboard || { echo "❌ Build failed"; exit 1; }
   
+  echo "📥 Pulling latest secure public images (including Nginx & Postgres patch versions)..."
+  docker compose pull
+  
   echo "🚀 Starting containers..."
   docker compose up -d
   
