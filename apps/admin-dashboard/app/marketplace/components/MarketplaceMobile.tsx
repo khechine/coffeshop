@@ -120,9 +120,9 @@ export default function MarketplaceMobile({
     <Link href={`/marketplace/product/${p.id}`} className="mic-product-card">
       <div className="mic-p-img">
         <img src={sanitizeUrl(p.image ?? undefined)} alt={p.name} />
-        {p.vendor?.isEcoResponsible && (
+        {(p.vendor?.isEcoResponsible || p.tags?.includes('🌱 Éco-responsable')) && (
           <span style={{ position: 'absolute', top: 6, left: 6, background: '#DCFCE7', color: '#166534', fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 3 }}>
-            ÉCO
+            🌱 ÉCO
           </span>
         )}
       </div>

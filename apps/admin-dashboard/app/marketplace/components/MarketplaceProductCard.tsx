@@ -81,7 +81,7 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
         </button>
 
         {/* Eco Badge */}
-        {product.vendor?.isEcoResponsible && (
+        {(product.vendor?.isEcoResponsible || product.tags?.includes('🌱 Éco-responsable')) && (
           <div style={{ 
             position: 'absolute', top: '12px', left: '12px', 
             background: '#DCFCE7', color: '#166534', 
@@ -99,7 +99,7 @@ export default function MarketplaceProductCard({ product, isVendor = false, hide
         {product.tags?.some((t: string) => t.includes('Tunis') || t.includes('🇹🇳')) && (
           <div style={{ 
             position: 'absolute', 
-            top: product.vendor?.isEcoResponsible ? '44px' : '12px', 
+            top: (product.vendor?.isEcoResponsible || product.tags?.includes('🌱 Éco-responsable')) ? '44px' : '12px', 
             left: '12px', 
             background: '#FFF1F2', color: '#E31E24', 
             padding: '4px 10px', borderRadius: '100px', 

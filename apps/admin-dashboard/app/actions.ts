@@ -1432,7 +1432,7 @@ export async function getMarketplaceData(userLat?: number, userLng?: number, rad
 
     productWhere.OR = [
       { vendor: { isEcoResponsible: true } },
-      { tags: { hasSome: ['Bio', 'Éco-responsable', 'Naturel', '🌱', 'Eco', 'Recyclé'] } },
+      { tags: { hasSome: ['Bio', 'Éco-responsable', 'Naturel', '🌱', 'Eco', 'Recyclé', '🌱 Éco-responsable'] } },
       { name: { contains: 'Bio', mode: 'insensitive' } },
       { categoryId: { in: ecoCategoryIds } }
     ];
