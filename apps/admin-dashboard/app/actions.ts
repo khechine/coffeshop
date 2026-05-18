@@ -6909,7 +6909,9 @@ export async function sendVendorInquiryAction(data: { vendorId: string, subject:
   try {
     const user = await getUserContext();
     if (!user) throw new Error('Vous devez être connecté');
-    const store = await (prisma as any).store.findFirst({ where: { userId: user.id } });
+    const storeId = (user as any).storeId;
+    if (!storeId) throw new Error('Seuls les professionnels peuvent envoyer des demandes (Boutique requise)');
+    const store = await (prisma as any).store.findUnique({ where: { id: storeId } });
     if (!store) throw new Error('Seuls les professionnels peuvent envoyer des demandes (Boutique requise)');
 
     const interaction = await (prisma as any).vendorInteraction.create({
