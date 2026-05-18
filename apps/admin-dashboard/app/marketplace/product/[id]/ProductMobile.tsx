@@ -165,6 +165,65 @@ export default function ProductMobile({ product, isVendor, relatedProducts = [] 
           Commande min. : {product.minOrderQty || 1} {product.unit || 'unité'}(s)
         </div>
         <h1 className="mic-pdp-title">{product.name}</h1>
+
+        {/* Premium Value Props: Eco & Tunisian */}
+        {(() => {
+          const isEco = product.vendor?.isEcoResponsible || product.tags?.includes('🌱 Éco-responsable');
+          const isTunisian = product.tags?.some((t: string) => t.includes('Tunis') || t.includes('🇹🇳'));
+          if (!isEco && !isTunisian) return null;
+          return (
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '8px', 
+              background: 'linear-gradient(135deg, #F0FDF4 0%, #FFF1F2 100%)', 
+              padding: '12px 16px', 
+              borderRadius: '12px', 
+              border: '1px dashed #BBF7D0',
+              marginTop: '12px',
+              marginBottom: '12px'
+            }}>
+              <div style={{ fontSize: '10px', fontWeight: 900, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                ✨ Avantages du Produit
+              </div>
+              {isEco && (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  background: '#fff', 
+                  padding: '8px 12px', 
+                  borderRadius: '8px',
+                  border: '1px solid #DCFCE7'
+                }}>
+                  <span style={{ fontSize: '16px' }}>🌱</span>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '11px', color: '#166534', fontWeight: 900 }}>Éco-responsable</strong>
+                    <span style={{ fontSize: '9px', color: '#15803D', fontWeight: 600 }}>Sourcing durable & respectueux</span>
+                  </div>
+                </div>
+              )}
+              {isTunisian && (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  background: '#fff', 
+                  padding: '8px 12px', 
+                  borderRadius: '8px',
+                  border: '1px solid #FFE4E6'
+                }}>
+                  <span style={{ fontSize: '16px' }}>🇹🇳</span>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '11px', color: '#9F1239', fontWeight: 900 }}>Produit Tunisien</strong>
+                    <span style={{ fontSize: '9px', color: '#BE123C', fontWeight: 600 }}>Production locale de proximité</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         <div className="mic-pdp-badges">
           <span className="mic-pdp-badge" style={{ background: '#ecfdf5', color: '#166534' }}>
             <ShieldCheck size={12} /> Fournisseur vérifié

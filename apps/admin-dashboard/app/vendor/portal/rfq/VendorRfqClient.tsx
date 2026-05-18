@@ -186,7 +186,15 @@ export default function VendorRfqClient({ rfqs, inquiries = [], vendorId }: { rf
                 </div>
               </div>
 
-              {success || existingQuote ? (
+              {selectedRfq.status === 'EXPIRED' ? (
+                <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-black flex items-center gap-2">
+                  <Info size={20} /> Cette demande a expiré (délai de 24h dépassé). Vous ne pouvez plus y répondre.
+                </div>
+              ) : selectedRfq.status === 'FULFILLED' && !existingQuote ? (
+                <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 font-black flex items-center gap-2">
+                  <Info size={20} /> Cette demande est clôturée (une offre a été acceptée par le client).
+                </div>
+              ) : success || existingQuote ? (
                 <div className={`p-4 rounded-2xl flex flex-col gap-2 font-black ${
                   existingQuote?.status === 'REJECTED' 
                     ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400' 

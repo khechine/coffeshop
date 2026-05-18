@@ -224,6 +224,70 @@ export default function ProductDetailClient({ product, isVendor = false, related
                 {product.name}
               </h1>
 
+              {/* Premium Value Props: Eco & Tunisian */}
+              {(() => {
+                const isEco = product.vendor?.isEcoResponsible || product.tags?.includes('🌱 Éco-responsable');
+                const isTunisian = product.tags?.some((t: string) => t.includes('Tunis') || t.includes('🇹🇳'));
+                if (!isEco && !isTunisian) return null;
+                return (
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '12px', 
+                    background: 'linear-gradient(135deg, #F0FDF4 0%, #FFF1F2 100%)', 
+                    padding: '16px 20px', 
+                    borderRadius: '16px', 
+                    border: '1px dashed #BBF7D0',
+                    marginBottom: '20px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
+                  }}>
+                    <div style={{ fontSize: '11px', fontWeight: 900, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      ✨ Avantages du Produit
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                      {isEco && (
+                        <div style={{ 
+                          flex: '1 1 200px',
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '10px', 
+                          background: '#fff', 
+                          padding: '10px 14px', 
+                          borderRadius: '10px',
+                          border: '1px solid #DCFCE7',
+                          boxShadow: '0 2px 6px rgba(22,101,52,0.05)'
+                        }}>
+                          <span style={{ fontSize: '20px' }}>🌱</span>
+                          <div>
+                            <strong style={{ display: 'block', fontSize: '13px', color: '#166534', fontWeight: 900 }}>Éco-responsable</strong>
+                            <span style={{ fontSize: '11px', color: '#15803D', fontWeight: 600 }}>Sourcing durable & respectueux</span>
+                          </div>
+                        </div>
+                      )}
+                      {isTunisian && (
+                        <div style={{ 
+                          flex: '1 1 200px',
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '10px', 
+                          background: '#fff', 
+                          padding: '10px 14px', 
+                          borderRadius: '10px',
+                          border: '1px solid #FFE4E6',
+                          boxShadow: '0 2px 6px rgba(227,30,36,0.05)'
+                        }}>
+                          <span style={{ fontSize: '20px' }}>🇹🇳</span>
+                          <div>
+                            <strong style={{ display: 'block', fontSize: '13px', color: '#9F1239', fontWeight: 900 }}>Produit Tunisien</strong>
+                            <span style={{ fontSize: '11px', color: '#BE123C', fontWeight: 600 }}>Production locale de proximité</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div style={{ padding: '20px 0', borderTop: '1px solid #F3F4F6', borderBottom: '1px solid #F3F4F6', marginBottom: '24px' }}>
                 {!isVendor ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

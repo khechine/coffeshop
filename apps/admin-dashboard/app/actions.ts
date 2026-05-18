@@ -1711,9 +1711,29 @@ export async function getMarketplaceSectors() {
   });
 }
 
+async function autoExpireRFQs() {
+  try {
+    const oneDayAgo = new Date();
+    oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+    await (prisma as any).marketplaceRFQ.updateMany({
+      where: {
+        status: 'OPEN',
+        createdAt: { lt: oneDayAgo }
+      },
+      data: {
+        status: 'EXPIRED'
+      }
+    });
+  } catch (e) {
+    console.error('Failed to auto-expire RFQs:', e);
+  }
+}
+
 export async function getStoreRFQs() {
   const store = await getStore();
   if (!store) return [];
+
+  await autoExpireRFQs();
 
   return await (prisma as any).marketplaceRFQ.findMany({
     where: { storeId: store.id },
@@ -1728,6 +1748,8 @@ export async function getStoreRFQs() {
 
 export async function getMarketplaceRFQs(vendorId?: string) {
   const where: any = {};
+
+  await autoExpireRFQs();
 
   if (vendorId) {
     const vendor = await (prisma as any).vendorProfile.findUnique({

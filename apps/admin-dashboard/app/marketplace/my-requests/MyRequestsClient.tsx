@@ -104,10 +104,10 @@ export default function MyRequestsClient({ rfqs, store }: any) {
                     <span style={{ 
                       fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', 
                       padding: '4px 8px', borderRadius: '4px',
-                      background: rfq.status === 'OPEN' ? '#DCFCE7' : '#F3F4F6',
-                      color: rfq.status === 'OPEN' ? '#166534' : '#6B7280'
+                      background: rfq.status === 'OPEN' ? '#DCFCE7' : rfq.status === 'EXPIRED' ? '#FEE2E2' : '#F3F4F6',
+                      color: rfq.status === 'OPEN' ? '#166534' : rfq.status === 'EXPIRED' ? '#991B1B' : '#6B7280'
                     }}>
-                      {rfq.status === 'OPEN' ? 'En cours' : 'Clôturé'}
+                      {rfq.status === 'OPEN' ? 'En cours' : rfq.status === 'EXPIRED' ? 'Expiré' : 'Clôturé'}
                     </span>
                     <span style={{ fontSize: '12px', color: '#6B7280' }}>{formatDate(rfq.createdAt)}</span>
                   </div>
@@ -196,7 +196,7 @@ export default function MyRequestsClient({ rfqs, store }: any) {
                             "{quote.notes}"
                           </div>
                         )}
-                        {quote.status !== 'ACCEPTED' && quote.status !== 'REJECTED' && selectedRfq.status !== 'FULFILLED' && (
+                        {quote.status !== 'ACCEPTED' && quote.status !== 'REJECTED' && selectedRfq.status !== 'FULFILLED' && selectedRfq.status !== 'EXPIRED' && (
                           <div style={{ display: 'flex', gap: '12px' }}>
                             <button 
                               onClick={() => handleAcceptQuote(quote.id)}
