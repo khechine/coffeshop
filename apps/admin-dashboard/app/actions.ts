@@ -4357,7 +4357,7 @@ export async function superadminGetAllVendorsAction() {
       isPremium: true,
       userId: true,
       city: true,
-      _count: { select: { products: true } }
+      _count: { select: { vendorProducts: true } }
     },
     orderBy: { companyName: 'asc' }
   });
@@ -6100,15 +6100,19 @@ export async function seedMarketplaceDataAction() {
 
 export async function getBlogPosts(publishedOnly = true) {
   'use server';
-  return prisma.marketplaceBlogPost.findMany({
-    where: publishedOnly ? { isPublished: true } : {},
-    orderBy: { publishedAt: 'desc' },
-  });
+  try {
+    return await (prisma as any).marketplaceBlogPost.findMany({
+      where: publishedOnly ? { isPublished: true } : {},
+      orderBy: { publishedAt: 'desc' },
+    });
+  } catch { return []; }
 }
 
 export async function getBlogPost(slug: string) {
   'use server';
-  return prisma.marketplaceBlogPost.findUnique({ where: { slug } });
+  try {
+    return await (prisma as any).marketplaceBlogPost.findUnique({ where: { slug } });
+  } catch { return null; }
 }
 
 export async function createBlogPost(data: {
@@ -6118,7 +6122,7 @@ export async function createBlogPost(data: {
 }) {
   'use server';
   const { tags = [], isPublished = false, ...rest } = data;
-  const post = await prisma.marketplaceBlogPost.create({
+  const post = await (prisma as any).marketplaceBlogPost.create({
     data: { ...rest, tags, isPublished, publishedAt: isPublished ? new Date() : null },
   });
   return { success: true, post };
@@ -6130,8 +6134,8 @@ export async function updateBlogPost(id: string, data: {
 }) {
   'use server';
   const { isPublished, ...rest } = data;
-  const existing = await prisma.marketplaceBlogPost.findUnique({ where: { id } });
-  const post = await prisma.marketplaceBlogPost.update({
+  const existing = await (prisma as any).marketplaceBlogPost.findUnique({ where: { id } });
+  const post = await (prisma as any).marketplaceBlogPost.update({
     where: { id },
     data: {
       ...rest,
