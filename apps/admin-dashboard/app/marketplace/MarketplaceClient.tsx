@@ -70,6 +70,8 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [minRating, setMinRating] = useState<number>(0);
+  const [tunisiaOnly, setTunisiaOnly] = useState<boolean>(false);
+  const [bioOnly, setBioOnly] = useState<boolean>(false);
 
   const router = useRouter();
 
@@ -93,13 +95,17 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
     const maxD = (urlRadius === 'all' || urlRadius === '500') ? Infinity : parseFloat(urlRadius);
 
     let allMatches = [];
+    const isViewAll = urlSearch === 'all';
+    
     if (urlScope === 'PRODUCT') {
       const productMatches = products.filter((p: any) => 
+        isViewAll ||
         normalize(p.name).includes(q) || 
         normalize(p.description || '').includes(q) ||
         normalize(p.vendor?.companyName || '').includes(q)
       );
       const bundleMatches = (initialData.bundles || []).filter((b: any) => 
+        isViewAll ||
         normalize(b.name).includes(q) || 
         normalize(b.description || '').includes(q) ||
         normalize(b.vendor?.companyName || '').includes(q)
@@ -128,7 +134,15 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                          (maxPrice === '' || item.price <= parseFloat(maxPrice));
       const ratingMatch = minRating === 0 || (item.vendor?.ratings?.overallAvg >= minRating);
       
-      return distMatch && priceMatch && ratingMatch;
+      const isTunisian = (item.tags || []).some((t: string) => t === 'Tunisie' || t === '🇹🇳 Produit Tunisien');
+      const isBio = (item.vendor?.isEcoResponsible) || 
+                    (item.tags || []).some((t: string) => ['Bio', 'Éco-responsable', 'Naturel', '🌱', 'Eco', 'Recyclé', '🌱 Éco-responsable'].includes(t)) ||
+                    normalize(item.name || '').includes('bio');
+
+      const tunisiaMatch = !tunisiaOnly || isTunisian;
+      const bioMatch = !bioOnly || isBio;
+      
+      return distMatch && priceMatch && ratingMatch && tunisiaMatch && bioMatch;
     });
 
     return {
@@ -137,7 +151,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
       outsideRadius: allMatches.length - filtered.length,
       allMatches // For similarity suggestions
     };
-  }, [urlSearch, urlScope, urlRadius, products, initialData.bundles, categories, minPrice, maxPrice, minRating]);
+  }, [urlSearch, urlScope, urlRadius, products, initialData.bundles, categories, minPrice, maxPrice, minRating, tunisiaOnly, bioOnly]);
 
   const marketplaceSegments = categories;
 
@@ -185,6 +199,17 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
     [products, maxD]
   );
   
+  const recommendedProducts = useMemo(() => {
+    // Aléatoire mais les proches avant
+    const withScore = [...products].map((p: any) => {
+      const dist = p.distance !== null ? p.distance : 1000;
+      // Bruit aléatoire pour créer de la variété tout en gardant une tendance de proximité
+      const score = dist + (Math.random() * 100);
+      return { ...p, _score: score };
+    });
+    return withScore.sort((a: any, b: any) => a._score - b._score);
+  }, [products]);
+  
   const historyProducts = filteredProducts.length > 0 ? filteredProducts.slice(0, 7) : [];
 
   // blog posts from DB or fallback
@@ -221,7 +246,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
             <div className="mkt-search-header">
               <div>
                 <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: 0 }}>
-                  Résultats pour "{urlSearch}" 
+                  {urlSearch === 'all' ? "Tous les produits" : `Résultats pour "${urlSearch}"`}
                 </h1>
                 <div style={{ height: '4px', width: '60px', background: '#E31E24', marginTop: '12px', borderRadius: '10px' }} />
               </div>
@@ -323,8 +348,39 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                     </div>
                   </div>
 
+                  {/* Origin & Responsibility Filters */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#111827', marginBottom: '16px' }}>Origine & Engagement</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#4B5563' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={tunisiaOnly}
+                          onChange={(e) => setTunisiaOnly(e.target.checked)}
+                          style={{ accentColor: '#E31E24' }} 
+                        />
+                        Produit Tunisien 🇹🇳
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#4B5563' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={bioOnly}
+                          onChange={(e) => setBioOnly(e.target.checked)}
+                          style={{ accentColor: '#E31E24' }} 
+                        />
+                        Bio & Responsable 🌱
+                      </label>
+                    </div>
+                  </div>
+
                   <button 
-                    onClick={() => { setMinPrice(''); setMaxPrice(''); setMinRating(0); }}
+                    onClick={() => { 
+                      setMinPrice(''); 
+                      setMaxPrice(''); 
+                      setMinRating(0); 
+                      setTunisiaOnly(false); 
+                      setBioOnly(false); 
+                    }}
                     style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #E5E7EB', background: 'transparent', color: '#111827', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}
                   >
                     Réinitialiser
@@ -727,9 +783,14 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
               
               {/* Products Section */}
               <section>
-                <div className="mkt-section-header">
+                <div className="mkt-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
                   <div>
-                    <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827' }}>Sélectionnés pour vous</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#111827', margin: 0 }}>Sélectionnés pour vous</h2>
+                      <Link href="/marketplace?search=all" style={{ fontSize: '14px', fontWeight: 800, color: '#E31E24', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: '#FEF2F2', borderRadius: '100px' }}>
+                        Voir tout <ChevronRight size={16} />
+                      </Link>
+                    </div>
                     <div style={{ height: '4px', width: '60px', background: '#E31E24', marginTop: '8px', borderRadius: '10px' }} />
                   </div>
                   <div style={{ display: 'flex', gap: '12px' }}>
@@ -753,7 +814,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                 </div>
 
                 <div className="mkt-grid mkt-grid-5">
-                  {(homeTab === 'Nouveautés' ? [...products].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : products).slice(0, 10).map((p: any) => (
+                  {(homeTab === 'Nouveautés' ? [...products].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : recommendedProducts).slice(0, 10).map((p: any) => (
                     <MarketplaceProductCard 
                       key={p.id} 
                       product={p} 
