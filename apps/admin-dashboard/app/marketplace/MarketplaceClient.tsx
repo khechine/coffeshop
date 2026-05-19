@@ -166,7 +166,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
   }
 
   const sidebarAd = banners.find((b: any) => b.position === 'SIDEBAR_2' && b.isActive) || {
-    imageUrl: '/images/sidebar_ad_banner.png',
+    imageUrl: '/images/sidebar_ad_banner.png?v=2',
     title: 'Café Pro & Équipement',
     buttonLink: '/marketplace/category/equipement-cafe'
   };
@@ -282,7 +282,7 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
 
             <div className="mkt-search-layout">
                {/* Left Column Container */}
-               <div>
+               <div style={{ alignSelf: 'stretch', height: '100%' }}>
                  {/* Sidebar Filters */}
                  <aside className="mkt-search-sidebar" style={{ position: 'relative', top: 'auto', marginBottom: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', color: '#111827' }}>
