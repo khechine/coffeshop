@@ -165,6 +165,24 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
     });
   }
 
+  const sidebarAd = banners.find((b: any) => b.position === 'SIDEBAR_2' && b.isActive) || {
+    imageUrl: '/images/sidebar_ad_banner.png',
+    title: 'Café Pro & Équipement',
+    buttonLink: '/marketplace/category/equipement-cafe'
+  };
+
+  const middleAd = banners.find((b: any) => b.position === 'ADS_1' && b.isActive) || {
+    imageUrl: '/images/middle_horizontal_banner.png',
+    title: 'Sourcing Local Tunisien',
+    buttonLink: '/marketplace?search=all'
+  };
+
+  const bottomAd = banners.find((b: any) => b.position === 'ADS_2' && b.isActive) || {
+    imageUrl: '/images/bottom_horizontal_banner.png',
+    title: 'Packs et Bundles',
+    buttonLink: '/marketplace?search=all'
+  };
+
   const [activeBannerIdx, setActiveBannerIdx] = useState(0);
 
   useEffect(() => {
@@ -381,23 +399,40 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                       setTunisiaOnly(false); 
                       setBioOnly(false); 
                     }}
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #E5E7EB', background: 'transparent', color: '#111827', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #E5E7EB', background: 'transparent', color: '#111827', fontWeight: 800, fontSize: '13px', cursor: 'pointer', marginBottom: '24px' }}
                   >
                     Réinitialiser
                   </button>
+
+                  {/* Sidebar Ad Banner */}
+                  <Link href={sidebarAd.buttonLink || '#'} style={{ display: 'block', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', position: 'relative', textDecoration: 'none' }}>
+                    <img src={sidebarAd.imageUrl} alt={sidebarAd.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                    <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', color: '#fff', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.05em' }}>PUB</div>
+                  </Link>
                </aside>
 
                {/* Results Area */}
                <section>
                 {searchData.results.length > 0 ? (
+                  <>
                   <div className={`mkt-grid ${urlScope === 'PRODUCT' ? 'mkt-grid-4' : 'mkt-grid-3'}`}>
-                    {urlScope === 'PRODUCT' && searchData.results.map((p: any) => (
-                      <MarketplaceProductCard 
-                        key={p.id} 
-                        product={p} 
-                        isVendor={isVendor}
-                        hidePrice={hidePrices}
-                      />
+                    {urlScope === 'PRODUCT' && searchData.results.map((p: any, idx: number) => (
+                      <React.Fragment key={p.id}>
+                        <MarketplaceProductCard 
+                          product={p} 
+                          isVendor={isVendor}
+                          hidePrice={hidePrices}
+                        />
+                        {/* Middle Ad between product rows */}
+                        {idx === 7 && (
+                          <div style={{ gridColumn: '1 / -1', marginTop: '16px', marginBottom: '16px' }}>
+                            <Link href={middleAd.buttonLink || '#'} style={{ display: 'block', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E7EB', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', position: 'relative' }}>
+                              <img src={middleAd.imageUrl} alt={middleAd.title} style={{ width: '100%', maxHeight: '180px', objectFit: 'cover', display: 'block' }} />
+                              <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '4px 8px', borderRadius: '6px', letterSpacing: '0.05em' }}>ANNONCE</div>
+                            </Link>
+                          </div>
+                        )}
+                      </React.Fragment>
                     ))}
 
                     {urlScope === 'VENDOR' && searchData.results.map((v: any) => {
@@ -435,6 +470,14 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                       </Link>
                     ))}
                   </div>
+                  {/* Bottom Ad at the end of the results */}
+                  <div style={{ marginTop: '32px' }}>
+                    <Link href={bottomAd.buttonLink || '#'} style={{ display: 'block', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E7EB', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', position: 'relative' }}>
+                      <img src={bottomAd.imageUrl} alt={bottomAd.title} style={{ width: '100%', maxHeight: '180px', objectFit: 'cover', display: 'block' }} />
+                      <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '4px 8px', borderRadius: '6px', letterSpacing: '0.05em' }}>ANNONCE</div>
+                    </Link>
+                  </div>
+                  </>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '100px 20px', background: '#fff', borderRadius: '24px', border: '2px dashed #E5E7EB' }}>
                     <div style={{ width: '80px', height: '80px', background: '#F9FAFB', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
