@@ -1,6 +1,6 @@
 import { prisma } from '@coffeeshop/database';
 import { CreditCard, CheckCircle2, Zap, BarChart3, Shield, Headphones, ArrowRight, Calendar, AlertCircle, Wallet, FileText, Upload, History, ArrowUpRight } from 'lucide-react';
-import { getStore, submitWalletRechargeRequestAction } from '../../actions';
+import { getStore, submitWalletRechargeRequestAction, checkStoreMarketplaceBlock } from '../../actions';
 import RechargeForm from './RechargeForm';
 
 export const dynamic = 'force-dynamic';
@@ -8,6 +8,8 @@ export const dynamic = 'force-dynamic';
 export default async function SubscriptionManagement() {
   const store = await getStore();
   if (!store) return <div>Accès refusé</div>;
+
+  const isBlocked = await checkStoreMarketplaceBlock(store.id);
 
   let subscription = await (prisma as any).subscription.findUnique({
     where: { storeId: store.id },
@@ -142,6 +144,29 @@ export default async function SubscriptionManagement() {
         </div>
       </div>
 
+      {isBlocked && (
+        <div className="bg-gradient-to-r from-rose-500/10 via-red-500/15 to-rose-500/10 border-2 border-rose-500/30 rounded-[32px] p-8 shadow-lg backdrop-blur-md relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-red-500/5 blur-3xl pointer-events-none" />
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center flex-shrink-0 animate-pulse">
+              <AlertCircle size={28} />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-black text-rose-900 dark:text-rose-100 uppercase tracking-tight">Accès Marketplace B2B Bloqué</h3>
+              <p className="text-sm font-semibold text-rose-700/80 dark:text-rose-300/80 max-w-3xl leading-relaxed">
+                Votre période d'essai de 30 jours a expiré. Pour réactiver votre accès complet à la Marketplace B2B d'ElKassa et commander auprès de vos fournisseurs, veuillez effectuer une recharge de votre Wallet et soumettre une preuve de paiement. Dès validation par notre administration, votre accès sera rétabli.
+              </p>
+            </div>
+          </div>
+          <a 
+            href="#recharge-section" 
+            className="px-6 py-3.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-rose-600/20 transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+          >
+            Recharger Mon Wallet
+          </a>
+        </div>
+      )}
+
       {/* Wallet & Balance Header */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-slate-900 rounded-[32px] p-8 text-white flex flex-col justify-between shadow-xl shadow-slate-900/20 relative overflow-hidden">
@@ -184,7 +209,7 @@ export default async function SubscriptionManagement() {
       </div>
 
       {/* Recharge Wallet Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div id="recharge-section" className="grid grid-cols-1 md:grid-cols-2 gap-8 scroll-mt-24">
         <RechargeForm />
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] p-8 shadow-sm">

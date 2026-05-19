@@ -88,7 +88,7 @@ export default function TunisiaMarketplaceClient({ initialData, store, user }: a
         }}>
           <div style={{ borderRadius: '24px', overflow: 'hidden', height: '400px', background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
              <img 
-               src="https://upload.wikimedia.org/wikipedia/commons/0/05/Flag_map_of_Tunisia.svg" 
+               src="/tunisia-flag-map.png" 
                style={{ height: '90%', objectFit: 'contain' }} 
                alt="Tunisia Map"
              />

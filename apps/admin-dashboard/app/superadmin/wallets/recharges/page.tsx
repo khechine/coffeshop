@@ -4,17 +4,34 @@ import RechargeRequestsClient from './RechargeRequestsClient';
 export const dynamic = 'force-dynamic';
 
 export default async function RechargeRequestsPage() {
-  let requests = [];
+  let clientRequests = [];
   try {
-    requests = await (prisma as any).storeWalletRechargeRequest.findMany({
+    clientRequests = await (prisma as any).storeWalletRechargeRequest.findMany({
       include: {
         store: true
       },
       orderBy: { createdAt: 'desc' }
     });
   } catch (e) {
-    console.error("RechargeRequest table missing:", e);
+    console.error("storeWalletRechargeRequest fetch error:", e);
   }
 
-  return <RechargeRequestsClient initialRequests={requests} />;
+  let vendorRequests = [];
+  try {
+    vendorRequests = await (prisma as any).walletDepositRequest.findMany({
+      include: {
+        vendor: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  } catch (e) {
+    console.error("walletDepositRequest fetch error:", e);
+  }
+
+  return (
+    <RechargeRequestsClient 
+      initialClientRequests={clientRequests} 
+      initialVendorRequests={vendorRequests} 
+    />
+  );
 }

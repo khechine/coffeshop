@@ -17,6 +17,38 @@ export async function getVendorProfile() {
   });
 }
 
+export async function checkStoreMarketplaceBlock(storeId: string): Promise<boolean> {
+  try {
+    const store = await (prisma as any).store.findUnique({
+      where: { id: storeId },
+      include: {
+        rechargeRequests: {
+          where: { status: 'APPROVED' },
+          take: 1
+        }
+      }
+    });
+    if (!store) return false;
+    if (store.forceMarketplaceAccess === true) return false;
+
+    // Check trial duration: 30 days
+    const trialDurationDays = 30;
+    const now = new Date();
+    // fallback to 30 days from creation if trialEndsAt is not set
+    const trialEndsAt = store.trialEndsAt ? new Date(store.trialEndsAt) : new Date(new Date(store.createdAt).getTime() + trialDurationDays * 24 * 60 * 60 * 1000);
+    
+    const isTrialExpired = now > trialEndsAt;
+    
+    // Blocked if trial is expired AND there are no approved recharge requests
+    if (isTrialExpired && store.rechargeRequests.length === 0) {
+      return true;
+    }
+  } catch (error) {
+    console.error("Error checking store wallet status:", error);
+  }
+  return false;
+}
+
 export async function getStore() {
   const userId = cookies().get('userId')?.value;
   if (!userId) return null;
@@ -39,6 +71,8 @@ export async function getStore() {
           businessType: true,
           isFiscalEnabled: true,
           forceMarketplaceAccess: true,
+          trialEndsAt: true,
+          createdAt: true,
           subscription: {
             select: {
               id: true,
@@ -61,8 +95,9 @@ export async function getStore() {
         const storeObj: any = store;
         const plan = storeObj?.subscription?.plan;
 
-        // Combined access: from Plan OR manual override (Forced TRUE for all plans as per requirement)
-        const hasMarketplace = true; // (plan?.hasMarketplace === true) || (storeObj?.forceMarketplaceAccess === true);
+        // Combined access: from Plan OR manual override, and blocked if trial expired without recharge
+        const isBlocked = await checkStoreMarketplaceBlock(store.id);
+        const hasMarketplace = !isBlocked;
         storeObj.hasMarketplace = hasMarketplace;
 
         // Ensure wallet exists (Robustness check)
@@ -89,6 +124,8 @@ export async function getStore() {
           id: true,
           name: true,
           city: true,
+          trialEndsAt: true,
+          createdAt: true,
           subscription: {
             select: {
               id: true,
@@ -106,7 +143,8 @@ export async function getStore() {
       });
       if (store) {
         const storeObj: any = store;
-        storeObj.hasMarketplace = true; // (storeObj.subscription?.plan?.hasMarketplace === true) || (storeObj.forceMarketplaceAccess === true);
+        const isBlocked = await checkStoreMarketplaceBlock(store.id);
+        storeObj.hasMarketplace = !isBlocked;
         return storeObj;
       }
     }
@@ -2075,7 +2113,13 @@ export async function getUserContext() {
 
   // Add marketplace access flag
   const userObj = JSON.parse(JSON.stringify(user));
-  userObj.hasMarketplace = true; // Simplified for now
+  
+  if (userObj.role === 'STORE_OWNER' && userObj.storeId) {
+    const isBlocked = await checkStoreMarketplaceBlock(userObj.storeId);
+    userObj.hasMarketplace = !isBlocked;
+  } else {
+    userObj.hasMarketplace = true;
+  }
 
   return userObj;
 }

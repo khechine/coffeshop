@@ -11,6 +11,10 @@ export default async function MarketplaceLayout({ children }: { children: React.
     redirect('/login');
   }
 
+  if (user.role === 'STORE_OWNER' && !user.hasMarketplace) {
+    redirect('/admin/subscription?blocked=trial_expired');
+  }
+
   return (
     <ToastProvider>
       <CartProvider>
