@@ -817,15 +817,19 @@ export default function RegisterPage() {
                  <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
                     <CheckCircle size={56} />
                  </div>
-                 <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Félicitations !</h2>
+                 <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Inscription réussie !</h2>
                  <p className="text-slate-500 font-medium leading-relaxed mb-10">
-                   {form.role === 'STORE_OWNER' 
-                    ? "Votre espace café est en cours de préparation. Un email de confirmation a été envoyé à votre adresse."
-                    : "Votre demande de compte fournisseur a été reçue. Notre équipe vous contactera sous 24h pour la validation."}
+                   Un email de bienvenue contenant votre <strong>code de validation</strong> a été envoyé à l'adresse <strong>{form.email}</strong>.<br /><br />
+                   Veuillez valider votre adresse email pour activer votre compte.
                  </p>
-                 <Link href="/login" className="block w-full py-5 rounded-[24px] bg-indigo-600 text-white font-black text-lg hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-600/30 uppercase tracking-widest">
-                   Accéder à mon compte
-                 </Link>
+                 <div className="space-y-4">
+                   <Link href={`/verify-email?email=${encodeURIComponent(form.email)}`} className="block w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-600/20 uppercase tracking-widest text-center">
+                     Saisir le code de validation
+                   </Link>
+                   <Link href="/login" className="block w-full py-4 rounded-2xl bg-slate-100 text-slate-700 font-black text-sm hover:bg-slate-200 transition-all text-center">
+                     Retour à la connexion
+                   </Link>
+                 </div>
               </div>
             )}
 

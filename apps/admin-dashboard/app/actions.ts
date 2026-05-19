@@ -6,7 +6,7 @@ import * as bcrypt from 'bcryptjs';
 import { cookies, headers } from 'next/headers';
 import { Prisma } from '@prisma/client';
 import crypto from 'crypto';
-import { sendMarketplaceEmail } from './lib/mail';
+import { sendMarketplaceEmail, sendWelcomeEmail } from './lib/mail';
 
 // ── Helpers (Updated for phone field) ──────────────────────────
 export async function getVendorProfile() {
@@ -632,6 +632,8 @@ export async function registerStoreAction(data: any) {
     });
   }
 
+  const verificationToken = Math.random().toString(36).substring(2, 8).toUpperCase();
+
   const user = await prisma.user.create({
     data: {
       email,
@@ -639,7 +641,7 @@ export async function registerStoreAction(data: any) {
       name,
       role: 'STORE_OWNER',
       emailVerified: false,
-      verificationToken: Math.random().toString(36).substring(7),
+      verificationToken,
       store: {
         create: {
           name: storeName,
@@ -658,6 +660,18 @@ export async function registerStoreAction(data: any) {
     },
     include: { store: true }
   });
+
+  try {
+    await sendWelcomeEmail({
+      to: user.email,
+      name: user.name,
+      token: verificationToken,
+      role: 'STORE_OWNER',
+      businessName: storeName
+    });
+  } catch (mailError) {
+    console.error('Failed to send welcome email to store owner:', mailError);
+  }
 
   return user;
 }
@@ -799,6 +813,27 @@ export async function updateWalletRechargeStatusAction(requestId: string, status
     }
   }
 
+  // Notify client (Store Owners)
+  try {
+    const storeOwners = await (prisma as any).user.findMany({
+      where: { storeId: request.storeId, role: 'STORE_OWNER' },
+      select: { id: true }
+    });
+    for (const owner of storeOwners) {
+      await sendTradeNotificationAction({
+        userId: owner.id,
+        type: 'ORDER_UPDATE',
+        title: `Recharge Wallet ${status === 'APPROVED' ? 'Approuvée' : 'Refusée'}`,
+        content: status === 'APPROVED'
+          ? `Votre demande de recharge de ${request.amount} DT a été approuvée. Votre nouveau solde est disponible.`
+          : `Votre demande de recharge de ${request.amount} DT a été refusée.`,
+        metadata: { requestId }
+      });
+    }
+  } catch (err) {
+    console.error('Failed to notify store owners of wallet recharge status:', err);
+  }
+
   revalidatePath('/superadmin/wallets/recharges');
   return { success: true };
 }
@@ -815,11 +850,17 @@ export async function loginUser(email: string, pass: string) {
       role: true,
       storeId: true,
       permissions: true,
-      defaultPosMode: true
+      defaultPosMode: true,
+      emailVerified: true,
+      verificationToken: true
     }
   });
 
   if (!user) return { error: 'Utilisateur non trouvé' };
+
+  if (user.verificationToken && !user.emailVerified) {
+    return { error: 'Veuillez valider votre adresse email avant de vous connecter.' };
+  }
 
   const isMatch = await bcrypt.compare(pass, user.password);
   if (!isMatch) return { error: 'Mot de passe incorrect' };
@@ -2456,7 +2497,7 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
     }
   });
 
-  // Notify Vendor via Email & In-app
+  // Notify Vendor & Client via Email & In-app
   try {
     const vendorUser = await (prisma as any).user.findFirst({
       where: { vendorProfile: { id: data.vendorId } },
@@ -2496,6 +2537,21 @@ export async function placeMarketplaceOrder(data: { vendorId: string; total: num
       } catch (crmErr) {
         console.error('Failed to update Vendor CRM:', crmErr);
       }
+    }
+
+    // Notify Client Store Owners
+    const storeOwners = await (prisma as any).user.findMany({
+      where: { storeId: store.id, role: 'STORE_OWNER' },
+      select: { id: true }
+    });
+    for (const owner of storeOwners) {
+      await sendTradeNotificationAction({
+        userId: owner.id,
+        type: 'ORDER_UPDATE',
+        title: 'Confirmation de Commande',
+        content: `Votre commande chez ${vendor?.companyName || 'le fournisseur'} d'un montant de ${data.total} DT a été enregistrée avec succès. Une commission de ${commissionAmount.toFixed(2)} DT a été débitée de votre wallet. Réf: #${order.id}`,
+        metadata: { orderId: order.id }
+      });
     }
   } catch (e) {
     console.error('Order notification failed:', e);
@@ -2818,12 +2874,16 @@ export async function registerVendorAction(data: any) {
     });
   }
 
+  const verificationToken = Math.random().toString(36).substring(2, 8).toUpperCase();
+
   const user = await prisma.user.create({
     data: {
       email: email,
       password: hashedPassword,
       name: name,
-      role: 'VENDOR'
+      role: 'VENDOR',
+      emailVerified: false,
+      verificationToken
     }
   });
 
@@ -2853,6 +2913,18 @@ export async function registerVendorAction(data: any) {
         }
       }
     });
+  }
+
+  try {
+    await sendWelcomeEmail({
+      to: user.email,
+      name: user.name,
+      token: verificationToken,
+      role: 'VENDOR',
+      businessName: companyName
+    });
+  } catch (mailError) {
+    console.error('Failed to send welcome email to vendor:', mailError);
   }
 
   return { success: true };
@@ -3787,6 +3859,27 @@ export async function processDepositRequestAction(requestId: string, status: 'AP
     });
   }
 
+  // Notify vendor about deposit status update
+  try {
+    const vendorUser = await (prisma as any).user.findFirst({
+      where: { vendorProfile: { id: request.vendorId } },
+      select: { id: true }
+    });
+    if (vendorUser) {
+      await sendTradeNotificationAction({
+        userId: vendorUser.id,
+        type: 'ORDER_UPDATE',
+        title: `Dépôt Wallet ${status === 'APPROVED' ? 'Approuvé' : 'Refusé'}`,
+        content: status === 'APPROVED' 
+          ? `Votre demande de dépôt de ${request.amount} DT a été approuvée. Votre solde a été mis à jour.`
+          : `Votre demande de dépôt de ${request.amount} DT a été refusée.${adminNotes ? ` Motif : ${adminNotes}` : ''}`,
+        metadata: { requestId }
+      });
+    }
+  } catch (err) {
+    console.error('Failed to notify vendor of deposit request processing:', err);
+  }
+
   revalidatePath('/superadmin/wallet');
   revalidatePath('/vendor/portal/wallet');
   revalidatePath('/marketplace');
@@ -4044,6 +4137,30 @@ export async function updateSupplierOrderStatus(orderId: string, status: any) {
       const itemName = item.name || "Produit sans nom";
       await upsertStockItem(order.storeId, itemName, Number(item.quantity), Number(item.price));
     }
+  }
+
+  // Notify client (Store Owners) of status update
+  try {
+    const storeOwners = await (prisma as any).user.findMany({
+      where: { storeId: order.storeId, role: 'STORE_OWNER' },
+      select: { id: true }
+    });
+    const vendorProfile = await (prisma as any).vendorProfile.findUnique({
+      where: { id: order.vendorId }
+    });
+    const vendorName = vendorProfile?.companyName || 'Votre fournisseur';
+
+    for (const owner of storeOwners) {
+      await sendTradeNotificationAction({
+        userId: owner.id,
+        type: 'ORDER_UPDATE',
+        title: `Commande #${orderId} mise à jour`,
+        content: `Le statut de votre commande chez ${vendorName} a été mis à jour à : ${status}.`,
+        metadata: { orderId: order.id }
+      });
+    }
+  } catch (err) {
+    console.error('Failed to notify store owners of order status update:', err);
   }
 
   revalidatePath('/vendor/portal/orders');
@@ -5876,7 +5993,7 @@ export async function updateVendorPasswordAction(data: {
   const userId = cookies().get('userId')?.value;
   if (!userId) throw new Error('Non authentifié');
 
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true, name: true, email: true } });
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true, name: true, email: true, password: true } });
   if (!user) throw new Error('Utilisateur introuvable');
 
   // Verify current password
@@ -6454,6 +6571,25 @@ export async function acceptMarketplaceQuoteAction(quoteId: string) {
       where: { rfqId: quote.rfqId, id: { not: quoteId } },
       data: { status: 'REJECTED' }
     });
+
+    // Notify vendor of commission fee deduction
+    try {
+      const vendorUser = await (prisma as any).user.findFirst({
+        where: { vendorProfile: { id: quote.vendorId } },
+        select: { id: true }
+      });
+      if (vendorUser) {
+        await sendTradeNotificationAction({
+          userId: vendorUser.id,
+          type: 'ORDER_UPDATE',
+          title: 'Offre RFQ Acceptée - Commission Prélevée',
+          content: `Votre offre pour "${quote.rfq.title}" a été acceptée. Une commission de ${commissionAmount.toFixed(2)} DT (${rate}%) a été prélevée de votre wallet.`,
+          metadata: { quoteId }
+        });
+      }
+    } catch (err) {
+      console.error('Failed to notify vendor of quote acceptance commission:', err);
+    }
 
     return { success: true };
   } catch (error: any) {
@@ -7045,4 +7181,60 @@ export async function getPublicProductUpsellsAction(sourceProductId: string) {
     console.error("getPublicProductUpsellsAction error", err);
     return [];
   }
+}
+
+export async function verifyEmailAction(token: string, email?: string) {
+  if (!token) {
+    return { error: "Le code de validation est requis." };
+  }
+
+  const normalizedToken = token.trim().toUpperCase();
+
+  let user = null;
+  if (email) {
+    const normalizedEmail = email.toLowerCase().trim();
+    user = await prisma.user.findFirst({
+      where: {
+        email: normalizedEmail,
+        verificationToken: normalizedToken
+      }
+    });
+  } else {
+    user = await prisma.user.findFirst({
+      where: {
+        verificationToken: normalizedToken
+      }
+    });
+  }
+
+  if (!user) {
+    // Try without uppercase normalization as fallback
+    user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { verificationToken: token.trim() },
+          { verificationToken: token.trim().toLowerCase() }
+        ]
+      }
+    });
+  }
+
+  if (!user) {
+    return { error: "Code de validation incorrect ou adresse email invalide." };
+  }
+
+  if (user.emailVerified) {
+    return { success: true, message: "Votre adresse email a déjà été validée." };
+  }
+
+  // Update user verification status
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      emailVerified: true,
+      verificationToken: null
+    }
+  });
+
+  return { success: true, message: "Votre adresse email a été validée avec succès ! Vous pouvez maintenant vous connecter." };
 }
