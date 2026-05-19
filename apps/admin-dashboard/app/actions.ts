@@ -4192,6 +4192,62 @@ export async function deleteMarketplaceProductAction(id: string) {
   revalidatePath('/vendor/portal/catalog');
 }
 
+// ── Superadmin: Toggle product enabled/disabled (via stockStatus) ──
+export async function superadminToggleProductStatusAction(id: string, newStatus: 'IN_STOCK' | 'OUT_OF_STOCK') {
+  await (prisma as any).vendorProduct.update({
+    where: { id },
+    data: { stockStatus: newStatus }
+  });
+  revalidatePath('/superadmin/marketplace');
+  revalidatePath('/vendor/portal/catalog');
+}
+
+// ── Superadmin: Toggle bundle isActive ──
+export async function superadminToggleBundleActiveAction(id: string, isActive: boolean) {
+  await (prisma as any).mktBundle.update({
+    where: { id },
+    data: { isActive }
+  });
+  revalidatePath('/superadmin/marketplace');
+}
+
+// ── Superadmin: Get all bundles with vendor info ──
+export async function superadminGetAllBundlesAction() {
+  const bundles = await (prisma as any).mktBundle.findMany({
+    include: {
+      vendor: { select: { id: true, companyName: true, isPremium: true } },
+      items: {
+        include: {
+          vendorProduct: { select: { id: true, name: true, unit: true } }
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+  return JSON.parse(JSON.stringify(bundles.map((b: any) => ({
+    ...b,
+    price: Number(b.price)
+  }))));
+}
+
+// ── Superadmin: Get all vendors (for impersonation list) ──
+export async function superadminGetAllVendorsAction() {
+  const vendors = await (prisma as any).vendorProfile.findMany({
+    select: {
+      id: true,
+      companyName: true,
+      status: true,
+      isPremium: true,
+      userId: true,
+      city: true,
+      _count: { select: { products: true } }
+    },
+    orderBy: { companyName: 'asc' }
+  });
+  return JSON.parse(JSON.stringify(vendors));
+}
+
+
 export async function approveVendorAction(vendorId: string) {
   await prisma.vendorProfile.update({
     where: { id: vendorId },

@@ -1,20 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Filter, Package, ShoppingCart, Settings, Save, Clock, Percent, Target, ArrowUpRight, CheckCircle2, AlertCircle, TrendingUp, BarChart3, Globe, Edit3, Trash2, X, Power, Image as ImageIcon } from 'lucide-react';
-import { updateMarketplaceConfig, updateMarketplaceProductAction, deleteMarketplaceProductAction } from '../../actions';
+import { Search, Package, ShoppingCart, Settings, Save, Clock, Percent, Target, ArrowUpRight, CheckCircle2, TrendingUp, Edit3, Trash2, X, Power, Image as ImageIcon, Users, Layers, Eye, ToggleLeft, ToggleRight } from 'lucide-react';
+import { updateMarketplaceConfig, updateMarketplaceProductAction, deleteMarketplaceProductAction, superadminToggleProductStatusAction, superadminToggleBundleActiveAction } from '../../actions';
 
-export default function SuperAdminMarketplaceClient({ products: initialProducts, orders, config: initialConfig }: { products: any[], orders: any[], config: any }) {
+export default function SuperAdminMarketplaceClient({ products: initialProducts, orders, config: initialConfig, bundles: initialBundles = [], vendors = [], superadminUserId = '' }: { products: any[], orders: any[], config: any, bundles?: any[], vendors?: any[], superadminUserId?: string }) {
   const [products, setProducts] = useState(initialProducts);
+  const [bundles, setBundles] = useState(initialBundles);
   const [searchTerm, setSearchTerm] = useState('');
+  const [vendorSearch, setVendorSearch] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [config, setConfig] = useState(initialConfig);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'catalog' | 'orders' | 'performance'>('catalog');
-  
-  // Product management state
+  const [activeTab, setActiveTab] = useState<'catalog' | 'orders' | 'bundles' | 'vendors'>('catalog');
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [updatingProd, setUpdatingProd] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [impersonating, setImpersonating] = useState<string | null>(null);
 
   const filteredProducts = (products || []).filter(p => 
     (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -68,10 +70,50 @@ export default function SuperAdminMarketplaceClient({ products: initialProducts,
     }
   };
 
+  const handleToggleProduct = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'IN_STOCK' ? 'OUT_OF_STOCK' : 'IN_STOCK';
+    setTogglingId(id);
+    try {
+      await superadminToggleProductStatusAction(id, newStatus as any);
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, stockStatus: newStatus } : p));
+    } catch (err) { alert('Erreur'); } finally { setTogglingId(null); }
+  };
+
+  const handleToggleBundle = async (id: string, currentActive: boolean) => {
+    setTogglingId(id);
+    try {
+      await superadminToggleBundleActiveAction(id, !currentActive);
+      setBundles(prev => prev.map((b: any) => b.id === id ? { ...b, isActive: !currentActive } : b));
+    } catch (err) { alert('Erreur'); } finally { setTogglingId(null); }
+  };
+
+  const handleImpersonate = async (vendor: any) => {
+    if (!confirm(`Se connecter en tant que "${vendor.companyName}" ?`)) return;
+    setImpersonating(vendor.id);
+    try {
+      const res = await fetch('/api/superadmin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vendorId: vendor.id, superadminUserId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.location.href = data.data.redirectTo;
+      } else { alert(data.error || 'Erreur'); }
+    } catch (err) { alert('Erreur réseau'); } finally { setImpersonating(null); }
+  };
+
+  const filteredVendors = vendors.filter((v: any) =>
+    (v.companyName || '').toLowerCase().includes(vendorSearch.toLowerCase()) ||
+    (v.city || '').toLowerCase().includes(vendorSearch.toLowerCase())
+  );
+
   const stats = [
-    { label: 'Produits Actifs', value: products.length, icon: Package, color: '#4F46E5' },
+    { label: 'Produits', value: products.length, icon: Package, color: '#4F46E5' },
     { label: 'Commandes (30j)', value: orders.length, icon: ShoppingCart, color: '#10B981' },
     { label: 'Volume d\'Affaires', value: `${orders.reduce((s,o) => s + Number(o.total), 0).toFixed(2)} DT`, icon: TrendingUp, color: '#F59E0B' },
+    { label: 'Vendeurs', value: vendors.length, icon: Users, color: '#8B5CF6' },
+    { label: 'Packs Actifs', value: bundles.filter((b: any) => b.isActive).length, icon: Layers, color: '#F59E0B' },
   ];
 
   return (
@@ -114,7 +156,7 @@ export default function SuperAdminMarketplaceClient({ products: initialProducts,
       </div>
 
       {/* Stats Quick View */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
         {stats.map((s, i) => (
           <div key={i} style={{ background: '#fff', padding: '24px', borderRadius: '24px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '20px' }}>
              <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: `${s.color}10`, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -200,10 +242,12 @@ export default function SuperAdminMarketplaceClient({ products: initialProducts,
       {/* Main Content Tabs */}
       <div style={{ background: '#fff', borderRadius: '32px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
         <div style={{ padding: '0 32px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-           <div style={{ display: 'flex', gap: '32px' }}>
+           <div style={{ display: 'flex', gap: '24px' }}>
               {[
-                { id: 'catalog', label: 'Catalogue Produits', icon: Package },
-                { id: 'orders', label: 'Flux Transactions', icon: ShoppingCart }
+                { id: 'catalog', label: 'Produits', icon: Package },
+                { id: 'bundles', label: 'Packs', icon: Layers },
+                { id: 'vendors', label: 'Vendeurs', icon: Users },
+                { id: 'orders', label: 'Transactions', icon: ShoppingCart }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -234,33 +278,114 @@ export default function SuperAdminMarketplaceClient({ products: initialProducts,
 
         <div style={{ padding: '32px' }}>
            {activeTab === 'catalog' && (
-             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
-                {filteredProducts.map(p => (
-                  <div key={p.id} style={{ position: 'relative', padding: '16px', borderRadius: '24px', border: '1px solid #F1F5F9', background: '#fff', transition: 'all 0.3s' }}>
-                     <div style={{ width: '100%', aspectRatio: '1/1', borderRadius: '18px', overflow: 'hidden', marginBottom: '16px', background: '#F8FAFC' }}>
+             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
+                {filteredProducts.map(p => {
+                  const isActive = p.stockStatus === 'IN_STOCK';
+                  return (
+                  <div key={p.id} style={{ position: 'relative', padding: '16px', borderRadius: '20px', border: `1px solid ${isActive ? '#E2E8F0' : '#FEE2E2'}`, background: isActive ? '#fff' : '#FFF8F8', transition: 'all 0.3s', opacity: isActive ? 1 : 0.75 }}>
+                     <div style={{ width: '100%', aspectRatio: '1/1', borderRadius: '14px', overflow: 'hidden', marginBottom: '12px', background: '#F8FAFC' }}>
                         <img src={p.image || ''} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                      </div>
-                     <div style={{ position: 'absolute', top: '24px', right: '24px', display: 'flex', gap: '4px' }}>
-                        <div style={{ padding: '4px 10px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)', borderRadius: '8px', fontSize: '10px', fontWeight: 900, color: p.stockStatus === 'IN_STOCK' ? '#10B981' : '#E31E24', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                           {p.stockStatus === 'IN_STOCK' ? 'EN STOCK' : 'RUPTURE'}
-                        </div>
-                        <button 
-                          onClick={() => setEditingProduct(p)}
-                          style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}
+                     <div style={{ position: 'absolute', top: '20px', right: '20px', display: 'flex', gap: '4px' }}>
+                        <button
+                          title={isActive ? 'Désactiver' : 'Activer'}
+                          disabled={togglingId === p.id}
+                          onClick={() => handleToggleProduct(p.id, p.stockStatus)}
+                          style={{ padding: '4px 8px', borderRadius: '8px', background: isActive ? '#DCFCE7' : '#FEE2E2', border: 'none', fontSize: '10px', fontWeight: 900, color: isActive ? '#16A34A' : '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                         >
-                          <Edit3 size={14} />
+                          {isActive ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
+                          {isActive ? 'ACTIF' : 'INACTIF'}
+                        </button>
+                        <button onClick={() => setEditingProduct(p)} style={{ width: '26px', height: '26px', borderRadius: '8px', background: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>
+                          <Edit3 size={12} />
                         </button>
                      </div>
-                     <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 900, color: '#1E293B' }}>{p.name}</h4>
-                     <p style={{ margin: '0 0 12px', fontSize: '13px', fontWeight: 600, color: '#64748B' }}>{p.vendor?.companyName}</p>
+                     <h4 style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: 900, color: '#1E293B' }}>{p.name}</h4>
+                     <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: '#94A3B8' }}>{p.vendor?.companyName}</p>
                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ fontSize: '18px', fontWeight: 950, color: '#4F46E5' }}>{Number(p.price).toFixed(3)} <span style={{ fontSize: '12px' }}>DT</span></div>
-                        <a href={`/marketplace/product/${p.id}`} target="_blank" style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #F1F5F9', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1E293B', cursor: 'pointer' }}>
-                          <ArrowUpRight size={18} />
+                        <div style={{ fontSize: '16px', fontWeight: 950, color: '#4F46E5' }}>{Number(p.price).toFixed(3)} <span style={{ fontSize: '11px' }}>DT</span></div>
+                        <a href={`/marketplace/product/${p.id}`} target="_blank" style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1px solid #F1F5F9', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1E293B' }}>
+                          <ArrowUpRight size={14} />
                         </a>
                      </div>
                   </div>
-                ))}
+                  );
+                })}
+             </div>
+           )}
+
+           {/* ── BUNDLES TAB ── */}
+           {activeTab === 'bundles' && (
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', padding: '12px 20px', background: '#F8FAFC', borderRadius: '12px', fontSize: '11px', fontWeight: 900, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                 <span>Pack</span><span>Vendeur</span><span>Prix</span><span style={{ textAlign: 'right' }}>Statut</span>
+               </div>
+               {bundles.filter((b: any) =>
+                 !searchTerm || (b.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (b.vendor?.companyName || '').toLowerCase().includes(searchTerm.toLowerCase())
+               ).map((b: any) => (
+                 <div key={b.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', padding: '20px', borderRadius: '16px', border: `1px solid ${b.isActive ? '#F1F5F9' : '#FEE2E2'}`, background: b.isActive ? '#fff' : '#FFF8F8', alignItems: 'center' }}>
+                   <div>
+                     <div style={{ fontWeight: 900, color: '#1E293B', fontSize: '14px' }}>{b.name}</div>
+                     <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>{b.items?.length || 0} produit(s) inclus</div>
+                   </div>
+                   <span style={{ fontSize: '13px', fontWeight: 700, color: '#4F46E5' }}>{b.vendor?.companyName}</span>
+                   <span style={{ fontWeight: 900, color: '#1E293B' }}>{Number(b.price).toFixed(3)} DT</span>
+                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                     <button
+                       disabled={togglingId === b.id}
+                       onClick={() => handleToggleBundle(b.id, b.isActive)}
+                       style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: b.isActive ? '#DCFCE7' : '#FEE2E2', color: b.isActive ? '#16A34A' : '#DC2626', fontSize: '12px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                     >
+                       {b.isActive ? <><ToggleRight size={14} /> Actif</> : <><ToggleLeft size={14} /> Inactif</>}
+                     </button>
+                   </div>
+                 </div>
+               ))}
+               {bundles.length === 0 && <p style={{ textAlign: 'center', color: '#94A3B8', padding: '40px', fontWeight: 600 }}>Aucun pack configuré sur la plateforme.</p>}
+             </div>
+           )}
+
+           {/* ── VENDORS IMPERSONATION TAB ── */}
+           {activeTab === 'vendors' && (
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+               <div style={{ position: 'relative', marginBottom: '8px' }}>
+                 <input type="text" placeholder="Rechercher un vendeur..." value={vendorSearch} onChange={e => setVendorSearch(e.target.value)}
+                   style={{ width: '100%', padding: '12px 16px 12px 44px', borderRadius: '14px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontSize: '14px', outline: 'none', fontWeight: 600 }}
+                 />
+                 <Users style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} size={16} />
+               </div>
+               <div style={{ padding: '12px 20px', background: '#FFF8E1', border: '1px solid #FEF3C7', borderRadius: '12px', fontSize: '13px', color: '#92400E', fontWeight: 600 }}>
+                 ⚠️ <strong>Mode Impersonation</strong> — Vous serez connecté temporairement (2h) en tant que ce vendeur pour auditer ou modifier son catalogue. La session superadmin sera restaurée automatiquement.
+               </div>
+               {filteredVendors.map((v: any) => (
+                 <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', borderRadius: '16px', border: '1px solid #F1F5F9', background: '#fff' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                     <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: v.isPremium ? 'linear-gradient(135deg,#F59E0B,#EF4444)' : '#EDE9FE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 900, color: v.isPremium ? '#fff' : '#7C3AED' }}>
+                       {(v.companyName || 'V')[0]}
+                     </div>
+                     <div>
+                       <div style={{ fontWeight: 900, color: '#1E293B', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                         {v.companyName}
+                         {v.isPremium && <span style={{ fontSize: '10px', background: '#FEF3C7', color: '#92400E', padding: '2px 6px', borderRadius: '6px', fontWeight: 900 }}>PREMIUM</span>}
+                       </div>
+                       <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>{v.city || '—'} · {v._count?.products || 0} produits · <span style={{ color: v.status === 'ACTIVE' ? '#10B981' : '#F59E0B' }}>{v.status}</span></div>
+                     </div>
+                   </div>
+                   <div style={{ display: 'flex', gap: '8px' }}>
+                     <a href={`/superadmin/vendors`} style={{ padding: '10px 16px', borderRadius: '10px', border: '1px solid #E2E8F0', background: '#fff', color: '#1E293B', fontSize: '13px', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                       <Eye size={14} /> Profil
+                     </a>
+                     <button
+                       onClick={() => handleImpersonate(v)}
+                       disabled={impersonating === v.id}
+                       style={{ padding: '10px 20px', borderRadius: '10px', border: 'none', background: impersonating === v.id ? '#94A3B8' : 'linear-gradient(135deg,#4F46E5,#7C3AED)', color: '#fff', fontSize: '13px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                     >
+                       {impersonating === v.id ? '...' : <><Users size={14} /> Voir en tant que</>}
+                     </button>
+                   </div>
+                 </div>
+               ))}
+               {filteredVendors.length === 0 && <p style={{ textAlign: 'center', color: '#94A3B8', padding: '40px', fontWeight: 600 }}>Aucun vendeur trouvé.</p>}
              </div>
            )}
 

@@ -1,11 +1,14 @@
 import { prisma } from '@coffeeshop/database';
 import SuperAdminMarketplaceClient from './SuperAdminMarketplaceClient';
-import { getMarketplaceConfig } from '../../actions';
+import { getMarketplaceConfig, superadminGetAllBundlesAction, superadminGetAllVendorsAction } from '../../actions';
+import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SuperAdminMarketplacePage() {
-  const [products, orders, config] = await Promise.all([
+  const superadminUserId = cookies().get('userId')?.value || '';
+
+  const [products, orders, config, bundles, vendors] = await Promise.all([
     prisma.vendorProduct.findMany({
       include: { vendor: true },
       orderBy: { createdAt: 'desc' }
@@ -20,14 +23,19 @@ export default async function SuperAdminMarketplacePage() {
       orderBy: { createdAt: 'desc' },
       take: 20
     }),
-    getMarketplaceConfig()
+    getMarketplaceConfig(),
+    superadminGetAllBundlesAction(),
+    superadminGetAllVendorsAction(),
   ]);
 
   return (
     <SuperAdminMarketplaceClient 
       products={products} 
       orders={orders} 
-      config={config} 
+      config={config}
+      bundles={bundles}
+      vendors={vendors}
+      superadminUserId={superadminUserId}
     />
   );
 }
