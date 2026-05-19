@@ -435,9 +435,70 @@ async function incrementStoreStock(orderId: string) {
 
   await prisma.$transaction(async (tx) => {
     for (const item of order.items) {
+      // Handle Bundle Items
+      if (item.mktBundleId) {
+        const bundle = await tx.mktBundle.findUnique({
+          where: { id: item.mktBundleId },
+          include: { 
+            items: {
+              include: { 
+                vendorProduct: { 
+                  include: { productStandard: true } 
+                } 
+              }
+            }
+          }
+        });
+
+        if (bundle) {
+          for (const bundleItem of bundle.items) {
+            const bundleQty = Number(item.quantity);
+            const componentQty = Number(bundleItem.quantity);
+            const totalQty = bundleQty * componentQty;
+            
+            const productName = bundleItem.vendorProduct.name || bundleItem.vendorProduct.productStandard?.name || "Produit du pack";
+            
+            let compStockItem = await tx.stockItem.findFirst({
+              where: {
+                storeId: order.storeId,
+                name: { equals: productName, mode: 'insensitive' }
+              }
+            });
+
+            if (!compStockItem) {
+              compStockItem = await tx.stockItem.create({
+                data: {
+                  name: productName,
+                  quantity: 0,
+                  storeId: order.storeId
+                }
+              });
+            }
+
+            const compPrice = Number(bundleItem.vendorProduct.price);
+            const oldQty = Number(compStockItem.quantity || 0);
+            const oldCost = Number(compStockItem.cost || 0);
+
+            let finalCost = compPrice;
+            if (oldQty > 0) {
+              finalCost = ((oldQty * oldCost) + (totalQty * compPrice)) / (oldQty + totalQty);
+            }
+
+            await tx.stockItem.update({
+              where: { id: compStockItem.id },
+              data: {
+                quantity: { increment: totalQty },
+                cost: finalCost
+              }
+            });
+          }
+        }
+        continue; // Skip the regular single-item logic
+      }
+
+      // Handle Regular Items
       let stockItemId = item.stockItemId;
 
-      // If marketplace/manual order (no stockItemId), try to find or create it
       if (!stockItemId && item.name) {
         let stockItem = await tx.stockItem.findFirst({
           where: {
