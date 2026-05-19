@@ -17,6 +17,9 @@ export default function HomePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [contactSuccess, setContactSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -144,7 +147,7 @@ export default function HomePage() {
                border: '1px solid #F1F5F9'
              }}>
                <img 
-                 src="/images/elkassa-logo.png" 
+                 src="/images/hero_dashboard_b2b.png" 
                  style={{ width: '100%', borderRadius: isMobile ? '16px' : '24px', display: 'block' }}
                  alt="Dashboard Preview"
                />
@@ -337,7 +340,7 @@ export default function HomePage() {
                {!isMobile && (
                 <div style={{ flex: 1, position: 'relative' }}>
                     <img 
-                      src="/images/elkassa-logo.png" 
+                      src="/images/vendor_warehouse_growth.png" 
                       style={{ width: '100%', borderRadius: '40px', filter: 'grayscale(0.2)' }}
                       alt="Vendor advantage"
                     />
@@ -352,7 +355,7 @@ export default function HomePage() {
                {!isMobile && (
                  <div style={{ flex: 1, position: 'relative' }}>
                     <img 
-                      src="/images/elkassa-logo.png" 
+                      src="/images/buyer_sourcing_procurement.png" 
                       style={{ width: '100%', borderRadius: '40px', filter: 'grayscale(0.2)' }}
                       alt="Buyer advantage"
                     />
@@ -506,16 +509,72 @@ export default function HomePage() {
       </section>
 
       {/* ── CTA SECTION ── */}
-      <section style={{ padding: isMobile ? '60px 0' : '100px 0', textAlign: 'center' }}>
+      <section style={{ padding: isMobile ? '60px 0' : '100px 0', textAlign: 'center', position: 'relative' }}>
          <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 24px' }}>
             <h2 style={{ fontSize: isMobile ? '36px' : '56px', fontWeight: 950, color: '#111827', letterSpacing: '-2.5px', lineHeight: 1.1, marginBottom: '24px' }}>Prêt à passer au niveau supérieur ?</h2>
             <p style={{ fontSize: isMobile ? '16px' : '20px', color: '#6B7280', marginBottom: '40px', fontWeight: 500 }}>Inscrivez-vous aujourd'hui sur ElKassa.</p>
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', gap: '16px' }}>
-               <button style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '18px 48px', borderRadius: '100px', fontWeight: 900, fontSize: '18px', cursor: 'pointer', boxShadow: '0 20px 40px rgba(227,30,36,0.2)' }}>S'inscrire</button>
-               <button style={{ background: 'transparent', border: '2px solid #111827', color: '#111827', padding: '18px 48px', borderRadius: '100px', fontWeight: 900, fontSize: '18px', cursor: 'pointer' }}>Contacter un expert</button>
+               <Link href="/register" style={{ background: '#E31E24', color: '#fff', border: 'none', padding: '18px 48px', borderRadius: '100px', fontWeight: 900, fontSize: '18px', cursor: 'pointer', boxShadow: '0 20px 40px rgba(227,30,36,0.2)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>S'inscrire</Link>
+               <button onClick={() => setShowContactForm(true)} style={{ background: 'transparent', border: '2px solid #111827', color: '#111827', padding: '18px 48px', borderRadius: '100px', fontWeight: 900, fontSize: '18px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>Contacter un expert</button>
             </div>
          </div>
       </section>
+
+      {/* ── CONTACT FORM MODAL ── */}
+      {showContactForm && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(17,24,39,0.8)', backdropFilter: 'blur(8px)' }} onClick={() => setShowContactForm(false)} />
+          <div style={{ position: 'relative', background: '#fff', padding: '40px', borderRadius: '32px', width: '100%', maxWidth: '500px', boxShadow: '0 40px 80px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+            {contactSuccess ? (
+              <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s ease-out' }}>
+                <div style={{ width: '80px', height: '80px', background: '#10B981', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 10px 30px rgba(16,185,129,0.3)' }}>
+                  <CheckCircle2 size={40} />
+                </div>
+                <h3 style={{ fontSize: '28px', fontWeight: 950, color: '#111827', marginBottom: '16px', letterSpacing: '-1px' }}>Message envoyé !</h3>
+                <p style={{ color: '#6B7280', marginBottom: '32px', fontSize: '16px', lineHeight: 1.6 }}>Merci pour votre intérêt. Un expert ElKassa vous contactera dans les plus brefs délais.</p>
+                <button onClick={() => { setShowContactForm(false); setContactSuccess(false); }} style={{ background: '#111827', color: '#fff', padding: '16px 32px', borderRadius: '100px', fontWeight: 800, width: '100%', border: 'none', cursor: 'pointer', fontSize: '16px' }}>Fermer</button>
+              </div>
+            ) : (
+              <div style={{ animation: 'fadeInUp 0.3s ease-out' }}>
+                <h3 style={{ fontSize: '28px', fontWeight: 950, color: '#111827', marginBottom: '12px', letterSpacing: '-1px' }}>Parler à un expert</h3>
+                <p style={{ color: '#6B7280', marginBottom: '32px', fontSize: '15px', lineHeight: 1.6 }}>Laissez-nous vos coordonnées, nous vous rappelons pour une démonstration sur mesure.</p>
+                
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  setIsSubmitting(true);
+                  const formData = new FormData(e.currentTarget);
+                  try {
+                    await fetch('/api/contact', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(Object.fromEntries(formData))
+                    });
+                    setContactSuccess(true);
+                  } catch(err) {}
+                  setIsSubmitting(false);
+                }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 900, color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Nom Complet</label>
+                    <input name="name" required type="text" placeholder="ex: Ahmed Ben Salah" style={{ width: '100%', padding: '16px 20px', borderRadius: '16px', border: '2px solid #F1F5F9', outline: 'none', fontSize: '15px', background: '#F8FAFC', transition: 'all 0.2s', fontWeight: 500 }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 900, color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Numéro de téléphone</label>
+                    <input name="phone" required type="tel" placeholder="+216 20 000 000" style={{ width: '100%', padding: '16px 20px', borderRadius: '16px', border: '2px solid #F1F5F9', outline: 'none', fontSize: '15px', background: '#F8FAFC', transition: 'all 0.2s', fontWeight: 500 }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 900, color: '#374151', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Nom de l'entreprise</label>
+                    <input name="company" required type="text" placeholder="ex: Magasin Central Sousse" style={{ width: '100%', padding: '16px 20px', borderRadius: '16px', border: '2px solid #F1F5F9', outline: 'none', fontSize: '15px', background: '#F8FAFC', transition: 'all 0.2s', fontWeight: 500 }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
+                    <button type="button" onClick={() => setShowContactForm(false)} disabled={isSubmitting} style={{ flex: 1, background: '#F1F5F9', color: '#475569', padding: '16px', borderRadius: '100px', fontWeight: 800, border: 'none', cursor: 'pointer', fontSize: '15px', opacity: isSubmitting ? 0.5 : 1 }}>Annuler</button>
+                    <button type="submit" disabled={isSubmitting} style={{ flex: 2, background: '#E31E24', color: '#fff', padding: '16px', borderRadius: '100px', fontWeight: 800, border: 'none', cursor: 'pointer', boxShadow: '0 10px 20px rgba(227,30,36,0.2)', fontSize: '15px', opacity: isSubmitting ? 0.5 : 1 }}>{isSubmitting ? 'Envoi...' : 'Envoyer ma demande'}</button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <MarketplaceFooter />
 
