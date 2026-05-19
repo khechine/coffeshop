@@ -9,13 +9,16 @@ import {
 export default function SalesDashboardClient({ orders, products, bundles }: { orders: any[], products: any[], bundles: any[] }) {
   
   const stats = useMemo(() => {
-    const totalRevenue = orders.reduce((acc, o) => acc + Number(o.total || 0), 0);
-    const totalOrders = orders.length;
+    // Filter out REJECTED and CANCELLED orders from all sales calculations
+    const validOrders = orders.filter(o => !['REJECTED', 'CANCELLED'].includes(o.status));
+
+    const totalRevenue = validOrders.reduce((acc, o) => acc + Number(o.total || 0), 0);
+    const totalOrders = validOrders.length;
     const avgOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
     
     // Top products calculation
     const productSales: Record<string, { name: string, total: number, qty: number }> = {};
-    orders.forEach(order => {
+    validOrders.forEach(order => {
       order.items.forEach((item: any) => {
         if (!productSales[item.name]) {
           productSales[item.name] = { name: item.name, total: 0, qty: 0 };
@@ -38,7 +41,7 @@ export default function SalesDashboardClient({ orders, products, bundles }: { or
 
     // Group revenue by weekday for last 7 days
     const revenueByWeekday: number[] = [0, 0, 0, 0, 0, 0, 0]; // Sun=0..Sat=6
-    orders.forEach(o => {
+    validOrders.forEach(o => {
       const d = new Date(o.createdAt);
       if (d >= sevenDaysAgo) {
         revenueByWeekday[d.getDay()] += Number(o.total || 0);
@@ -62,10 +65,10 @@ export default function SalesDashboardClient({ orders, products, bundles }: { or
     // ── Month-over-month evolution ──
     const startOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const thisMonthRevenue = orders
+    const thisMonthRevenue = validOrders
       .filter(o => new Date(o.createdAt) >= startOfThisMonth)
       .reduce((acc, o) => acc + Number(o.total || 0), 0);
-    const lastMonthRevenue = orders
+    const lastMonthRevenue = validOrders
       .filter(o => {
         const d = new Date(o.createdAt);
         return d >= startOfLastMonth && d < startOfThisMonth;

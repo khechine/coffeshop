@@ -4,7 +4,7 @@ import StoreWalletHistoryClient from './StoreWalletHistoryClient';
 export const dynamic = 'force-dynamic';
 
 export default async function StoreWalletHistoryPage() {
-  const transactions = await (prisma as any).storeWalletTransaction.findMany({
+  const storeTransactions = await (prisma as any).storeWalletTransaction.findMany({
     include: {
       wallet: {
         include: {
@@ -18,5 +18,19 @@ export default async function StoreWalletHistoryPage() {
     take: 200
   });
 
-  return <StoreWalletHistoryClient initialTransactions={transactions} />;
+  const vendorTransactions = await (prisma as any).walletTransaction.findMany({
+    include: {
+      wallet: {
+        include: {
+          vendor: {
+            select: { companyName: true }
+          }
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 200
+  });
+
+  return <StoreWalletHistoryClient initialStoreTransactions={storeTransactions} initialVendorTransactions={vendorTransactions} />;
 }
