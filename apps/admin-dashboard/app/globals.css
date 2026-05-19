@@ -31,7 +31,6 @@ html, body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   @apply bg-slate-50 text-slate-900;
-  overflow-x: hidden; /* Prevent horizontal scroll */
   width: 100%;
 }
 

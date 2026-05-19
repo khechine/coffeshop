@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction } from '../actions';
+import { savePendingAction, getPendingActions, deletePendingAction } from './OfflineSync';
 import './pos-premium.css';
 
 const ICONS: Record<string, React.FC<any>> = {
@@ -72,6 +73,8 @@ export default function PremiumPOSClient({
   const [error, setError] = useState("");
   const [selectedTerminalId, setSelectedTerminalId] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
 
   // --- Theme Management ---
   useEffect(() => {
@@ -174,6 +177,87 @@ export default function PremiumPOSClient({
       clearInterval(interval);
     };
   }, [cashierId, lastActivity]);
+
+  // --- Offline Sync Logic ---
+  useEffect(() => {
+    // Register Service Worker for offline PWA capabilities
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw-pos.js')
+        .then((registration) => console.log('POS ServiceWorker registered with scope:', registration.scope))
+        .catch((error) => console.error('POS ServiceWorker registration failed:', error));
+    }
+
+    const handleOnline = () => {
+      setIsOffline(false);
+      syncOfflineData();
+    };
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Initial check
+    if (!navigator.onLine) {
+      setIsOffline(true);
+    } else {
+      syncOfflineData();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const syncOfflineData = async () => {
+    try {
+      // Sync Sales
+      const pendingSales = await getPendingActions('pendingSales');
+      // Sync Customers
+      const pendingCustomers = await getPendingActions('pendingCustomers');
+      
+      setPendingSyncCount(pendingSales.length + pendingCustomers.length);
+      
+      let syncedCount = 0;
+
+      // Sync customers first because sales might depend on them
+      if (pendingCustomers.length > 0) {
+        for (const customer of pendingCustomers) {
+          try {
+            await createCustomer(customer.data);
+            await deletePendingAction('pendingCustomers', customer.id);
+            syncedCount++;
+          } catch (err) {
+            console.error("Failed to sync customer", err);
+          }
+        }
+      }
+
+      if (pendingSales.length > 0) {
+        for (const sale of pendingSales) {
+          try {
+            // Remove the temporary offline ID before sending to server
+            const { id, createdAt, ...salePayload } = sale.data;
+            await recordSale(salePayload);
+            await deletePendingAction('pendingSales', sale.id);
+            syncedCount++;
+          } catch (err) {
+            console.error("Failed to sync sale", err);
+          }
+        }
+      }
+
+      const remainingSales = await getPendingActions('pendingSales');
+      const remainingCustomers = await getPendingActions('pendingCustomers');
+      setPendingSyncCount(remainingSales.length + remainingCustomers.length);
+      
+      if (syncedCount > 0 && remainingSales.length === 0 && remainingCustomers.length === 0) {
+        alert(`Synchronisation terminée ! ${syncedCount} élément(s) hors ligne synchronisé(s).`);
+      }
+    } catch (err) {
+      console.error("Sync error", err);
+    }
+  };
   
   // --- Derived ---
   const peakHoursData = React.useMemo(() => {
@@ -252,10 +336,17 @@ export default function PremiumPOSClient({
   const fetchOrders = async () => {
     setIsLoadingOrders(true);
     try {
+      if (isOffline) {
+        // En mode hors ligne, afficher au moins les ventes de la session courante
+        setOrders(sessionSales);
+        return;
+      }
       const data = await getRecentOrders();
       setOrders(data);
     } catch (err) {
       console.error(err);
+      setIsOffline(true);
+      setOrders(sessionSales); // Fallback to local session sales
     } finally {
       setIsLoadingOrders(false);
     }
@@ -343,8 +434,25 @@ export default function PremiumPOSClient({
   const handleCustomerSearch = async (val: string) => {
     setCustomerSearch(val);
     if (val.length > 1) {
-      const results = await searchCustomers(val);
-      setCustomerResults(results as any);
+      if (isOffline) {
+        // En mode hors ligne, on cherche d'abord dans les clients temporaires créés localement
+        getPendingActions('pendingCustomers').then((pending) => {
+          const localMatches = pending
+            .map((p: any) => p.data)
+            .filter((c: any) => c.name.toLowerCase().includes(val.toLowerCase()) || c.phone.includes(val));
+          setCustomerResults(localMatches as any);
+        });
+        return;
+      }
+
+      try {
+        const results = await searchCustomers(val);
+        setCustomerResults(results as any);
+      } catch (err) {
+        console.error("Search failed, likely offline", err);
+        setIsOffline(true);
+        setCustomerResults([]);
+      }
     } else {
       setCustomerResults([]);
     }
@@ -352,28 +460,38 @@ export default function PremiumPOSClient({
 
   const processPayment = async () => {
     setLastActivity(Date.now());
+    const saleData = {
+      total,
+      subtotal,
+      discount: discountFromPoints,
+      items: currentCart.map(i => ({ productId: i.id, quantity: i.quantity, price: i.price, product: i })), // added product: i for local display
+      baristaId: cashierId || 'pos-internal',
+      terminalId: selectedTerminalId || undefined,
+      tableName: selectedTable?.label || 'Directe',
+      paymentMethod: paymentMethod,
+      paymentDetails: {
+        cash: paymentMethod === 'CASH' ? total : 0,
+        card: paymentMethod === 'CARD' ? total : 0,
+        points: discountFromPoints * loyaltyRedeemRate
+      },
+      customerId: (selectedCustomer?.id && selectedCustomer.id !== 'passager') ? selectedCustomer.id : undefined,
+      change: change,
+      createdAt: new Date().toISOString()
+    };
+
     try {
-      const sale = await recordSale({
-        total,
-        subtotal,
-        discount: discountFromPoints,
-        items: currentCart.map(i => ({ productId: i.id, quantity: i.quantity, price: i.price })),
-        baristaId: cashierId || 'pos-internal',
-        terminalId: selectedTerminalId || undefined,
-        tableName: selectedTable?.label || 'Directe',
-        paymentMethod: paymentMethod,
-        paymentDetails: {
-          cash: paymentMethod === 'CASH' ? total : 0,
-          card: paymentMethod === 'CARD' ? total : 0,
-          points: discountFromPoints * loyaltyRedeemRate
-        },
-        customerId: (selectedCustomer?.id && selectedCustomer.id !== 'passager') ? selectedCustomer.id : undefined,
-        change: change
-      });
+      if (isOffline) {
+        // Sauvegarde locale
+        await savePendingAction('pendingSales', saleData);
+        setSessionSales(prev => [{ ...saleData, id: 'offline-' + Date.now() }, ...prev]);
+        setPendingSyncCount(prev => prev + 1);
+        alert("Mode hors ligne : Vente sauvegardée localement ! Elle sera synchronisée au retour de la connexion.");
+      } else {
+        const sale = await recordSale(saleData);
+        setSessionSales(prev => [sale, ...prev]);
+        alert("Vente enregistrée avec succès !");
+      }
 
-      setSessionSales(prev => [sale, ...prev]);
-
-      alert("Vente enregistrée avec succès !");
       clearCart();
       setSelectedCustomer({
         id: 'passager',
@@ -385,7 +503,15 @@ export default function PremiumPOSClient({
       setIsRedeemingPoints(false);
       setIsCartOpenMobile(false);
     } catch (err) {
-      alert("Erreur lors du paiement");
+      console.error(err);
+      // En cas d'erreur réseau inattendue, forcer le mode offline et sauvegarder
+      setIsOffline(true);
+      await savePendingAction('pendingSales', saleData);
+      setSessionSales(prev => [{ ...saleData, id: 'offline-' + Date.now() }, ...prev]);
+      setPendingSyncCount(prev => prev + 1);
+      alert("Erreur réseau détectée. Passage en mode hors ligne. Vente sauvegardée localement !");
+      clearCart();
+      setIsPaymentModalOpen(false);
     }
   };
 
@@ -561,6 +687,18 @@ export default function PremiumPOSClient({
         <div className={`pos-sidebar-icon ${view === 'CUSTOMERS' ? 'active' : ''}`} onClick={() => setView('CUSTOMERS')} title="Clientèle"><Users size={24} /></div>
         <div style={{ flex: 1 }} />
         
+        {/* Offline Indicator */}
+        {isOffline && (
+          <div className="pos-sidebar-icon" title={`${pendingSyncCount} en attente`} style={{ color: '#F59E0B', marginBottom: 10, position: 'relative' }}>
+             <AlertCircle size={28} />
+             {pendingSyncCount > 0 && (
+               <span style={{ position: 'absolute', top: 2, right: 2, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 900, borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 {pendingSyncCount}
+               </span>
+             )}
+          </div>
+        )}
+
         {/* Theme Toggle */}
         <div className="pos-sidebar-icon" onClick={toggleThemeVariant} title="Changer de thème" style={{ cursor: 'pointer', marginBottom: 10 }}>
            {theme === 'mocha' ? <Cake size={24} /> : <Zap size={24} />}
@@ -1403,17 +1541,37 @@ export default function PremiumPOSClient({
                 onClick={async () => {
                   try {
                     setIsCreatingCustomer(true);
-                    const customer = await createCustomer(newCustomer);
-                    setCustomerResults(prev => [customer, ...prev]);
-                    setSelectedCustomer(customer);
-                    alert("Client créé avec succès !");
-                    setIsAddCustomerModalOpen(false);
-                    setNewCustomer({ name: '', phone: '', email: '' });
+                    if (isOffline) {
+                      const tempCustomer = { ...newCustomer, id: 'offline-cust-' + Date.now(), loyaltyPoints: 0 };
+                      await savePendingAction('pendingCustomers', tempCustomer);
+                      setCustomerResults(prev => [tempCustomer, ...prev]);
+                      setSelectedCustomer(tempCustomer);
+                      setPendingSyncCount(prev => prev + 1);
+                      alert("Mode hors ligne : Client enregistré localement.");
+                      setIsAddCustomerModalOpen(false);
+                      setNewCustomer({ name: '', phone: '', email: '' });
+                    } else {
+                      const customer = await createCustomer(newCustomer);
+                      setCustomerResults(prev => [customer, ...prev]);
+                      setSelectedCustomer(customer);
+                      alert("Client créé avec succès !");
+                      setIsAddCustomerModalOpen(false);
+                      setNewCustomer({ name: '', phone: '', email: '' });
+                    }
                   } catch (err: any) {
                     if (err.message === 'DUPLICATE_PHONE') {
                       alert("Ce numéro de téléphone est déjà associé à un client existant.");
                     } else {
-                      alert("Erreur lors de la création : " + err.message);
+                      // Passer en mode hors ligne si erreur réseau
+                      setIsOffline(true);
+                      const tempCustomer = { ...newCustomer, id: 'offline-cust-' + Date.now(), loyaltyPoints: 0 };
+                      await savePendingAction('pendingCustomers', tempCustomer);
+                      setCustomerResults(prev => [tempCustomer, ...prev]);
+                      setSelectedCustomer(tempCustomer);
+                      setPendingSyncCount(prev => prev + 1);
+                      alert("Erreur réseau : Client enregistré localement en mode hors ligne.");
+                      setIsAddCustomerModalOpen(false);
+                      setNewCustomer({ name: '', phone: '', email: '' });
                     }
                   } finally {
                     setIsCreatingCustomer(false);

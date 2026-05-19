@@ -1,7 +1,7 @@
 /* Marketplace web — responsive layout (tablette & petit desktop) */
 
 .mkt-page {
-  overflow-x: hidden;
+  /* overflow-x: hidden removed because it breaks position: sticky */
 }
 
 .mkt-main {
