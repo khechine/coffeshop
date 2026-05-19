@@ -7347,3 +7347,28 @@ export async function verifyEmailAction(token: string, email?: string) {
 
   return { success: true, message: "Votre adresse email a été validée avec succès ! Vous pouvez maintenant vous connecter." };
 }
+
+export async function manuallyVerifyUserAction(userId: string) {
+  const authUser = await getUserContext();
+  if (authUser?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { emailVerified: true }
+  });
+}
+
+export async function updateUserEmailAction(userId: string, newEmail: string) {
+  const authUser = await getUserContext();
+  if (authUser?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  const existing = await prisma.user.findUnique({ where: { email: newEmail } });
+  if (existing && existing.id !== userId) {
+    throw new Error('Cet e-mail est déjà utilisé par un autre compte.');
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { email: newEmail }
+  });
+}

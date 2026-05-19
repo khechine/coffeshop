@@ -3,10 +3,10 @@ import { sendMarketplaceEmail } from '../../lib/mail';
 
 export async function POST(request: Request) {
   try {
-    const { name, phone, company } = await request.json();
+    const { name, phone, company, email } = await request.json();
 
-    if (!name || !phone) {
-      return NextResponse.json({ error: 'Name and phone are required' }, { status: 400 });
+    if (!name || !phone || !email) {
+      return NextResponse.json({ error: 'Name, email, and phone are required' }, { status: 400 });
     }
 
     const htmlContent = `
@@ -17,6 +17,7 @@ export async function POST(request: Request) {
         <div style="background: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #E31E24;">
           <strong>Détails du prospect :</strong><br><br>
           • <strong>Nom :</strong> ${name}<br>
+          • <strong>E-mail :</strong> ${email}<br>
           • <strong>Téléphone :</strong> ${phone}<br>
           • <strong>Entreprise :</strong> ${company || 'Non renseigné'}<br>
         </div>

@@ -1,17 +1,19 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { User, Shield, UserCheck, UserX, Search, MessageSquare, Mail, Calendar, Hash, Key, Save, X, History, MapPin, Monitor } from 'lucide-react';
+import { User, Shield, UserCheck, UserX, Search, MessageSquare, Mail, Calendar, Hash, Key, Save, X, History, MapPin, Monitor, CheckCircle2 } from 'lucide-react';
 import Modal from '../../../components/Modal';
-import { updateUserPasswordAction, getUserLoginHistory } from '../../actions';
+import { updateUserPasswordAction, getUserLoginHistory, manuallyVerifyUserAction, updateUserEmailAction } from '../../actions';
 
 export default function SuperAdminUsersClient({ initialUsers }: { initialUsers: any[] }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [loginHistory, setLoginHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [isPending, startTransition] = useTransition();
 
   const handleOpenHistory = async (user: any) => {
@@ -39,7 +41,42 @@ export default function SuperAdminUsersClient({ initialUsers }: { initialUsers: 
       await updateUserPasswordAction(selectedUser.id, newPassword);
       setModalOpen(false);
       alert(`Mot de passe mis à jour pour ${selectedUser.name}`);
+      window.location.reload();
     });
+  };
+
+  const handleOpenEmailModal = (user: any) => {
+    setSelectedUser(user);
+    setNewEmail(user.email || '');
+    setEmailModalOpen(true);
+  };
+
+  const handleUpdateEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmail || !newEmail.includes('@')) {
+      alert("E-mail invalide");
+      return;
+    }
+    startTransition(async () => {
+      try {
+        await updateUserEmailAction(selectedUser.id, newEmail);
+        setEmailModalOpen(false);
+        alert(`E-mail mis à jour avec succès.`);
+        window.location.reload();
+      } catch (err: any) {
+        alert(err.message);
+      }
+    });
+  };
+
+  const handleVerifyUser = async (user: any) => {
+    if (confirm(`Voulez-vous valider manuellement l'e-mail de ${user.name} ? (Aucun e-mail ne lui sera envoyé)`)) {
+      startTransition(async () => {
+        await manuallyVerifyUserAction(user.id);
+        alert(`${user.name} a été validé avec succès.`);
+        window.location.reload();
+      });
+    }
   };
 
   const getRoleColor = (role: string) => {
@@ -84,7 +121,14 @@ export default function SuperAdminUsersClient({ initialUsers }: { initialUsers: 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                          <div style={{ width: 40, height: 40, borderRadius: '12px', background: `${colors.bg}40`, color: colors.text, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{u.name?.charAt(0)}</div>
                          <div>
-                            <div style={{ fontWeight: 800, color: '#1E293B', fontSize: '14px' }}>{u.name}</div>
+                            <div style={{ fontWeight: 800, color: '#1E293B', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {u.name}
+                              {u.emailVerified ? (
+                                <span title="Vérifié"><CheckCircle2 size={14} color="#10B981" /></span>
+                              ) : (
+                                <span style={{ fontSize: '10px', background: '#FEE2E2', color: '#991B1B', padding: '2px 6px', borderRadius: '4px' }}>Non Vérifié</span>
+                              )}
+                            </div>
                             <div style={{ fontSize: '12px', color: '#94A3B8' }}>{u.email}</div>
                          </div>
                       </div>
@@ -94,7 +138,25 @@ export default function SuperAdminUsersClient({ initialUsers }: { initialUsers: 
                    </td>
                    <td style={{ padding: '20px 24px', fontSize: '13px', color: '#64748B', fontWeight: 600 }}>{affiliation}</td>
                    <td style={{ padding: '20px 24px', textAlign: 'right' }}>
-                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                         {!u.emailVerified && (
+                           <button 
+                             onClick={() => handleVerifyUser(u)}
+                             className="btn btn-outline" 
+                             style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#10B981', borderColor: '#10B981' }}
+                             title="Valider manuellement"
+                           >
+                             <CheckCircle2 size={14} /> Valider
+                           </button>
+                         )}
+                         <button 
+                           onClick={() => handleOpenEmailModal(u)}
+                           className="btn btn-outline" 
+                           style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
+                           title="Modifier E-mail"
+                         >
+                           <Mail size={14} />
+                         </button>
                          <button 
                            onClick={() => handleOpenHistory(u)}
                            className="btn btn-outline" 
@@ -109,7 +171,6 @@ export default function SuperAdminUsersClient({ initialUsers }: { initialUsers: 
                          >
                            <Key size={14} /> Password
                          </button>
-                         <button className="btn btn-outline" style={{ padding: '8px', color: '#EF4444' }}><UserX size={16} /></button>
                       </div>
                    </td>
                 </tr>
@@ -140,6 +201,34 @@ export default function SuperAdminUsersClient({ initialUsers }: { initialUsers: 
             
             <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
                <button type="button" onClick={() => setModalOpen(false)} className="btn btn-outline" style={{ flex: 1 }}>Annuler</button>
+               <button type="submit" disabled={isPending} className="btn btn-primary" style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  {isPending ? 'Mise à jour...' : <><Save size={16} /> Enregistrer</>}
+               </button>
+            </div>
+         </form>
+      </Modal>
+
+      <Modal open={emailModalOpen} onClose={() => setEmailModalOpen(false)} title="Modifier l'E-mail">
+         <form onSubmit={handleUpdateEmail} style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: '320px' }}>
+            <div>
+               <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#64748B', marginBottom: '8px', textTransform: 'uppercase' }}>Utilisateur</label>
+               <div style={{ padding: '12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '14px', fontWeight: 700 }}>{selectedUser?.name}</div>
+            </div>
+            <div>
+               <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#64748B', marginBottom: '8px', textTransform: 'uppercase' }}>Nouvel E-mail</label>
+               <input 
+                 type="email" 
+                 autoFocus
+                 style={fieldStyle} 
+                 value={newEmail} 
+                 onChange={e => setNewEmail(e.target.value)} 
+                 placeholder="Entrez le nouvel e-mail..."
+                 required
+               />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+               <button type="button" onClick={() => setEmailModalOpen(false)} className="btn btn-outline" style={{ flex: 1 }}>Annuler</button>
                <button type="submit" disabled={isPending} className="btn btn-primary" style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   {isPending ? 'Mise à jour...' : <><Save size={16} /> Enregistrer</>}
                </button>
