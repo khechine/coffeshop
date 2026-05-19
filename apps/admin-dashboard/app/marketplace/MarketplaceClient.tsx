@@ -281,12 +281,14 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
             </div>
 
             <div className="mkt-search-layout">
-               {/* Sidebar Filters */}
-               <aside className="mkt-search-sidebar">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', color: '#111827' }}>
-                    <Menu size={20} />
-                    <h2 style={{ fontSize: '18px', fontWeight: 900 }}>Filtres</h2>
-                  </div>
+               {/* Left Column Container */}
+               <div>
+                 {/* Sidebar Filters */}
+                 <aside className="mkt-search-sidebar" style={{ position: 'relative', top: 'auto', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', color: '#111827' }}>
+                      <Menu size={20} />
+                      <h2 style={{ fontSize: '18px', fontWeight: 900 }}>Filtres</h2>
+                    </div>
 
                   {/* Distance Filter */}
                   <div style={{ marginBottom: '32px' }}>
@@ -399,17 +401,20 @@ export default function MarketplaceClient({ initialData, store, blogPosts = [], 
                       setTunisiaOnly(false); 
                       setBioOnly(false); 
                     }}
-                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #E5E7EB', background: 'transparent', color: '#111827', fontWeight: 800, fontSize: '13px', cursor: 'pointer', marginBottom: '24px' }}
+                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #E5E7EB', background: 'transparent', color: '#111827', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}
                   >
                     Réinitialiser
                   </button>
+                 </aside>
 
-                  {/* Sidebar Ad Banner */}
-                  <Link href={sidebarAd.buttonLink || '#'} style={{ display: 'block', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', position: 'relative', textDecoration: 'none' }}>
-                    <img src={sidebarAd.imageUrl} alt={sidebarAd.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
-                    <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', color: '#fff', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.05em' }}>PUB</div>
-                  </Link>
-               </aside>
+                 {/* Detached Sidebar Ad Banner (Sticky) */}
+                 <div style={{ position: 'sticky', top: '100px', paddingBottom: '24px' }}>
+                   <Link href={sidebarAd.buttonLink || '#'} style={{ display: 'block', borderRadius: '16px', overflow: 'hidden', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', position: 'relative', textDecoration: 'none' }}>
+                     <img src={sidebarAd.imageUrl} alt={sidebarAd.title} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                     <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', color: '#fff', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.05em' }}>PUB</div>
+                   </Link>
+                 </div>
+               </div>
 
                {/* Results Area */}
                <section>
