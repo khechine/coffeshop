@@ -1107,8 +1107,33 @@ export default function PremiumPOSClient({
 
 
 
-              {/* Extra spacer to balance the header flex if needed */}
-              <div style={{ width: 100 }} />
+              {/* Cashier & Terminal Info */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginLeft: 'auto' }}>
+                 {cashierName && (
+                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--pos-input-bg)', padding: '8px 16px', borderRadius: 14 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--pos-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800 }}>
+                        {cashierName.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--pos-text-muted)', lineHeight: 1, marginBottom: 2 }}>SERVEUR</div>
+                        <div style={{ fontWeight: 700, color: 'var(--pos-text-main)', fontSize: 14 }}>{cashierName}</div>
+                      </div>
+                   </div>
+                 )}
+                 {selectedTerminalId && (
+                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--pos-input-bg)', padding: '8px 16px', borderRadius: 14 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--pos-text-muted)' }}>
+                        <Store size={18} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--pos-text-muted)', lineHeight: 1, marginBottom: 2 }}>CAISSE</div>
+                        <div style={{ fontWeight: 700, color: 'var(--pos-text-main)', fontSize: 14 }}>
+                          {terminals.find(t => t.id === selectedTerminalId)?.name || 'Terminal'}
+                        </div>
+                      </div>
+                   </div>
+                 )}
+              </div>
             </div>
           </header>
 
@@ -1516,47 +1541,67 @@ export default function PremiumPOSClient({
       )}
 
       {/* Payment Modal (Unchanged functional part) */}
+      {/* Payment Modal (Redesigned UX) */}
       {isPaymentModalOpen && (
         <div className="pos-modal-overlay">
-           <div className="pos-modal-card">
+           <div className="pos-modal-card" style={{ maxWidth: 840, width: '90%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
                  <div>
                    <h2 style={{ margin: 0, fontWeight: 900, color: 'var(--pos-sidebar)', fontSize: 24 }}>Encaissement</h2>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--pos-text-muted)' }}>
-                      <span style={{ fontWeight: 800 }}>{selectedTable?.label || 'Directe'}</span>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--pos-text-muted)', marginTop: 4 }}>
+                      <span style={{ fontWeight: 800 }}>{selectedTable?.label || 'Vente Directe'}</span>
                       <span>•</span>
                       <span style={{ fontWeight: 800, color: 'var(--pos-primary)' }}>{total.toFixed(3)} DT</span>
                    </div>
                  </div>
-                 <X size={28} onClick={() => setIsPaymentModalOpen(false)} style={{ cursor: 'pointer' }} />
+                 <X size={28} onClick={() => setIsPaymentModalOpen(false)} style={{ cursor: 'pointer', color: 'var(--pos-text-muted)' }} />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
-                 <button className={`category-pill ${paymentMethod === 'CASH' ? 'active' : ''}`} style={{ height: 50 }} onClick={() => setPaymentMethod('CASH')}>ESPECES</button>
-                 <button className={`category-pill ${paymentMethod === 'CARD' ? 'active' : ''}`} style={{ height: 50 }} onClick={() => setPaymentMethod('CARD')}>CARTE</button>
-                 <button className={`category-pill ${paymentMethod === 'MIXED' ? 'active' : ''}`} style={{ height: 50 }} onClick={() => setPaymentMethod('MIXED')}>MIXTE</button>
-              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 32 }}>
+                {/* Left side: Payment Methods & Keypad */}
+                <div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                     <button className={`category-pill ${paymentMethod === 'CASH' ? 'active' : ''}`} style={{ flex: 1, height: 60, fontSize: 16 }} onClick={() => setPaymentMethod('CASH')}>ESPECES</button>
+                     <button className={`category-pill ${paymentMethod === 'CARD' ? 'active' : ''}`} style={{ flex: 1, height: 60, fontSize: 16 }} onClick={() => setPaymentMethod('CARD')}>CARTE</button>
+                     <button className={`category-pill ${paymentMethod === 'MIXED' ? 'active' : ''}`} style={{ flex: 1, height: 60, fontSize: 16 }} onClick={() => setPaymentMethod('MIXED')}>MIXTE</button>
+                  </div>
 
-              <div style={{ background: '#F8FAFC', padding: 24, borderRadius: 24, textAlign: 'center', border: '1px solid var(--pos-border)' }}>
-                 <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 8, letterSpacing: '0.05em' }}>MONTANT REÇU</div>
-                 <div style={{ fontSize: 54, fontWeight: 900, color: 'var(--pos-primary)' }}>{amountReceived} <span style={{ fontSize: 24 }}>DT</span></div>
-              </div>
-
-              <div className="keypad-grid">
-                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'C'].map(k => (
-                   <button key={k} className="keypad-btn" onClick={() => handleKeypad(k.toString())}>{k}</button>
-                 ))}
-              </div>
-
-              {change > 0 && (
-                <div style={{ marginTop: 24, textAlign: 'center', background: '#D1FAE5', padding: 20, borderRadius: 20, border: '2px solid #10B981' }}>
-                   <div style={{ fontWeight: 900, color: '#065F46', fontSize: 18 }}>RENDU : {change.toFixed(3)} DT</div>
+                  <div className="keypad-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'C'].map(k => (
+                       <button key={k} className="keypad-btn" style={{ height: 68, fontSize: 24, borderRadius: 16 }} onClick={() => handleKeypad(k.toString())}>{k}</button>
+                     ))}
+                  </div>
                 </div>
-              )}
 
-              <button className="btn-premium btn-premium-success" style={{ width: '100%', height: 72, marginTop: 24, fontSize: 18, borderRadius: 20 }} onClick={processPayment}>
-                 <CheckCircle size={24} /> VALIDER LA VENTE
-              </button>
+                {/* Right side: Amount & Actions */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ background: '#F8FAFC', padding: 28, borderRadius: 24, textAlign: 'center', border: '1px solid var(--pos-border)' }}>
+                     <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 8, letterSpacing: '0.05em' }}>MONTANT REÇU</div>
+                     <div style={{ fontSize: 52, fontWeight: 900, color: 'var(--pos-primary)', lineHeight: 1 }}>{amountReceived || '0'} <span style={{ fontSize: 24 }}>DT</span></div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                     {[5, 10, 20, 50].map(amt => (
+                       <button key={amt} className="category-pill" style={{ height: 48, background: '#EFF6FF', color: '#1E40AF', borderColor: '#BFDBFE', fontSize: 16 }} onClick={() => setAmountReceived(amt.toString())}>+{amt}</button>
+                     ))}
+                  </div>
+
+                  {change > 0 ? (
+                    <div style={{ flex: 1, textAlign: 'center', background: '#D1FAE5', padding: 20, borderRadius: 20, border: '2px solid #10B981', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                       <div style={{ fontSize: 13, fontWeight: 800, color: '#065F46', marginBottom: 4 }}>À RENDRE</div>
+                       <div style={{ fontWeight: 900, color: '#065F46', fontSize: 32, lineHeight: 1 }}>{change.toFixed(3)} DT</div>
+                    </div>
+                  ) : (
+                    <div style={{ flex: 1, border: '2px dashed var(--pos-border)', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--pos-text-muted)' }}>
+                      <span style={{ fontWeight: 600 }}>Montant exact ou insuffisant</span>
+                    </div>
+                  )}
+
+                  <button className="btn-premium btn-premium-success" style={{ width: '100%', height: 72, fontSize: 18, borderRadius: 20, display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center' }} onClick={processPayment}>
+                     <CheckCircle size={24} /> VALIDER LA VENTE
+                  </button>
+                </div>
+              </div>
            </div>
         </div>
       )}

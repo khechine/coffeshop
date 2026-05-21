@@ -5154,6 +5154,17 @@ export async function getTerminalAction(id: string) {
 export async function createTerminalAction(nickname: string) {
   const store = await getStore();
   if (!store) return;
+  
+  const planName = store.subscription?.plan?.name?.toUpperCase() || '';
+  if (planName === 'STARTER') {
+    const existingTerminalsCount = await (prisma.posTerminal as any).count({
+      where: { storeId: store.id }
+    });
+    if (existingTerminalsCount >= 1) {
+      throw new Error('Le plan STARTER est limité à une seule caisse (Terminal POS). Veuillez passer au plan PRO pour ajouter plus de caisses.');
+    }
+  }
+
   try {
     await (prisma.posTerminal as any).create({
       data: {
