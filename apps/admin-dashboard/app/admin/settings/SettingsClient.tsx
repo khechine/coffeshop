@@ -1183,47 +1183,64 @@ export default function SettingsClient({ store, token }: { store: StoreProps; to
                      Testez instantanément votre coffeeshop avec des données fictives pré-configurées. Vous pourrez les supprimer d'un clic avant le passage en production.
                   </p>
                </div>
-               <div className="flex flex-wrap gap-4 justify-center">
-                  <button
-                     onClick={() => {
-                        if (!confirm('Installer le Pack Initial Tunisie (Café, Thé, Citronnade, Chicha, Recettes...) ?')) return;
-                        startTransition(async () => {
-                           const res = await seedTunisianStarterPackAction(store.id);
-                           alert(res.message);
-                        });
-                     }}
-                     disabled={isPending}
-                     className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3 shadow-lg shadow-emerald-600/20"
-                  >
-                     <Sparkles size={16} /> Pack Initial Tunisie
-                  </button>
-                  <button
-                     onClick={() => {
-                        if (!confirm('Installer les données de démo génériques ?')) return;
-                        startTransition(async () => {
-                           await seedDemoProductsAction(store.id);
-                           alert('Boutique initialisée avec succès !');
-                        });
-                     }}
-                     disabled={isPending}
-                     className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3"
-                  >
-                     <Sparkles size={16} /> Démo Générique
-                  </button>
-                  <button
-                     onClick={() => {
-                        if (!confirm('Réinitialiser toutes les données (Produits, Stock, Catégories) ?')) return;
-                        startTransition(async () => {
-                           await resetDemoDataAction(store.id);
-                           alert('Boutique réinitialisée.');
-                        });
-                     }}
-                     disabled={isPending}
-                     className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3"
-                  >
-                     <RotateCcw size={16} /> Tout Effacer
-                  </button>
-               </div>
+               {store.isFiscalEnabled ? (
+                  <div className="flex flex-col items-center gap-4 text-center max-w-sm">
+                     <div className="w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+                        <ShieldCheck size={28} className="text-amber-400" />
+                     </div>
+                     <div>
+                        <p className="font-black text-sm uppercase tracking-widest text-amber-400 mb-1">
+                           Mode NACEF activé
+                        </p>
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                           La réinitialisation et l'injection de données de démonstration sont désactivées lorsque la facturation fiscale NACEF est active.<br />
+                           <span className="text-slate-500 mt-1 block">Toute modification de données pourrait compromettre la chaîne d'audit fiscale.</span>
+                        </p>
+                     </div>
+                  </div>
+               ) : (
+                  <div className="flex flex-wrap gap-4 justify-center">
+                     <button
+                        onClick={() => {
+                           if (!confirm('Installer le Pack Initial Tunisie (Café, Thé, Citronnade, Chicha, Recettes...) ?')) return;
+                           startTransition(async () => {
+                              const res = await seedTunisianStarterPackAction(store.id);
+                              alert(res.message);
+                           });
+                        }}
+                        disabled={isPending}
+                        className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3 shadow-lg shadow-emerald-600/20"
+                     >
+                        <Sparkles size={16} /> Pack Initial Tunisie
+                     </button>
+                     <button
+                        onClick={() => {
+                           if (!confirm('Installer les données de démo génériques ?')) return;
+                           startTransition(async () => {
+                              await seedDemoProductsAction(store.id);
+                              alert('Boutique initialisée avec succès !');
+                           });
+                        }}
+                        disabled={isPending}
+                        className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3"
+                     >
+                        <Sparkles size={16} /> Démo Générique
+                     </button>
+                     <button
+                        onClick={() => {
+                           if (!confirm('Réinitialiser toutes les données (Produits, Stock, Catégories) ?')) return;
+                           startTransition(async () => {
+                              await resetDemoDataAction(store.id);
+                              alert('Boutique réinitialisée.');
+                           });
+                        }}
+                        disabled={isPending}
+                        className="px-8 py-4 bg-white/10 hover:bg-white/20 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-3"
+                     >
+                        <RotateCcw size={16} /> Tout Effacer
+                     </button>
+                  </div>
+               )}
             </div>
          </div>
 
