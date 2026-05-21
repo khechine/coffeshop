@@ -300,7 +300,7 @@ export default function Sidebar({
                     {displayExpanded && <span>Marketplace B2B</span>}
                   </Link>
                 )}
-                <Link href="/vendor/dashboard" className={`nav-item${isActive('/vendor/dashboard') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
+                <Link href="/admin/suppliers" className={`nav-item${isActive('/admin/suppliers') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
                   <ShoppingBag size={18} />
                   {displayExpanded && <span>Fournisseurs Externes</span>}
                 </Link>

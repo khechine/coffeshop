@@ -6,14 +6,22 @@ import {
   ChevronRight, ChevronLeft, Filter, Printer,
   Layers, AlertCircle
 } from 'lucide-react';
-import { format, addDays, startOfToday, isSameDay } from 'date-fns';
+import { format, addDays, startOfToday, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 export default function PlanningClient({ initialPlanning }: { initialPlanning: any[] }) {
   const [selectedDate, setSelectedDate] = useState(startOfToday());
-  const [startDate, setStartDate] = useState(startOfToday());
+  const [currentMonth, setCurrentMonth] = useState(startOfMonth(startOfToday()));
 
-  const days = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(monthStart);
+  const startDateCalendar = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const endDateCalendar = endOfWeek(monthEnd, { weekStartsOn: 1 });
+
+  const calendarDays = eachDayOfInterval({
+    start: startDateCalendar,
+    end: endDateCalendar
+  });
 
   const dayOrders = initialPlanning.filter(o => 
     isSameDay(new Date(o.deliveryDate), selectedDate)
@@ -39,50 +47,59 @@ export default function PlanningClient({ initialPlanning }: { initialPlanning: a
           <p className="text-slate-500 text-sm font-medium">Préparation des commandes à venir</p>
         </div>
         
-        <button className="flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-2xl font-bold transition-all hover:bg-slate-800">
+        <button onClick={() => window.print()} className="flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-2xl font-bold transition-all hover:bg-slate-800">
           <Printer size={18} />
           Imprimer la fiche de Prod
         </button>
       </div>
 
-      {/* Date Picker (Horizontal) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        <button 
-          onClick={() => setStartDate(prev => addDays(prev, -7))}
-          className="flex-shrink-0 w-10 h-[88px] flex items-center justify-center rounded-2xl border border-slate-100 bg-white text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
-        >
-          <ChevronLeft size={20} />
-        </button>
-        {days.map((day) => (
-          <button
-            key={day.toISOString()}
-            onClick={() => setSelectedDate(day)}
-            className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[80px] h-[88px] rounded-2xl border transition-all ${
-              isSameDay(day, selectedDate)
-              ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200'
-              : 'bg-white border-slate-100 text-slate-500 hover:border-indigo-200'
-            }`}
-          >
-            <span className="text-[10px] font-black uppercase tracking-widest mb-1">
-              {format(day, 'EEE', { locale: fr })}
-            </span>
-            <span className="text-xl font-black relative">
-              {format(day, 'dd')}
-              {initialPlanning.some(o => isSameDay(new Date(o.deliveryDate), day)) && (
-                <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-500" />
-              )}
-            </span>
-          </button>
-        ))}
-        <button 
-          onClick={() => setStartDate(prev => addDays(prev, 7))}
-          className="flex-shrink-0 w-10 h-[88px] flex items-center justify-center rounded-2xl border border-slate-100 bg-white text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
-        >
-          <ChevronRight size={20} />
-        </button>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Calendar Sidebar */}
+        <div className="lg:col-span-1">
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+             <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-black text-slate-900 capitalize">{format(currentMonth, 'MMMM yyyy', { locale: fr })}</h2>
+                <div className="flex gap-2">
+                   <button onClick={() => setCurrentMonth(addMonths(currentMonth, -1))} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"><ChevronLeft size={20} /></button>
+                   <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"><ChevronRight size={20} /></button>
+                </div>
+             </div>
+             <div className="grid grid-cols-7 gap-2 mb-3">
+                {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(d => (
+                   <div key={d} className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">{d}</div>
+                ))}
+             </div>
+             <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map(day => {
+                   const isSelected = isSameDay(day, selectedDate);
+                   const isCurrentMonth = isSameMonth(day, currentMonth);
+                   const hasOrders = initialPlanning.some(o => isSameDay(new Date(o.deliveryDate), day));
+                   
+                   return (
+                      <button
+                         key={day.toISOString()}
+                         onClick={() => setSelectedDate(day)}
+                         className={`aspect-square rounded-xl flex flex-col items-center justify-center transition-all relative ${
+                            isSelected 
+                               ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' 
+                               : isCurrentMonth 
+                                  ? 'bg-slate-50 text-slate-700 hover:bg-slate-100' 
+                                  : 'bg-transparent text-slate-300'
+                         }`}
+                      >
+                         <span className="text-sm font-black">{format(day, 'd')}</span>
+                         {hasOrders && (
+                            <div className={`absolute bottom-1.5 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-amber-400' : 'bg-amber-500'}`} />
+                         )}
+                      </button>
+                   );
+                })}
+             </div>
+          </div>
+        </div>
+
+        {/* Content Side (2 columns) */}
+        <div className="lg:col-span-2 space-y-6">
         {/* Production List (The "What to make") */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">

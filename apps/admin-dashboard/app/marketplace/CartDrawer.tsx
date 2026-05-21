@@ -159,15 +159,7 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
     }
   }, [orderError, dismissError]);
 
-  // Handle redirect on success
-  React.useEffect(() => {
-    if (orderStatus === 'SUCCESS') {
-      const timer = setTimeout(() => {
-        window.location.href = '/marketplace/orders'; 
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [orderStatus]);
+  // (Removed automatic redirect to allow user to read vendor details)
 
   // Group items by vendor
   const groupedItems = cart.reduce((acc: any, item: any) => {
@@ -226,13 +218,38 @@ export default function CartDrawer({ onClose }: { onClose: () => void }) {
         {/* Success Overlay */}
         {orderStatus === 'SUCCESS' && (
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(4px)', zIndex: 1002, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px', animation: 'fadeIn 0.4s ease' }}>
-            <div style={{ width: '80px', height: '80px', background: '#DCFCE7', color: '#16A34A', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', animation: 'scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+            <div style={{ width: '80px', height: '80px', background: '#DCFCE7', color: '#16A34A', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', animation: 'scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)', flexShrink: 0 }}>
               <CheckCircle2 size={40} />
             </div>
             <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#111827', textAlign: 'center', marginBottom: '8px' }}>Commande réussie !</h3>
-            <p style={{ color: '#6B7280', textAlign: 'center', fontSize: '15px', lineHeight: 1.5 }}>
-              Votre commande a été envoyée avec succès.<br/>Vous allez être redirigé vers vos commandes...
+            <p style={{ color: '#6B7280', textAlign: 'center', fontSize: '15px', lineHeight: 1.5, marginBottom: '24px' }}>
+              Votre commande a été envoyée avec succès.
             </p>
+
+            <div style={{ width: '100%', maxHeight: '40vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px', paddingRight: '8px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#111827', margin: 0 }}>Détails des Fournisseurs :</h4>
+              {vendors.map((group: any, idx: number) => {
+                const v = group.vendor;
+                if (!v) return null;
+                return (
+                  <div key={v.id || idx} style={{ padding: '16px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px' }}>
+                    <div style={{ fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>{v.companyName || 'Fournisseur'}</div>
+                    <div style={{ fontSize: '13px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {v.phone && <div>📞 {v.phone}</div>}
+                      {v.email && <div>✉️ {v.email}</div>}
+                      {(v.address || v.city) && <div>📍 {v.address} {v.city}</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button 
+              onClick={() => { window.location.href = '/marketplace/orders'; }}
+              style={{ width: '100%', padding: '16px', background: '#111827', color: '#fff', border: 'none', borderRadius: '100px', fontSize: '16px', fontWeight: 800, cursor: 'pointer' }}
+            >
+              Voir mes commandes
+            </button>
           </div>
         )}
 

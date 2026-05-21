@@ -119,6 +119,36 @@ export default function OrdersClient({ orders, store }: any) {
                       <span style={{ fontSize: '15px', fontWeight: 900, color: '#E31E24' }}>{Number(selectedOrder.total).toFixed(2)} DT</span>
                     </div>
                   </div>
+
+                  {/* Vendor Details Section */}
+                  {selectedOrder.vendor && (
+                    <div style={{ marginTop: '24px', padding: '20px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px' }}>
+                       <h3 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                         <FileText size={18} color="#E31E24" /> Coordonnées du Fournisseur
+                       </h3>
+                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '14px' }}>
+                          <div>
+                            <span style={{ color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase' }}>Téléphone</span>
+                            <span style={{ color: '#0F172A', fontWeight: 600 }}>{selectedOrder.vendor.phone || 'Non renseigné'}</span>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase' }}>Email</span>
+                            <span style={{ color: '#0F172A', fontWeight: 600 }}>{selectedOrder.vendor.email || 'Non renseigné'}</span>
+                          </div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <span style={{ color: '#64748B', fontWeight: 700, display: 'block', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase' }}>Adresse</span>
+                            <span style={{ color: '#0F172A', fontWeight: 600 }}>{selectedOrder.vendor.address || 'Non renseignée'}{selectedOrder.vendor.city ? `, ${selectedOrder.vendor.city}` : ''}</span>
+                          </div>
+                          {(selectedOrder.vendor.address || selectedOrder.vendor.city) && (
+                            <div style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
+                               <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${selectedOrder.vendor.companyName} ${selectedOrder.vendor.address || ''} ${selectedOrder.vendor.city || ''}`)}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#FEF2F2', color: '#E31E24', borderRadius: '8px', fontWeight: 800, textDecoration: 'none', transition: 'all 0.2s' }}>
+                                 📍 Voir sur Google Maps
+                               </a>
+                            </div>
+                          )}
+                       </div>
+                    </div>
+                  )}
                 </div>
 
                 <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#111827', marginBottom: '20px' }}>Articles ({selectedOrder.items.length})</h3>

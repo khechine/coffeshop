@@ -73,9 +73,22 @@ export default function OrdersClient({ initialOrders }: { initialOrders: any[] }
                     <div style={{ fontSize: '11px', color: '#94A3B8' }}>{new Date(order.createdAt).toLocaleDateString('fr-FR')}</div>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                       <div style={{ width: 32, height: 32, borderRadius: '8px', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>🏪</div>
-                       <div style={{ fontWeight: 700 }}>{order.vendor?.companyName || order.supplier?.name || 'Inconnu'}</div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                       <div style={{ width: 36, height: 36, borderRadius: '8px', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>🏪</div>
+                       <div>
+                         <div style={{ fontWeight: 800, fontSize: '14px', color: '#1E293B', marginBottom: '4px' }}>{order.vendor?.companyName || order.supplier?.name || 'Inconnu'}</div>
+                         {order.vendor && (
+                           <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                             {order.vendor.phone && <span>📞 {order.vendor.phone}</span>}
+                             {order.vendor.email && <span>✉️ {order.vendor.email}</span>}
+                             {(order.vendor.address || order.vendor.city) && (
+                               <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${order.vendor.companyName} ${order.vendor.address || ''} ${order.vendor.city || ''}`)}`} target="_blank" rel="noopener noreferrer" style={{ color: '#4F46E5', textDecoration: 'none', fontWeight: 600, marginTop: '2px' }}>
+                                 📍 Voir sur la carte
+                               </a>
+                             )}
+                           </div>
+                         )}
+                       </div>
                     </div>
                   </td>
                   <td style={{ fontWeight: 900, color: '#1E1B4B' }}>{Number(order.total).toFixed(3)} DT</td>

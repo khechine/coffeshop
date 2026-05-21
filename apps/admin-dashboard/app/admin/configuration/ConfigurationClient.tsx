@@ -44,15 +44,20 @@ export default function ConfigurationClient({
             <p className="mt-2 text-slate-500 font-medium max-w-lg">Pilotage global de l'établissement : équipe, infrastructure POS et audit financier.</p>
          </div>
          <div className="flex gap-4 relative z-10">
-            <Link href="/pos" className="px-6 py-3.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-indigo-600/20 flex items-center gap-2">
-               Ouvrir la Caisse <ExternalLink size={14} />
-            </Link>
+            {store?.industry !== 'PASTRY_PRO' && (
+               <Link href="/pos" className="px-6 py-3.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-indigo-600/20 flex items-center gap-2">
+                  Ouvrir la Caisse <ExternalLink size={14} />
+               </Link>
+            )}
          </div>
       </div>
 
       {/* Modern Tabs Navigation */}
       <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 w-fit">
-        {TABS.filter(t => t.id !== 'reports' || isFiscalEnabled).map(tab => {
+        {TABS.filter(t => {
+           if (store?.industry === 'PASTRY_PRO' && ['tables', 'staff', 'terminals'].includes(t.id)) return false;
+           return t.id !== 'reports' || isFiscalEnabled;
+        }).map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
