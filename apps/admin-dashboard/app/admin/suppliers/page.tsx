@@ -25,9 +25,22 @@ export default async function AdminSuppliersPage() {
     orderBy: { createdAt: 'desc' },
   });
 
+  // Fetch marketplace vendor orders (supplierOrders with a vendorId)
+  const marketplaceOrders = await (prisma as any).supplierOrder.findMany({
+    where: { storeId: store.id, vendorId: { not: null } },
+    include: {
+      vendor: true,
+      items: true
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
   return (
     <div className="page-content">
-      <SuppliersClient initialSuppliers={JSON.parse(JSON.stringify(suppliers))} />
+      <SuppliersClient 
+        initialSuppliers={JSON.parse(JSON.stringify(suppliers))}
+        marketplaceOrders={JSON.parse(JSON.stringify(marketplaceOrders))}
+      />
     </div>
   );
 }
