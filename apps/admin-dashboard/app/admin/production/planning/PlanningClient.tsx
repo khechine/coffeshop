@@ -169,5 +169,6 @@ export default function PlanningClient({ initialPlanning }: { initialPlanning: a
         </div>
       </div>
     </div>
+  </div>
   );
 }
