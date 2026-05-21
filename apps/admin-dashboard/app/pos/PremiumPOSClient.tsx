@@ -6,7 +6,7 @@ import {
   History, User, Cake, LogOut, Lock, LayoutGrid, CreditCard,
   ChevronRight, AlertCircle, Save, ArrowLeft, MoreVertical, ClipboardList,
   ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, Search,
-  X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package
+  X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package, Store
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction } from '../actions';
