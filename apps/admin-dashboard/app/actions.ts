@@ -66,6 +66,8 @@ export async function getStore() {
         select: {
           id: true,
           name: true,
+          address: true,
+          phone: true,
           city: true,
           industry: true,
           businessType: true,
@@ -73,6 +75,9 @@ export async function getStore() {
           forceMarketplaceAccess: true,
           trialEndsAt: true,
           createdAt: true,
+          logoUrl: true,
+          ticketConfig: true,
+          printerConfig: true,
           subscription: {
             select: {
               id: true,
@@ -7372,3 +7377,31 @@ export async function updateUserEmailAction(userId: string, newEmail: string) {
     data: { email: newEmail }
   });
 }
+
+export async function updateStoreLogoAction(logoUrl: string | null) {
+  const store = await getStore();
+  if (!store) throw new Error("Boutique introuvable");
+  await prisma.store.update({
+    where: { id: store.id },
+    data: { logoUrl }
+  });
+  revalidatePath('/admin/settings');
+  revalidatePath('/');
+  return { success: true };
+}
+
+export async function updateStorePrintConfigAction(ticketConfig: any, printerConfig: any) {
+  const store = await getStore();
+  if (!store) throw new Error("Boutique introuvable");
+  await prisma.store.update({
+    where: { id: store.id },
+    data: {
+      ticketConfig: ticketConfig || {},
+      printerConfig: printerConfig || {}
+    }
+  });
+  revalidatePath('/admin/settings');
+  revalidatePath('/');
+  return { success: true };
+}
+

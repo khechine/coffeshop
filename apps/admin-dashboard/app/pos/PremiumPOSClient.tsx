@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction } from '../actions';
 import { savePendingAction, getPendingActions, deletePendingAction } from './OfflineSync';
+import { PrintService } from './PrintService';
 import './pos-premium.css';
 
 const ICONS: Record<string, React.FC<any>> = {
@@ -39,6 +40,11 @@ interface Customer {
 export default function PremiumPOSClient({ 
   storeId,
   storeName,
+  storeAddress,
+  storePhone,
+  logoUrl,
+  ticketConfig,
+  printerConfig,
   initialProducts,
   initialCategories = [],
   initialBaristas = [],
@@ -52,6 +58,11 @@ export default function PremiumPOSClient({
 }: { 
   storeId: string;
   storeName: string;
+  storeAddress?: string;
+  storePhone?: string;
+  logoUrl?: string | null;
+  ticketConfig?: any;
+  printerConfig?: any;
   initialProducts: Product[];
   initialCategories?: any[];
   initialBaristas?: any[];
@@ -458,6 +469,31 @@ export default function PremiumPOSClient({
     }
   };
 
+  const printTicket = async (sale: any, itemsList: any[]) => {
+    try {
+      const printItems = itemsList.map(item => ({
+        id: item.id || item.productId,
+        productId: item.productId || item.id,
+        name: item.name || item.product?.name || 'Article',
+        quantity: Number(item.quantity),
+        price: Number(item.price)
+      }));
+      await PrintService.printTicket({
+        storeName,
+        storeAddress,
+        storePhone,
+        logoUrl,
+        ticketConfig,
+        sale,
+        items: printItems
+      }, { 
+        paperSize: printerConfig?.paperSize || '80mm' 
+      }, planName);
+    } catch (err) {
+      console.error("Print failed:", err);
+    }
+  };
+
   const processPayment = async () => {
     setLastActivity(Date.now());
     const saleData = {
@@ -479,17 +515,35 @@ export default function PremiumPOSClient({
       createdAt: new Date().toISOString()
     };
 
+    let finalSaleObject = null;
+    let autoPrintList = [...currentCart];
+
     try {
       if (isOffline) {
         // Sauvegarde locale
         await savePendingAction('pendingSales', saleData);
-        setSessionSales(prev => [{ ...saleData, id: 'offline-' + Date.now() }, ...prev]);
+        finalSaleObject = { 
+          ...saleData, 
+          id: 'offline-' + Date.now(),
+          totalHt: saleData.subtotal,
+          totalTax: saleData.total - saleData.subtotal,
+          isFiscal: false,
+          cashierName: cashierName
+        };
+        setSessionSales(prev => [finalSaleObject, ...prev]);
         setPendingSyncCount(prev => prev + 1);
         alert("Mode hors ligne : Vente sauvegardée localement ! Elle sera synchronisée au retour de la connexion.");
       } else {
         const sale = await recordSale(saleData);
+        finalSaleObject = sale;
         setSessionSales(prev => [sale, ...prev]);
         alert("Vente enregistrée avec succès !");
+      }
+
+      // Automatic Printing
+      const shouldAutoPrint = ticketConfig?.autoPrint ?? true;
+      if (shouldAutoPrint && finalSaleObject) {
+        await printTicket(finalSaleObject, autoPrintList);
       }
 
       clearCart();
@@ -507,9 +561,24 @@ export default function PremiumPOSClient({
       // En cas d'erreur réseau inattendue, forcer le mode offline et sauvegarder
       setIsOffline(true);
       await savePendingAction('pendingSales', saleData);
-      setSessionSales(prev => [{ ...saleData, id: 'offline-' + Date.now() }, ...prev]);
+      finalSaleObject = { 
+        ...saleData, 
+        id: 'offline-' + Date.now(),
+        totalHt: saleData.subtotal,
+        totalTax: saleData.total - saleData.subtotal,
+        isFiscal: false,
+        cashierName: cashierName
+      };
+      setSessionSales(prev => [finalSaleObject, ...prev]);
       setPendingSyncCount(prev => prev + 1);
       alert("Erreur réseau détectée. Passage en mode hors ligne. Vente sauvegardée localement !");
+      
+      // Try to print offline ticket
+      const shouldAutoPrint = ticketConfig?.autoPrint ?? true;
+      if (shouldAutoPrint) {
+        await printTicket(finalSaleObject, autoPrintList);
+      }
+
       clearCart();
       setIsPaymentModalOpen(false);
     }
@@ -1324,7 +1393,7 @@ export default function PremiumPOSClient({
                         </div>
                         
                         <div style={{ display: 'flex', gap: 12 }}>
-                           <button className="btn-premium" style={{ flex: 1, background: '#fff', border: '1px solid var(--pos-border)' }} onClick={() => alert("Impression ticket...")}>Exporter</button>
+                           <button className="btn-premium" style={{ flex: 1, background: '#fff', border: '1px solid var(--pos-border)' }} onClick={() => printTicket(selectedOrder, selectedOrder.items)}>Imprimer</button>
                            {!selectedOrder.isVoid && (
                              <button className="btn-premium btn-premium-secondary" style={{ flex: 1, backgroundColor: 'var(--pos-danger)', color: '#fff' }} onClick={() => handleVoidOrder(selectedOrder.id)}>Annuler</button>
                            )}

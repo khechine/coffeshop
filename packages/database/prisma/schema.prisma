@@ -145,6 +145,13 @@ model Store {
   isVerified    Boolean  @default(false)
   forceMarketplaceAccess Boolean @default(false)
 
+  // Branding
+  logoUrl       String?  // Store logo URL (used in dashboard + tickets)
+
+  // Ticket & Printer Configuration
+  ticketConfig  Json?    // { headerText, footerText, showTax, showTableName, showCashierName, showLogo, autoPrint, copies }
+  printerConfig Json?    // { paperSize, connectionType, printerName, ipAddress, port, autoCut }
+
   // NACEF / Fiscal Requirements
   isFiscalEnabled Boolean  @default(false)
   currentFiscalSequence Int @default(0) // Compteur atomique pour la numérotation NACEF

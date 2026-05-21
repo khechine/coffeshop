@@ -76,13 +76,20 @@ export default async function POSPage() {
   const serializedSales = (dailySales as any[]).map((s: any) => ({
     id: s.id,
     total: Number(s.total),
+    subtotal: Number(s.subtotal || s.total),
     table: s.tableName || 'Directe',
     cashier: s.barista?.name || 'Inconnu',
     takenBy: (s as any).takenBy?.name || s.barista?.name || 'Inconnu',
     cashierId: s.baristaId,
     createdAt: s.createdAt,
     time: new Date(s.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-    items: s.items.map((i: any) => ({ name: i.product?.name || 'Inconnu', quantity: Number(i.quantity), price: Number(i.price) }))
+    items: s.items.map((i: any) => ({
+      id: i.id,
+      productId: i.productId,
+      name: i.product?.name || 'Inconnu',
+      quantity: Number(i.quantity),
+      price: Number(i.price)
+    }))
   }));
   
   const planNameUpper = (store.subscription?.plan?.name || '').toUpperCase();
@@ -94,6 +101,11 @@ export default async function POSPage() {
       <PremiumPOSClient 
         storeId={store.id}
         storeName={store?.name || 'ElKassa Patisserie POS'} 
+        storeAddress={store?.address || undefined}
+        storePhone={store?.phone || undefined}
+        logoUrl={store?.logoUrl}
+        ticketConfig={store?.ticketConfig}
+        printerConfig={store?.printerConfig}
         planName={planNameUpper}
         isFiscalEnabled={isFiscal}
         initialProducts={serializedProducts} 

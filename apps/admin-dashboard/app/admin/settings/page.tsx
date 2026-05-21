@@ -1,12 +1,15 @@
 import { prisma } from '@coffeeshop/database';
 import { Store, MapPin, Building2 } from 'lucide-react';
 import SettingsClient from './SettingsClient';
-import { getStore } from '../../actions';
+import { getStore, getMarketplaceToken } from '../../actions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SettingsPage() {
-  const store = await getStore();
+  const [store, token] = await Promise.all([
+    getStore(),
+    getMarketplaceToken()
+  ]);
 
   return (
     <div className="page-content">
@@ -37,7 +40,8 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      <SettingsClient store={store as any} />
+      <SettingsClient store={store as any} token={token} />
     </div>
   );
 }
+

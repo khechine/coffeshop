@@ -8,6 +8,17 @@ export interface PrintData {
   storeName: string;
   storeAddress?: string;
   storePhone?: string;
+  logoUrl?: string | null;
+  ticketConfig?: {
+    headerText?: string;
+    footerText?: string;
+    showTax?: boolean;
+    showTableName?: boolean;
+    showCashierName?: boolean;
+    showLogo?: boolean;
+    autoPrint?: boolean;
+    copies?: number;
+  };
   sale: any;
   items: any[];
 }
@@ -49,11 +60,16 @@ export class PrintService {
   }
 
   private static async generateTicketHtml(data: PrintData, settings: PrinterSettings, planName?: string | null) {
-    const { storeName, storeAddress, storePhone, sale, items } = data;
+    const { storeName, storeAddress, storePhone, logoUrl, ticketConfig, sale, items } = data;
     const width = settings.paperSize === '80mm' ? '80mm' : '58mm';
     const isStarter = planName?.toUpperCase() === 'STARTER';
     const isFiscal = !!sale.isFiscal;
     
+    const showLogo = ticketConfig?.showLogo ?? true;
+    const showTableName = ticketConfig?.showTableName ?? true;
+    const showCashierName = ticketConfig?.showCashierName ?? true;
+    const showTax = ticketConfig?.showTax ?? true;
+
     const dateStr = new Date(sale.createdAt || sale.timestamp || new Date()).toLocaleString('fr-FR');
     const totalAmount = Number(sale.total || 0).toFixed(3);
     const totalHt = Number(sale.totalHt || 0);
@@ -98,9 +114,11 @@ export class PrintService {
           <div><span style="font-weight: bold;">${item.quantity}x</span> <span>${item.name}</span></div>
           <span style="font-weight: bold;">${lineTtc.toFixed(3)}</span>
         </div>
+        ${showTax ? `
         <div style="font-size: 8px; color: #555; padding-left: 16px;">
           HT: ${lineHt.toFixed(3)} + TVA ${Math.round(taxRate * 100)}%: ${lineTax.toFixed(3)}
         </div>
+        ` : ''}
       </div>
     `}).join('');
 
@@ -131,9 +149,15 @@ export class PrintService {
         </head>
         <body>
           <div class="header center">
+            ${showLogo && logoUrl ? `
+              <div style="margin-bottom: 8px; display: flex; justify-content: center;">
+                <img src="${logoUrl}" style="max-height: 50px; max-width: 120px; object-fit: contain;" />
+              </div>
+            ` : ''}
             <div style="font-size: 16px; font-weight: bold; text-transform: uppercase;">${storeName}</div>
             ${storeAddress ? `<div style="font-size: 9px;">${storeAddress}</div>` : ''}
             ${storePhone ? `<div style="font-size: 9px;">Tél: ${storePhone}</div>` : ''}
+            ${ticketConfig?.headerText ? `<div style="font-size: 10px; margin-top: 6px; font-weight: bold;">${ticketConfig.headerText}</div>` : ''}
           </div>
 
           <div style="font-size: 10px; margin-bottom: 8px;">
@@ -143,6 +167,11 @@ export class PrintService {
               ${sale.fiscalNumber ? `<span class="bold">FACT: ${sale.fiscalNumber}</span>` : ''}
             </div>
             ${sale.sequenceNumber ? `<div>Séq: ${sale.sequenceNumber} | Caisse: ${sale.terminalId?.slice(-4) || 'N/A'}</div>` : ''}
+            
+            ${showTableName && sale.tableName ? `<div>Table: ${sale.tableName}</div>` : ''}
+            ${showCashierName && (sale.barista?.name || sale.takenBy?.name || sale.cashierName) ? `
+              <div>Serveur: ${sale.barista?.name || sale.takenBy?.name || sale.cashierName}</div>
+            ` : ''}
           </div>
 
           <div class="separator"></div>
@@ -150,15 +179,17 @@ export class PrintService {
           <div class="separator"></div>
 
           <!-- Ventilation TVA -->
-          ${taxHtml ? `
+          ${(showTax && taxHtml) ? `
             <div style="margin-bottom: 8px;">
               <div style="font-size: 9px; font-weight: bold; margin-bottom: 2px;">Vérification TVA:</div>
               ${taxHtml}
             </div>
           ` : ''}
 
-          <div class="total-line"><span>Total HT</span><span>${totalHt.toFixed(3)} DT</span></div>
-          <div class="total-line"><span>TVA Totale</span><span>${totalTax.toFixed(3)} DT</span></div>
+          ${showTax ? `
+            <div class="total-line"><span>Total HT</span><span>${totalHt.toFixed(3)} DT</span></div>
+            <div class="total-line"><span>TVA Totale</span><span>${totalTax.toFixed(3)} DT</span></div>
+          ` : ''}
           
           <div class="total-ttc">
             <span>TOTAL TTC</span>
@@ -185,7 +216,7 @@ export class PrintService {
           `}
 
           <div class="footer center">
-            <div>Merci de votre visite !</div>
+            <div>${ticketConfig?.footerText || 'Merci de votre visite !'}</div>
             <div>Logiciel certifié par ELKASSA</div>
           </div>
         </body>
@@ -193,3 +224,4 @@ export class PrintService {
     `;
   }
 }
+

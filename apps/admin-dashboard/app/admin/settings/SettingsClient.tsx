@@ -1,18 +1,27 @@
 'use client';
 
 import React, { useState, useTransition, useEffect, useRef } from 'react';
-import { updateStore, seedDemoProductsAction, resetDemoDataAction, seedTunisianStarterPackAction } from '../../actions';
+import { 
+  updateStore, 
+  seedDemoProductsAction, 
+  resetDemoDataAction, 
+  seedTunisianStarterPackAction,
+  updateStoreLogoAction,
+  updateStorePrintConfigAction
+} from '../../actions';
 import {
    Building2, MapPin, Store, Crosshair, Save, Clock,
    CheckCircle2, FileCheck, AlertCircle, ShieldCheck,
    FileUp, Eye, Upload, X, ShoppingCart, Sparkles,
-   RotateCcw, Search, Map as MapIcon, Navigation, RefreshCw, Coins
+   RotateCcw, Search, Map as MapIcon, Navigation, RefreshCw, Coins,
+   Printer, Image, FileText, Trash2, Wifi, Usb, Bluetooth
 } from 'lucide-react';
 
 import 'leaflet/dist/leaflet.css';
 
 import FiscalSettings from './FiscalSettings';
 import { getPlanFeatures } from '../../../lib/planFeatures';
+import { PrintService } from '../../pos/PrintService';
 
 interface StoreProps {
    id: string;
@@ -29,6 +38,9 @@ interface StoreProps {
    officialDocs: any[] | null;
    forceMarketplaceAccess: boolean;
    isFiscalEnabled: boolean;
+   logoUrl?: string | null;
+   ticketConfig?: any;
+   printerConfig?: any;
    loyaltyEarnRate?: number | any;
    loyaltyRedeemRate?: number | any;
    subscription?: {
@@ -45,13 +57,135 @@ interface StoreProps {
    } | null;
 }
 
-export default function SettingsClient({ store }: { store: StoreProps }) {
+export default function SettingsClient({ store, token }: { store: StoreProps; token?: string | null }) {
    const [isPending, startTransition] = useTransition();
    const [isGeocoding, setIsGeocoding] = useState(false);
    const mapContainerRef = useRef<HTMLDivElement>(null);
    const mapRef = useRef<any>(null);
    const markerRef = useRef<any>(null);
 
+   const [logoUrl, setLogoUrl] = useState<string | null>(store.logoUrl || null);
+   const [isUploading, setIsUploading] = useState(false);
+
+   // Ticket Config state
+   const [ticketConfig, setTicketConfig] = useState({
+      headerText: store.ticketConfig?.headerText || '',
+      footerText: store.ticketConfig?.footerText || 'Merci de votre visite !',
+      showTax: store.ticketConfig?.showTax ?? true,
+      showTableName: store.ticketConfig?.showTableName ?? true,
+      showCashierName: store.ticketConfig?.showCashierName ?? true,
+      showLogo: store.ticketConfig?.showLogo ?? true,
+      autoPrint: store.ticketConfig?.autoPrint ?? true,
+      copies: store.ticketConfig?.copies ?? 1,
+   });
+
+   // Printer Config state
+   const [printerConfig, setPrinterConfig] = useState({
+      paperSize: store.printerConfig?.paperSize || '80mm',
+      connectionType: store.printerConfig?.connectionType || 'USB',
+      printerName: store.printerConfig?.printerName || '',
+      ipAddress: store.printerConfig?.ipAddress || '',
+      port: store.printerConfig?.port ?? 9100,
+      autoCut: store.printerConfig?.autoCut ?? true,
+   });
+
+   const [isSavingConfig, setIsSavingConfig] = useState(false);
+
+   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.coffeeshop.elkassa.com';
+         const res = await fetch(`${API_URL}/management/upload`, {
+            method: 'POST',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            body: formData,
+         });
+         const data = await res.json();
+         if (data.url) {
+            setLogoUrl(data.url);
+            await updateStoreLogoAction(data.url);
+            alert('Logo mis à jour avec succès !');
+         } else {
+            alert("Erreur lors du chargement du fichier.");
+         }
+      } catch (err) {
+         console.error(err);
+         alert("Erreur lors de l'upload du logo.");
+      } finally {
+         setIsUploading(false);
+      }
+   };
+
+   const handleRemoveLogo = async () => {
+      if (!confirm('Êtes-vous sûr de vouloir supprimer le logo ?')) return;
+      try {
+         setLogoUrl(null);
+         await updateStoreLogoAction(null);
+         alert('Logo supprimé avec succès !');
+      } catch (err) {
+         console.error(err);
+         alert('Erreur lors de la suppression.');
+      }
+   };
+
+   const handleSaveConfig = async () => {
+      setIsSavingConfig(true);
+      try {
+         await updateStorePrintConfigAction(ticketConfig, printerConfig);
+         alert('Configurations enregistrées avec succès !');
+      } catch (err: any) {
+         console.error(err);
+         alert('Erreur: ' + err.message);
+      } finally {
+         setIsSavingConfig(false);
+      }
+   };
+
+   const handleTestPrint = async () => {
+      try {
+         const testSale = {
+            id: 'TEST-12345',
+            total: 24.500,
+            totalHt: 20.588,
+            totalTax: 3.912,
+            change: 5.500,
+            tableName: 'Table 5 (Test)',
+            cashierName: 'Caissier Démo',
+            isFiscal: store.isFiscalEnabled,
+            fiscalNumber: store.isFiscalEnabled ? 'FACT-TEST-0001' : undefined,
+            sequenceNumber: store.isFiscalEnabled ? 1 : undefined,
+            hash: store.isFiscalEnabled ? 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6' : undefined,
+            taxBreakdown: { '19': 3.912 },
+            createdAt: new Date(),
+         };
+         const testItems = [
+            { id: '1', name: 'Espresso Double', price: 4.500, quantity: 2, taxRate: 0.19 },
+            { id: '2', name: 'Citronnade Maison', price: 5.500, quantity: 1, taxRate: 0.19 },
+            { id: '3', name: 'Chicha Menthe', price: 10.000, quantity: 1, taxRate: 0.19 }
+         ];
+
+         await PrintService.printTicket({
+            storeName: form.name || store.name,
+            storeAddress: form.address || store.address || undefined,
+            storePhone: form.phone || store.phone || undefined,
+            logoUrl: logoUrl,
+            ticketConfig: ticketConfig,
+            sale: testSale,
+            items: testItems
+         }, {
+            paperSize: printerConfig.paperSize as '58mm' | '80mm'
+         });
+      } catch (err) {
+         console.error(err);
+         alert("Erreur lors de l'impression test.");
+      }
+   };
    const [form, setForm] = useState<{
       name: string;
       address: string;
@@ -372,6 +506,387 @@ export default function SettingsClient({ store }: { store: StoreProps }) {
                </div>
             </div>
 
+         </div>
+
+         {/* Configuration de l'impression et des tickets */}
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Colonne Gauche : Formulaires de configuration */}
+            <div className="lg:col-span-2 space-y-8">
+               
+               {/* 1. Logo de l'établissement */}
+               <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] shadow-sm overflow-hidden">
+                  <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
+                           <Image size={20} />
+                        </div>
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Logo de l'Établissement</h3>
+                     </div>
+                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">En-tête des tickets</span>
+                  </div>
+
+                  <div className="p-10 flex flex-col md:flex-row items-center gap-8">
+                     <div className="relative w-32 h-32 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[32px] overflow-hidden flex items-center justify-center bg-slate-50 dark:bg-slate-950/50">
+                        {logoUrl ? (
+                           <>
+                              <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-2" />
+                              <button
+                                 type="button"
+                                 onClick={handleRemoveLogo}
+                                 className="absolute top-2 right-2 p-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-lg transition-all"
+                              >
+                                 <Trash2 size={14} />
+                              </button>
+                           </>
+                        ) : (
+                           <Image size={32} className="text-slate-300" />
+                        )}
+                     </div>
+
+                     <div className="flex-1 space-y-4">
+                        <p className="text-xs font-medium text-slate-500 leading-relaxed">
+                           Ce logo sera imprimé en haut de vos tickets de caisse thermiques et affiché sur l'écran client et le tableau de bord.
+                        </p>
+                        <div className="flex gap-4">
+                           <label className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-md shadow-indigo-600/30 hover:bg-indigo-500 transition-all cursor-pointer flex items-center gap-2">
+                              {isUploading ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
+                              {logoUrl ? 'Changer le Logo' : 'Charger un Logo'}
+                              <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={isUploading} />
+                           </label>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
+               {/* 2. Configuration des Tickets & Imprimante */}
+               <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] shadow-sm overflow-hidden">
+                  <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
+                           <Printer size={20} />
+                        </div>
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Configuration de l'Impression</h3>
+                     </div>
+                     <button
+                        type="button"
+                        onClick={handleSaveConfig}
+                        disabled={isSavingConfig}
+                        className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-md shadow-indigo-600/30 hover:bg-indigo-500 transition-all flex items-center gap-2"
+                     >
+                        {isSavingConfig ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                        Enregistrer
+                     </button>
+                  </div>
+
+                  <div className="p-10 space-y-8">
+                     {/* Paramètres de mise en page du Ticket */}
+                     <div className="space-y-6">
+                        <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Contenu du Ticket</h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <div>
+                              <label style={label}>Texte d'En-tête personnalisé</label>
+                              <input
+                                 style={field}
+                                 value={ticketConfig.headerText}
+                                 onChange={e => setTicketConfig(c => ({ ...c, headerText: e.target.value }))}
+                                 placeholder="Ex: Bienvenue chez nous !"
+                              />
+                           </div>
+                           <div>
+                              <label style={label}>Message de Pied de page</label>
+                              <input
+                                 style={field}
+                                 value={ticketConfig.footerText}
+                                 onChange={e => setTicketConfig(c => ({ ...c, footerText: e.target.value }))}
+                                 placeholder="Ex: Merci de votre visite !"
+                              />
+                           </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
+                           <label className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800 rounded-2xl cursor-pointer">
+                              <input
+                                 type="checkbox"
+                                 checked={ticketConfig.showLogo}
+                                 onChange={e => setTicketConfig(c => ({ ...c, showLogo: e.target.checked }))}
+                                 className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <div>
+                                 <div className="text-xs font-bold text-slate-900 dark:text-white">Afficher le Logo</div>
+                                 <div className="text-[10px] text-slate-400">Si un logo est chargé</div>
+                              </div>
+                           </label>
+
+                           <label className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800 rounded-2xl cursor-pointer">
+                              <input
+                                 type="checkbox"
+                                 checked={ticketConfig.showTableName}
+                                 onChange={e => setTicketConfig(c => ({ ...c, showTableName: e.target.checked }))}
+                                 className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <div>
+                                 <div className="text-xs font-bold text-slate-900 dark:text-white">Nom de la Table</div>
+                                 <div className="text-[10px] text-slate-400">Afficher le numéro/label de table</div>
+                              </div>
+                           </label>
+
+                           <label className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800 rounded-2xl cursor-pointer">
+                              <input
+                                 type="checkbox"
+                                 checked={ticketConfig.showCashierName}
+                                 onChange={e => setTicketConfig(c => ({ ...c, showCashierName: e.target.checked }))}
+                                 className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <div>
+                                 <div className="text-xs font-bold text-slate-900 dark:text-white">Nom du Caissier</div>
+                                 <div className="text-[10px] text-slate-400">Afficher qui a saisi la commande</div>
+                              </div>
+                           </label>
+
+                           <label className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800 rounded-2xl cursor-pointer">
+                              <input
+                                 type="checkbox"
+                                 checked={ticketConfig.showTax}
+                                 onChange={e => setTicketConfig(c => ({ ...c, showTax: e.target.checked }))}
+                                 className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <div>
+                                 <div className="text-xs font-bold text-slate-900 dark:text-white">Détails Taxes (TVA)</div>
+                                 <div className="text-[10px] text-slate-400">Afficher HT et détail par taux</div>
+                              </div>
+                           </label>
+
+                           <label className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800 rounded-2xl cursor-pointer">
+                              <input
+                                 type="checkbox"
+                                 checked={ticketConfig.autoPrint}
+                                 onChange={e => setTicketConfig(c => ({ ...c, autoPrint: e.target.checked }))}
+                                 className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <div>
+                                 <div className="text-xs font-bold text-slate-900 dark:text-white">Impression Auto</div>
+                                 <div className="text-[10px] text-slate-400">Imprimer au paiement</div>
+                              </div>
+                           </label>
+
+                           <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800 rounded-2xl flex flex-col justify-center">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Copies par commande</label>
+                              <input
+                                 type="number"
+                                 min="1"
+                                 max="5"
+                                 value={ticketConfig.copies}
+                                 onChange={e => setTicketConfig(c => ({ ...c, copies: Math.max(1, parseInt(e.target.value) || 1) }))}
+                                 className="w-full bg-transparent text-xs font-bold text-slate-900 dark:text-white outline-none border-none p-0"
+                              />
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="border-t border-slate-100 dark:border-slate-800 my-8"></div>
+
+                     {/* Paramètres Physiques Imprimante */}
+                     <div className="space-y-6">
+                        <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Connexion Imprimante</h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <div>
+                              <label style={label}>Taille du papier</label>
+                              <select
+                                 style={field}
+                                 value={printerConfig.paperSize}
+                                 onChange={e => setPrinterConfig(p => ({ ...p, paperSize: e.target.value }))}
+                              >
+                                 <option value="80mm">80mm (Standard)</option>
+                                 <option value="58mm">58mm (Étroit)</option>
+                              </select>
+                           </div>
+
+                           <div>
+                              <label style={label}>Type de Connexion</label>
+                              <select
+                                 style={field}
+                                 value={printerConfig.connectionType}
+                                 onChange={e => setPrinterConfig(p => ({ ...p, connectionType: e.target.value }))}
+                              >
+                                 <option value="USB">USB (Câble local)</option>
+                                 <option value="IP">Réseau local (Ethernet / Wifi)</option>
+                                 <option value="Bluetooth">Bluetooth (Sans-fil)</option>
+                              </select>
+                           </div>
+                        </div>
+
+                        {printerConfig.connectionType === 'IP' ? (
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-6 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800 rounded-3xl">
+                              <div>
+                                 <label style={label}>Adresse IP Imprimante</label>
+                                 <input
+                                    style={field}
+                                    value={printerConfig.ipAddress}
+                                    onChange={e => setPrinterConfig(p => ({ ...p, ipAddress: e.target.value }))}
+                                    placeholder="Ex: 192.168.1.100"
+                                 />
+                              </div>
+                              <div>
+                                 <label style={label}>Port Réseau</label>
+                                 <input
+                                    type="number"
+                                    style={field}
+                                    value={printerConfig.port}
+                                    onChange={e => setPrinterConfig(p => ({ ...p, port: parseInt(e.target.value) || 9100 }))}
+                                    placeholder="9100"
+                                 />
+                              </div>
+                           </div>
+                        ) : (
+                           <div className="p-6 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800 rounded-3xl">
+                              <label style={label}>Nom du périphérique / Driver</label>
+                              <input
+                                 style={field}
+                                 value={printerConfig.printerName}
+                                 onChange={e => setPrinterConfig(p => ({ ...p, printerName: e.target.value }))}
+                                 placeholder="Laisser vide pour utiliser l'imprimante système par défaut"
+                              />
+                           </div>
+                        )}
+
+                        <div className="flex justify-between items-center p-6 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800 rounded-3xl">
+                           <div>
+                              <div className="text-xs font-bold text-slate-900 dark:text-white">Découpe automatique</div>
+                              <div className="text-[10px] text-slate-400">Envoyer le signal de découpe papier après l'impression</div>
+                           </div>
+                           <input
+                              type="checkbox"
+                              checked={printerConfig.autoCut}
+                              onChange={e => setPrinterConfig(p => ({ ...p, autoCut: e.target.checked }))}
+                              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-5 h-5"
+                           />
+                        </div>
+
+                        <div className="pt-4 flex gap-4">
+                           <button
+                              type="button"
+                              onClick={handleTestPrint}
+                              className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
+                           >
+                              <Printer size={16} /> Imprimer un ticket de test
+                           </button>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            {/* Colonne Droite : Aperçu dynamique du Ticket en direct */}
+            <div className="lg:col-span-1">
+               <div className="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-[40px] p-6 shadow-inner sticky top-8 space-y-4">
+                  <div className="text-center text-[10px] font-black tracking-widest text-slate-400 uppercase">Aperçu en temps réel</div>
+                  
+                  {/* Rouleau de papier thermique */}
+                  <div 
+                     className="bg-white text-black p-6 font-mono text-[11px] shadow-2xl border-t-8 border-indigo-500 rounded-b-2xl mx-auto space-y-4"
+                     style={{ 
+                        width: printerConfig.paperSize === '80mm' ? '100%' : '80%',
+                        backgroundImage: 'radial-gradient(#eee 10%, transparent 11%)',
+                        backgroundSize: '10px 10px'
+                     }}
+                  >
+                     <div className="text-center space-y-1">
+                        {ticketConfig.showLogo && logoUrl ? (
+                           <div className="flex justify-center mb-2">
+                              <img src={logoUrl} alt="Logo" className="max-h-12 max-w-[100px] object-contain" />
+                           </div>
+                        ) : null}
+                        <div className="font-bold text-sm uppercase">{form.name || store.name || 'NOM DU CAFE'}</div>
+                        <div className="text-[9px]">{form.address || store.address || '123 Rue de la République'}</div>
+                        <div className="text-[9px]">Tél: {form.phone || store.phone || '71 000 000'}</div>
+                        {ticketConfig.headerText && (
+                           <div className="text-[9px] font-bold border-t border-b border-black py-1 my-1">{ticketConfig.headerText}</div>
+                        )}
+                     </div>
+
+                     <div className="text-[9px] space-y-0.5 border-b border-dashed border-black pb-2">
+                        <div>DATE: {new Date().toLocaleString('fr-FR')}</div>
+                        <div className="flex justify-between">
+                           <span>TICKET: #TEST1234</span>
+                           {store.isFiscalEnabled && <span className="font-bold">FACT: FAC-2026-0001</span>}
+                        </div>
+                        {ticketConfig.showTableName && <div>Table: Table 5 (Aperçu)</div>}
+                        {ticketConfig.showCashierName && <div>Serveur: Caissier Démo</div>}
+                     </div>
+
+                     <div className="space-y-2 border-b border-dashed border-black pb-2">
+                        <div className="flex justify-between">
+                           <span>2x Espresso Double</span>
+                           <span className="font-bold">9.000</span>
+                        </div>
+                        {ticketConfig.showTax && (
+                           <div className="text-[8px] text-gray-600 pl-4">
+                              HT: 7.563 + TVA 19%: 1.437
+                           </div>
+                        )}
+                        <div className="flex justify-between">
+                           <span>1x Citronnade Maison</span>
+                           <span className="font-bold">5.500</span>
+                        </div>
+                        {ticketConfig.showTax && (
+                           <div className="text-[8px] text-gray-600 pl-4">
+                              HT: 4.622 + TVA 19%: 0.878
+                           </div>
+                        )}
+                        <div className="flex justify-between">
+                           <span>1x Chicha Menthe</span>
+                           <span className="font-bold">10.000</span>
+                        </div>
+                        {ticketConfig.showTax && (
+                           <div className="text-[8px] text-gray-600 pl-4">
+                              HT: 8.403 + TVA 19%: 1.597
+                           </div>
+                        )}
+                     </div>
+
+                     <div className="space-y-1">
+                        {ticketConfig.showTax && (
+                           <>
+                              <div className="flex justify-between text-[9px] text-gray-700">
+                                 <span>Total HT</span>
+                                 <span>20.588 DT</span>
+                              </div>
+                              <div className="flex justify-between text-[9px] text-gray-700">
+                                 <span>TVA Totale</span>
+                                 <span>3.912 DT</span>
+                              </div>
+                           </>
+                        )}
+                        <div className="flex justify-between font-bold text-sm border-t border-black pt-1">
+                           <span>TOTAL TTC</span>
+                           <span>24.500 DT</span>
+                        </div>
+                     </div>
+
+                     {store.isFiscalEnabled ? (
+                        <div className="border border-black p-2 rounded text-[7px] space-y-1">
+                           <div className="font-bold text-center">CONFORMITÉ NACEF (Tunisie)</div>
+                           <div className="break-all font-mono"><strong>HASH:</strong> a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0...</div>
+                           <div className="flex justify-center pt-1">
+                              {/* Simple QR Mock */}
+                              <div className="w-16 h-16 bg-gray-200 flex items-center justify-center text-[7px] text-gray-600 border border-gray-400">
+                                 [QR Code]
+                              </div>
+                           </div>
+                        </div>
+                     ) : (
+                        <div className="text-center font-bold border border-gray-400 p-2 my-2 text-[9px]">TICKET PRO-FORMA</div>
+                     )}
+
+                     <div className="text-center text-[9px] italic border-t border-dashed border-black pt-2">
+                        <div>{ticketConfig.footerText}</div>
+                        <div>Logiciel certifié par ELKASSA</div>
+                     </div>
+                  </div>
+               </div>
+            </div>
          </div>
 
          {/* Loyalty Program Section */}
