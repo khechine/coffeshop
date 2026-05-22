@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Store, ShieldCheck, MapPin, Package, CreditCard, LogOut, CheckCircle, Truck, Database, Wallet, Menu, X, Cake, Star, FileText, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Store, ShieldCheck, MapPin, Package, CreditCard, LogOut, CheckCircle, Truck, Database, Wallet, Menu, X, Cake, Star, FileText, Settings, Mail } from 'lucide-react';
 import { ToastProvider } from '../components/Toast';
 
 export default function SuperAdminLayoutClient({ children }: { children: React.ReactNode }) {
