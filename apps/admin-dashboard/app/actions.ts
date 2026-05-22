@@ -7416,3 +7416,193 @@ export async function updateStorePrintConfigAction(ticketConfig: any, printerCon
   return { success: true };
 }
 
+export async function getSmtpConfigAction() {
+  const authUser = await getUserContext();
+  if (authUser?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+  
+  const settings = await (prisma as any).systemSettings.findUnique({
+    where: { id: 'global' }
+  });
+  return settings || {
+    smtpHost: '',
+    smtpPort: 587,
+    smtpUser: '',
+    smtpPass: '',
+    smtpFrom: ''
+  };
+}
+
+export async function saveSmtpConfigAction(data: any) {
+  const authUser = await getUserContext();
+  if (authUser?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  await (prisma as any).systemSettings.upsert({
+    where: { id: 'global' },
+    update: {
+      smtpHost: data.smtpHost,
+      smtpPort: Number(data.smtpPort),
+      smtpUser: data.smtpUser,
+      smtpPass: data.smtpPass,
+      smtpFrom: data.smtpFrom
+    },
+    create: {
+      id: 'global',
+      smtpHost: data.smtpHost,
+      smtpPort: Number(data.smtpPort),
+      smtpUser: data.smtpUser,
+      smtpPass: data.smtpPass,
+      smtpFrom: data.smtpFrom
+    }
+  });
+}
+
+export async function resendVerificationEmailAction(userId: string) {
+  const authUser = await getUserContext();
+  if (authUser?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  const userToVerify = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { vendorProfile: true, store: true }
+  });
+
+  if (!userToVerify) throw new Error('Utilisateur non trouvé');
+  if (userToVerify.emailVerified) throw new Error('Email déjà vérifié');
+
+  let token = userToVerify.verificationToken;
+  if (!token) {
+    token = Math.random().toString(36).substring(2, 8).toUpperCase();
+    await prisma.user.update({
+      where: { id: userId },
+      data: { verificationToken: token }
+    });
+  }
+
+  const businessName = userToVerify.role === 'VENDOR' 
+    ? userToVerify.vendorProfile?.companyName 
+    : userToVerify.store?.name;
+
+  try {
+    const { sendWelcomeEmail } = await import('./lib/mail');
+    await sendWelcomeEmail({
+      to: userToVerify.email,
+      name: userToVerify.name,
+      token,
+      role: userToVerify.role as any,
+      businessName: businessName || 'Votre Entreprise'
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to resend verification email:", error);
+    throw new Error("Erreur lors de l'envoi de l'email");
+  }
+}
+
+export async function deleteUserAccountAction(userId: string) {
+  const authUser = await getUserContext();
+  if (authUser?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { vendorProfile: true, store: true }
+  });
+
+  if (!targetUser) throw new Error('Utilisateur non trouvé');
+  if (targetUser.role === 'SUPERADMIN') throw new Error('Impossible de supprimer un SuperAdmin');
+
+  await prisma.$transaction(async (tx: any) => {
+    // 1. VENDOR CLEANUP
+    if (targetUser.role === 'VENDOR' && targetUser.vendorProfile) {
+      const vendorId = targetUser.vendorProfile.id;
+      await tx.vendorPremiumRequest?.deleteMany({ where: { vendorId } });
+      const wallet = await tx.vendorWallet?.findUnique({ where: { vendorId } });
+      if (wallet) {
+        await tx.walletTransaction?.deleteMany({ where: { walletId: wallet.id } });
+        await tx.vendorWallet?.delete({ where: { id: wallet.id } });
+      }
+      await tx.walletDepositRequest?.deleteMany({ where: { vendorId } });
+      await tx.vendorRating?.deleteMany({ where: { vendorId } });
+      await tx.vendorInteraction?.deleteMany({ where: { vendorId } });
+      await tx.storeVendorRelationship?.deleteMany({ where: { vendorId } });
+      const bundles = await tx.mktBundle?.findMany({ where: { vendorId } }) || [];
+      for (const bundle of bundles) {
+        await tx.mktBundleItem?.deleteMany({ where: { bundleId: bundle.id } });
+      }
+      await tx.mktBundle?.deleteMany({ where: { vendorId } });
+      const vendorProducts = await tx.vendorProduct?.findMany({ where: { vendorId } }) || [];
+      for (const vp of vendorProducts) {
+        await tx.vendorProductUpsell?.deleteMany({ where: { sourceProductId: vp.id } });
+        await tx.vendorProductUpsell?.deleteMany({ where: { targetProductId: vp.id } });
+        await tx.mktBundleItem?.deleteMany({ where: { vendorProductId: vp.id } });
+      }
+      await tx.vendorProduct?.deleteMany({ where: { vendorId } });
+      await tx.supplierOrder?.updateMany({ where: { vendorId }, data: { vendorId: null } });
+      await tx.vendorProfile?.delete({ where: { id: vendorId } });
+    }
+
+    // 2. STORE_OWNER (CLIENT) CLEANUP
+    if (targetUser.role === 'STORE_OWNER' && targetUser.storeId) {
+      const storeId = targetUser.storeId;
+      const storeWallet = await tx.storeWallet?.findUnique({ where: { storeId } });
+      if (storeWallet) {
+        await tx.storeWalletTransaction?.deleteMany({ where: { storeWalletId: storeWallet.id } });
+        await tx.storeWallet?.delete({ where: { id: storeWallet.id } });
+      }
+      await tx.storeWalletRechargeRequest?.deleteMany({ where: { storeId } });
+      await tx.vendorInteraction?.deleteMany({ where: { storeId } });
+      await tx.storeVendorRelationship?.deleteMany({ where: { storeId } });
+      
+      const orders = await tx.supplierOrder?.findMany({ where: { storeId } }) || [];
+      for (const order of orders) {
+        await tx.supplierOrderItem?.deleteMany({ where: { orderId: order.id } });
+      }
+      await tx.supplierOrder?.deleteMany({ where: { storeId } });
+      
+      const sales = await tx.sale?.findMany({ where: { storeId } }) || [];
+      for (const sale of sales) {
+        await tx.fiscalLog?.deleteMany({ where: { saleId: sale.id } });
+        await tx.saleItem?.deleteMany({ where: { saleId: sale.id } });
+      }
+      await tx.sale?.deleteMany({ where: { storeId } });
+      await tx.zReport?.deleteMany({ where: { storeId } });
+      
+      const products = await tx.product?.findMany({ where: { storeId } }) || [];
+      for (const prod of products) {
+        await tx.recipeItem?.deleteMany({ where: { productId: prod.id } });
+      }
+      await tx.product?.deleteMany({ where: { storeId } });
+      await tx.category?.deleteMany({ where: { storeId } });
+      
+      await tx.stockReportDetail?.deleteMany({ where: { stockItem: { storeId } } });
+      await tx.stockReport?.deleteMany({ where: { storeId } });
+      await tx.recipeItem?.deleteMany({ where: { stockItem: { storeId } } });
+      await tx.stockItem?.deleteMany({ where: { storeId } });
+      await tx.supplier?.deleteMany({ where: { storeId } });
+      
+      await tx.posTerminal?.deleteMany({ where: { storeId } });
+      await tx.storeTable?.deleteMany({ where: { storeId } });
+      await tx.storeZone?.deleteMany({ where: { storeId } });
+      await tx.subscription?.deleteMany({ where: { storeId } });
+      await tx.erpIntegration?.deleteMany({ where: { storeId } });
+      await tx.expense?.deleteMany({ where: { storeId } });
+      await tx.specialOrder?.deleteMany({ where: { storeId } });
+      await tx.cashSession?.deleteMany({ where: { storeId } });
+      
+      await tx.staffSessionLog?.deleteMany({ where: { storeId } });
+      await tx.userLoginLog?.deleteMany({ where: { user: { storeId } } });
+      await tx.user?.deleteMany({ where: { storeId, id: { not: userId } } });
+      
+      await tx.store?.delete({ where: { id: storeId } });
+    }
+
+    // 3. COMMON CLEANUP
+    await tx.userLoginLog?.deleteMany({ where: { userId } });
+    await tx.staffSessionLog?.deleteMany({ where: { userId } });
+    await tx.sale?.updateMany({ where: { baristaId: userId }, data: { baristaId: null } });
+    await tx.sale?.updateMany({ where: { takenById: userId }, data: { takenById: null } });
+    await tx.sale?.updateMany({ where: { preparedById: userId }, data: { preparedById: null } });
+
+    await tx.user?.delete({ where: { id: userId } });
+  });
+
+  return { success: true };
+}

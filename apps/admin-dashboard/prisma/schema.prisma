@@ -3,6 +3,17 @@ generator client {
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
+model SystemSettings {
+  id        String   @id @default("global")
+  smtpHost  String?
+  smtpPort  Int?     @default(587)
+  smtpUser  String?
+  smtpPass  String?
+  smtpFrom  String?  @default("ElKassa <postmaster@elkassa.com>")
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")

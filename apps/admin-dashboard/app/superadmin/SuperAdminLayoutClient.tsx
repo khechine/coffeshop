@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Store, ShieldCheck, MapPin, Package, CreditCard, LogOut, CheckCircle, Truck, Database, Wallet, Menu, X, Cake, Star, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, Store, ShieldCheck, MapPin, Package, CreditCard, LogOut, CheckCircle, Truck, Database, Wallet, Menu, X, Cake, Star, FileText, Settings } from 'lucide-react';
 import { ToastProvider } from '../components/Toast';
 
 export default function SuperAdminLayoutClient({ children }: { children: React.ReactNode }) {
@@ -26,6 +26,7 @@ export default function SuperAdminLayoutClient({ children }: { children: React.R
     { label: 'Recharges Wallet', icon: Wallet, href: '/superadmin/wallets/recharges', badge: 'Action' },
     { label: 'Gestion Utilisateurs', icon: Users, href: '/superadmin/users' },
     { label: 'Monitoring Anti-Bypass', icon: ShieldCheck, href: '/superadmin/marketplace/monitoring', badge: 'Sécurité' },
+    { label: 'Paramètres Système', icon: Settings, href: '/superadmin/settings', badge: 'Admin' },
   ];
 
   const handleLogout = async () => {

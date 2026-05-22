@@ -1,9 +1,36 @@
 import nodemailer from 'nodemailer';
+import { prisma } from '@coffeeshop/database';
 
 /**
  * ElKassa Marketplace Email Utility
  * This handles sending notifications to vendors and buyers.
  */
+
+export async function getSmtpConfig() {
+  try {
+    const settings = await (prisma as any).systemSettings.findUnique({
+      where: { id: 'global' }
+    });
+    if (settings && settings.smtpHost) {
+      return {
+        host: settings.smtpHost,
+        port: settings.smtpPort || 587,
+        user: settings.smtpUser,
+        pass: settings.smtpPass,
+        from: settings.smtpFrom || "ElKassa <postmaster@elkassa.com>"
+      };
+    }
+  } catch (err) {
+    console.error("Error fetching SMTP config from DB", err);
+  }
+  return {
+    host: process.env.SMTP_HOST || 'mail.elkassa.com',
+    port: Number(process.env.SMTP_PORT || '587'),
+    user: process.env.SMTP_USER || 'postmaster@elkassa.com',
+    pass: process.env.SMTP_PASS || 'se01Wh6IRDKBQXMX',
+    from: "ElKassa <postmaster@elkassa.com>"
+  };
+}
 
 export async function sendMarketplaceEmail({ 
   to, 
@@ -16,7 +43,8 @@ export async function sendMarketplaceEmail({
   text: string; 
   html?: string; 
 }) {
-  const from = "ElKassa <postmaster@elkassa.com>";
+  const smtpConfig = await getSmtpConfig();
+  const from = smtpConfig.from;
 
   console.log(`
     [EMAIL DISPATCH - SMTP RELAY]
@@ -29,12 +57,12 @@ export async function sendMarketplaceEmail({
 
   try {
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'mail.elkassa.com',
-      port: Number(process.env.SMTP_PORT || '587'),
-      secure: false, // true for 465, false for other ports (587)
+      host: smtpConfig.host,
+      port: smtpConfig.port,
+      secure: smtpConfig.port === 465, // true for 465, false for other ports (587)
       auth: {
-        user: process.env.SMTP_USER || 'postmaster@elkassa.com',
-        pass: process.env.SMTP_PASS || 'se01Wh6IRDKBQXMX',
+        user: smtpConfig.user,
+        pass: smtpConfig.pass,
       },
       tls: {
         rejectUnauthorized: false // Avoid connection failures due to self-signed certs or SMTP relay cert name mismatches

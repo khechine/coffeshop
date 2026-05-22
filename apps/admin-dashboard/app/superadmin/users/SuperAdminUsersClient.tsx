@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { User, Shield, UserCheck, UserX, Search, MessageSquare, Mail, Calendar, Hash, Key, Save, X, History, MapPin, Monitor, CheckCircle2 } from 'lucide-react';
+import { User, Shield, UserCheck, UserX, Search, MessageSquare, Mail, Calendar, Hash, Key, Save, X, History, MapPin, Monitor, CheckCircle2, Trash2, Send } from 'lucide-react';
 import Modal from '../../../components/Modal';
-import { updateUserPasswordAction, getUserLoginHistory, manuallyVerifyUserAction, updateUserEmailAction } from '../../actions';
+import { updateUserPasswordAction, getUserLoginHistory, manuallyVerifyUserAction, updateUserEmailAction, resendVerificationEmailAction, deleteUserAccountAction } from '../../actions';
 
 export default function SuperAdminUsersClient({ initialUsers }: { initialUsers: any[] }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [loginHistory, setLoginHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -77,6 +79,48 @@ export default function SuperAdminUsersClient({ initialUsers }: { initialUsers: 
         window.location.reload();
       });
     }
+  };
+
+  const handleResendEmail = async (user: any) => {
+    if (confirm(`Voulez-vous renvoyer l'e-mail de vérification à ${user.email} ?`)) {
+      startTransition(async () => {
+        try {
+          await resendVerificationEmailAction(user.id);
+          alert(`E-mail renvoyé avec succès.`);
+        } catch (err: any) {
+          alert("Erreur: " + err.message);
+        }
+      });
+    }
+  };
+
+  const handleOpenDeleteModal = (user: any) => {
+    setSelectedUser(user);
+    setDeleteConfirmText('');
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const businessName = selectedUser?.role === 'VENDOR' 
+      ? selectedUser?.vendorProfile?.companyName 
+      : selectedUser?.role === 'STORE_OWNER' ? selectedUser?.store?.name : selectedUser?.name;
+
+    if (deleteConfirmText !== businessName) {
+      alert("Le nom saisi ne correspond pas.");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        await deleteUserAccountAction(selectedUser.id);
+        alert(`Le compte a été supprimé avec succès.`);
+        setDeleteModalOpen(false);
+        window.location.reload();
+      } catch (err: any) {
+        alert("Erreur: " + err.message);
+      }
+    });
   };
 
   const getRoleColor = (role: string) => {
@@ -149,6 +193,16 @@ export default function SuperAdminUsersClient({ initialUsers }: { initialUsers: 
                              <CheckCircle2 size={14} /> Valider
                            </button>
                          )}
+                         {!u.emailVerified && (
+                           <button 
+                             onClick={() => handleResendEmail(u)}
+                             className="btn btn-outline" 
+                             style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
+                             title="Renvoyer l'e-mail de vérification"
+                           >
+                             <Send size={14} /> Renvoi E-mail
+                           </button>
+                         )}
                          <button 
                            onClick={() => handleOpenEmailModal(u)}
                            className="btn btn-outline" 
@@ -171,6 +225,16 @@ export default function SuperAdminUsersClient({ initialUsers }: { initialUsers: 
                          >
                            <Key size={14} /> Password
                          </button>
+                         {(u.role === 'VENDOR' || u.role === 'STORE_OWNER' || u.role === 'COURIER' || u.role === 'CASHIER') && (
+                           <button 
+                             onClick={() => handleOpenDeleteModal(u)}
+                             className="btn btn-outline" 
+                             style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#EF4444', borderColor: '#FECACA' }}
+                             title="Supprimer le compte"
+                           >
+                             <Trash2 size={14} /> Supprimer
+                           </button>
+                         )}
                       </div>
                    </td>
                 </tr>
@@ -203,6 +267,39 @@ export default function SuperAdminUsersClient({ initialUsers }: { initialUsers: 
                <button type="button" onClick={() => setModalOpen(false)} className="btn btn-outline" style={{ flex: 1 }}>Annuler</button>
                <button type="submit" disabled={isPending} className="btn btn-primary" style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   {isPending ? 'Mise à jour...' : <><Save size={16} /> Enregistrer</>}
+               </button>
+            </div>
+         </form>
+      </Modal>
+
+      <Modal open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} title="Supprimer le compte (Irréversible)">
+         <form onSubmit={handleDeleteUser} style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: '320px' }}>
+            <div style={{ padding: '16px', background: '#FEF2F2', borderRadius: '12px', border: '1px solid #FECACA', color: '#991B1B', fontSize: '14px' }}>
+               <strong>Attention :</strong> Cette action supprimera définitivement le compte et <strong>toutes les données associées</strong> (produits, ventes, historiques...).
+            </div>
+            <div>
+               <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#64748B', marginBottom: '8px', textTransform: 'uppercase' }}>Nom de l'entreprise ou Utilisateur</label>
+               <div style={{ padding: '12px', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '14px', fontWeight: 700 }}>
+                 {selectedUser?.role === 'VENDOR' ? selectedUser?.vendorProfile?.companyName : selectedUser?.role === 'STORE_OWNER' ? selectedUser?.store?.name : selectedUser?.name}
+               </div>
+            </div>
+            <div>
+               <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#64748B', marginBottom: '8px', textTransform: 'uppercase' }}>Veuillez taper le nom exact pour confirmer :</label>
+               <input 
+                 type="text" 
+                 autoFocus
+                 style={{...fieldStyle, borderColor: '#FECACA'}} 
+                 value={deleteConfirmText} 
+                 onChange={e => setDeleteConfirmText(e.target.value)} 
+                 placeholder="Nom exact..."
+                 required
+               />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+               <button type="button" onClick={() => setDeleteModalOpen(false)} className="btn btn-outline" style={{ flex: 1 }}>Annuler</button>
+               <button type="submit" disabled={isPending} className="btn btn-primary" style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#EF4444', borderColor: '#EF4444' }}>
+                  {isPending ? 'Suppression...' : <><Trash2 size={16} /> Supprimer définitivement</>}
                </button>
             </div>
          </form>
