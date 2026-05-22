@@ -7606,3 +7606,19 @@ export async function deleteUserAccountAction(userId: string) {
 
   return { success: true };
 }
+
+export async function getEmailLogsAction() {
+  const authUser = await getUserContext();
+  if (authUser?.role !== 'SUPERADMIN') throw new Error('Non autorisé');
+
+  try {
+    const logs = await (prisma as any).emailLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    });
+    return logs;
+  } catch (err) {
+    console.error("Failed to fetch email logs", err);
+    return [];
+  }
+}

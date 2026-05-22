@@ -25,6 +25,7 @@ export default function SuperAdminLayoutClient({ children }: { children: React.R
     { label: 'Flux Financiers Boutique', icon: CreditCard, href: '/superadmin/store-wallet', badge: 'Finances' },
     { label: 'Recharges Wallet', icon: Wallet, href: '/superadmin/wallets/recharges', badge: 'Action' },
     { label: 'Gestion Utilisateurs', icon: Users, href: '/superadmin/users' },
+    { label: 'Historique E-mails', icon: Mail, href: '/superadmin/emails', badge: 'Logs' },
     { label: 'Monitoring Anti-Bypass', icon: ShieldCheck, href: '/superadmin/marketplace/monitoring', badge: 'Sécurité' },
     { label: 'Paramètres Système', icon: Settings, href: '/superadmin/settings', badge: 'Admin' },
   ];

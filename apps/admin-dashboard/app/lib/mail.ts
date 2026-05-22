@@ -78,9 +78,39 @@ export async function sendMarketplaceEmail({
     });
 
     console.log(`[EMAIL DISPATCH SUCCESS] MessageId: ${info.messageId}`);
+    
+    // Log in DB
+    try {
+      await (prisma as any).emailLog.create({
+        data: {
+          to,
+          subject,
+          status: 'SENT',
+          messageId: info.messageId
+        }
+      });
+    } catch (dbErr) {
+      console.error("Failed to log email to DB", dbErr);
+    }
+
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
     console.error('[EMAIL DISPATCH ERROR]', error);
+    
+    // Log failure in DB
+    try {
+      await (prisma as any).emailLog.create({
+        data: {
+          to,
+          subject,
+          status: 'FAILED',
+          error: error.message
+        }
+      });
+    } catch (dbErr) {
+      console.error("Failed to log email failure to DB", dbErr);
+    }
+
     return { success: false, error: error.message };
   }
 }
