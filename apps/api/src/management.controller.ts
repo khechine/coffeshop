@@ -1915,7 +1915,10 @@ export class ManagementController {
 
   @UseGuards(MarketplaceAuthGuard)
   @Get('vendor/rfq')
-  async getVendorRFQs(@Req() req: any): Promise<any> {
+  async getVendorRFQs(
+    @Req() req: any,
+    @Query('type') type?: string,
+  ): Promise<any> {
     const vendor = await (prisma as any).vendorProfile.findUnique({ where: { userId: req.currentUser.id } });
     if (!vendor) throw new BadRequestException('Profil vendeur introuvable.');
 
@@ -1926,8 +1929,23 @@ export class ManagementController {
       data: { status: 'EXPIRED' },
     });
 
+    const filterType = type || 'open';
+
+    let whereClause: any = {};
+    if (filterType === 'my') {
+      // RFQs where vendor has submitted a quote (any status)
+      const myQuoteRfqIds = await (prisma as any).marketplaceQuote.findMany({
+        where: { vendorId: vendor.id },
+        select: { rfqId: true },
+      });
+      whereClause = { id: { in: myQuoteRfqIds.map((q: any) => q.rfqId) } };
+    } else {
+      // Default: only OPEN
+      whereClause = { status: 'OPEN' };
+    }
+
     const rfqs = await (prisma as any).marketplaceRFQ.findMany({
-      where: { status: 'OPEN' },
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
         store: { select: { name: true, city: true } },
@@ -1946,10 +1964,17 @@ export class ManagementController {
         budget: r.budget ? Number(r.budget) : null,
         expiresAt: r.expiresAt,
         createdAt: r.createdAt,
+        status: r.status,
         store: r.store,
         hasSubmittedQuote: r.quotes.length > 0,
         myQuote: r.quotes.length > 0
-          ? { id: r.quotes[0].id, price: Number(r.quotes[0].price), notes: r.quotes[0].notes, createdAt: r.quotes[0].createdAt }
+          ? {
+              id: r.quotes[0].id,
+              price: Number(r.quotes[0].price),
+              notes: r.quotes[0].notes,
+              status: r.quotes[0].status,
+              createdAt: r.quotes[0].createdAt,
+            }
           : null,
       })),
     };
