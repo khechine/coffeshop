@@ -6632,18 +6632,33 @@ export async function debugTradeMessagesAction() {
 
 export async function acceptMarketplaceQuoteAction(quoteId: string) {
   'use server';
-  const cookieStore = cookies();
-  const storeId = cookieStore.get('storeId')?.value;
-  if (!storeId) throw new Error('Store session required to accept RFQ');
-
   try {
+    const cookieStore = cookies();
+    let storeId = cookieStore.get('storeId')?.value;
+    const userId = cookieStore.get('userId')?.value;
+
+    if (!storeId && userId) {
+      // Fallback: Get the first store owned by the user
+      const userStore = await (prisma as any).store.findFirst({
+        where: { owners: { some: { id: userId } } },
+        select: { id: true }
+      });
+      if (userStore) {
+        storeId = userStore.id;
+      }
+    }
+
+    if (!storeId) {
+      return { success: false, error: 'Session Boutique requise. Veuillez vous connecter en tant que Boutique pour accepter ce devis.' };
+    }
+
     const quote = await (prisma as any).marketplaceQuote.findUnique({
       where: { id: quoteId },
       include: { rfq: true, vendor: true }
     });
 
     if (!quote) return { success: false, error: 'Quote not found' };
-    if (quote.rfq.storeId !== storeId) return { success: false, error: 'Not authorized to accept this RFQ' };
+    if (quote.rfq.storeId !== storeId) return { success: false, error: 'Vous n\'êtes pas autorisé à accepter ce devis.' };
     if (quote.status === 'ACCEPTED') return { success: false, error: 'Quote already accepted' };
 
     // Fetch config for commission rate
