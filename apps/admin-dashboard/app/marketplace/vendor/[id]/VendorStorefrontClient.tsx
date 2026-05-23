@@ -108,6 +108,8 @@ export default function VendorStorefrontClient({ vendor, ratings, isVendor = fal
         showToast("Message envoyé ! Les coordonnées personnelles ont été masquées selon nos conditions.");
         setTradeMessagerOpen(false);
         setTradeMessage('');
+      } else {
+        throw new Error(res.error || "Erreur inconnue côté serveur");
       }
     } catch (e: any) {
       showToast("Erreur lors de l'envoi du message : " + e.message, 'error');

@@ -34,17 +34,23 @@ export default function VendorPortalLayout({ children }: { children: React.React
   const [vendorId, setVendorId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchNotifsAndProfile = async () => {
-      const { getUserNotificationsAction, getVendorProfile } = await import('../../actions');
+    const fetchStatus = async () => {
       try {
-        const notifs = await getUserNotificationsAction();
-        setNotifications(notifs);
-        const profile = await getVendorProfile();
-        if (profile) setVendorId(profile.id);
-      } catch (e) {}
+        const res = await fetch('/api/vendor/status');
+        if (res.ok) {
+          const data = await res.json();
+          setNotifications(data.notifications || []);
+          if (data.profile?.id) {
+            setVendorId(data.profile.id);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch vendor status:', e);
+      }
     };
-    fetchNotifsAndProfile();
-    const interval = setInterval(fetchNotifsAndProfile, 10000);
+    fetchStatus();
+    // Fetch every 30 seconds instead of 10s to reduce load
+    const interval = setInterval(fetchStatus, 30000);
     return () => clearInterval(interval);
   }, []);
 

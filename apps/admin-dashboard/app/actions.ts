@@ -6277,12 +6277,13 @@ export async function deleteBlogPost(id: string) {
 
 export async function sendTradeMessageAction(data: { receiverId: string; productId?: string; content: string }) {
   'use server';
-  const cookieStore = cookies();
-  const userId = cookieStore.get('userId')?.value;
+  try {
+    const cookieStore = cookies();
+    const userId = cookieStore.get('userId')?.value;
 
-  if (!userId) {
-    throw new Error('Session expirée.');
-  }
+    if (!userId) {
+      return { success: false, error: 'Session expirée.' };
+    }
 
   // Robust filtering for personal info (emails, phones)
   const numberWords: { [key: string]: string } = {
@@ -6353,7 +6354,11 @@ export async function sendTradeMessageAction(data: { receiverId: string; product
     metadata: { threadId: userId, productId: data.productId }
   });
 
-  return { success: true, message };
+    return { success: true, message };
+  } catch (error: any) {
+    console.error("sendTradeMessageAction error:", error);
+    return { success: false, error: error.message || "Erreur base de données" };
+  }
 }
 
 export async function sendTradeNotificationAction(data: {
