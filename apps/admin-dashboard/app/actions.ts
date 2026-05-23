@@ -6788,7 +6788,7 @@ export async function getPredictiveAlertsAction() {
   // Find nearby stores (clients)
   const allStores = await (prisma as any).store.findMany({
     include: {
-      user: true,
+      owners: true,
       stockItems: true
     }
   });
@@ -6799,7 +6799,7 @@ export async function getPredictiveAlertsAction() {
   ).filter((n: string) => n.length > 2);
 
   for (const store of allStores) {
-    if (!store.user) continue;
+    if (!store.owners || store.owners.length === 0) continue;
 
     // Proximity check (50km radius)
     if (vendor.lat && vendor.lng && store.lat && store.lng) {
