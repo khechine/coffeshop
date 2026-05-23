@@ -6689,9 +6689,8 @@ export async function acceptMarketplaceQuoteAction(quoteId: string) {
       data: {
         walletId: wallet.id,
         amount: -commissionAmount,
-        type: 'FEE',
-        description: `Commission RFQ (Taux: ${rate}%) - ${quote.rfq.title}`,
-        status: 'COMPLETED'
+        type: 'COMMISSION',
+        description: `Commission RFQ (Taux: ${rate}%) - ${quote.rfq.title}`
       }
     });
 
