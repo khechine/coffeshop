@@ -1809,4 +1809,237 @@ export class ManagementController {
       }
     });
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // MESSAGES (TradeMessage)
+  // ═══════════════════════════════════════════════════════════
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Get('vendor/messages')
+  async getVendorMessages(@Req() req: any, @Query('otherUserId') otherUserId?: string): Promise<any> {
+    const userId = req.currentUser.id;
+    const where: any = otherUserId
+      ? {
+          OR: [
+            { senderId: userId, receiverId: otherUserId },
+            { senderId: otherUserId, receiverId: userId },
+          ],
+        }
+      : {
+          OR: [
+            { senderId: userId },
+            { receiverId: userId },
+          ],
+        };
+    const messages = await (prisma as any).tradeMessage.findMany({
+      where,
+      include: {
+        sender: { select: { id: true, name: true } },
+        receiver: { select: { id: true, name: true } },
+        product: { select: { id: true, name: true, image: true, price: true } },
+      },
+      orderBy: { createdAt: otherUserId ? 'asc' : 'desc' },
+    });
+    if (otherUserId) {
+      return { success: true, data: messages };
+    }
+    // Group by conversation
+    const convMap = new Map<string, any>();
+    for (const msg of messages as any[]) {
+      const otherUser = msg.senderId === userId ? msg.receiver : msg.sender;
+      if (!convMap.has(otherUser.id)) {
+        convMap.set(otherUser.id, {
+          otherUser: { id: otherUser.id, name: otherUser.name },
+          lastMessage: msg,
+          unread: msg.senderId !== userId && !msg.isRead,
+        });
+      }
+    }
+    return { success: true, data: Array.from(convMap.values()) };
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Post('vendor/messages')
+  async sendVendorMessage(@Req() req: any, @Body() body: { receiverId: string; content: string; productId?: string }): Promise<any> {
+    if (!body.receiverId || !body.content) {
+      throw new BadRequestException('Destinataire et contenu requis.');
+    }
+    const msg = await (prisma as any).tradeMessage.create({
+      data: {
+        senderId: req.currentUser.id,
+        receiverId: body.receiverId,
+        content: body.content,
+        productId: body.productId || null,
+      },
+      include: {
+        sender: { select: { id: true, name: true } },
+        receiver: { select: { id: true, name: true } },
+      },
+    });
+    return { success: true, data: msg };
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Get('vendor/orders/:orderId/client')
+  async getOrderClientInfo(@Req() req: any, @Param('orderId') orderId: string): Promise<any> {
+    const order = await (prisma as any).supplierOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        store: {
+          include: {
+            user: { select: { id: true, name: true, email: true, phone: true } },
+          },
+        },
+      },
+    });
+    if (!order) throw new BadRequestException('Commande introuvable.');
+    const vendor = await (prisma as any).vendorProfile.findUnique({ where: { userId: req.currentUser.id } });
+    if (!vendor || order.vendorId !== vendor.id) {
+      throw new BadRequestException('Accès refusé.');
+    }
+    const contactUnlocked = order.status !== 'PENDING' && order.status !== 'CANCELLED';
+    return {
+      success: true,
+      data: {
+        clientName: order.store?.name || order.store?.user?.name || 'Client',
+        city: order.deliveryCity || order.store?.city || '',
+        address: order.deliveryAddress || order.store?.address || '',
+        phone: contactUnlocked ? (order.store?.user?.phone || order.phone || '') : '********',
+        email: contactUnlocked ? (order.store?.user?.email || '') : '********',
+        contactUnlocked,
+      },
+    };
+  }
+
+  // ─── RFQ (Request For Quote) ─────────────────────────────────────────────
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Get('vendor/rfq')
+  async getVendorRFQs(@Req() req: any): Promise<any> {
+    const vendor = await (prisma as any).vendorProfile.findUnique({ where: { userId: req.currentUser.id } });
+    if (!vendor) throw new BadRequestException('Profil vendeur introuvable.');
+
+    // Auto-expire RFQs
+    const now = new Date();
+    await (prisma as any).marketplaceRFQ.updateMany({
+      where: { status: 'OPEN', expiresAt: { lt: now } },
+      data: { status: 'EXPIRED' },
+    });
+
+    const rfqs = await (prisma as any).marketplaceRFQ.findMany({
+      where: { status: 'OPEN' },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        store: { select: { name: true, city: true } },
+        quotes: { where: { vendorId: vendor.id } },
+      },
+    });
+
+    return {
+      success: true,
+      data: rfqs.map((r: any) => ({
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        category: r.category,
+        quantity: Number(r.quantity),
+        budget: r.budget ? Number(r.budget) : null,
+        expiresAt: r.expiresAt,
+        createdAt: r.createdAt,
+        store: r.store,
+        hasSubmittedQuote: r.quotes.length > 0,
+        myQuote: r.quotes.length > 0
+          ? { id: r.quotes[0].id, price: Number(r.quotes[0].price), notes: r.quotes[0].notes, createdAt: r.quotes[0].createdAt }
+          : null,
+      })),
+    };
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Post('vendor/rfq')
+  async submitRFQQuote(@Req() req: any, @Body() body: { rfqId: string; price: number; notes?: string }): Promise<any> {
+    const vendor = await (prisma as any).vendorProfile.findUnique({ where: { userId: req.currentUser.id } });
+    if (!vendor) throw new BadRequestException('Profil vendeur introuvable.');
+    if (!body.rfqId || !body.price) throw new BadRequestException('rfqId et prix requis.');
+
+    const existing = await (prisma as any).marketplaceQuote.findFirst({
+      where: { rfqId: body.rfqId, vendorId: vendor.id },
+    });
+    if (existing) {
+      throw new BadRequestException('Vous avez déjà envoyé une proposition pour cette demande.');
+    }
+
+    const quote = await (prisma as any).marketplaceQuote.create({
+      data: {
+        rfqId: body.rfqId,
+        vendorId: vendor.id,
+        price: Number(body.price),
+        notes: body.notes || null,
+      },
+    });
+
+    const rfq = await (prisma as any).marketplaceRFQ.findUnique({
+      where: { id: body.rfqId },
+      include: { store: { include: { owner: true } } },
+    });
+    if (rfq?.store?.owner) {
+      await (prisma as any).tradeNotification.create({
+        data: {
+          userId: rfq.store.owner.id,
+          type: 'RFQ_QUOTE',
+          title: 'Nouvelle proposition RFQ',
+          content: `Un vendeur a soumis une proposition pour votre demande : ${rfq.title}`,
+          metadata: { quoteId: quote.id },
+        },
+      });
+    }
+
+    return { success: true, data: quote };
+  }
+
+  // ─── Notification Email Preferences ──────────────────────────────────────
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Get('vendor/notification-settings')
+  async getNotificationSettings(@Req() req: any): Promise<any> {
+    const user = await (prisma as any).user.findUnique({
+      where: { id: req.currentUser.id },
+      select: {
+        notifyEmailMessages: true,
+        notifyEmailOrders: true,
+        notifyEmailRFQs: true,
+      },
+    });
+    if (!user) throw new BadRequestException('Utilisateur introuvable.');
+    return {
+      success: true,
+      data: {
+        notifyEmailMessages: user.notifyEmailMessages ?? true,
+        notifyEmailOrders: user.notifyEmailOrders ?? true,
+        notifyEmailRFQs: user.notifyEmailRFQs ?? true,
+      },
+    };
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Put('vendor/notification-settings')
+  async updateNotificationSettings(
+    @Req() req: any,
+    @Body() body: { notifyEmailMessages?: boolean; notifyEmailOrders?: boolean; notifyEmailRFQs?: boolean },
+  ): Promise<any> {
+    const data: any = {};
+    if (body.notifyEmailMessages !== undefined) data.notifyEmailMessages = body.notifyEmailMessages;
+    if (body.notifyEmailOrders !== undefined) data.notifyEmailOrders = body.notifyEmailOrders;
+    if (body.notifyEmailRFQs !== undefined) data.notifyEmailRFQs = body.notifyEmailRFQs;
+    const updated = await (prisma as any).user.update({
+      where: { id: req.currentUser.id },
+      data,
+      select: {
+        notifyEmailMessages: true,
+        notifyEmailOrders: true,
+        notifyEmailRFQs: true,
+      },
+    });
+    return { success: true, data: updated };
+  }
 }
