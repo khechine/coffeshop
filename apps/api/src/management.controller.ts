@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, BadRequestException, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req, BadRequestException, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as bcrypt from 'bcrypt';
 import { diskStorage } from 'multer';
@@ -801,6 +801,82 @@ export class ManagementController {
     return prisma.vendorProduct.delete({
       where: { id }
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // UPSELLS (VendorProductUpsell)
+  // ═══════════════════════════════════════════════════════════
+
+  @Get('marketplace/products/:productId/upsells')
+  async getProductUpsells(@Param('productId') productId: string): Promise<any> {
+    return prisma.vendorProductUpsell.findMany({
+      where: { sourceProductId: productId },
+      include: {
+        targetProduct: {
+          select: { id: true, name: true, price: true, image: true, unit: true }
+        }
+      }
+    } as any);
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Post('vendor/upsells')
+  async configureUpsell(@Req() req: any, @Body() body: {
+    sourceProductId: string;
+    targetProductId: string;
+    quantity?: number;
+    discountPercent?: number;
+    text?: string;
+    isActive?: boolean;
+  }): Promise<any> {
+    const user = req.currentUser;
+    // Verify the vendor owns the source product
+    const product = await prisma.vendorProduct.findUnique({ where: { id: body.sourceProductId } });
+    if (!product) throw new BadRequestException('Produit source introuvable.');
+    const vendor = await prisma.vendorProfile.findUnique({ where: { userId: user.id } });
+    if (!vendor || product.vendorId !== vendor.id) {
+      throw new BadRequestException('Vous ne pouvez pas configurer d\'upsell sur ce produit.');
+    }
+    const upsell = await prisma.vendorProductUpsell.upsert({
+      where: {
+        sourceProductId_targetProductId: {
+          sourceProductId: body.sourceProductId,
+          targetProductId: body.targetProductId,
+        }
+      },
+      update: {
+        quantity: body.quantity,
+        discountPercent: body.discountPercent,
+        text: body.text,
+        isActive: body.isActive !== undefined ? body.isActive : true,
+      },
+      create: {
+        sourceProductId: body.sourceProductId,
+        targetProductId: body.targetProductId,
+        quantity: body.quantity,
+        discountPercent: body.discountPercent,
+        text: body.text,
+        isActive: body.isActive !== undefined ? body.isActive : true,
+      },
+    } as any);
+    return { success: true, upsell };
+  }
+
+  @UseGuards(MarketplaceAuthGuard)
+  @Delete('vendor/upsells/:id')
+  async deleteUpsell(@Req() req: any, @Param('id') id: string): Promise<any> {
+    const user = req.currentUser;
+    const upsell = await (prisma as any).vendorProductUpsell.findUnique({
+      where: { id },
+      include: { sourceProduct: { select: { vendorId: true } } }
+    });
+    if (!upsell) throw new BadRequestException('Upsell introuvable.');
+    const vendor = await prisma.vendorProfile.findUnique({ where: { userId: user.id } });
+    if (!vendor || upsell.sourceProduct.vendorId !== vendor.id) {
+      throw new BadRequestException('Accès refusé.');
+    }
+    await prisma.vendorProductUpsell.delete({ where: { id } } as any);
+    return { success: true };
   }
 
   @UseGuards(MarketplaceAuthGuard)
