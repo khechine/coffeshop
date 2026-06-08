@@ -58,6 +58,8 @@ services:
     image: openwa/wa-automate:latest
     container_name: coffeeshop_openwa
     restart: always
+    entrypoint: ["node"]
+    command: ["node_modules/@open-wa/wa-automate/bin/server.js", "--use-chrome", "--in-docker", "--qr-timeout", "0", "--popup", "--debug", "--force-port", "--host", "0.0.0.0"]
     environment:
       WA_API_KEY: ${WA_API_KEY}
       TZ: Africa/Tunis
