@@ -43,7 +43,9 @@ MSG: ${text}
         'Content-Type': 'application/json',
         ...(config.apiKey ? { 'Authorization': `Bearer ${config.apiKey}` } : {}),
       },
-      body: JSON.stringify({ chatId, text }),
+      body: JSON.stringify({
+        args: { to: chatId, content: text },
+      }),
     });
 
     const data = await res.json();
