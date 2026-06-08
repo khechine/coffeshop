@@ -216,6 +216,7 @@ export async function updateStore(data: {
   await (prisma.store as any).update({ where: { id: store.id }, data });
   revalidatePath('/admin/settings');
   revalidatePath('/');
+  revalidatePath('/pos');
 }
 
 export async function toggleFiscalMode(enabled: boolean, pinCode?: string) {
@@ -328,13 +329,14 @@ export async function deleteProduct(id: string) {
 // ══════════════════════════════════════════════════════════════
 //  STOCK ITEMS
 // ══════════════════════════════════════════════════════════════
-export async function createStockItem(data: { name: string; unitId?: string; quantity: number; minThreshold: number; cost: number; preferredVendorId?: string; preferredSupplierId?: string }) {
+export async function createStockItem(data: { name: string; unitId?: string; quantity: number; minThreshold: number; cost: number; taxRate?: number; preferredVendorId?: string; preferredSupplierId?: string }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
-  const { unitId, preferredVendorId, preferredSupplierId, ...rest } = data;
+  const { unitId, preferredVendorId, preferredSupplierId, taxRate, ...rest } = data;
   await prisma.stockItem.create({
     data: {
       ...rest,
+      taxRate: taxRate ?? 0.19,
       storeId: store.id,
       unitId: unitId || undefined,
       preferredVendorId: preferredVendorId || undefined,
@@ -344,11 +346,12 @@ export async function createStockItem(data: { name: string; unitId?: string; qua
   revalidatePath('/admin/stock');
 }
 
-export async function updateStockItem(id: string, data: { name: string; unitId?: string; quantity: number; minThreshold: number; cost: number; preferredVendorId?: string; preferredSupplierId?: string }) {
-  const { unitId, preferredVendorId, preferredSupplierId, ...rest } = data;
+export async function updateStockItem(id: string, data: { name: string; unitId?: string; quantity: number; minThreshold: number; cost: number; taxRate?: number; preferredVendorId?: string; preferredSupplierId?: string }) {
+  const { unitId, preferredVendorId, preferredSupplierId, taxRate, ...rest } = data;
   await prisma.stockItem.update({
     where: { id }, data: {
       ...rest,
+      taxRate: taxRate ?? 0.19,
       unitId: unitId || undefined,
       preferredVendorId: preferredVendorId || undefined,
       preferredSupplierId: preferredSupplierId || undefined
@@ -373,14 +376,40 @@ export async function adjustStock(id: string, delta: number) {
 // ══════════════════════════════════════════════════════════════
 //  SUPPLIERS
 // ══════════════════════════════════════════════════════════════
-export async function createSupplier(data: { name: string; contact: string; phone: string }) {
-  await prisma.supplier.create({ data });
+export async function createSupplier(data: { name: string; contact: string; phone: string; email?: string; address?: string }) {
+  const store = await getStore();
+  if (!store) throw new Error('Non autorisé');
+  const record = await prisma.supplier.create({
+    data: {
+      name: data.name,
+      contact: data.contact,
+      phone: data.phone,
+      email: data.email || null,
+      address: data.address || null,
+      storeId: store.id
+    }
+  });
   revalidatePath('/vendor/dashboard');
+  revalidatePath('/admin/suppliers');
+  revalidatePath('/admin/stock');
+  return record;
 }
 
-export async function updateSupplier(id: string, data: { name: string; contact: string; phone: string }) {
-  await prisma.supplier.update({ where: { id }, data });
+export async function updateSupplier(id: string, data: { name: string; contact: string; phone: string; email?: string; address?: string }) {
+  const record = await prisma.supplier.update({
+    where: { id },
+    data: {
+      name: data.name,
+      contact: data.contact,
+      phone: data.phone,
+      email: data.email || null,
+      address: data.address || null
+    }
+  });
   revalidatePath('/vendor/dashboard');
+  revalidatePath('/admin/suppliers');
+  revalidatePath('/admin/stock');
+  return record;
 }
 
 export async function deleteSupplier(id: string) {
@@ -576,7 +605,7 @@ async function checkStaffActionAuth() {
   return user;
 }
 
-export async function createStaffMember(data: { name: string; email: string; phone: string; role: string; defaultPosMode?: string; permissions?: string[]; assignedTables?: string[] }) {
+export async function createStaffMember(data: { name: string; email: string; phone: string; role: string; defaultPosMode?: string; permissions?: string[]; assignedTables?: string[]; dailyTarget?: number }) {
   const authUser = await checkStaffActionAuth();
   const store = await getStore();
   if (!store) throw new Error('Store not found');
@@ -589,6 +618,7 @@ export async function createStaffMember(data: { name: string; email: string; pho
       defaultPosMode: data.defaultPosMode || 'tables',
       permissions: data.permissions || ['POS'],
       assignedTables: data.assignedTables || [],
+      dailyTarget: data.dailyTarget || 1200,
       password: await bcrypt.hash('changeme123', 10), // must be reset by the user
       storeId: store.id,
     },
@@ -596,7 +626,7 @@ export async function createStaffMember(data: { name: string; email: string; pho
   revalidatePath('/admin/staff');
 }
 
-export async function updateStaffMember(id: string, data: { name: string; email: string; phone: string; role: string; defaultPosMode?: string; permissions?: string[]; assignedTables?: string[] }) {
+export async function updateStaffMember(id: string, data: { name: string; email: string; phone: string; role: string; defaultPosMode?: string; permissions?: string[]; assignedTables?: string[]; dailyTarget?: number }) {
   await checkStaffActionAuth();
   await prisma.user.update({
     where: { id },
@@ -607,7 +637,8 @@ export async function updateStaffMember(id: string, data: { name: string; email:
       role: data.role as any,
       defaultPosMode: data.defaultPosMode,
       permissions: data.permissions,
-      assignedTables: data.assignedTables
+      assignedTables: data.assignedTables,
+      dailyTarget: data.dailyTarget
     }
   });
   revalidatePath('/admin/staff');
@@ -1093,6 +1124,30 @@ export async function createCustomer(data: { name: string; phone: string; email?
   } catch (error: any) {
     console.error('[createCustomer Error]:', error);
     throw new Error(error.message || 'Erreur lors de la création du client');
+  }
+}
+
+export async function updateCustomer(id: string, data: { name: string; phone: string; email?: string; loyaltyPoints?: number }) {
+  try {
+    const store = await getStore();
+    if (!store) throw new Error('Store not found');
+
+    const customer = await prisma.customer.update({
+      where: { id, storeId: store.id },
+      data: {
+        name: data.name,
+        phone: data.phone,
+        email: data.email || null,
+        ...(data.loyaltyPoints !== undefined ? { loyaltyPoints: data.loyaltyPoints } : {})
+      }
+    });
+    
+    revalidatePath('/admin/customers');
+    revalidatePath('/pos');
+    return JSON.parse(JSON.stringify(customer));
+  } catch (error: any) {
+    console.error('[updateCustomer Error]:', error);
+    throw new Error(error.message || 'Erreur lors de la mise à jour du client');
   }
 }
 
@@ -4858,6 +4913,120 @@ export async function logStaffSessionAction(userId: string, storeId: string, act
   });
 }
 
+// ══════════════════════════════════════════════════════════════
+//  ATTENDANCE / POINTAGE
+// ══════════════════════════════════════════════════════════════
+
+export async function clockInAction(userId: string, source: string = 'POS') {
+  const store = await getStore();
+  if (!store) throw new Error('Non autorisé');
+
+  // Check if already clocked in today
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const existing = await (prisma as any).attendance.findFirst({
+    where: {
+      userId,
+      storeId: store.id,
+      clockIn: { gte: today },
+      clockOut: null
+    }
+  });
+  if (existing) throw new Error('Déjà pointé');
+
+  const record = await (prisma as any).attendance.create({
+    data: {
+      userId,
+      storeId: store.id,
+      source,
+      status: 'PRESENT'
+    },
+    include: { user: { select: { name: true } } }
+  });
+  revalidatePath('/admin/pointage');
+  return record;
+}
+
+export async function clockOutAction(attendanceId: string, notes?: string) {
+  const record = await (prisma as any).attendance.findUnique({ where: { id: attendanceId } });
+  if (!record || record.clockOut) throw new Error('Pointage invalide');
+
+  const now = new Date();
+  const duration = Math.round((now.getTime() - new Date(record.clockIn).getTime()) / 60000);
+
+  const updated = await (prisma as any).attendance.update({
+    where: { id: attendanceId },
+    data: {
+      clockOut: now,
+      duration,
+      notes: notes || null
+    },
+    include: { user: { select: { name: true } } }
+  });
+  revalidatePath('/admin/pointage');
+  return updated;
+}
+
+export async function getActiveAttendance(userId: string) {
+  const store = await getStore();
+  if (!store) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return (prisma as any).attendance.findFirst({
+    where: {
+      userId,
+      storeId: store.id,
+      clockIn: { gte: today },
+      clockOut: null
+    }
+  });
+}
+
+export async function getTodayAttendance() {
+  const store = await getStore();
+  if (!store) return [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return (prisma as any).attendance.findMany({
+    where: {
+      storeId: store.id,
+      clockIn: { gte: today }
+    },
+    include: { user: { select: { id: true, name: true, role: true } } },
+    orderBy: { clockIn: 'desc' }
+  });
+}
+
+export async function getAttendanceHistory(startDate: string, endDate: string) {
+  const store = await getStore();
+  if (!store) return [];
+
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+
+  return (prisma as any).attendance.findMany({
+    where: {
+      storeId: store.id,
+      clockIn: { gte: start, lte: end }
+    },
+    include: { user: { select: { id: true, name: true, role: true } } },
+    orderBy: { clockIn: 'desc' }
+  });
+}
+
+export async function getAllStaffForAttendance() {
+  const store = await getStore();
+  if (!store) return [];
+  return prisma.user.findMany({
+    where: { storeId: store.id },
+    select: { id: true, name: true, role: true, pinCode: true }
+  });
+}
+
 // ── Cash Session Management ─────────────────────────────────────
 export async function getActiveCashSession() {
   const store = await getStore();
@@ -4874,7 +5043,7 @@ export async function getActiveCashSession() {
   });
 }
 
-export async function openCashSessionAction(openingBalance: number) {
+export async function openCashSessionAction(openingBalance: number, details?: any) {
   const store = await getStore();
   if (!store) throw new Error('Non autorisé');
   const userId = cookies().get('userId')?.value;
@@ -4892,12 +5061,13 @@ export async function openCashSessionAction(openingBalance: number) {
       baristaId: userId,
       openingBalance,
       totalSales: 0,
-      status: 'OPEN'
+      status: 'OPEN',
+      openingDetails: details || null
     }
   });
 }
 
-export async function closeCashSessionAction(id: string, closingBalance: number, notes?: string) {
+export async function closeCashSessionAction(id: string, closingBalance: number, notes?: string, details?: any) {
   const session = await (prisma as any).cashSession.findUnique({
     where: { id }
   });
@@ -4909,7 +5079,8 @@ export async function closeCashSessionAction(id: string, closingBalance: number,
       closingBalance,
       notes,
       status: 'CLOSED',
-      closedAt: new Date()
+      closedAt: new Date(),
+      closingDetails: details || null
     }
   });
 }
@@ -7640,4 +7811,229 @@ export async function getEmailLogsAction() {
     console.error("Failed to fetch email logs", err);
     return [];
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  AI INVOICE SCANNING
+// ══════════════════════════════════════════════════════════════
+
+export async function analyzeInvoiceAction(imageBase64: string) {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+    throw new Error("Clé API Gemini non configurée. Veuillez définir GEMINI_API_KEY dans votre fichier .env.");
+  }
+
+  let cleanBase64 = imageBase64;
+  let mimeType = "image/jpeg";
+  if (imageBase64.includes(';base64,')) {
+    const parts = imageBase64.split(';base64,');
+    cleanBase64 = parts[1];
+    mimeType = parts[0].replace('data:', '');
+  }
+
+  const prompt = `Analyze this purchase invoice/ticket image and extract the following details in a structured JSON format:
+- "supplierName": The name of the vendor/supplier.
+- "items": A list of items/products purchased. For each item extract:
+  - "name": Name/description of the item (translate to French if possible).
+  - "quantity": Number of units purchased (as a number).
+  - "price": Unit cost/price excluding tax (HT) or unit price including tax if HT not clear (as a number).
+  - "tva": Value Value Added Tax (TVA) percentage rate if listed (e.g. 19 for 19%, 7 for 7%).
+
+Return ONLY a valid JSON object matching this schema, without markdown formatting blocks:
+{
+  "supplierName": string,
+  "items": Array<{ name: string, quantity: number, price: number, tva: number }>
+}`;
+
+  // Endpoints/models to try in sequence
+  const endpoints = [
+    `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
+  ];
+
+  let lastError: any = null;
+
+  for (const url of endpoints) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType,
+                  data: cleanBase64
+                }
+              }
+            ]
+          }],
+          generationConfig: {
+            responseMimeType: "application/json"
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Status ${response.status}: ${errorText}`);
+      }
+
+      const resData = await response.json();
+      const textResponse = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!textResponse) {
+        throw new Error("Aucun texte retourné.");
+      }
+
+      return JSON.parse(textResponse);
+    } catch (err: any) {
+      console.warn(`Fallback warn: endpoint failed: ${url}. Error:`, err.message);
+      lastError = err;
+    }
+  }
+
+  throw new Error(`L'analyse de la facture a échoué. Détail: ${lastError?.message}`);
+}
+
+export async function importInvoiceItemsAction(
+  items: Array<{
+    stockItemId?: string;
+    name?: string;
+    quantity: number;
+    cost: number;
+    taxRate?: number;
+    unitId?: string;
+  }>,
+  supplierName?: string
+) {
+  const store = await getStore();
+  if (!store) throw new Error('Non autorisé');
+
+  let supplierId: string | undefined = undefined;
+  if (supplierName && supplierName.trim() !== "") {
+    const nameTrim = supplierName.trim();
+    let supplier = await prisma.supplier.findFirst({
+      where: {
+        name: { equals: nameTrim, mode: 'insensitive' }
+      }
+    });
+
+    if (!supplier) {
+      supplier = await prisma.supplier.create({
+        data: {
+          name: nameTrim,
+          contact: "Contact " + nameTrim,
+          phone: "00000000",
+          storeId: store.id
+        }
+      });
+    }
+    supplierId = supplier.id;
+  }
+
+  let totalTtc = 0;
+  for (const item of items) {
+    const rate = item.taxRate ?? 0.19;
+    const ht = item.cost * item.quantity;
+    const ttc = ht * (1 + rate);
+    totalTtc += ttc;
+
+    if (item.stockItemId && item.stockItemId !== 'NEW') {
+      const currentItem = await prisma.stockItem.findUnique({
+        where: { id: item.stockItemId }
+      });
+      if (currentItem) {
+        const newQty = Number(currentItem.quantity) + Number(item.quantity);
+        await prisma.stockItem.update({
+          where: { id: item.stockItemId },
+          data: {
+            quantity: newQty,
+            cost: item.cost,
+            taxRate: rate,
+            preferredSupplierId: supplierId || currentItem.preferredSupplierId
+          }
+        });
+      }
+    } else if (item.name) {
+      await prisma.stockItem.create({
+        data: {
+          name: item.name,
+          quantity: item.quantity,
+          cost: item.cost,
+          taxRate: rate,
+          minThreshold: 0,
+          storeId: store.id,
+          unitId: item.unitId || null,
+          preferredSupplierId: supplierId || null
+        }
+      });
+    }
+  }
+
+  // Record the financial flow
+  if (totalTtc > 0) {
+    await prisma.expense.create({
+      data: {
+        storeId: store.id,
+        category: "ACHAT",
+        amount: totalTtc,
+        description: `Facture Achat - ${supplierName || 'Fournisseur Inconnu'}`,
+      }
+    });
+  }
+
+  revalidatePath('/admin/stock');
+  revalidatePath('/admin/configuration');
+  revalidatePath('/admin/expenses');
+  return { success: true };
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ATTENDANCE & HR
+// ══════════════════════════════════════════════════════════════
+
+export async function getMonthlyAttendanceReport(storeId: string, year: number, month: number) {
+  const user = await getUser();
+  if (!user || user.role !== 'STORE_OWNER') return [];
+
+  // Use current user's store if storeId not provided
+  let resolvedStoreId = storeId;
+  if (!resolvedStoreId) {
+    const store = await getStore();
+    resolvedStoreId = store?.id;
+  }
+  if (!resolvedStoreId) return [];
+
+  // Generate date bounds (start and end of the month)
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+  const attendances = await (prisma as any).attendance.findMany({
+    where: {
+      storeId: resolvedStoreId,
+      clockIn: {
+        gte: startDate,
+        lte: endDate
+      }
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          role: true,
+        }
+      }
+    },
+    orderBy: {
+      clockIn: 'asc'
+    }
+  });
+
+  return JSON.parse(JSON.stringify(attendances));
 }

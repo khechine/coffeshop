@@ -32,6 +32,7 @@ interface StaffMember {
   permissions: string[];
   pinCode?: string | null;
   assignedTables?: string[];
+  dailyTarget?: number;
 }
 
 export default function StaffClient({ staff, tables, currentUser }: { staff: StaffMember[]; tables: { id: string; label: string }[]; currentUser: any }) {
@@ -74,7 +75,7 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
   const [form, setForm] = useState({ 
     name: '', email: '', phone: '', role: 'CASHIER', 
     defaultPosMode: 'tables', permissions: ['POS'] as string[],
-    assignedTables: [] as string[]
+    assignedTables: [] as string[], dailyTarget: 1200
   });
   const [deleteTarget, setDeleteTarget] = useState<StaffMember | null>(null);
   const [pinTarget, setPinTarget] = useState<StaffMember | null>(null);
@@ -83,8 +84,8 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
   const [logs, setLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
-  const openCreate = () => { setEditing(null); setForm({ name: '', email: '', phone: '', role: 'CASHIER', defaultPosMode: 'tables', permissions: ['POS'], assignedTables: [] }); setModalOpen(true); };
-  const openEdit = (m: StaffMember) => { setEditing(m); setForm({ name: m.name, email: m.email, phone: m.phone || '', role: m.role, defaultPosMode: m.defaultPosMode || 'tables', permissions: m.permissions || [], assignedTables: m.assignedTables || [] }); setModalOpen(true); };
+  const openCreate = () => { setEditing(null); setForm({ name: '', email: '', phone: '', role: 'CASHIER', defaultPosMode: 'tables', permissions: ['POS'], assignedTables: [], dailyTarget: 1200 }); setModalOpen(true); };
+  const openEdit = (m: StaffMember) => { setEditing(m); setForm({ name: m.name, email: m.email, phone: m.phone || '', role: m.role, defaultPosMode: m.defaultPosMode || 'tables', permissions: m.permissions || [], assignedTables: m.assignedTables || [], dailyTarget: m.dailyTarget || 1200 }); setModalOpen(true); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,6 +269,18 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
                 <option value="CASHIER">Caissier</option>
               </select>
             </div>
+            {form.role === 'CASHIER' && (
+              <div>
+                <label style={label}>Objectif Journalier (DT)</label>
+                <input 
+                  type="number" 
+                  style={field} 
+                  value={form.dailyTarget} 
+                  onChange={e => setForm({...form, dailyTarget: parseFloat(e.target.value) || 0})}
+                  placeholder="Ex: 1200"
+                />
+              </div>
+            )}
             <div>
               <label style={label}>Mode POS par défaut</label>
               <select style={field} value={form.defaultPosMode} onChange={e => setForm(f => ({ ...f, defaultPosMode: e.target.value }))}>

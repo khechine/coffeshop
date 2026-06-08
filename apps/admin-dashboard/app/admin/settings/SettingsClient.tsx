@@ -38,7 +38,6 @@ interface StoreProps {
    officialDocs: any[] | null;
    forceMarketplaceAccess: boolean;
    isFiscalEnabled: boolean;
-   logoUrl?: string | null;
    ticketConfig?: any;
    printerConfig?: any;
    loyaltyEarnRate?: number | any;
@@ -198,7 +197,6 @@ export default function SettingsClient({ store, token }: { store: StoreProps; to
       loyaltyRedeemRate: number | string;
    }>({
       name: store.name,
-      address: store.address || '',
       city: store.city || '',
       governorate: store.governorate || '',
       phone: store.phone || '',

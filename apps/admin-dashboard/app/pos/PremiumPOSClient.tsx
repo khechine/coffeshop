@@ -9,9 +9,10 @@ import {
   X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package, Store
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction } from '../actions';
+import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction, clockInAction, clockOutAction, getActiveAttendance } from '../actions';
 import { savePendingAction, getPendingActions, deletePendingAction } from './OfflineSync';
 import { PrintService } from './PrintService';
+import { DenominationCounter } from './DenominationCounter';
 import './pos-premium.css';
 
 const ICONS: Record<string, React.FC<any>> = {
@@ -137,6 +138,11 @@ export default function PremiumPOSClient({
   const [orderFilter, setOrderFilter] = useState<'ALL' | 'PAID' | 'VOID' | 'MINE'>('ALL');
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   
+  const activeDailyTarget = React.useMemo(() => {
+    const barista = initialBaristas.find(b => String(b.id) === String(cashierId));
+    return Number(barista?.dailyTarget || 1200);
+  }, [cashierId, initialBaristas]);
+  
   // Payment Modal
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'MIXED'>('CASH');
@@ -154,7 +160,10 @@ export default function PremiumPOSClient({
   const [showOpeningModal, setShowOpeningModal] = useState(false);
   const [showClosingModal, setShowClosingModal] = useState(false);
   const [openingBalance, setOpeningBalance] = useState('0');
+  const [openingCounts, setOpeningCounts] = useState<Record<string, number>>({});
   const [closingBalance, setClosingBalance] = useState('0');
+  const [closingCounts, setClosingCounts] = useState<Record<string, number>>({});
+  const [fondDeCaisse, setFondDeCaisse] = useState('0');
   const [sessionNotes, setSessionNotes] = useState('');
   
   // Auto-lock & Inactivity Timer
@@ -331,6 +340,37 @@ export default function PremiumPOSClient({
   const currentCart = selectedTable ? (tableOrders[selectedTable.id] || []) : [];
 
   const subtotal = currentCart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
+  // Cross-selling suggestions
+  const suggestedProducts = React.useMemo(() => {
+    if (currentCart.length === 0) return [];
+    
+    // Simple heuristic: if cart has drinks, suggest pastries/food. If cart has food, suggest drinks.
+    const cartCategories = currentCart.map(c => c.category?.toLowerCase() || '');
+    const hasDrinks = cartCategories.some(c => c.includes('café') || c.includes('boisson') || c.includes('jus'));
+    const hasFood = cartCategories.some(c => c.includes('viennoiserie') || c.includes('pâtisserie') || c.includes('gâteau') || c.includes('salé'));
+    
+    let candidates = initialProducts.filter(p => !currentCart.some(c => c.id === p.id));
+    
+    if (hasDrinks && !hasFood) {
+      candidates = candidates.filter(p => {
+        const cat = p.category?.toLowerCase() || '';
+        return cat.includes('viennoiserie') || cat.includes('pâtisserie') || cat.includes('gâteau') || cat.includes('salé') || cat.includes('snack');
+      });
+      // Fallback if no matching category
+      if (candidates.length === 0) candidates = initialProducts.filter(p => !currentCart.some(c => c.id === p.id));
+    } else if (hasFood && !hasDrinks) {
+      candidates = candidates.filter(p => {
+        const cat = p.category?.toLowerCase() || '';
+        return cat.includes('café') || cat.includes('boisson') || cat.includes('jus') || cat.includes('drink');
+      });
+      if (candidates.length === 0) candidates = initialProducts.filter(p => !currentCart.some(c => c.id === p.id));
+    }
+    
+    // Take up to 2 items
+    return candidates.slice(0, 2);
+  }, [currentCart, initialProducts]);
+  
   const discountFromPoints = isRedeemingPoints && selectedCustomer 
     ? Math.min(selectedCustomer.loyaltyPoints / loyaltyRedeemRate, subtotal)
     : 0;
@@ -515,7 +555,7 @@ export default function PremiumPOSClient({
       createdAt: new Date().toISOString()
     };
 
-    let finalSaleObject = null;
+    let finalSaleObject: any = null;
     let autoPrintList = [...currentCart];
 
     try {
@@ -626,9 +666,23 @@ export default function PremiumPOSClient({
 
   const handleOpenSession = async () => {
     try {
-      const session = await openCashSessionAction(Number(openingBalance));
+      const session = await openCashSessionAction(Number(openingBalance), openingCounts);
       setActiveSession(session);
       setShowOpeningModal(false);
+      
+      try {
+        const printData = {
+          storeName,
+          openTime: session.openedAt || new Date().toISOString(),
+          cashierName: cashierName || "Caisse",
+          counts: openingCounts,
+          openingCash: Number(openingBalance)
+        };
+        await PrintService.printOpeningReport(printData, { paperSize: '80mm' });
+      } catch (printErr) {
+        console.error("Erreur d'impression:", printErr);
+      }
+      
       alert("Session ouverte avec succès ! Bon service.");
     } catch (err) {
       alert("Erreur lors de l'ouverture de la session");
@@ -638,7 +692,33 @@ export default function PremiumPOSClient({
   const handleCloseSession = async () => {
     if (!activeSession) return;
     try {
-      await closeCashSessionAction(activeSession.id, Number(closingBalance), sessionNotes);
+      const expectedTotal = Number(activeSession.openingBalance || 0) + Number(activeSession.totalSales || 0);
+      const ecart = Number(closingBalance) - expectedTotal;
+      const notes = sessionNotes + `\nTotal compté: ${closingBalance} DT\nFond de caisse gardé: ${fondDeCaisse} DT\nÉcart: ${ecart.toFixed(3)} DT\nMontant à déposer: ${Math.max(0, Number(closingBalance) - Number(fondDeCaisse)).toFixed(3)} DT`;
+      
+      await closeCashSessionAction(activeSession.id, Number(closingBalance), notes, closingCounts);
+      
+      // Try to print the Z report
+      try {
+        const shiftData = {
+          storeName,
+          storeAddress,
+          storePhone,
+          openTime: activeSession.createdAt,
+          closeTime: new Date().toISOString(),
+          openingCash: Number(activeSession.openingBalance || 0),
+          salesCashTotal: Number(activeSession.totalSales || 0),
+          expectedTotal,
+          countedTotal: Number(closingBalance),
+          difference: ecart,
+          fondDeCaisse: Number(fondDeCaisse),
+          montantDepot: Math.max(0, Number(closingBalance) - Number(fondDeCaisse))
+        };
+        await PrintService.printShiftReport(shiftData, { paperSize: printerConfig?.paperSize || '80mm' });
+      } catch (err) {
+        console.error("Failed to print Z report:", err);
+      }
+
       alert("Session clôturée avec succès.");
       setActiveSession(null);
       setShowClosingModal(false);
@@ -655,6 +735,137 @@ export default function PremiumPOSClient({
     setCashierName(null);
     setPin("");
     setActiveSession(null);
+  };
+
+  // --- Attendance States & Handlers ---
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [attendancePin, setAttendancePin] = useState("");
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [attendanceError, setAttendanceError] = useState("");
+  const [attendanceSuccessMessage, setAttendanceSuccessMessage] = useState("");
+
+  const handleAttendanceSubmit = async (pinValue?: string) => {
+    const code = pinValue || attendancePin;
+    if (!code || code.length < 4) {
+      setAttendanceError("Veuillez saisir votre code PIN complet");
+      return;
+    }
+    setAttendanceLoading(true);
+    setAttendanceError("");
+    setAttendanceSuccessMessage("");
+    try {
+      const barista = initialBaristas.find(b => b.pinCode === code);
+      if (!barista) {
+        setAttendanceError("Code PIN incorrect");
+        setAttendancePin("");
+        return;
+      }
+
+      // Check if user has active attendance
+      const active = await getActiveAttendance(barista.id);
+      if (active) {
+        // Clock out
+        const updated = await clockOutAction(active.id);
+        const diffMinutes = updated.duration || 0;
+        const hours = Math.floor(diffMinutes / 60);
+        const mins = diffMinutes % 60;
+        setAttendanceSuccessMessage(
+          `Au revoir ${barista.name} ! Départ enregistré. Durée : ${hours}h ${mins}m.`
+        );
+      } else {
+        // Clock in
+        const created = await clockInAction(barista.id, 'POS');
+        setAttendanceSuccessMessage(
+          `Bonjour ${barista.name} ! Arrivée enregistrée. Bon service !`
+        );
+      }
+      setAttendancePin("");
+    } catch (err: any) {
+      setAttendanceError(err.message || "Une erreur est survenue lors du pointage");
+      setAttendancePin("");
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
+  const renderAttendanceModal = () => {
+    return (
+      <div className="pos-modal-overlay" style={{ zIndex: 5000, background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="pos-modal-card" style={{ width: '400px', padding: '32px', borderRadius: '24px', background: '#1E1B4B', color: '#fff', border: '1px solid rgba(255, 255, 255, 0.1)', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 900, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Clock size={22} className="text-pos-primary" /> Pointage
+            </h2>
+            <button 
+              onClick={() => { setShowAttendanceModal(false); setAttendancePin(""); setAttendanceError(""); setAttendanceSuccessMessage(""); }}
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          {attendanceSuccessMessage ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '20px 0' }}>
+              <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <CheckCircle size={48} />
+              </div>
+              <p style={{ fontSize: '16px', fontWeight: 600, color: 'rgba(255,255,255,0.9)', margin: 0, lineHeight: 1.5 }}>
+                {attendanceSuccessMessage}
+              </p>
+              <button 
+                onClick={() => { setShowAttendanceModal(false); setAttendancePin(""); setAttendanceError(""); setAttendanceSuccessMessage(""); }}
+                className="btn-premium btn-premium-primary"
+                style={{ width: '100%', height: '48px', borderRadius: '14px', marginTop: '12px' }}
+              >
+                Fermer
+              </button>
+            </div>
+          ) : (
+            <div>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', marginBottom: '24px' }}>
+                Saisissez votre code PIN pour enregistrer votre arrivée ou départ.
+              </p>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '24px' }}>
+                {[0, 1, 2, 3].map(i => (
+                  <div key={i} style={{ width: '16px', height: '16px', borderRadius: '50%', background: attendancePin.length > i ? 'var(--pos-primary)' : 'rgba(255,255,255,0.2)', transition: 'all 0.2s' }} />
+                ))}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' }}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, '✓'].map(n => (
+                  <button key={n} disabled={attendanceLoading} onClick={() => {
+                    if (n === 'C') setAttendancePin("");
+                    else if (n === '✓') handleAttendanceSubmit();
+                    else if (attendancePin.length < 4) {
+                      const newVal = attendancePin + n.toString();
+                      setAttendancePin(newVal);
+                      if (newVal.length === 4) {
+                        handleAttendanceSubmit(newVal);
+                      }
+                    }
+                  }}
+                  style={{ height: '60px', borderRadius: '16px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', fontSize: '20px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+
+              {attendanceError && (
+                <div style={{ color: '#F87171', fontSize: '14px', fontWeight: 700, marginTop: '12px' }}>
+                  {attendanceError}
+                </div>
+              )}
+              {attendanceLoading && (
+                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', marginTop: '12px' }}>
+                  Traitement en cours...
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -705,7 +916,15 @@ export default function PremiumPOSClient({
             ))}
           </div>
           {error && <div style={{ marginTop: '24px', color: '#F87171', fontWeight: 800 }}>{error}</div>}
+          
+          <button 
+            onClick={() => { setShowAttendanceModal(true); setAttendancePin(""); setAttendanceError(""); setAttendanceSuccessMessage(""); }}
+            style={{ marginTop: '32px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '8px', width: '100%', justifyContent: 'center', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+          >
+            <Clock size={20} /> Pointage du personnel
+          </button>
         </div>
+        {showAttendanceModal && renderAttendanceModal()}
       </div>
     );
   }
@@ -771,6 +990,14 @@ export default function PremiumPOSClient({
         {/* Theme Toggle */}
         <div className="pos-sidebar-icon" onClick={toggleThemeVariant} title="Changer de thème" style={{ cursor: 'pointer', marginBottom: 10 }}>
            {theme === 'mocha' ? <Cake size={24} /> : <Zap size={24} />}
+        </div>
+
+        {/* Pointage du personnel */}
+        <div className="pos-sidebar-icon" style={{ color: 'var(--pos-primary-light)', cursor: 'pointer', marginBottom: 10 }} onClick={() => { setShowAttendanceModal(true); setAttendancePin(""); setAttendanceError(""); setAttendanceSuccessMessage(""); }} title="Pointage Personnel">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <Clock size={28} />
+            <span style={{ fontSize: 9, fontWeight: 900 }}>POINTAGE</span>
+          </div>
         </div>
 
         <div className="pos-sidebar-icon" style={{ color: 'var(--pos-warning)' }} onClick={handleLogout} title="Verrouiller">
@@ -983,17 +1210,17 @@ export default function PremiumPOSClient({
                        <div className="metric-card" style={{ flex: 1, background: 'var(--pos-primary)', color: '#fff', minWidth: 300 }}>
                           <div style={{ fontSize: 14, opacity: 0.8, fontWeight: 700 }}>OBJECTIF JOURNALIER (VOTRE SESSION)</div>
                           <div style={{ fontSize: 24, fontWeight: 900 }}>
-                             {(sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} / 1200.000 DT
+                             {(sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} / {activeDailyTarget.toFixed(3)} DT
                           </div>
                           <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 12, overflow: 'hidden' }}>
                              <div style={{ 
                                height: '100%', 
-                               width: `${Math.min(100, Math.floor(((sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)) / 1200) * 100))}%`, 
+                               width: `${Math.min(100, Math.floor(((sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)) / activeDailyTarget) * 100))}%`, 
                                background: '#fff' 
                              }} />
                           </div>
                           <p style={{ margin: '12px 0 0', fontSize: 11, fontWeight: 600 }}>
-                             Vous êtes à {Math.min(100, Math.floor(((sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)) / 1200) * 100))}% de votre objectif personnel !
+                             Vous êtes à {Math.min(100, Math.floor(((sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)) / activeDailyTarget) * 100))}% de votre objectif personnel !
                           </p>
                        </div>
                     </div>
@@ -1505,6 +1732,26 @@ export default function PremiumPOSClient({
           )}
         </div>
 
+        {/* Cross-Selling / Upselling Section */}
+        {suggestedProducts.length > 0 && (
+          <div style={{ padding: '0 24px 16px' }}>
+            <div style={{ fontSize: 11, fontWeight: 900, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Star size={14} fill="#F59E0B" /> Suggestion pour ce client
+            </div>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+              {suggestedProducts.map(p => (
+                <div key={p.id} onClick={() => addToCart(p)} style={{ flex: '0 0 auto', width: '140px', background: 'var(--pos-bg)', border: '1px solid var(--pos-border)', borderRadius: 12, padding: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4, transition: 'all 0.2s' }} className="hover:border-indigo-400 hover:shadow-md">
+                   <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--pos-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                     <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--pos-primary)' }}>+{p.price.toFixed(3)} DT</div>
+                     <div style={{ background: '#EEF2FF', padding: 4, borderRadius: 6, color: 'var(--pos-primary)' }}><Plus size={14} /></div>
+                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="cart-totals">
            {selectedCustomer && (
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: 14, borderRadius: 14, marginBottom: 12, border: '1px solid var(--pos-primary)', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.05)' }}>
@@ -1701,30 +1948,37 @@ export default function PremiumPOSClient({
       {/* Opening Session Modal */}
       {showOpeningModal && (
         <div className="pos-modal-overlay" style={{ zIndex: 4000 }}>
-          <div className="pos-modal-card" style={{ width: 400, textAlign: 'center' }}>
-             <div style={{ width: 64, height: 64, borderRadius: '20px', background: 'var(--pos-accent)', color: 'var(--pos-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-                <Banknote size={32} />
-             </div>
-             <h2 style={{ fontSize: 24, fontWeight: 900, marginBottom: 8 }}>Ouverture de Caisse</h2>
-             <p style={{ color: 'var(--pos-text-muted)', marginBottom: 24 }}>Saisissez votre fond de caisse initial pour commencer votre service.</p>
-             
-             <div className="payment-amount-display" style={{ marginBottom: 24, background: 'var(--pos-bg)', padding: '20px', borderRadius: '16px' }}>
-                <span style={{ fontSize: 32, fontWeight: 900, color: 'var(--pos-primary)' }}>{openingBalance} DT</span>
-             </div>
+          <div className="pos-modal-card" style={{ width: 800, maxWidth: '95vw', padding: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+               <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0 }}>Ouverture de Caisse</h2>
+            </div>
+            <p style={{ color: 'var(--pos-text-muted)', marginBottom: 24 }}>Saisissez votre fond de caisse initial pour commencer votre service.</p>
+            
+            <div style={{ display: 'flex', gap: 32 }}>
+              {/* Left Column: Denomination Counter */}
+              <div style={{ flex: 1, maxHeight: '60vh', overflowY: 'auto' }}>
+                 <DenominationCounter onChange={(counts, total) => {
+                   setOpeningCounts(counts);
+                   setOpeningBalance(total.toString());
+                 }} />
+              </div>
 
-             <div className="keypad-grid" style={{ marginBottom: 24 }}>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'C'].map(n => (
-                  <button key={n} className="keypad-btn" style={{ height: 60, fontSize: 20 }} onClick={() => {
-                    if (n === 'C') setOpeningBalance('0');
-                    else if (n === '.') { if (!openingBalance.includes('.')) setOpeningBalance(b => b + '.'); }
-                    else setOpeningBalance(b => b === '0' ? n.toString() : b + n.toString());
-                  }}>{n}</button>
-                ))}
-             </div>
+              {/* Right Column: Summary */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                 <div style={{ width: 64, height: 64, borderRadius: '20px', background: 'var(--pos-accent)', color: 'var(--pos-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                    <Banknote size={32} />
+                 </div>
+                 
+                 <div className="payment-amount-display" style={{ marginBottom: 32, background: 'var(--pos-bg)', padding: '24px', borderRadius: '16px', textAlign: 'center' }}>
+                    <p style={{ fontSize: 14, fontWeight: 800, margin: '0 0 8px', color: 'var(--pos-text-muted)' }}>TOTAL EN CAISSE</p>
+                    <span style={{ fontSize: 40, fontWeight: 900, color: 'var(--pos-primary)' }}>{Number(openingBalance).toFixed(3)} DT</span>
+                 </div>
 
-             <button className="btn-premium btn-premium-primary" style={{ width: '100%', height: 60, fontSize: 18 }} onClick={handleOpenSession}>
-                OUVRIR LA SESSION
-             </button>
+                 <button className="btn-premium btn-premium-primary" style={{ width: '100%', height: 60, fontSize: 18 }} onClick={handleOpenSession}>
+                    OUVRIR LA SESSION
+                 </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1732,57 +1986,81 @@ export default function PremiumPOSClient({
       {/* Closing Session Modal */}
       {showClosingModal && (
         <div className="pos-modal-overlay" style={{ zIndex: 4000 }}>
-          <div className="pos-modal-card" style={{ width: 450 }}>
+          <div className="pos-modal-card" style={{ width: 850, maxWidth: '95vw', padding: 32 }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0 }}>Clôture de Caisse</h2>
                 <X size={24} onClick={() => setShowClosingModal(false)} style={{ cursor: 'pointer' }} />
              </div>
              
-             <div style={{ background: 'var(--pos-bg)', padding: 20, borderRadius: 16, marginBottom: 24 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                   <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)' }}>Ventes Session:</span>
-                   <span style={{ fontWeight: 900, color: 'var(--pos-primary)' }}>{Number(activeSession?.totalSales || 0).toFixed(3)} DT</span>
+             <div style={{ display: 'flex', gap: 32 }}>
+                {/* Left Column: Denomination Counter */}
+                <div style={{ flex: '1 1 50%', maxHeight: '60vh', overflowY: 'auto' }}>
+                   <DenominationCounter onChange={(counts, total) => {
+                     setClosingCounts(counts);
+                     setClosingBalance(total.toString());
+                   }} />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                   <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)' }}>Fond initial:</span>
-                   <span style={{ fontWeight: 900 }}>{Number(activeSession?.openingBalance || 0).toFixed(3)} DT</span>
+
+                {/* Right Column: Summary & Actions */}
+                <div style={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column' }}>
+                   <div style={{ background: 'var(--pos-bg)', padding: 16, borderRadius: 16, marginBottom: 16 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                         <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)' }}>Ventes Session:</span>
+                         <span style={{ fontWeight: 900, color: 'var(--pos-primary)' }}>{Number(activeSession?.totalSales || 0).toFixed(3)} DT</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                         <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)' }}>Fond initial:</span>
+                         <span style={{ fontWeight: 900 }}>{Number(activeSession?.openingBalance || 0).toFixed(3)} DT</span>
+                      </div>
+                      <div style={{ height: 1, background: 'var(--pos-border)', margin: '12px 0' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, marginBottom: 12 }}>
+                         <span style={{ fontWeight: 900 }}>Total Attendu:</span>
+                         <span style={{ fontWeight: 900 }}>{(Number(activeSession?.openingBalance || 0) + Number(activeSession?.totalSales || 0)).toFixed(3)} DT</span>
+                      </div>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                         <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)' }}>Total Compté:</span>
+                         <span style={{ fontWeight: 900, color: 'var(--pos-primary)' }}>{Number(closingBalance).toFixed(3)} DT</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                         <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)' }}>Écart:</span>
+                         <span style={{ fontWeight: 900, color: (Number(closingBalance) - (Number(activeSession?.openingBalance || 0) + Number(activeSession?.totalSales || 0))) < 0 ? '#EF4444' : '#10B981' }}>
+                           {(Number(closingBalance) - (Number(activeSession?.openingBalance || 0) + Number(activeSession?.totalSales || 0))).toFixed(3)} DT
+                         </span>
+                      </div>
+                   </div>
+
+                   <div style={{ marginBottom: 16 }}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 800, marginBottom: 8, color: 'var(--pos-text-muted)', textAlign: 'left' }}>FOND DE CAISSE (À CONSERVER)</label>
+                      <input
+                         type="number"
+                         style={{ width: '100%', borderRadius: 12, border: '1px solid var(--pos-border)', padding: 12, background: 'var(--pos-bg)', color: 'var(--pos-text-main)', fontSize: 18, fontWeight: 'bold' }}
+                         value={fondDeCaisse}
+                         onChange={e => setFondDeCaisse(e.target.value)}
+                      />
+                   </div>
+
+                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, background: 'var(--pos-accent)', padding: 16, borderRadius: 12, marginBottom: 16 }}>
+                      <span style={{ fontWeight: 900, color: 'var(--pos-primary)' }}>Montant à Déposer:</span>
+                      <span style={{ fontWeight: 900, color: 'var(--pos-primary)' }}>{Math.max(0, Number(closingBalance) - Number(fondDeCaisse)).toFixed(3)} DT</span>
+                   </div>
+
+                   <div style={{ marginBottom: 24 }}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 800, marginBottom: 8, color: 'var(--pos-text-muted)' }}>NOTES DE CLÔTURE</label>
+                      <textarea 
+                        style={{ width: '100%', borderRadius: 12, border: '1px solid var(--pos-border)', padding: 12, background: 'var(--pos-bg)', color: 'var(--pos-text-main)' }}
+                        rows={2}
+                        placeholder="Écart de caisse, remarques..."
+                        value={sessionNotes}
+                        onChange={e => setSessionNotes(e.target.value)}
+                      />
+                   </div>
+
+                   <button className="btn-premium btn-premium-danger" style={{ width: '100%', height: 60, fontSize: 18, marginTop: 'auto' }} onClick={handleCloseSession}>
+                      VALIDER LA CLÔTURE
+                   </button>
                 </div>
-                <div style={{ height: 1, background: 'var(--pos-border)', margin: '16px 0' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18 }}>
-                   <span style={{ fontWeight: 900 }}>Total Attendu:</span>
-                   <span style={{ fontWeight: 900 }}>{(Number(activeSession?.openingBalance || 0) + Number(activeSession?.totalSales || 0)).toFixed(3)} DT</span>
-                </div>
              </div>
-
-             <div className="payment-amount-display" style={{ marginBottom: 24, background: 'var(--pos-bg)', padding: '15px', borderRadius: '16px' }}>
-                <p style={{ fontSize: 12, fontWeight: 800, margin: '0 0 4px', color: 'var(--pos-text-muted)' }}>MONTANT RÉEL EN CAISSE</p>
-                <span style={{ fontSize: 28, fontWeight: 900, color: 'var(--pos-primary)' }}>{closingBalance} DT</span>
-             </div>
-
-             <div className="keypad-grid" style={{ marginBottom: 24 }}>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'C'].map(n => (
-                  <button key={n} className="keypad-btn" style={{ height: 50, fontSize: 18 }} onClick={() => {
-                    if (n === 'C') setClosingBalance('0');
-                    else if (n === '.') { if (!closingBalance.includes('.')) setClosingBalance(b => b + '.'); }
-                    else setClosingBalance(b => b === '0' ? n.toString() : b + n.toString());
-                  }}>{n}</button>
-                ))}
-             </div>
-
-             <div style={{ marginBottom: 24 }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, marginBottom: 8, color: 'var(--pos-text-muted)' }}>NOTES DE CLÔTURE</label>
-                <textarea 
-                  style={{ width: '100%', borderRadius: 12, border: '1px solid var(--pos-border)', padding: 12, background: 'var(--pos-bg)', color: 'var(--pos-text-main)' }}
-                  rows={2}
-                  placeholder="Écart de caisse, remarques..."
-                  value={sessionNotes}
-                  onChange={e => setSessionNotes(e.target.value)}
-                />
-             </div>
-
-             <button className="btn-premium btn-premium-danger" style={{ width: '100%', height: 60, fontSize: 18 }} onClick={handleCloseSession}>
-                VALIDER LA CLÔTURE
-             </button>
           </div>
         </div>
       )}
@@ -1818,6 +2096,7 @@ export default function PremiumPOSClient({
         input:checked + .slider { background-color: var(--pos-primary); }
         input:checked + .slider:before { transform: translateX(20px); }
       `}</style>
+      {showAttendanceModal && renderAttendanceModal()}
     </div>
   );
 }

@@ -86,6 +86,7 @@ model User {
   defaultPosMode String? @default("tables") 
   permissions    String[] @default(["POS"])
   assignedTables String[] @default([]) // Tables assigned to this barista (labels)
+  dailyTarget    Decimal? @default(1200) // Objectif journalier personnel (caisse)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -106,6 +107,7 @@ model User {
   sentTradeMessages     TradeMessage[] @relation("SentMessages")
   receivedTradeMessages TradeMessage[] @relation("ReceivedMessages")
   tradeNotifications    TradeNotification[]
+  attendances           Attendance[] @relation("UserAttendance")
 }
 
 model StaffSessionLog {
@@ -128,6 +130,25 @@ model UserLoginLog {
 
   @@index([userId])
   @@index([createdAt])
+}
+
+model Attendance {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserAttendance", fields: [userId], references: [id], onDelete: Cascade)
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  clockIn   DateTime @default(now())
+  clockOut  DateTime?
+  duration  Int?     // Duration in minutes (calculated at clockOut)
+  notes     String?
+  source    String   @default("POS") // "POS" or "BACKOFFICE"
+  status    String   @default("PRESENT") // PRESENT, LATE, ABSENT, EARLY_LEAVE
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([storeId])
+  @@index([clockIn])
 }
 
 model Expense {
@@ -199,6 +220,7 @@ model Store {
   zReports       ZReport[]
   zones          StoreZone[]
   cashSessions   CashSession[]
+  attendances    Attendance[]
   rfqs           MarketplaceRFQ[]
   vendorRatings  VendorRating[]
 
@@ -896,6 +918,7 @@ model StockItem {
   unit         GlobalUnit? @relation(fields: [unitId], references: [id])
   quantity     Decimal @default(0)
   cost         Decimal @default(0)
+  taxRate      Decimal @default(0.19)  // Taux TVA achat: 0, 0.07, 0.13, 0.19
   minThreshold Decimal @default(0)
   storeId      String
   store        Store   @relation(fields: [storeId], references: [id])
@@ -1088,6 +1111,8 @@ model Supplier {
   name    String
   contact String?
   phone   String?
+  email   String?
+  address String?
   orders  SupplierOrder[]
   stockItems StockItem[]
   storeId    String?
@@ -1134,6 +1159,7 @@ model SupplierOrderItem {
   name        String? // Name of product if not linked to stockItem
   quantity    Decimal
   price       Decimal
+  taxRate     Decimal?  // Taux TVA appliqué à la ligne
   mktBundleId String?
   mktProductId String?
 }
@@ -1235,6 +1261,8 @@ model CashSession {
   openedAt        DateTime @default(now())
   closedAt        DateTime?
   notes           String?
+  openingDetails  Json?
+  closingDetails  Json?
 
   @@index([storeId])
   @@index([baristaId])

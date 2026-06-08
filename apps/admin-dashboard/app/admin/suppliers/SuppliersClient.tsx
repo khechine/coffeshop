@@ -1,11 +1,45 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { Truck, Plus, Package, Edit, Trash2, Search, FileText, ShoppingBag, Store, ExternalLink } from 'lucide-react';
+import { Truck, Plus, Package, Edit, Trash2, Search, FileText, ShoppingBag, Store, ExternalLink, Building2, User, Phone, Mail, MapPin } from 'lucide-react';
 import Modal from '../../../components/Modal';
 import { createSupplier, updateSupplier, deleteSupplier } from '../../actions';
 
 type SupplierView = { type: 'local'; data: any } | { type: 'marketplace'; data: any };
+
+/* ── Premium form field styles ── */
+const fieldGroupStyle: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', gap: '6px',
+};
+const labelStyle: React.CSSProperties = {
+  fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase',
+  letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px',
+};
+const inputWrapStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: '12px',
+  background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '14px',
+  padding: '0 16px', transition: 'all 0.2s ease',
+};
+const inputStyle: React.CSSProperties = {
+  flex: 1, border: 'none', background: 'transparent', outline: 'none',
+  padding: '13px 0', fontSize: '14px', fontWeight: 600, color: '#1E293B',
+};
+const textareaStyle: React.CSSProperties = {
+  width: '100%', border: '1.5px solid #E2E8F0', background: '#F8FAFC',
+  borderRadius: '14px', padding: '13px 16px', fontSize: '14px', fontWeight: 600,
+  color: '#1E293B', outline: 'none', resize: 'vertical' as const, minHeight: '72px',
+  fontFamily: 'inherit', transition: 'all 0.2s ease',
+};
+const sectionDividerStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0',
+};
+const sectionLabelStyle: React.CSSProperties = {
+  fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase',
+  letterSpacing: '0.08em', whiteSpace: 'nowrap',
+};
+const sectionLineStyle: React.CSSProperties = {
+  flex: 1, height: '1px', background: 'linear-gradient(90deg, #E2E8F0, transparent)',
+};
 
 export default function SuppliersClient({
   initialSuppliers,
@@ -20,7 +54,7 @@ export default function SuppliersClient({
   const [selected, setSelected] = useState<SupplierView | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ id: '', name: '', contact: '', phone: '' });
+  const [formData, setFormData] = useState({ id: '', name: '', contact: '', phone: '', email: '', address: '' });
 
   // Deduplicate marketplace vendors from orders
   const marketplaceVendors: any[] = [];
@@ -47,13 +81,13 @@ export default function SuppliersClient({
   );
 
   const openAddModal = () => {
-    setFormData({ id: '', name: '', contact: '', phone: '' });
+    setFormData({ id: '', name: '', contact: '', phone: '', email: '', address: '' });
     setIsModalOpen(true);
   };
 
   const openEditModal = (s: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    setFormData({ id: s.id, name: s.name, contact: s.contact || '', phone: s.phone || '' });
+    setFormData({ id: s.id, name: s.name, contact: s.contact || '', phone: s.phone || '', email: s.email || '', address: s.address || '' });
     setIsModalOpen(true);
   };
 
@@ -83,6 +117,9 @@ export default function SuppliersClient({
 
   const selectedLocal = selected?.type === 'local' ? selected.data : null;
   const selectedMarketplace = selected?.type === 'marketplace' ? selected.data : null;
+
+  /* Avatar initial + gradient */
+  const avatarInitial = formData.name ? formData.name.charAt(0).toUpperCase() : '?';
 
   return (
     <>
@@ -370,28 +407,172 @@ export default function SuppliersClient({
         </div>
       </div>
 
-      <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)} title={formData.id ? "Modifier le fournisseur" : "Nouveau fournisseur"}>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <label className="form-label">Nom de l'entreprise *</label>
-            <input type="text" className="form-input" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+      {/* ═══════════════════════════════════════════ */}
+      {/*  PREMIUM SUPPLIER MODAL                    */}
+      {/* ═══════════════════════════════════════════ */}
+      <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)} title={formData.id ? "Modifier le fournisseur" : "Nouveau fournisseur"} width={540}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+
+          {/* ── Avatar Header ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px', padding: '20px', background: 'linear-gradient(135deg, #EEF2FF, #E0E7FF)', borderRadius: '16px', border: '1px solid #C7D2FE' }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '14px', flexShrink: 0,
+              background: formData.name ? 'linear-gradient(135deg, #4F46E5, #7C3AED)' : 'linear-gradient(135deg, #CBD5E1, #94A3B8)',
+              color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '24px', fontWeight: 900, boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)',
+              transition: 'all 0.3s ease',
+            }}>
+              {avatarInitial}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '16px', fontWeight: 900, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {formData.name || 'Nouveau fournisseur'}
+              </div>
+              <div style={{ fontSize: '12px', color: '#6366F1', fontWeight: 700, marginTop: '2px' }}>
+                {formData.id ? 'Modification en cours' : 'Création d\'une nouvelle fiche'}
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="form-label">Nom du Contact</label>
-            <input type="text" className="form-input" value={formData.contact} onChange={e => setFormData({ ...formData, contact: e.target.value })} />
+
+          {/* ── Section: Entreprise ── */}
+          <div style={sectionDividerStyle}>
+            <Building2 size={13} color="#94A3B8" />
+            <span style={sectionLabelStyle}>Entreprise</span>
+            <div style={sectionLineStyle} />
           </div>
-          <div>
-            <label className="form-label">Téléphone</label>
-            <input type="text" className="form-input" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+
+          <div style={{ ...fieldGroupStyle, marginTop: '12px', marginBottom: '20px' }}>
+            <label style={labelStyle}>
+              Nom de l'entreprise <span style={{ color: '#EF4444' }}>*</span>
+            </label>
+            <div style={inputWrapStyle}>
+              <Building2 size={16} color="#94A3B8" />
+              <input
+                type="text"
+                required
+                placeholder="Ex: EL BARAKA, Boulangerie Ben Ali..."
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                style={inputStyle}
+              />
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-            <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setIsModalOpen(false)}>Annuler</button>
-            <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={isPending}>
-              {isPending ? 'Enregistrement...' : 'Enregistrer'}
+
+          {/* ── Section: Contact ── */}
+          <div style={sectionDividerStyle}>
+            <User size={13} color="#94A3B8" />
+            <span style={sectionLabelStyle}>Informations de contact</span>
+            <div style={sectionLineStyle} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px', marginBottom: '20px' }}>
+            {/* Contact Name */}
+            <div style={fieldGroupStyle}>
+              <label style={labelStyle}>Nom du contact</label>
+              <div style={inputWrapStyle}>
+                <User size={16} color="#94A3B8" />
+                <input
+                  type="text"
+                  placeholder="Nom et prénom"
+                  value={formData.contact}
+                  onChange={e => setFormData({ ...formData, contact: e.target.value })}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
+            {/* Phone */}
+            <div style={fieldGroupStyle}>
+              <label style={labelStyle}>Téléphone</label>
+              <div style={inputWrapStyle}>
+                <Phone size={16} color="#94A3B8" />
+                <input
+                  type="tel"
+                  placeholder="+216 XX XXX XXX"
+                  value={formData.phone}
+                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Email */}
+          <div style={{ ...fieldGroupStyle, marginBottom: '20px' }}>
+            <label style={labelStyle}>Email</label>
+            <div style={inputWrapStyle}>
+              <Mail size={16} color="#94A3B8" />
+              <input
+                type="email"
+                placeholder="contact@fournisseur.com"
+                value={formData.email}
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          {/* ── Section: Localisation ── */}
+          <div style={sectionDividerStyle}>
+            <MapPin size={13} color="#94A3B8" />
+            <span style={sectionLabelStyle}>Adresse</span>
+            <div style={sectionLineStyle} />
+          </div>
+
+          <div style={{ ...fieldGroupStyle, marginTop: '12px', marginBottom: '28px' }}>
+            <label style={labelStyle}>Adresse complète</label>
+            <textarea
+              placeholder="Rue, ville, code postal..."
+              value={formData.address}
+              onChange={e => setFormData({ ...formData, address: e.target.value })}
+              style={textareaStyle}
+              rows={2}
+            />
+          </div>
+
+          {/* ── Actions ── */}
+          <div style={{ display: 'flex', gap: '12px', paddingTop: '20px', borderTop: '1px solid #F1F5F9' }}>
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              style={{
+                flex: 1, padding: '14px 20px', borderRadius: '14px', fontSize: '14px', fontWeight: 700,
+                border: '1.5px solid #E2E8F0', background: '#fff', color: '#64748B', cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseOver={e => { (e.target as HTMLButtonElement).style.borderColor = '#CBD5E1'; (e.target as HTMLButtonElement).style.background = '#F8FAFC'; }}
+              onMouseOut={e => { (e.target as HTMLButtonElement).style.borderColor = '#E2E8F0'; (e.target as HTMLButtonElement).style.background = '#fff'; }}
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              style={{
+                flex: 2, padding: '14px 20px', borderRadius: '14px', fontSize: '14px', fontWeight: 800,
+                border: 'none', color: '#fff', cursor: isPending ? 'not-allowed' : 'pointer',
+                background: isPending ? '#94A3B8' : 'linear-gradient(135deg, #4F46E5, #6366F1)',
+                boxShadow: isPending ? 'none' : '0 4px 14px rgba(79, 70, 229, 0.35)',
+                transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              }}
+              onMouseOver={e => { if (!isPending) { (e.target as HTMLButtonElement).style.transform = 'translateY(-1px)'; (e.target as HTMLButtonElement).style.boxShadow = '0 6px 20px rgba(79, 70, 229, 0.45)'; }}}
+              onMouseOut={e => { (e.target as HTMLButtonElement).style.transform = 'translateY(0)'; (e.target as HTMLButtonElement).style.boxShadow = '0 4px 14px rgba(79, 70, 229, 0.35)'; }}
+            >
+              {isPending ? (
+                <>
+                  <span style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite', display: 'inline-block' }} />
+                  Enregistrement...
+                </>
+              ) : (
+                formData.id ? '✓ Enregistrer les modifications' : '+ Créer le fournisseur'
+              )}
             </button>
           </div>
         </form>
       </Modal>
+
+      {/* Spinner keyframes */}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </>
   );
 }

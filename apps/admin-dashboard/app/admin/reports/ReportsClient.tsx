@@ -9,20 +9,70 @@ export default function ReportsClient({ initialReports, storeName }: { initialRe
   const [isPending, startTransition] = useTransition();
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [exportFormat, setExportFormat] = useState<'json' | 'csv'>('csv');
+
+  const flattenForCSV = (data: any): string => {
+    if (!data || (Array.isArray(data) && data.length === 0)) return '';
+    const items = Array.isArray(data) ? data : [data];
+    
+    // Collect all keys (flatten nested objects one level)
+    const allKeys = new Set<string>();
+    items.forEach(item => {
+      Object.entries(item).forEach(([key, value]) => {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          Object.keys(value as any).forEach(subKey => allKeys.add(`${key}.${subKey}`));
+        } else {
+          allKeys.add(key);
+        }
+      });
+    });
+
+    const headers = Array.from(allKeys);
+    const rows = items.map(item => {
+      return headers.map(header => {
+        if (header.includes('.')) {
+          const [parent, child] = header.split('.');
+          const val = (item[parent] as any)?.[child];
+          return val !== null && val !== undefined ? `"${String(val).replace(/"/g, '""')}"` : '';
+        }
+        const val = item[header];
+        if (val === null || val === undefined) return '';
+        if (typeof val === 'object') return `"${JSON.stringify(val).replace(/"/g, '""')}"`;
+        return `"${String(val).replace(/"/g, '""')}"`;
+      }).join(';');
+    });
+
+    return [headers.join(';'), ...rows].join('\n');
+  };
 
   const handleExport = (type: 'sales' | 'products' | 'stock' | 'users' | 'full_backup') => {
     startTransition(async () => {
       try {
         const data = await exportDataAction(type, startDate, endDate);
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `coffeeshop_${type}_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const dateStr = new Date().toISOString().split('T')[0];
+
+        if (exportFormat === 'json') {
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `coffeeshop_${type}_${dateStr}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } else {
+          const csvContent = flattenForCSV(data);
+          const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `coffeeshop_${type}_${dateStr}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
       } catch (e: any) {
         alert(e.message);
       }
@@ -71,6 +121,19 @@ export default function ReportsClient({ initialReports, storeName }: { initialRe
     });
   };
 
+  const formatToggleStyle = (active: boolean): React.CSSProperties => ({
+    padding: '6px 14px',
+    borderRadius: '8px',
+    border: 'none',
+    background: active ? '#4F46E5' : 'transparent',
+    color: active ? '#fff' : '#64748B',
+    fontWeight: 800,
+    fontSize: '12px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    letterSpacing: '0.05em'
+  });
+
   return (
     <div className="page-content">
       <div className="page-header" style={{ marginBottom: '32px' }}>
@@ -108,15 +171,27 @@ export default function ReportsClient({ initialReports, storeName }: { initialRe
                  </h2>
                  <p style={{ color: '#4338CA', opacity: 0.8, margin: '4px 0 0', fontWeight: 600 }}>Extrayez vos données pour un usage externe ou sauvegarde</p>
               </div>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: '#fff', padding: '8px 16px', borderRadius: '16px', border: '1px solid #C7D2FE' }}>
-                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <label style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Début</label>
-                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ border: 'none', fontWeight: 700, outline: 'none', color: '#1E1B4B', background: 'transparent' }} />
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                 {/* Format Toggle */}
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#fff', padding: '4px', borderRadius: '10px', border: '1px solid #C7D2FE' }}>
+                    <button style={formatToggleStyle(exportFormat === 'csv')} onClick={() => setExportFormat('csv')}>
+                      CSV
+                    </button>
+                    <button style={formatToggleStyle(exportFormat === 'json')} onClick={() => setExportFormat('json')}>
+                      JSON
+                    </button>
                  </div>
-                 <div style={{ width: '1px', height: '30px', background: '#E2E8F0' }} />
-                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <label style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Fin</label>
-                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ border: 'none', fontWeight: 700, outline: 'none', color: '#1E1B4B', background: 'transparent' }} />
+                 {/* Date Range */}
+                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: '#fff', padding: '8px 16px', borderRadius: '16px', border: '1px solid #C7D2FE' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                       <label style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Début</label>
+                       <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ border: 'none', fontWeight: 700, outline: 'none', color: '#1E1B4B', background: 'transparent' }} />
+                    </div>
+                    <div style={{ width: '1px', height: '30px', background: '#E2E8F0' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                       <label style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Fin</label>
+                       <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ border: 'none', fontWeight: 700, outline: 'none', color: '#1E1B4B', background: 'transparent' }} />
+                    </div>
                  </div>
               </div>
            </div>

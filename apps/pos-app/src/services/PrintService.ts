@@ -104,4 +104,76 @@ export class PrintService {
       </html>
     `;
   }
+
+  public static async printShiftReport(data: any, settings: PrinterSettings = { paperSize: '80mm' }) {
+    const html = this.generateShiftReportHtml(data, settings);
+    
+    try {
+      await Print.printAsync({ html });
+    } catch (error) {
+      console.error("❌ Erreur d'impression rapport Z:", error);
+      throw error;
+    }
+  }
+
+  private static generateShiftReportHtml(data: any, settings: PrinterSettings) {
+    const { openTime, closeTime, openingCash, salesCashTotal, expectedTotal, countedTotal, difference, fondDeCaisse, montantDepot } = data;
+    const width = settings.paperSize === '80mm' ? '80mm' : '58mm';
+    
+    return `
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+          <style>
+            body { 
+              font-family: 'Courier New', Courier, monospace; 
+              width: ${width}; 
+              margin: 0; 
+              padding: 10px; 
+              font-size: 12px;
+              color: #000;
+            }
+            .center { text-align: center; }
+            .header { margin-bottom: 15px; }
+            .separator { border-top: 1px dashed #000; margin: 10px 0; }
+            .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+            .bold { font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="header center">
+            <h1 style="font-size: 18px; margin: 0; text-transform: uppercase;">RAPPORT Z (CLÔTURE)</h1>
+          </div>
+
+          <div style="font-size: 11px;">
+            <p><strong>Ouverture:</strong> ${new Date(openTime).toLocaleString('fr-FR')}</p>
+            <p><strong>Clôture:</strong> ${new Date(closeTime).toLocaleString('fr-FR')}</p>
+          </div>
+
+          <div class="separator"></div>
+          
+          <div class="row"><span>Fond de caisse initial:</span> <span>${openingCash.toFixed(3)} DT</span></div>
+          <div class="row"><span>Ventes espèces:</span> <span>+ ${salesCashTotal.toFixed(3)} DT</span></div>
+          <div class="row bold" style="margin-top: 10px;"><span>Total Attendu:</span> <span>${expectedTotal.toFixed(3)} DT</span></div>
+
+          <div class="separator"></div>
+          
+          <div class="row bold"><span>Total Compté:</span> <span>${countedTotal.toFixed(3)} DT</span></div>
+          <div class="row"><span>Écart de caisse:</span> <span>${difference.toFixed(3)} DT</span></div>
+
+          <div class="separator"></div>
+
+          <div class="row"><span>Nouveau Fond de caisse:</span> <span>${fondDeCaisse.toFixed(3)} DT</span></div>
+          <div class="row bold" style="font-size: 14px; margin-top: 10px;"><span>Montant à Déposer:</span> <span>${Math.max(0, montantDepot).toFixed(3)} DT</span></div>
+
+          <div class="separator"></div>
+          <div class="center" style="margin-top: 20px; font-size: 10px;">
+            <p>Signature Caissier</p>
+            <br/><br/>
+            <p>_______________________</p>
+          </div>
+        </body>
+      </html>
+    `;
+  }
 }

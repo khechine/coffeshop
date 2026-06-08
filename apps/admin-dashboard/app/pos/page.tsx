@@ -27,7 +27,7 @@ export default async function POSPage() {
       storeId: store.id,
       role: { in: ['CASHIER', 'STORE_OWNER'] }
     },
-    select: { id: true, name: true, role: true, pinCode: true, defaultPosMode: true }
+    select: { id: true, name: true, role: true, pinCode: true, defaultPosMode: true, dailyTarget: true }
   });
 
   const dailySales = await prisma.sale.findMany({

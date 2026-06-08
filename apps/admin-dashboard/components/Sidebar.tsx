@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, ShoppingCart, History, Store, Tablet, Users, CreditCard, Settings, 
   Boxes, Cake, BarChart3, ChevronDown, ChevronRight, Package, FileText, TrendingUp,
-  Layers, LayoutGrid, Truck, ShoppingBag, Activity, Wallet
+  Layers, LayoutGrid, Truck, ShoppingBag, Activity, Wallet, Clock
 } from 'lucide-react';
 
 import { logoutUser } from '../app/actions';
@@ -231,6 +231,10 @@ export default function Sidebar({
                     <Link href="/admin/reports" title="Reporting & Clôtures" className={`nav-item${isActive('/admin/reports') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
                       <FileText size={18} />
                       {displayExpanded && <span>Reporting & Clôtures</span>}
+                    </Link>
+                    <Link href="/admin/pointage" title="Pointage & Présence" className={`nav-item${isActive('/admin/pointage') ? ' active' : ''}`} style={{ justifyContent: 'flex-start' }}>
+                      <Clock size={18} />
+                      {displayExpanded && <span>Pointage & Présence</span>}
                     </Link>
                   </>
                 )}

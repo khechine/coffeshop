@@ -14,12 +14,7 @@ export default async function StockManagement() {
     orderBy: { quantity: 'asc' },
   });
   const customSuppliers = await prisma.supplier.findMany({ 
-    where: { 
-      OR: [
-        { orders: { some: { storeId: store.id } } },
-        { stockItems: { some: { storeId: store.id } } }
-      ]
-    },
+    where: { storeId: store.id },
     orderBy: { name: 'asc' } 
   });
   const marketplaceVendors: any[] = [];
@@ -48,12 +43,12 @@ export default async function StockManagement() {
           <div style={{ fontSize: '32px', fontWeight: 900, marginTop: '6px' }}>{critical.length}</div>
         </div>
         <div style={{ padding: '22px', borderRadius: '20px', background: 'linear-gradient(135deg, #6366F1, #4F46E5)', color: '#fff', boxShadow: '0 8px 20px rgba(99,102,241,0.2)' }}>
-          <div style={{ fontSize: '10px', fontWeight: 700, opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Articles</div>
-          <div style={{ fontSize: '32px', fontWeight: 900, marginTop: '6px' }}>{stockItems.length}</div>
+          <div style={{ fontSize: '10px', fontWeight: 700, opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Valeur Stock HT</div>
+          <div style={{ fontSize: '32px', fontWeight: 900, marginTop: '6px' }}>{inventoryValue.toFixed(3)} <span style={{ fontSize: '14px', opacity: 0.8 }}>DT</span></div>
         </div>
         <div style={{ padding: '22px', borderRadius: '20px', background: 'linear-gradient(135deg, #F59E0B, #D97706)', color: '#fff', boxShadow: '0 8px 20px rgba(245,158,11,0.2)' }}>
-          <div style={{ fontSize: '10px', fontWeight: 700, opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Valeur Stock</div>
-          <div style={{ fontSize: '32px', fontWeight: 900, marginTop: '6px' }}>{inventoryValue.toFixed(3)} <span style={{ fontSize: '14px', opacity: 0.8 }}>DT</span></div>
+          <div style={{ fontSize: '10px', fontWeight: 700, opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>TVA Déductible</div>
+          <div style={{ fontSize: '32px', fontWeight: 900, marginTop: '6px' }}>{stockItems.reduce((acc, i) => acc + (Number(i.quantity) * Number(i.cost || 0) * Number(i.taxRate ?? 0.19)), 0).toFixed(3)} <span style={{ fontSize: '14px', opacity: 0.8 }}>DT</span></div>
         </div>
       </div>
 

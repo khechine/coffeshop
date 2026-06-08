@@ -223,5 +223,197 @@ export class PrintService {
       </html>
     `;
   }
+
+  static async printShiftReport(data: any, settings: PrinterSettings) {
+    const html = this.generateShiftReportHtml(data, settings);
+    
+    // Create a hidden iframe to hold the print content
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+
+      iframe.contentWindow?.focus();
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 500);
+    }
+  }
+
+  private static generateShiftReportHtml(data: any, settings: PrinterSettings) {
+    const width = settings.paperSize === '80mm' ? '80mm' : '58mm';
+    return `
+      <html>
+        <head>
+          <style>
+            @page { margin: 0; }
+            body { 
+              font-family: 'Courier New', Courier, monospace; 
+              width: ${width}; 
+              margin: 0; 
+              padding: 10px; 
+              font-size: 11px;
+              color: #000;
+            }
+            .center { text-align: center; }
+            .bold { font-weight: bold; }
+            .header { margin-bottom: 15px; font-size: 16px; text-transform: uppercase; }
+            .separator { border-top: 1px dashed #000; margin: 10px 0; }
+            .line { display: flex; justify-content: space-between; margin: 4px 0; }
+            .footer { margin-top: 20px; font-size: 9px; font-style: italic; }
+          </style>
+        </head>
+        <body>
+          <div class="header center">
+            <div>${data.storeName || 'Boutique'}</div>
+            <div style="font-size: 12px; margin-top: 5px;">RAPPORT DE CLÔTURE (Z)</div>
+          </div>
+          
+          <div class="line"><span>Ouverture:</span><span>${new Date(data.openTime).toLocaleString('fr-FR')}</span></div>
+          <div class="line"><span>Fermeture:</span><span>${new Date(data.closeTime).toLocaleString('fr-FR')}</span></div>
+          
+          <div class="separator"></div>
+          
+          <div class="line"><span>Fond initial:</span><span>${data.openingCash.toFixed(3)} DT</span></div>
+          <div class="line"><span>Ventes Espèces:</span><span>${data.salesCashTotal.toFixed(3)} DT</span></div>
+          
+          <div class="separator"></div>
+          
+          <div class="line bold" style="font-size: 12px;"><span>Total Attendu:</span><span>${data.expectedTotal.toFixed(3)} DT</span></div>
+          <div class="line bold" style="font-size: 12px;"><span>Total Compté:</span><span>${data.countedTotal.toFixed(3)} DT</span></div>
+          
+          <div class="separator"></div>
+          
+          <div class="line bold"><span>Écart:</span><span>${data.difference.toFixed(3)} DT</span></div>
+          <div class="line"><span>Fond conservé:</span><span>${data.fondDeCaisse.toFixed(3)} DT</span></div>
+          <div class="line bold" style="font-size: 14px; margin-top: 8px;"><span>Montant à Déposer:</span><span>${data.montantDepot.toFixed(3)} DT</span></div>
+          
+          <div class="separator"></div>
+          
+          <div style="margin-top: 20px;">
+            <p>Signature Caissier:</p>
+            <br/><br/>
+            <p>Signature Manager:</p>
+            <br/><br/>
+          </div>
+          
+          <div class="footer center">
+            <p>logiciel par ELKASSA</p>
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  static async printOpeningReport(data: any, settings: PrinterSettings) {
+    const html = this.generateOpeningReportHtml(data, settings);
+    
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+
+      iframe.contentWindow?.focus();
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 500);
+    }
+  }
+
+  private static generateOpeningReportHtml(data: any, settings: PrinterSettings) {
+    const width = settings.paperSize === '80mm' ? '80mm' : '58mm';
+    
+    // Sort denominations descending
+    const denominations = Object.keys(data.counts || {})
+      .map(Number)
+      .sort((a, b) => b - a);
+
+    const countDetailsHtml = denominations.map(val => {
+      const qty = data.counts[val] || 0;
+      if (qty > 0) {
+        return `<div class="line"><span>${val >= 1 ? val + ' DT' : (val * 1000) + ' Millimes'} x ${qty}</span><span>${(val * qty).toFixed(3)} DT</span></div>`;
+      }
+      return '';
+    }).filter(Boolean).join('');
+
+    return `
+      <html>
+        <head>
+          <style>
+            @page { margin: 0; }
+            body { 
+              font-family: 'Courier New', Courier, monospace; 
+              width: ${width}; 
+              margin: 0; 
+              padding: 10px; 
+              font-size: 11px;
+              color: #000;
+            }
+            .center { text-align: center; }
+            .bold { font-weight: bold; }
+            .header { margin-bottom: 15px; font-size: 16px; text-transform: uppercase; }
+            .separator { border-top: 1px dashed #000; margin: 10px 0; }
+            .line { display: flex; justify-content: space-between; margin: 4px 0; }
+            .footer { margin-top: 20px; font-size: 9px; font-style: italic; }
+          </style>
+        </head>
+        <body>
+          <div class="header center">
+            <div>${data.storeName || 'Boutique'}</div>
+            <div style="font-size: 12px; margin-top: 5px;">RAPPORT D'OUVERTURE</div>
+          </div>
+          
+          <div class="line"><span>Date:</span><span>${new Date(data.openTime).toLocaleString('fr-FR')}</span></div>
+          ${data.cashierName ? `<div class="line"><span>Caissier:</span><span>${data.cashierName}</span></div>` : ''}
+          
+          <div class="separator"></div>
+          <div class="bold center" style="margin-bottom: 5px;">DÉTAIL DU COMPTAGE</div>
+          ${countDetailsHtml}
+          <div class="separator"></div>
+          
+          <div class="line bold" style="font-size: 14px; margin-top: 8px;"><span>Total en Caisse:</span><span>${Number(data.openingCash || 0).toFixed(3)} DT</span></div>
+          
+          <div class="separator"></div>
+          
+          <div style="margin-top: 20px;">
+            <p>Signature Caissier:</p>
+            <br/><br/>
+            <p>Signature Manager:</p>
+            <br/><br/>
+          </div>
+          
+          <div class="footer center">
+            <p>logiciel par ELKASSA</p>
+          </div>
+        </body>
+      </html>
+    `;
+  }
 }
 

@@ -1,19 +1,23 @@
-import React from 'react';
-import { View, StyleSheet, FlatList, SafeAreaView, Text } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, FlatList, SafeAreaView, Text, TouchableOpacity, Dimensions } from 'react-native';
 import { ProductCard } from '../src/components/ProductCard';
 import { Cart } from '../src/components/Cart';
 import { SimplisticPOS } from '../src/components/SimplisticPOS';
 import { mockProducts } from '../src/data/mockProducts';
 import { useCartStore } from '../src/store/useCartStore';
-import { LayoutGrid, Hash } from 'lucide-react-native';
-import { TouchableOpacity, Dimensions } from 'react-native';
+import { useShiftStore } from '../src/store/useShiftStore';
+import { ShiftOpenScreen } from '../src/components/ShiftManager/ShiftOpenScreen';
+import { ShiftCloseModal } from '../src/components/ShiftManager/ShiftCloseModal';
+import { LayoutGrid, Hash, Calculator } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 const isMobile = width < 768;
 
 export default function Home() {
   const { addToCart, posMode, setPosMode } = useCartStore();
-  const [navStack, setNavStack] = React.useState<string[]>([]);
+  const { isOpen } = useShiftStore();
+  const [navStack, setNavStack] = useState<string[]>([]);
+  const [showCloseModal, setShowCloseModal] = useState(false);
 
   // Build Hierarchy
   const buildHierarchy = () => {
@@ -45,6 +49,10 @@ export default function Home() {
     setNavStack(next);
   };
 
+  if (!isOpen) {
+    return <ShiftOpenScreen />;
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Top Header Selector */}
@@ -52,20 +60,30 @@ export default function Home() {
         <View style={styles.logoArea}>
           <Text style={styles.logoText}>☕ CoffeeShop POS</Text>
         </View>
-        <View style={styles.modeSwitcher}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <View style={styles.modeSwitcher}>
+            <TouchableOpacity 
+              style={[styles.modeBtn, posMode === 'standard' && styles.modeBtnActive]} 
+              onPress={() => setPosMode('standard')}
+            >
+              <LayoutGrid size={18} color={posMode === 'standard' ? '#fff' : '#4b5563'} />
+              <Text style={[styles.modeBtnText, posMode === 'standard' && styles.modeBtnTextActive]}>Standard</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.modeBtn, posMode === 'simplistic' && styles.modeBtnActive]} 
+              onPress={() => setPosMode('simplistic')}
+            >
+              <Hash size={18} color={posMode === 'simplistic' ? '#fff' : '#4b5563'} />
+              <Text style={[styles.modeBtnText, posMode === 'simplistic' && styles.modeBtnTextActive]}>Comptage Session</Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity 
-            style={[styles.modeBtn, posMode === 'standard' && styles.modeBtnActive]} 
-            onPress={() => setPosMode('standard')}
+            style={styles.closeShiftBtn}
+            onPress={() => setShowCloseModal(true)}
           >
-            <LayoutGrid size={18} color={posMode === 'standard' ? '#fff' : '#4b5563'} />
-            <Text style={[styles.modeBtnText, posMode === 'standard' && styles.modeBtnTextActive]}>Standard</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.modeBtn, posMode === 'simplistic' && styles.modeBtnActive]} 
-            onPress={() => setPosMode('simplistic')}
-          >
-            <Hash size={18} color={posMode === 'simplistic' ? '#fff' : '#4b5563'} />
-            <Text style={[styles.modeBtnText, posMode === 'simplistic' && styles.modeBtnTextActive]}>Comptage Session</Text>
+            <Calculator size={18} color="#ef4444" />
+            <Text style={styles.closeShiftText}>Clôturer Caisse</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -120,6 +138,11 @@ export default function Home() {
           <SimplisticPOS />
         )}
       </View>
+
+      <ShiftCloseModal 
+        visible={showCloseModal} 
+        onClose={() => setShowCloseModal(false)} 
+      />
     </SafeAreaView>
   );
 }
@@ -247,6 +270,21 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     marginTop: 4,
     fontWeight: '600',
+  },
+  closeShiftBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    gap: 8,
+  },
+  closeShiftText: {
+    fontWeight: 'bold',
+    color: '#ef4444',
   },
 });
 

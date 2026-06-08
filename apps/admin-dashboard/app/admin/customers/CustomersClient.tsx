@@ -1,16 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus, FileText, UserPlus, Users } from 'lucide-react';
+import { Search, Plus, FileText, UserPlus, Users, Edit2 } from 'lucide-react';
 import Modal from '../../../components/Modal';
 
-import { createCustomer } from '../../actions';
+import { createCustomer, updateCustomer } from '../../actions';
 
 export default function CustomersClient({ initialCustomers, storeId }: { initialCustomers: any[], storeId: string }) {
   const [customers, setCustomers] = useState(initialCustomers);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '' });
+  const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
   
   const filtered = customers.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -39,6 +40,23 @@ export default function CustomersClient({ initialCustomers, storeId }: { initial
       setNewCustomer({ name: '', phone: '', email: '' });
     } catch (err) {
       alert("Erreur lors de la création du client");
+    }
+  };
+
+  const handleEditCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCustomer) return;
+    try {
+      await updateCustomer(editingCustomer.id, {
+        name: editingCustomer.name,
+        phone: editingCustomer.phone,
+        email: editingCustomer.email,
+        loyaltyPoints: editingCustomer.loyaltyPoints
+      });
+      setCustomers(customers.map(c => c.id === editingCustomer.id ? { ...c, ...editingCustomer } : c));
+      setEditingCustomer(null);
+    } catch (err) {
+      alert("Erreur lors de la mise à jour du client");
     }
   };
 
@@ -97,6 +115,9 @@ export default function CustomersClient({ initialCustomers, storeId }: { initial
                 </td>
                 <td className="mobile-hide" style={{ color: '#94A3B8', fontSize: '13px' }}>{customer.createdAt}</td>
                 <td style={{ textAlign: 'right' }}>
+                  <button className="btn btn-ghost" style={{ padding: '8px', color: '#F59E0B' }} title="Modifier ou Ajuster" onClick={() => setEditingCustomer(customer)}>
+                    <Edit2 size={18} />
+                  </button>
                   <button className="btn btn-ghost" style={{ padding: '8px', color: '#6366F1' }} title="Consulter l'historique">
                     <FileText size={18} />
                   </button>
@@ -149,6 +170,56 @@ export default function CustomersClient({ initialCustomers, storeId }: { initial
             <button type="submit" className="btn btn-primary">Créer le client</button>
           </div>
         </form>
+      </Modal>
+
+      {/* Edit Modal */}
+      <Modal open={!!editingCustomer} onClose={() => setEditingCustomer(null)} title="Modifier / Ajuster Client">
+        {editingCustomer && (
+          <form onSubmit={handleEditCustomer} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#475569' }}>Nom complet</label>
+              <input 
+                required
+                type="text" 
+                value={editingCustomer.name || ''}
+                onChange={e => setEditingCustomer({...editingCustomer, name: e.target.value})}
+                style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', width: '100%', outline: 'none' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#475569' }}>Téléphone</label>
+              <input 
+                required
+                type="text" 
+                value={editingCustomer.phone || ''}
+                onChange={e => setEditingCustomer({...editingCustomer, phone: e.target.value})}
+                style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', width: '100%', outline: 'none' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#475569' }}>Email (Optionnel)</label>
+              <input 
+                type="email" 
+                value={editingCustomer.email || ''}
+                onChange={e => setEditingCustomer({...editingCustomer, email: e.target.value})}
+                style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', width: '100%', outline: 'none' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#475569' }}>Points de Fidélité</label>
+              <input 
+                type="number" 
+                value={editingCustomer.loyaltyPoints || 0}
+                onChange={e => setEditingCustomer({...editingCustomer, loyaltyPoints: parseInt(e.target.value) || 0})}
+                style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', width: '100%', outline: 'none' }}
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+              <button type="button" className="btn btn-ghost" onClick={() => setEditingCustomer(null)}>Annuler</button>
+              <button type="submit" className="btn btn-primary">Enregistrer les modifications</button>
+            </div>
+          </form>
+        )}
       </Modal>
 
     </div>

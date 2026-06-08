@@ -1,16 +1,25 @@
 // apps/pos-app/src/components/Cart.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { useCartStore } from '../store/useCartStore';
+import { useShiftStore } from '../store/useShiftStore';
 import { Trash2, Plus, Minus, CreditCard, Banknote } from 'lucide-react-native';
+import { CheckoutModal } from './CheckoutModal';
 
 export const Cart: React.FC = () => {
   const { items, total, addToCart, removeFromCart, clearCart } = useCartStore();
+  const { recordCashSale } = useShiftStore();
+  const [showCheckout, setShowCheckout] = useState(false);
 
-  const handleCheckout = () => {
-    if (items.length === 0) return;
-    // Here we would sync with API or Local Database for offline mode
-    alert(`Enregistré localement! Total: ${total.toFixed(3)} DT`);
+  const handleCheckoutConfirm = (method: string, type: string, discount: number) => {
+    setShowCheckout(false);
+    
+    // Simulate API call
+    if (method === 'CASH') {
+      recordCashSale(total - discount / 100); // Assuming total is correct
+    }
+    
+    alert(`Enregistré localement! Mode: ${method}, Total payé: ${(total - discount / 100).toFixed(3)} DT`);
     clearCart();
   };
 
@@ -55,13 +64,20 @@ export const Cart: React.FC = () => {
 
         <TouchableOpacity 
           style={[styles.checkoutBtn, items.length === 0 && styles.checkoutBtnDisabled]} 
-          onPress={handleCheckout}
+          onPress={() => setShowCheckout(true)}
           disabled={items.length === 0}
         >
           <Banknote color="#fff" size={24} style={{ marginRight: 8 }} />
           <Text style={styles.checkoutBtnText}>Payer & Enregistrer</Text>
         </TouchableOpacity>
       </View>
+
+      <CheckoutModal
+        visible={showCheckout}
+        onClose={() => setShowCheckout(false)}
+        onConfirm={handleCheckoutConfirm}
+        total={total}
+      />
     </View>
   );
 };
