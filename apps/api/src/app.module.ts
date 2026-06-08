@@ -5,6 +5,7 @@ import { SalesModule } from './sales/sales.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { ProductsModule } from './products/products.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
+import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { AuthController } from './auth.controller';
 import { ManagementController } from './management.controller';
 
@@ -19,6 +20,7 @@ import { ManagementController } from './management.controller';
     InventoryModule,
     ProductsModule,
     MarketplaceModule, // ✅ Anti-leakage tracking — Phase 2
+    WhatsappModule,
   ],
 
   controllers: [AuthController, ManagementController],

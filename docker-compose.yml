@@ -59,7 +59,7 @@ services:
     container_name: coffeeshop_openwa
     restart: always
     entrypoint: ["/usr/src/app/entrypoint.sh"]
-    command: ["--use-chrome", "--in-docker", "--qr-timeout", "0", "--popup", "--debug", "--force-port", "--host", "0.0.0.0", "--custom-user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"]
+    command: ["--in-docker", "--qr-timeout", "0", "--debug", "--force-port", "--host", "0.0.0.0", "--custom-user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36", "--webhook", "http://api:3001/whatsapp/webhook"]
     ports:
       - "127.0.0.1:8002:8002"
     environment:
