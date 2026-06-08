@@ -925,6 +925,45 @@ export async function resetPasswordAction(token: string, newPassword: string) {
   return { success: true, message: 'Mot de passe réinitialisé avec succès.' };
 }
 
+// ── WhatsApp Configuration (SuperAdmin) ────────────────────────
+export async function getWhatsAppConfigAction() {
+  const settings = await (prisma as any).systemSettings.findUnique({
+    where: { id: 'global' }
+  });
+  return {
+    waServerUrl: settings?.waServerUrl || '',
+    waApiKey: settings?.waApiKey ? '********' : '',
+    hasExistingKey: !!settings?.waApiKey,
+  };
+}
+
+export async function updateWhatsAppConfigAction(data: { waServerUrl: string; waApiKey?: string }) {
+  const updateData: any = { waServerUrl: data.waServerUrl };
+  if (data.waApiKey && data.waApiKey !== '********') {
+    updateData.waApiKey = data.waApiKey;
+  }
+  await (prisma as any).systemSettings.upsert({
+    where: { id: 'global' },
+    create: { id: 'global', ...updateData },
+    update: updateData,
+  });
+  revalidatePath('/superadmin/whatsapp');
+  return { success: true };
+}
+
+export async function sendTestWhatsAppAction(to: string, message: string) {
+  const { sendWhatsApp: waSend } = await import('./lib/whatsapp');
+  const result = await waSend({ to, text: message });
+  return result;
+}
+
+export async function getWhatsAppLogsAction() {
+  return await (prisma as any).whatsAppLog.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  });
+}
+
 export async function submitVendorPremiumRequestAction(data: { message?: string, phone: string, preferredContact: string }) {
   const user = await getUserContext();
   if (!user || user.role !== 'VENDOR') throw new Error('Non autorisé');

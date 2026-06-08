@@ -10,8 +10,20 @@ model SystemSettings {
   smtpUser  String?
   smtpPass  String?
   smtpFrom  String?  @default("ElKassa <postmaster@elkassa.com>")
+  waServerUrl String?
+  waApiKey    String?
   updatedAt DateTime @updatedAt
   updatedBy String?
+}
+
+model WhatsAppLog {
+  id        String   @id @default(cuid())
+  to        String
+  message   String
+  status    String   // "SENT" | "FAILED"
+  messageId String?
+  error     String?
+  createdAt DateTime @default(now())
 }
 
 model EmailLog {

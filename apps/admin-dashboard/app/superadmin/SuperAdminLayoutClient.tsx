@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Store, ShieldCheck, MapPin, Package, CreditCard, LogOut, CheckCircle, Truck, Database, Wallet, Menu, X, Cake, Star, FileText, Settings, Mail } from 'lucide-react';
+import { LayoutDashboard, Users, Store, ShieldCheck, MapPin, Package, CreditCard, LogOut, CheckCircle, Truck, Database, Wallet, Menu, X, Cake, Star, FileText, Settings, Mail, MessageCircle } from 'lucide-react';
 import { ToastProvider } from '../components/Toast';
 
 export default function SuperAdminLayoutClient({ children }: { children: React.ReactNode }) {
@@ -27,6 +27,7 @@ export default function SuperAdminLayoutClient({ children }: { children: React.R
     { label: 'Gestion Utilisateurs', icon: Users, href: '/superadmin/users' },
     { label: 'Historique E-mails', icon: Mail, href: '/superadmin/emails', badge: 'Logs' },
     { label: 'Monitoring Anti-Bypass', icon: ShieldCheck, href: '/superadmin/marketplace/monitoring', badge: 'Sécurité' },
+    { label: 'WhatsApp / OpenWA', icon: MessageCircle, href: '/superadmin/whatsapp', badge: 'Notifications' },
     { label: 'Paramètres Système', icon: Settings, href: '/superadmin/settings', badge: 'Admin' },
   ];
 
