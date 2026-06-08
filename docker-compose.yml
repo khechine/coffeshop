@@ -60,6 +60,8 @@ services:
     restart: always
     entrypoint: ["node"]
     command: ["node_modules/@open-wa/wa-automate/bin/server.js", "--use-chrome", "--in-docker", "--qr-timeout", "0", "--popup", "--debug", "--force-port", "--host", "0.0.0.0"]
+    ports:
+      - "127.0.0.1:8002:8002"
     environment:
       WA_API_KEY: ${WA_API_KEY}
       TZ: Africa/Tunis
