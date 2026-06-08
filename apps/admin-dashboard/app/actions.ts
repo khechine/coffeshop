@@ -417,6 +417,44 @@ export async function deleteSupplier(id: string) {
   revalidatePath('/vendor/dashboard');
 }
 
+export async function sendSupplierWhatsAppVerificationAction(supplierId: string) {
+  const store = await getStore();
+  if (!store) throw new Error('Non autorisé');
+
+  const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } });
+  if (!supplier) throw new Error('Fournisseur introuvable');
+  if (!supplier.phone) throw new Error('Ce fournisseur n\'a pas de numéro de téléphone');
+
+  const crypto = require('crypto');
+  const code = crypto.randomInt(100000, 999999).toString();
+  const expires = new Date(Date.now() + 10 * 60 * 1000);
+
+  await prisma.supplier.update({
+    where: { id: supplierId },
+    data: {
+      whatsappVerificationToken: code,
+      whatsappVerificationExpires: expires,
+    },
+  });
+
+  const { sendWhatsApp } = await import('./lib/whatsapp');
+  const msg = [
+    `☕ *ElKassa - Vérification WhatsApp* ☕`,
+    ``,
+    `Bonjour ${supplier.name},`,
+    ``,
+    `Votre code de vérification est : *${code}*`,
+    ``,
+    `Répondez avec ce code pour confirmer votre numéro WhatsApp.`,
+    `Ce code expire dans 10 minutes.`,
+  ].join('\n');
+
+  await sendWhatsApp({ to: supplier.phone, text: msg });
+
+  revalidatePath('/admin/suppliers');
+  return { success: true };
+}
+
 // ══════════════════════════════════════════════════════════════
 //  SUPPLIER ORDERS
 // ══════════════════════════════════════════════════════════════

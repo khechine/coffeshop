@@ -3,7 +3,7 @@
 import React, { useState, useTransition } from 'react';
 import { Truck, Plus, Package, Edit, Trash2, Search, FileText, ShoppingBag, Store, ExternalLink, Building2, User, Phone, Mail, MapPin } from 'lucide-react';
 import Modal from '../../../components/Modal';
-import { createSupplier, updateSupplier, deleteSupplier } from '../../actions';
+import { createSupplier, updateSupplier, deleteSupplier, sendSupplierWhatsAppVerificationAction } from '../../actions';
 
 type SupplierView = { type: 'local'; data: any } | { type: 'marketplace'; data: any };
 
@@ -260,7 +260,10 @@ export default function SuppliersClient({
                         </td>
                         <td>
                           <div style={{ fontSize: '13px', color: '#475569' }}>{supplier.contact || '-'}</div>
-                          <div style={{ fontSize: '12px', color: '#94A3B8' }}>{supplier.phone || '-'}</div>
+                          <div style={{ fontSize: '12px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {supplier.phone || '-'}
+                            {supplier.whatsappVerified && <span style={{ fontSize: '10px', color: '#16A34A' }}>✅</span>}
+                          </div>
                         </td>
                         <td>
                           <span className="badge blue" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -356,9 +359,31 @@ export default function SuppliersClient({
                 <div style={{ width: 56, height: 56, borderRadius: '12px', background: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 800 }}>
                   {selectedLocal.name.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#1E293B', margin: '0 0 4px' }}>{selectedLocal.name}</h2>
+            <div>
+              <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#1E293B', margin: '0 0 4px' }}>{selectedLocal.name}</h2>
                   <div style={{ fontSize: '13px', color: '#64748B' }}>{selectedLocal.phone || 'Pas de téléphone'} • {selectedLocal.contact || 'Pas de contact'}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                    {selectedLocal.whatsappVerified ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#DCFCE7', color: '#16A34A', borderRadius: '6px', padding: '2px 10px', fontSize: '11px', fontWeight: 800 }}>
+                        ✅ WhatsApp vérifié
+                      </span>
+                    ) : selectedLocal.phone ? (
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!confirm(`Envoyer le code de vérification WhatsApp à ${selectedLocal.name} ?`)) return;
+                          startTransition(async () => {
+                            await sendSupplierWhatsAppVerificationAction(selectedLocal.id);
+                            setSuppliers(prev => prev.map(s => s.id === selectedLocal.id ? { ...s, whatsappVerificationToken: 'sent' } : s));
+                          });
+                        }}
+                        disabled={isPending}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#FEF3C7', color: '#D97706', border: 'none', borderRadius: '6px', padding: '2px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        📱 Vérifier WhatsApp
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
 

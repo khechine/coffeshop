@@ -104,6 +104,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  whatsappVerified       Boolean   @default(false)
+  whatsappVerificationToken String?
+  whatsappVerificationExpires DateTime?
+
   // Notification Preferences
   notifyEmailMessages Boolean @default(true)
   notifyEmailOrders   Boolean @default(true)
@@ -1132,6 +1136,10 @@ model Supplier {
   storeId    String?
   store      Store?          @relation(fields: [storeId], references: [id])
   createdAt  DateTime      @default(now())
+
+  whatsappVerified       Boolean   @default(false)
+  whatsappVerificationToken String?
+  whatsappVerificationExpires DateTime?
 }
 
 model SupplierOrder {
