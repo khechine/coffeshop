@@ -69,7 +69,7 @@ ${itemsDescription}
   async handleIncomingMessage(payload: any) {
     const body = payload?.body || payload?.content || '';
     const from = payload?.from || payload?.chatId || '';
-    const senderName = payload?.notifyName || payload?.sender?.name || 'Inconnu';
+    const senderName = payload?.notifyName || payload?.sender?.name || payload?.sender?.pushname || 'Inconnu';
 
     this.logger.log(`📩 WhatsApp from ${from} (${senderName}): "${body}"`);
 
@@ -116,11 +116,11 @@ ${itemsDescription}
 
   async handleWebhook(body: any) {
     const event = body?.event || '';
-    const payload = body?.payload || body;
+    const payload = body?.data || body?.payload || body;
 
     this.logger.debug(`Webhook event: ${event}`);
 
-    if (event === 'onMessage' || (!event && payload?.body)) {
+    if (event === 'onMessage' || event === 'onAnyMessage' || (!event && payload?.body)) {
       await this.handleIncomingMessage(payload);
     }
   }
