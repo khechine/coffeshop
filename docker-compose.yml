@@ -58,8 +58,8 @@ services:
     image: openwa/wa-automate:latest
     container_name: coffeeshop_openwa
     restart: always
-    entrypoint: ["node"]
-    command: ["node_modules/@open-wa/wa-automate/bin/server.js", "--use-chrome", "--in-docker", "--qr-timeout", "0", "--popup", "--debug", "--force-port", "--host", "0.0.0.0"]
+    entrypoint: ["/usr/src/app/entrypoint.sh"]
+    command: ["--use-chrome", "--in-docker", "--qr-timeout", "0", "--popup", "--debug", "--force-port", "--host", "0.0.0.0", "--custom-user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"]
     ports:
       - "127.0.0.1:8002:8002"
     environment:
@@ -67,6 +67,7 @@ services:
       TZ: Africa/Tunis
     volumes:
       - openwa_data:/app/data
+      - ./entrypoint.sh:/usr/src/app/entrypoint.sh:ro
     networks:
       - default
 
