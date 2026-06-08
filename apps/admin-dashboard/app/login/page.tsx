@@ -140,7 +140,7 @@ export default function LoginPage() {
                <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mot de passe</label>
-                     <Link href="#" style={{ fontSize: '12px', color: '#6366F1', fontWeight: 700, textDecoration: 'none' }}>Mot de passe oublié ?</Link>
+                     <Link href="/forgot-password" style={{ fontSize: '12px', color: '#6366F1', fontWeight: 700, textDecoration: 'none' }}>Mot de passe oublié ?</Link>
                   </div>
                   <div style={{ position: 'relative' }}>
                      <Lock size={18} color="#CBD5E1" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />

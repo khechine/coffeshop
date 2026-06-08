@@ -3,7 +3,7 @@
 import React, { useState, useTransition } from 'react';
 import { Plus, Edit2, Trash2, Mail, Phone, ShieldCheck, Key, History, Lock, Clock } from 'lucide-react';
 import Modal from '../../../components/Modal';
-import { createStaffMember, updateStaffMember, deleteStaffMember, updateStaffPinAction, getStaffSessionLogs } from '../../actions';
+import { createStaffMember, updateStaffMember, deleteStaffMember, updateStaffPinAction, getStaffSessionLogs, updateStaffPasswordAction } from '../../actions';
 
 const ROLES = [
   { value: 'STORE_OWNER', label: 'Gérant (Owner)', badge: 'blue', desc: 'Accès complet au dashboard' },
@@ -80,6 +80,8 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
   const [deleteTarget, setDeleteTarget] = useState<StaffMember | null>(null);
   const [pinTarget, setPinTarget] = useState<StaffMember | null>(null);
   const [newPin, setNewPin] = useState('');
+  const [passwordTarget, setPasswordTarget] = useState<StaffMember | null>(null);
+  const [newPassword, setNewPassword] = useState('');
   const [logTarget, setLogTarget] = useState<StaffMember | null>(null);
   const [logs, setLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -108,6 +110,16 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
       await updateStaffPinAction(pinTarget.id, newPin || null);
       setPinTarget(null);
       setNewPin('');
+    });
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordTarget || !newPassword) return;
+    startTransition(async () => {
+      await updateStaffPasswordAction(passwordTarget.id, newPassword);
+      setPasswordTarget(null);
+      setNewPassword('');
     });
   };
 
@@ -198,6 +210,7 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
                       {isManager && (
                         <>
                           <button title="Gérer PIN" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => { setPinTarget(member); setNewPin(member.pinCode || ''); }}><Key size={14} /></button>
+                          <button title="Réinitialiser Mot de Passe" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px', color: '#D97706' }} onClick={() => { setPasswordTarget(member); setNewPassword(''); }}><Lock size={14} /></button>
                           <button title="Modifier" className="btn btn-ghost" style={{ padding: '6px 10px', marginRight: '4px' }} onClick={() => openEdit(member)}><Edit2 size={14} /></button>
                           {currentUser?.id !== member.id && (
                             <button title="Révoquer" className="btn btn-ghost" style={{ padding: '6px 10px', color: '#EF4444' }} onClick={() => setDeleteTarget(member)}><Trash2 size={14} /></button>
@@ -409,6 +422,34 @@ export default function StaffClient({ staff, tables, currentUser }: { staff: Sta
               Réinitialiser (supprimer le code)
             </button>
           )}
+        </form>
+      </Modal>
+
+      {/* Password Reset Modal */}
+      <Modal open={!!passwordTarget} onClose={() => setPasswordTarget(null)} title="Réinitialiser le Mot de Passe" width={400}>
+        <form onSubmit={handleUpdatePassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '12px', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}><Lock size={24} color="#D97706" /></div>
+            <p style={{ fontWeight: 700, color: '#1E293B', fontSize: '15px' }}>Nouveau mot de passe pour {passwordTarget?.name}</p>
+            <p style={{ color: '#64748B', fontSize: '13px' }}>L'employé devra utiliser ce nouveau mot de passe.</p>
+          </div>
+          <div>
+            <label style={label}>Nouveau Mot de Passe</label>
+            <input
+              style={field}
+              type="text"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              placeholder="Entrez le nouveau mot de passe..."
+              required
+              minLength={4}
+              autoFocus
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setPasswordTarget(null)}>Annuler</button>
+            <button type="submit" className="btn btn-primary" style={{ flex: 1, background: '#D97706', borderColor: '#D97706' }} disabled={isPending}>{isPending ? '...' : 'Enregistrer'}</button>
+          </div>
         </form>
       </Modal>
 

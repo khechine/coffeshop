@@ -83,6 +83,8 @@ model User {
   phone     String?
   emailVerified Boolean @default(false)
   verificationToken String?
+  resetPasswordToken String?
+  resetPasswordTokenExpires DateTime?
   defaultPosMode String? @default("tables") 
   permissions    String[] @default(["POS"])
   assignedTables String[] @default([]) // Tables assigned to this barista (labels)

@@ -822,6 +822,109 @@ export async function updateUserPasswordAction(userId: string, newPassword: stri
   return { success: true };
 }
 
+// ── Store Owner: Reset staff password ──────────────────────────
+export async function updateStaffPasswordAction(staffId: string, newPassword: string) {
+  const authUser = await checkStaffActionAuth();
+  const hashed = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({
+    where: { id: staffId },
+    data: { password: hashed }
+  });
+  revalidatePath('/admin/staff');
+  return { success: true };
+}
+
+// ── Forgot Password: Request reset ─────────────────────────────
+export async function requestPasswordResetAction(email: string) {
+  const user = await (prisma as any).user.findUnique({ where: { email } });
+  if (!user) {
+    // Don't reveal if email exists — return success either way
+    return { success: true, message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' };
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await prisma.user.update({
+    where: { email },
+    data: {
+      resetPasswordToken: token,
+      resetPasswordTokenExpires: expires,
+    },
+  });
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
+  const resetLink = `${appUrl}/reset-password?token=${token}`;
+
+  // Send email
+  const emailResult = await sendMarketplaceEmail({
+    to: email,
+    subject: '🔑 Réinitialisation de votre mot de passe - Alkassa',
+    text: `Bonjour ${user.name},\n\nVous avez demandé la réinitialisation de votre mot de passe.\n\nCliquez sur ce lien pour définir un nouveau mot de passe :\n${resetLink}\n\nCe lien expire dans 1 heure.\n\nSi vous n'avez pas demandé cette réinitialisation, ignorez cet email.\n\nL'équipe Alkassa`,
+    html: `
+      <div style="font-family: 'Segoe UI', sans-serif; background: #F8FAFC; padding: 40px 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #E2E8F0;">
+          <div style="background: linear-gradient(135deg, #1E1B4B, #312E81); padding: 32px; text-align: center; color: #fff;">
+            <div style="font-size: 24px; font-weight: 800;">Alkassa</div>
+          </div>
+          <div style="padding: 40px 32px;">
+            <h2 style="font-size: 20px; font-weight: 700; color: #0F172A; margin: 0 0 16px;">Bonjour ${user.name},</h2>
+            <p style="font-size: 15px; line-height: 1.6; color: #475569; margin-bottom: 32px;">
+              Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous pour en définir un nouveau.
+            </p>
+            <div style="text-align: center; margin-bottom: 32px;">
+              <a href="${resetLink}" style="display: inline-block; background: #4F46E5; color: #fff; font-size: 15px; font-weight: 700; text-decoration: none; padding: 14px 32px; border-radius: 12px;">
+                Réinitialiser mon mot de passe
+              </a>
+            </div>
+            <p style="font-size: 13px; color: #64748B;">Ce lien expire dans 1 heure. Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+          </div>
+          <div style="background: #F8FAFC; border-top: 1px solid #F1F5F9; padding: 24px 32px; text-align: center; font-size: 12px; color: #94A3B8;">
+            &copy; ${new Date().getFullYear()} Alkassa
+          </div>
+        </div>
+      </div>
+    `,
+  });
+
+  // Send WhatsApp if phone is available
+  if (user.phone) {
+    const { sendWhatsApp } = await import('./lib/whatsapp');
+    await sendWhatsApp({
+      to: user.phone,
+      text: `🔑 Alkassa - Réinitialisation mot de passe\n\nBonjour ${user.name},\n\nCliquez sur ce lien pour réinitialiser votre mot de passe (valable 1h) :\n${resetLink}\n\nSi vous n'avez pas demandé cette réinitialisation, ignorez ce message.`,
+    });
+  }
+
+  return { success: true, message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' };
+}
+
+// ── Reset Password: Use token ──────────────────────────────────
+export async function resetPasswordAction(token: string, newPassword: string) {
+  const user = await (prisma as any).user.findFirst({
+    where: {
+      resetPasswordToken: token,
+      resetPasswordTokenExpires: { gt: new Date() },
+    },
+  });
+
+  if (!user) {
+    return { error: 'Le lien de réinitialisation est invalide ou a expiré.' };
+  }
+
+  const hashed = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password: hashed,
+      resetPasswordToken: null,
+      resetPasswordTokenExpires: null,
+    },
+  });
+
+  return { success: true, message: 'Mot de passe réinitialisé avec succès.' };
+}
+
 export async function submitVendorPremiumRequestAction(data: { message?: string, phone: string, preferredContact: string }) {
   const user = await getUserContext();
   if (!user || user.role !== 'VENDOR') throw new Error('Non autorisé');
