@@ -54,6 +54,18 @@ services:
       - default
       - marketplace_default
 
+  openwa:
+    image: openwa/wa-automate:latest
+    container_name: coffeeshop_openwa
+    restart: always
+    environment:
+      WA_API_KEY: ${WA_API_KEY}
+      TZ: Africa/Tunis
+    volumes:
+      - openwa_data:/app/data
+    networks:
+      - default
+
   nginx:
     image: nginx:alpine
     container_name: coffeeshop_nginx
@@ -73,6 +85,7 @@ services:
       - default
 
 volumes:
+  openwa_data:
   coffeeshop_pgdata:
   coffeeshop_uploads:
 
