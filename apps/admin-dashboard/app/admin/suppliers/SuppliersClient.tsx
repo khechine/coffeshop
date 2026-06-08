@@ -3,7 +3,7 @@
 import React, { useState, useTransition } from 'react';
 import { Truck, Plus, Package, Edit, Trash2, Search, FileText, ShoppingBag, Store, ExternalLink, Building2, User, Phone, Mail, MapPin } from 'lucide-react';
 import Modal from '../../../components/Modal';
-import { createSupplier, updateSupplier, deleteSupplier, sendSupplierWhatsAppVerificationAction } from '../../actions';
+import { createSupplier, updateSupplier, deleteSupplier } from '../../actions';
 
 type SupplierView = { type: 'local'; data: any } | { type: 'marketplace'; data: any };
 
@@ -367,21 +367,6 @@ export default function SuppliersClient({
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#DCFCE7', color: '#16A34A', borderRadius: '6px', padding: '2px 10px', fontSize: '11px', fontWeight: 800 }}>
                         ✅ WhatsApp vérifié
                       </span>
-                    ) : selectedLocal.phone ? (
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (!confirm(`Envoyer le code de vérification WhatsApp à ${selectedLocal.name} ?`)) return;
-                          startTransition(async () => {
-                            await sendSupplierWhatsAppVerificationAction(selectedLocal.id);
-                            setSuppliers(prev => prev.map(s => s.id === selectedLocal.id ? { ...s, whatsappVerificationToken: 'sent' } : s));
-                          });
-                        }}
-                        disabled={isPending}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#FEF3C7', color: '#D97706', border: 'none', borderRadius: '6px', padding: '2px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
-                      >
-                        📱 Vérifier WhatsApp
-                      </button>
                     ) : null}
                   </div>
                 </div>
