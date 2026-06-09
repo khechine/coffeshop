@@ -2067,4 +2067,169 @@ export class ManagementController {
     });
     return { success: true, data: updated };
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // INVOICE IMPORT  (AI analysis + stock import)
+  // ═══════════════════════════════════════════════════════════
+
+  @Post('invoice/analyze')
+  async analyzeInvoice(@Body() body: { imageBase64: string }): Promise<any> {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      throw new BadRequestException("Clé API Gemini non configurée.");
+    }
+
+    let cleanBase64 = body.imageBase64;
+    let mimeType = "image/jpeg";
+    if (body.imageBase64.includes(';base64,')) {
+      const parts = body.imageBase64.split(';base64,');
+      cleanBase64 = parts[1];
+      mimeType = parts[0].replace('data:', '');
+    }
+
+    const prompt = `Analyze this purchase invoice/ticket image and extract the following details in a structured JSON format:
+- "supplierName": The name of the vendor/supplier.
+- "items": A list of items/products purchased. For each item extract:
+  - "name": Name/description of the item (translate to French if possible).
+  - "quantity": Number of units purchased (as a number).
+  - "price": Unit cost/price excluding tax (HT) or unit price including tax if HT not clear (as a number).
+  - "tva": Value Added Tax (TVA) percentage rate if listed (e.g. 19 for 19%, 7 for 7%).
+
+Return ONLY a valid JSON object matching this schema, without markdown formatting blocks:
+{
+  "supplierName": string,
+  "items": Array<{ name: string, quantity: number, price: number, tva: number }>
+}`;
+
+    const models = ['gemini-1.5-flash', 'gemini-2.5-flash'];
+    let lastError: any = null;
+
+    for (const model of models) {
+      for (const version of ['v1', 'v1beta']) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent?key=${apiKey}`;
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: prompt },
+                  { inlineData: { mimeType, data: cleanBase64 } }
+                ]
+              }],
+              generationConfig: { responseMimeType: "application/json" }
+            })
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Status ${response.status}: ${errorText}`);
+          }
+
+          const resData = await response.json();
+          const textResponse = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!textResponse) throw new Error("Aucun texte retourné.");
+
+          return JSON.parse(textResponse);
+        } catch (err: any) {
+          lastError = err;
+        }
+      }
+    }
+
+    throw new BadRequestException(`L'analyse de la facture a échoué: ${lastError?.message}`);
+  }
+
+  @Post('invoice/import')
+  async importInvoiceItems(@Body() body: {
+    storeId: string;
+    supplierName?: string;
+    items: Array<{
+      stockItemId?: string;
+      name?: string;
+      quantity: number;
+      cost: number;
+      taxRate?: number;
+      unitId?: string;
+    }>;
+  }): Promise<any> {
+    if (!body.storeId) throw new BadRequestException("storeId requis.");
+
+    let supplierId: string | undefined = undefined;
+    if (body.supplierName && body.supplierName.trim() !== "") {
+      const nameTrim = body.supplierName.trim();
+      let supplier = await (prisma as any).supplier.findFirst({
+        where: { name: { equals: nameTrim, mode: 'insensitive' }, storeId: body.storeId }
+      });
+
+      if (!supplier) {
+        supplier = await (prisma as any).supplier.create({
+          data: {
+            name: nameTrim,
+            contact: "Contact " + nameTrim,
+            phone: "00000000",
+            storeId: body.storeId
+          }
+        });
+      }
+      supplierId = supplier.id;
+    }
+
+    let totalTtc = 0;
+    const results: any[] = [];
+
+    for (const item of body.items) {
+      const rate = item.taxRate ?? 0.19;
+      const ht = item.cost * item.quantity;
+      const ttc = ht * (1 + rate);
+      totalTtc += ttc;
+
+      if (item.stockItemId && item.stockItemId !== 'NEW') {
+        const currentItem = await prisma.stockItem.findUnique({
+          where: { id: item.stockItemId }
+        });
+        if (currentItem) {
+          const newQty = Number(currentItem.quantity) + Number(item.quantity);
+          const updated = await prisma.stockItem.update({
+            where: { id: item.stockItemId },
+            data: {
+              quantity: newQty,
+              cost: item.cost,
+              taxRate: rate,
+              preferredSupplierId: supplierId || currentItem.preferredSupplierId
+            }
+          });
+          results.push({ id: updated.id, name: updated.name, action: 'UPDATED' });
+        }
+      } else if (item.name) {
+        const created = await prisma.stockItem.create({
+          data: {
+            name: item.name,
+            quantity: item.quantity,
+            cost: item.cost,
+            taxRate: rate,
+            minThreshold: 0,
+            storeId: body.storeId,
+            unitId: item.unitId || null,
+            preferredSupplierId: supplierId || null
+          }
+        });
+        results.push({ id: created.id, name: created.name, action: 'CREATED' });
+      }
+    }
+
+    if (totalTtc > 0) {
+      await prisma.expense.create({
+        data: {
+          storeId: body.storeId,
+          category: "ACHAT",
+          amount: totalTtc,
+          description: `Facture Achat - ${body.supplierName || 'Fournisseur Inconnu'}`,
+        }
+      });
+    }
+
+    return { success: true, items: results, totalTtc };
+  }
 }
