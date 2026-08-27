@@ -1164,10 +1164,10 @@ export default function PremiumPOSClient({
                </>
              )}
           </div>
-        )}
+          )}
 
-      {/* Main Experience Area */}
-      <div className="pos-product-section">
+          {/* Main Experience Area */}
+          <div className="pos-product-section">
         {view === 'DASHBOARD' ? (
           <div style={{ flex: 1, padding: 40, overflowY: 'auto', background: 'var(--pos-bg)' }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
@@ -1726,9 +1726,8 @@ export default function PremiumPOSClient({
            </div>
         )}
       </div>
-    </div>
 
-    {/* Cart Sidebar (Stay functional always during POS) */}
+      {/* Cart Sidebar (Stay functional always during POS) */}
       {view === 'POS' && (
       <aside className={`pos-cart-sidebar ${isCartOpenMobile ? 'mobile-open' : ''}`}>
         <div className="cart-header">
@@ -1856,6 +1855,7 @@ export default function PremiumPOSClient({
       </aside>
       )}
 
+      </div> {/* closes pos-main-wrapper */}
       </div> {/* closes pos-main-content */}
 
       {/* Floating Mobile Cart Bar */}
