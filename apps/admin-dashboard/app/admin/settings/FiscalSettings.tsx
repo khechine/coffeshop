@@ -11,23 +11,22 @@ interface FiscalSettingsProps {
 }
 
 export default function FiscalSettings({ isFiscalEnabled, planName }: FiscalSettingsProps) {
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = React.useState(false);
 
-  const handleToggle = (enabled: boolean) => {
-    const msg = enabled 
-      ? "Activer le mode fiscal NACEF ? Cette action est irréversible pour les transactions futures et nécessite un abonnement valide."
-      : "Désactiver le mode fiscal ? Attention, cela pourrait compromettre votre conformité si vous avez déjà émis des tickets fiscaux.";
+  const handleActivate = async () => {
+    const msg = "Activer le mode fiscal NACEF ? Cette action enclenche le chaînage cryptographique des factures et la conformité légale CIMF.";
     
     if (!confirm(msg)) return;
 
-    startTransition(async () => {
-      try {
-        await toggleFiscalMode(enabled);
-        alert(`Mode fiscal ${enabled ? 'activé' : 'désactivé'} avec succès.`);
-      } catch (e: any) {
-        alert(e.message);
-      }
-    });
+    setIsPending(true);
+    try {
+      await toggleFiscalMode(true);
+      alert("Mode fiscal NACEF activé avec succès.");
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsPending(false);
+    }
   };
 
   const isEligible = planName?.toUpperCase() === 'PRO' || planName?.toUpperCase() === 'STARTER';
@@ -40,7 +39,7 @@ export default function FiscalSettings({ isFiscalEnabled, planName }: FiscalSett
         </span>
         {isFiscalEnabled && (
           <div style={{ background: '#10B981', color: '#fff', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 800 }}>
-             ACTIF & SÉCURISÉ
+             ACTIF & CONFORME
           </div>
         )}
       </div>
@@ -49,34 +48,52 @@ export default function FiscalSettings({ isFiscalEnabled, planName }: FiscalSett
         <div style={{ display: 'flex', gap: '20px', marginBottom: '24px' }}>
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: '14px', color: '#64748B', lineHeight: '1.6', margin: 0 }}>
-              Le mode fiscal NACEF active le chaînage des tickets, la signature électronique et la génération de rapports Z conformes à la réglementation tunisienne.
+              Le mode fiscal NACEF active le chaînage SHA-256 des tickets, la signature électronique S-MDF et la génération des rapports Z de fin de journée.
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8' }}>MODE NACEF</div>
-                <div style={{ fontSize: '16px', fontWeight: 900, color: isFiscalEnabled ? '#10B981' : '#94A3B8' }}>
-                   {isFiscalEnabled ? 'ACTIVÉ' : 'DÉSACTIVÉ'}
+                <div style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8' }}>STATUT FISCAL</div>
+                <div style={{ fontSize: '15px', fontWeight: 900, color: isFiscalEnabled ? '#10B981' : '#94A3B8' }}>
+                   {isFiscalEnabled ? 'VERROUILLÉ ACTIF' : 'NON ACTIVÉ'}
                 </div>
              </div>
-             <button
-               onClick={() => handleToggle(!isFiscalEnabled)}
-               disabled={isPending || (!isEligible && !isFiscalEnabled)}
-               style={{
-                 width: '60px', height: '32px', borderRadius: '20px', border: 'none',
-                 background: isFiscalEnabled ? '#10B981' : '#E2E8F0',
-                 position: 'relative', cursor: (isEligible || isFiscalEnabled) ? 'pointer' : 'not-allowed',
-                 transition: '0.3s', opacity: (isEligible || isFiscalEnabled) ? 1 : 0.5
-               }}
-             >
+             {!isFiscalEnabled ? (
+               <button
+                 onClick={handleActivate}
+                 disabled={isPending || !isEligible}
+                 style={{
+                   padding: '8px 16px', borderRadius: '12px', border: 'none',
+                   background: '#10B981', color: '#fff', fontWeight: 800, fontSize: '13px',
+                   cursor: isEligible ? 'pointer' : 'not-allowed', opacity: isEligible ? 1 : 0.5
+                 }}
+               >
+                 {isPending ? 'Activation...' : 'Activer NACEF'}
+               </button>
+             ) : (
                <div style={{
-                 width: '26px', height: '26px', background: '#fff', borderRadius: '50%',
-                 position: 'absolute', top: '3px', left: isFiscalEnabled ? '31px' : '3px',
-                 transition: '0.3s', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-               }} />
-             </button>
+                 padding: '6px 12px', borderRadius: '12px', background: '#F0FDF4',
+                 border: '1px solid #BBF7D0', color: '#166534', fontSize: '11px', fontWeight: 800,
+                 display: 'flex', alignItems: 'center', gap: '6px'
+               }}>
+                 <Lock size={13} /> INALTÉRABLE
+               </div>
+             )}
           </div>
         </div>
+
+        {isFiscalEnabled && (
+          <div style={{
+            padding: '14px 16px', background: '#F8FAFC', border: '1px solid #E2E8F0',
+            borderRadius: '14px', marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'flex-start'
+          }}>
+            <Info size={18} color="#6366F1" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div style={{ fontSize: '12px', color: '#475569', lineHeight: '1.5' }}>
+              <strong>Besoin d'effectuer des tests ou de former des caissiers ?</strong><br />
+              Pour respecter la piste d'audit CIMF, le mode fiscal ne doit pas être désactivé à chaud. Utilisez directement le <strong>Mode Formation</strong> sur la caisse POS : les tickets seront émis en <em>PRO-FORMA</em> sans impacter les ventes, le stock, ni la clôture fiscale Z.
+            </div>
+          </div>
+        )}
 
         {!isEligible && !isFiscalEnabled && (
           <div style={{ padding: '16px', background: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0', marginBottom: '20px', display: 'flex', gap: '12px' }}>

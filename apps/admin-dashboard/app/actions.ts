@@ -367,10 +367,14 @@ export async function toggleFiscalMode(enabled: boolean, pinCode?: string) {
     throw new Error(`Le mode fiscal NACEF est réservé aux abonnements STARTER et PRO. Plan actuel : ${planName || 'FREE'}`);
   }
 
-  // 2. Security (Optional PIN check for locking)
+  // 2. NACEF Compliance: Inalterability of active fiscal ledger
   if (!enabled && store.isFiscalEnabled) {
-    // If disabling an already active fiscal mode, we might want extra caution
-    console.warn(`Store ${store.id} is disabling fiscal mode.`);
+    const fiscalSalesCount = await prisma.sale.count({
+      where: { storeId: store.id, isFiscal: true, isVoid: false }
+    });
+    if (fiscalSalesCount > 0) {
+      throw new Error("Conformité NACEF : Le mode fiscal ne peut plus être désactivé car des factures fiscales ont déjà été scellées. Pour réaliser des tests sans fausser la comptabilité, activez le 'Mode Formation' directement sur la caisse POS.");
+    }
   }
 
   await prisma.store.update({
@@ -1465,6 +1469,7 @@ export async function recordSale(data: {
   change?: number;
   consumeType?: string; // DINE_IN | TAKEAWAY
   terminalId?: string;
+  isTraining?: boolean;
 }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
@@ -1483,8 +1488,9 @@ export async function recordSale(data: {
       let signature = null;
       let terminalId = data.terminalId;
       let finalSequenceNumber: number | null = null;
+      const isTraining = !!data.isTraining;
 
-      if (store.isFiscalEnabled) {
+      if (store.isFiscalEnabled && !isTraining) {
         // 1. Plan Verification (Solo available on PRO, STARTER & RACHMA in production)
         const planName = store.subscription?.plan?.name?.toUpperCase();
         const validPlans = ['PRO', 'STARTER', 'RACHMA'];
@@ -1595,6 +1601,8 @@ export async function recordSale(data: {
           hashInput: hashInputS,
           signature,
           isVoid: false,
+          nacefContext: isTraining ? 'TRAINING' : 'SALE',
+          nacefOperationType: isTraining ? 'PROFORMA' : 'TICKET',
           totalHt: Math.round(totalHtGlobal * 1000) / 1000,
           totalTax: Math.round(totalTaxGlobal * 1000) / 1000,
           taxBreakdown: taxBreakdown,
@@ -1611,16 +1619,16 @@ export async function recordSale(data: {
         }
       });
 
-      // Update active cash session if exists
-      if (data.baristaId) {
+      // Update active cash session ONLY if NOT training mode
+      if (data.baristaId && !isTraining) {
         await (tx as any).cashSession.updateMany({
           where: { storeId: store.id, baristaId: data.baristaId, status: 'OPEN' },
           data: { totalSales: { increment: data.total } }
         });
       }
 
-      // 2. Fiscal Journaling
-      if (isFiscal) {
+      // Fiscal Journaling (Only for real fiscal sales)
+      if (isFiscal && !isTraining) {
         await tx.fiscalLog.create({
           data: {
             saleId: s.id,
@@ -1635,25 +1643,26 @@ export async function recordSale(data: {
         });
       }
 
-      // 3. Deduct stock based on recipes (with consumeType filter)
-      for (const item of data.items) {
-        const recipes = await tx.recipeItem.findMany({
-          where: { productId: item.productId }
-        });
-
-        for (const recipe of recipes) {
-          // Filter: only deduct if BOTH or matches sale consumeType (prefer item-level consumeType)
-          const itemConsumeType = (item as any).consumeType || s.consumeType;
-          const modeMatches = recipe.consumeType === 'BOTH' || recipe.consumeType === itemConsumeType;
-          if (!modeMatches) continue;
-
-          const totalToDeduct = Number(recipe.quantity) * item.quantity;
-          await tx.stockItem.update({
-            where: { id: recipe.stockItemId },
-            data: {
-              quantity: { decrement: totalToDeduct }
-            }
+      // Deduct stock based on recipes ONLY for real sales (NOT in training mode)
+      if (!isTraining) {
+        for (const item of data.items) {
+          const recipes = await tx.recipeItem.findMany({
+            where: { productId: item.productId }
           });
+
+          for (const recipe of recipes) {
+            const itemConsumeType = (item as any).consumeType || s.consumeType;
+            const modeMatches = recipe.consumeType === 'BOTH' || recipe.consumeType === itemConsumeType;
+            if (!modeMatches) continue;
+
+            const totalToDeduct = Number(recipe.quantity) * item.quantity;
+            await tx.stockItem.update({
+              where: { id: recipe.stockItemId },
+              data: {
+                quantity: { decrement: totalToDeduct }
+              }
+            });
+          }
         }
       }
 

@@ -119,6 +119,7 @@ export default function PremiumPOSClient({
   const [view, setView] = useState<'TABLES' | 'POS' | 'ORDERS' | 'CUSTOMERS' | 'DASHBOARD'>('DASHBOARD');
   const [theme, setTheme] = useState<'mocha' | 'koffie'>('mocha');
   const [currentParentCategoryId, setCurrentParentCategoryId] = useState<string | null>(null);
+  const [isTrainingMode, setIsTrainingMode] = useState(false);
   
   // Customer & Loyalty
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>({
@@ -552,6 +553,7 @@ export default function PremiumPOSClient({
       },
       customerId: (selectedCustomer?.id && selectedCustomer.id !== 'passager') ? selectedCustomer.id : undefined,
       change: change,
+      isTraining: isTrainingMode,
       createdAt: new Date().toISOString()
     };
 
@@ -575,9 +577,18 @@ export default function PremiumPOSClient({
         alert("Mode hors ligne : Vente sauvegardée localement ! Elle sera synchronisée au retour de la connexion.");
       } else {
         const sale = await recordSale(saleData);
-        finalSaleObject = sale;
-        setSessionSales(prev => [sale, ...prev]);
-        alert("Vente enregistrée avec succès !");
+        finalSaleObject = isTrainingMode ? {
+          ...sale,
+          isFiscal: false,
+          fiscalNumber: null,
+          id: `PROFORMA-${Date.now().toString().slice(-6)}`
+        } : sale;
+        setSessionSales(prev => [finalSaleObject, ...prev]);
+        if (isTrainingMode) {
+          alert("🎓 Mode Formation : Billet PRO-FORMA émis (Aucun impact sur le stock, les gains, ni le rapport Z fiscal).");
+        } else {
+          alert("Vente enregistrée avec succès !");
+        }
       }
 
       // Automatic Printing
@@ -992,6 +1003,25 @@ export default function PremiumPOSClient({
            {theme === 'mocha' ? <Cake size={24} /> : <Zap size={24} />}
         </div>
 
+        {/* Mode Formation / Training */}
+        <div 
+          className={`pos-sidebar-icon ${isTrainingMode ? 'active' : ''}`} 
+          onClick={() => setIsTrainingMode(!isTrainingMode)} 
+          title={isTrainingMode ? "Désactiver le Mode Formation" : "Activer le Mode Formation (Tickets PRO-FORMA)"}
+          style={{
+            cursor: 'pointer',
+            marginBottom: 10,
+            color: isTrainingMode ? '#F59E0B' : 'rgba(255,255,255,0.7)',
+            background: isTrainingMode ? 'rgba(245, 158, 11, 0.25)' : 'transparent',
+            borderRadius: '12px'
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 20 }}>🎓</span>
+            <span style={{ fontSize: 8, fontWeight: 900, color: isTrainingMode ? '#F59E0B' : 'inherit' }}>FORMATION</span>
+          </div>
+        </div>
+
         {/* Pointage du personnel */}
         <div className="pos-sidebar-icon" style={{ color: 'var(--pos-primary-light)', cursor: 'pointer', marginBottom: 10 }} onClick={() => { setShowAttendanceModal(true); setAttendancePin(""); setAttendanceError(""); setAttendanceSuccessMessage(""); }} title="Pointage Personnel">
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -1017,6 +1047,43 @@ export default function PremiumPOSClient({
 
       {/* Main Content Wrapper (Responsive Stack) */}
       <div className="pos-main-wrapper">
+        {/* Mode Formation Warning Banner */}
+        {isTrainingMode && (
+          <div style={{
+            gridColumn: '1 / -1',
+            background: 'linear-gradient(135deg, #D97706, #B45309)',
+            color: '#FFFBEB',
+            padding: '10px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '13px',
+            fontWeight: 800,
+            boxShadow: '0 4px 12px rgba(217, 119, 6, 0.3)',
+            zIndex: 100
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '18px' }}>🎓</span>
+              <span>MODE FORMATION ACTIF — Billets émis en PRO-FORMA (Non comptabilisés dans le CA, ni le stock, ni le rapport Z fiscal)</span>
+            </div>
+            <button
+              onClick={() => setIsTrainingMode(false)}
+              style={{
+                background: '#fff',
+                color: '#92400E',
+                border: 'none',
+                padding: '6px 14px',
+                borderRadius: '10px',
+                fontSize: '12px',
+                fontWeight: 900,
+                cursor: 'pointer'
+              }}
+            >
+              Quitter la formation
+            </button>
+          </div>
+        )}
+
         {/* Categories Column */}
         {view === 'POS' && (
           <div className="pos-categories-column">
