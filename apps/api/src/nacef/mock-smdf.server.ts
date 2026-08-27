@@ -1,10 +1,12 @@
-import express from 'express';
+import * as expressModule from 'express';
 import { Logger } from '@nestjs/common';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
+
+const expressApp = (expressModule as any).default || expressModule;
 
 export class MockSmdfServer {
   private static instance: MockSmdfServer;
-  private app = express();
+  private app: any;
   private logger = new Logger('MockSmdfServer');
   private isRunning = false;
 
@@ -22,7 +24,8 @@ export class MockSmdfServer {
   private init(port: number) {
     if (this.isRunning) return;
 
-    this.app.use(express.json({ limit: '10mb' }));
+    this.app = expressApp();
+    this.app.use(expressApp.json({ limit: '10mb' }));
 
     // CORS for local testing
     this.app.use((req, res, next) => {
