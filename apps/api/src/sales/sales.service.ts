@@ -3,6 +3,7 @@ import { prisma } from '@coffeeshop/database';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { InventoryService } from '../inventory/inventory.service';
 import { SalesGateway } from '../websockets/sales.gateway';
+import { NacefService } from '../nacef/nacef.service';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -11,7 +12,8 @@ export class SalesService {
 
   constructor(
     private readonly inventoryService: InventoryService,
-    private readonly salesGateway: SalesGateway
+    private readonly salesGateway: SalesGateway,
+    private readonly nacefService: NacefService,
   ) {}
 
   async createSale(dto: CreateSaleDto): Promise<any> {
@@ -157,6 +159,22 @@ export class SalesService {
       
       // Broadcast to real-time owner dashboard
       this.salesGateway.broadcastSaleCompleted(dto.storeId, sale);
+
+      // NACEF: Sign ticket if fiscal mode is enabled
+      try {
+        const isReady = await this.nacefService.isStoreReady(dto.storeId);
+        if (isReady) {
+          const nacefResult = await this.nacefService.signTicket(sale.id);
+          if (nacefResult) {
+            this.logger.log(`Sale ${sale.id} signed by NACEF. Ticket: ${nacefResult.ticketIdentifier}`);
+            // Return sale with NACEF data
+            return { ...sale, nacef: nacefResult };
+          }
+        }
+      } catch (nacefError) {
+        // Don't fail the sale if NACEF signing fails - log and continue
+        this.logger.error(`NACEF signing failed for sale ${sale.id}: ${nacefError.message}`);
+      }
 
       return sale;
 

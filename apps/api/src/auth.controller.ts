@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Query, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UnauthorizedException, Optional } from '@nestjs/common';
 import { prisma } from '@coffeeshop/database';
 import * as bcrypt from 'bcrypt';
+import { NacefService } from './nacef/nacef.service';
 
 @Controller('auth')
 export class AuthController {
+  constructor(@Optional() private readonly nacefService?: NacefService) {}
 
   @Get('health')
   health() { return { status: 'ok', time: new Date().toISOString() }; }
@@ -35,6 +37,18 @@ export class AuthController {
     }
 
     console.log(`✅ Bienvenue ${user.name} !`);
+
+    // [E0105-GAP-1] Tracer l'événement USER_LOGIN dans l'audit S-MDF
+    if (this.nacefService) {
+      this.nacefService.logEvent(
+        storeId.trim(),
+        'LC',
+        'USER_LOGIN',
+        'INFO',
+        `Connexion caissier via PIN : ${user.name} (${user.id})`
+      ).catch(() => {});
+    }
+
     return user;
   }
 

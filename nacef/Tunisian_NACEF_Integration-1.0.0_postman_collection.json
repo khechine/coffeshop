@@ -1,0 +1,91 @@
+{
+	"info": {
+		"_postman_id": "ef07b664-ad6c-4c20-9306-886cd2e7a8ed",
+		"name": "Tunisian NACEF Collection Integration",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "10879333"
+	},
+	"item": [
+		{
+			"name": "Get Manifest",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:10006/sic/external/manifest"
+			},
+			"response": []
+		},
+		{
+			"name": "Certificate Request",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"cashRegisterInfo\": {\r\n    \"model\": \"model\",\r\n    \"serialNumber\": \"serialNumber\",\r\n    \"version\": \"1.0.0\"\r\n  }\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:10006/sic/external/certificate/request/"
+			},
+			"response": []
+		},
+		{
+			"name": "Synchronisation",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"requestPINupdate\": false\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:10006/sic/external/sync/request/"
+			},
+			"response": []
+		},
+		{
+			"name": "Signature Request",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"base64Ticket\": \"ewogICJkYXRhX3R5cGUiOiAibmNmLmNhc2hpZXIub3BlcmF0aW9uIiwgIAogICJ2ZXJzaW9uIjogIjEuMS4zIiwKICAidHJhbnNhY3Rpb24iOiB7CiAgICAiaWQiOiAiWVkxMjM0NTY3OCIsCiAgICAidGltZXN0YW1wIjogIjIwMjMtMDktMjRUMTQ6MzA6MDBaIiwKICAgICJvcGVyYXRpb24iOiB7CiAgICAgICJvcF90eXBlIjogIlRJQ0tFVCIsCiAgICAgICJjb250ZXh0IjogIlNBTEUiCiAgICB9LAogICAgIm9yaWdpbmF0b3IiOiB7CiAgICAgICJhZ2VudF9pZGVudGlmaWVyIjogIkFHRU5UMDAxIiwKICAgICAgImltZGYiOiAiMTIzNDU2Nzg5MDEyMzQiLAogICAgICAiY2FzaF9yZWdpc3Rlcl9zZXJpYWxudW1iZXIiOiAiQ1IxMjM0NTY3OCIsCiAgICAgICJjYXNoX3JlZ2lzdGVyX3NvZnR3YXJlIjogIlBPU3YyMDI0IiwKICAgICAgImFjY3JlZGl0YXRpb25fcmVmZXJlbmNlIjogIkFDQzEyMzQ1NiIKICAgIH0KICB9LAogICJtZXJjaGFudF9pZGVudGl0eSI6IHsKICAgICJpZCI6ICIxMjM0NTY3QSIsCiAgICAiaWRfdHlwZSI6ICJNRiIsCiAgICAidGF4cGF5ZXJfZXN0YWJsaXNobWVudCI6IHsKICAgICAgImNvbW1lcmNpYWxfbmFtZSI6ICJNb25vcHJpeCIsCiAgICAgICJyZWZlcmVuY2UiOiAiMDAwIiwKICAgICAgImFkZHJlc3MiOiAiMTIgUnVlIGRlIGwnSW5kw6lwZW5kYW5jZSIsCiAgICAgICJjaXR5IjogIlR1bmlzIgogICAgfQogIH0sCiAgImN1c3RvbWVyX2lkZW50aXR5IjogewogICAgImZpc2NhbF9hZHZhbnRhZ2VzIjogIkxvcmVtIiwKICAgICAgICAiaWRfdHlwZSI6ICJQUCIsCiAgICAgICAgImlkIjogIjAwMDAwMDBBIgogIH0sCiAgInNhbGVfZGV0YWlscyI6IFsKICAgIHsKICAgICAgInByb2R1Y3QiOiB7CiAgICAgICAgImZhbWlseV9jb2RlIjogIkYwMDEiLAogICAgICAgICJuYW1lIjogIlByb2R1aXQgQSIsCiAgICAgICAgInByaWNlX3ByZV90YXgiOiA1MDAwCiAgICAgIH0sCiAgICAgICJ0YXhhdGlvbiI6IFsKICAgICAgICB7CiAgICAgICAgICAidHlwZSI6ICJwZXJjZW50IiwKICAgICAgICAgICJ2YWx1ZSI6IDE5LjAsCiAgICAgICAgICAidGF4X2NvZGUiOiAiVFZBMTkiCiAgICAgICAgfQogICAgICBdLAogICAgICAicXVhbnRpdHkiOiAyLAogICAgICAiZGlzY291bnRfcGVyX3VuaXQiOiB7CiAgICAgICAgInBlcmNlbnQiOiAwLAogICAgICAgICJ2YWx1ZSI6IDAKICAgICAgfQogICAgfSwKICAgIHsKICAgICAgInByb2R1Y3QiOiB7CiAgICAgICAgImZhbWlseV9jb2RlIjogIkYwMDIiLAogICAgICAgICJuYW1lIjogIlByb2R1aXQgQiIsCiAgICAgICAgInByaWNlX3ByZV90YXgiOiAzMDAwCiAgICAgIH0sCiAgICAgICJ0YXhhdGlvbiI6IFsKICAgICAgICB7CiAgICAgICAgICAidHlwZSI6ICJwZXJjZW50IiwKICAgICAgICAgICJ2YWx1ZSI6IDcuMCwKICAgICAgICAgICJ0YXhfY29kZSI6ICJUVkE3IgogICAgICAgIH0KICAgICAgXSwKICAgICAgInF1YW50aXR5IjogMSwKICAgICAgImRpc2NvdW50X3Blcl91bml0IjogewogICAgICAgICJwZXJjZW50IjogMCwKICAgICAgICAidmFsdWUiOiAwCiAgICAgIH0KICAgIH0KICBdLAogICJ0YXhfc3VtbWFyeSI6IFsKICAgIHsKICAgICAgInRheF9jb2RlIjogIlRWQTE5IiwKICAgICAgInRvdGFsX2Ftb3VudCI6IDE5MDAKICAgIH0sCiAgICB7CiAgICAgICJ0YXhfY29kZSI6ICJUVkE3IiwKICAgICAgInRvdGFsX2Ftb3VudCI6IDIxMAogICAgfSwKICAgIHsKICAgICAgInRheF9jb2RlIjogIlRBWEVfQUREIiwKICAgICAgInRvdGFsX2Ftb3VudCI6IDEzMAogICAgfQogIF0sCiAgImdlbmVyYWxfZGlzY291bnQiOiB7CiAgICAicGVyY2VudCI6IDAsCiAgICAidmFsdWUiOiAwCiAgfSwKICAiYWRkaXRpb25hbF90YXgiOiB7CiAgICAidHlwZSI6ICJwZXJjZW50IiwKICAgICJ2YWx1ZSI6IDEuMCwKICAgICJ0YXhfY29kZSI6ICJUQVhFX0FERCIKICB9LAogICJwYXltZW50X2RldGFpbHMiOiB7CiAgICAiY29sbGVjdGlvbl9kZXRhaWxzIjogWwogICAgICB7CiAgICAgICAgIm1ldGhvZCI6ICJjYXNoIiwKICAgICAgICAiYW1vdW50IjogMTUxNDAKICAgICAgfQogICAgXSwKICAgICJyZXR1cm5lZF9jaGFuZ2UiOiBbXQogIH0sCiAgInNhbGVfc3VtbWFyeSI6IHsKICAgICJ0b3RhbF9leGNsX3RheCI6IDEzMDAwLAogICAgInRvdGFsX2luY2xfdGF4IjogMTUxNDAsCiAgICAidG90YWxfdGF4IjogMjI0MAogIH0sCiAgICAiZGVsaXZlcnlfZGV0YWlscyI6IHsKICAgICAgICAidHlwZSI6ICJTRUxGX1BJQ0tVUCIKICAgIH0KfQ==\",\r\n  \"totalHT\": 100,\r\n  \"totalTax\": 119,\r\n  \"operationType\": \"Vente\",\r\n  \"transactionType\": \"Copie\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:10006/sic/external/sign/request/"
+			},
+			"response": []
+		},
+		{
+			"name": "Log LC",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"module\": \"SMDF\",\r\n  \"operation\": \"UPGRADE\",\r\n  \"level\": \"INFO\",\r\n  \"message\": \"Ceci est un message pour tester le log du logiciel de caisse\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:10006/sic/external/log/"
+			},
+			"response": []
+		}
+	]
+}

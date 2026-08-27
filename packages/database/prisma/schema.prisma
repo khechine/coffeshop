@@ -216,6 +216,17 @@ model Store {
   isFiscalEnabled Boolean  @default(false)
   currentFiscalSequence Int @default(0) // Compteur atomique pour la numérotation NACEF
   fiscalSecret    String?  // Secret de signature spécifique à la boutique
+
+  // NACEF Official Fields
+  imdf                    String?   // Identifiant Module de Données Fiscales (14-16 chars)
+  matriculeFiscal         String?   // Matricule fiscal commerçant (8 chars: 1234567A)
+  establishmentReference  String?   // "000" principal, "001"+ secondaire
+  commercialName          String?   // Nom commercial de l'établissement
+  accreditationReference  String?   // Référence certificat d'homologation (8-32 chars)
+  smdfUrl                 String?   // URL du S-MDF local de ce store (ex: http://localhost:10006)
+  nacefSyncStatus         String?   // NOT_SYNCED, SYNCED, ERROR
+  nacefLastSyncAt         DateTime?
+
   preferredSearchRadius Int? @default(50) // Rayon de recherche marketplace par défaut (km)
 
   createdAt DateTime @default(now())
@@ -236,6 +247,7 @@ model Store {
   customers      Customer[]
   specialOrders  SpecialOrder[]
   zReports       ZReport[]
+  nacefSyncLogs  NacefSyncLog[]
   zones          StoreZone[]
   cashSessions   CashSession[]
   attendances    Attendance[]
@@ -860,6 +872,13 @@ model Sale {
   isVoid             Boolean   @default(false) // Ticket annulé
   change             Decimal?  // Monnaie rendue au client
 
+  // ── NACEF Officiel ──────────────────────────────────────────
+  nacefTicketId      String?   // ID unique assigné par la plateforme NACEF
+  nacefQrCode        String?   // QR code officiel NACEF (base64)
+  nacefSyncedAt      DateTime? // Date de signature NACEF
+  nacefOperationType String?   // TICKET, PROFORMA, REFUND, DUPLICATE
+  nacefContext       String?   // SALE, TRAINING
+
   // ── Totaux Fiscaux ──────────────────────────────────────────
   totalHt            Decimal?  // Total HT global
   totalTax           Decimal?  // Total TVA global
@@ -908,6 +927,18 @@ model ZReport {
   sales           Sale[]
   
   createdAt       DateTime    @default(now())
+}
+
+model NacefSyncLog {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id])
+  action      String   // SYNC, CERT_REQUEST, SIGN, LOG
+  status      String   // SUCCESS, ERROR, PENDING
+  request     Json?
+  response    Json?
+  errorMessage String?
+  createdAt   DateTime @default(now())
 }
 
 model SaleItem {

@@ -98,7 +98,7 @@ export class PrintService {
 
           <div class="footer center">
             <p>Merci de votre visite !</p>
-            <p>logiciel par ELKASSA</p>
+            <p style="margin-top: 5px; font-size: 8px;">Propulsé par ElKassa POS v1.0.0</p>
           </div>
         </body>
       </html>

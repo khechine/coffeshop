@@ -116,15 +116,49 @@ export class FiscalService {
           lte: endOfDay
         }
       },
-      select: { total: true, hash: true }
+      select: {
+        total: true,
+        totalHt: true,
+        totalTax: true,
+        taxBreakdown: true,
+        hash: true,
+        items: {
+          select: {
+            taxRate: true,
+            taxAmount: true,
+            price: true,
+            quantity: true,
+          }
+        }
+      }
     });
 
     if (sales.length === 0) {
       throw new Error('Aucune vente enregistrée pour ce terminal aujourd\'hui.');
     }
 
-    const totalAmount = sales.reduce((sum, s) => sum + Number(s.total), 0);
-    const totalTax = totalAmount * 0.19; // TODO: Utiliser les taux réels par produit (par défaut 19%)
+    const totalAmount = sales.reduce((sum: number, s: any) => sum + Number(s.total || 0), 0);
+
+    // [E0303-GAP-1] Calcul de la TVA réelle cumulée à partir des données de vente
+    let totalTax = 0;
+    const aggregatedTaxBreakdown: Record<string, number> = {};
+
+    for (const sale of sales) {
+      if (sale.totalTax !== null && sale.totalTax !== undefined && Number(sale.totalTax) > 0) {
+        totalTax += Number(sale.totalTax);
+      } else {
+        // Fallback par ventilation des items de la vente
+        for (const item of sale.items || []) {
+          const rate = Number(item.taxRate) || 0.19;
+          const itemTax = item.taxAmount
+            ? Number(item.taxAmount)
+            : (Number(item.price) / (1 + rate)) * rate * item.quantity;
+          totalTax += itemTax;
+          const rateKey = `${Math.round(rate * 100)}%`;
+          aggregatedTaxBreakdown[rateKey] = (aggregatedTaxBreakdown[rateKey] || 0) + itemTax;
+        }
+      }
+    }
 
     // 2. Récupérer le hash du dernier rapport Z
     const lastZReport = await tx.zReport.findFirst({

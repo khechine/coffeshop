@@ -31,7 +31,7 @@ export const SimplisticPOS: React.FC = () => {
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>Mode Comptage Rapide</Text>
-          <Text style={styles.headerSubtitle}>Appuyez sur n'importe quel produit pour ajouter +1</Text>
+          <Text style={styles.headerSubtitle}>Appuyez sur n'importe quel produit pour ajouter +1 | v1.0.0</Text>
         </View>
         <TouchableOpacity style={styles.resetBtn} onPress={clearCart}>
           <RefreshCcw color="#ef4444" size={22} />
