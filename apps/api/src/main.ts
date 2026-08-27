@@ -33,5 +33,13 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}`);
+
+  // Start S-MDF mock agent on port 10006 for NACEF simulation
+  try {
+    const { MockSmdfServer } = await import('./nacef/mock-smdf.server');
+    MockSmdfServer.start(10006);
+  } catch (err) {
+    console.warn('Could not initialize S-MDF Mock server:', err);
+  }
 }
 bootstrap();

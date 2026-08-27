@@ -42,6 +42,7 @@ services:
     command: ["pnpm", "--filter", "@coffeeshop/api", "start"]
     ports:
       - "3051:3001"
+      - "10006:10006"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@coffeeshop_db:5432/${POSTGRES_DB:-coffeeshop}?schema=public
       JWT_SECRET: ${JWT_SECRET:-supers3cr3tc0ffeesh0p}
