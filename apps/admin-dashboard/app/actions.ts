@@ -228,7 +228,7 @@ async function getNacefToken(): Promise<string> {
 }
 
 async function nacefFetch(path: string, method: 'GET' | 'POST' = 'GET', body?: any) {
-  const API_URL = process.env.NACEF_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API_URL = process.env.INTERNAL_API_URL || process.env.NACEF_API_URL || (process.env.NODE_ENV === 'production' ? 'http://api:3001' : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'));
   const token = await getNacefToken();
   const res = await fetch(`${API_URL}${path}`, {
     method,
