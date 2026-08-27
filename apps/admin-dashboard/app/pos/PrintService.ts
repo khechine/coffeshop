@@ -91,12 +91,16 @@ export class PrintService {
     let taxHtml = '';
     if (isFiscal && sale.taxBreakdown) {
       const breakdown = typeof sale.taxBreakdown === 'string' ? JSON.parse(sale.taxBreakdown) : sale.taxBreakdown;
-      taxHtml = Object.entries(breakdown).map(([rate, amount]) => `
+      taxHtml = Object.entries(breakdown).map(([rate, amount]) => {
+        const numRate = parseFloat(String(rate).replace('%', ''));
+        const formattedRate = !isNaN(numRate) ? numRate.toFixed(2) : rate;
+        return `
         <div style="display: flex; justify-content: space-between; font-size: 8px;">
-           <span>TVA ${rate}</span>
-           <span>${Number(amount).toFixed(3)}</span>
+           <span>TVA ${formattedRate}%</span>
+           <span>${Number(amount).toFixed(3)} DT</span>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     const itemsHtml = items.map(item => {
@@ -116,7 +120,7 @@ export class PrintService {
         </div>
         ${showTax ? `
         <div style="font-size: 8px; color: #555; padding-left: 16px;">
-          HT: ${lineHt.toFixed(3)} + TVA ${Math.round(taxRate * 100)}%: ${lineTax.toFixed(3)}
+          HT: ${lineHt.toFixed(3)} + TVA ${(taxRate * 100).toFixed(2)}%: ${lineTax.toFixed(3)}
         </div>
         ` : ''}
       </div>

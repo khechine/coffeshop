@@ -49,7 +49,7 @@ export class SalesService {
           totalHtGlobal += itemTotalHt;
           totalTaxGlobal += itemTaxAmount;
 
-          const rateLabel = `${Math.round(taxRate * 100)}%`;
+          const rateLabel = `${(taxRate * 100).toFixed(2)}%`;
           taxBreakdown[rateLabel] = (taxBreakdown[rateLabel] || 0) + itemTaxAmount;
 
           return {
