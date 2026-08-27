@@ -47,40 +47,42 @@ export class NacefClient {
   private async httpPost(basePath: string, body: any, storeId: string): Promise<any> {
     const baseUrl = await this.getSmdfUrl(storeId);
     const url = `${baseUrl}${basePath}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      throw {
-        response: { data: errorBody },
-        message: errorBody.message || `HTTP ${response.status}`,
-      };
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.message || `HTTP ${response.status} from S-MDF`);
+      }
+
+      return await response.json();
+    } catch (err: any) {
+      throw new Error(`Échec de connexion S-MDF (${url}): ${err.message || 'Hôte injoignable'}`);
     }
-
-    return response.json();
   }
 
   private async httpGet(basePath: string, storeId: string): Promise<any> {
     const baseUrl = await this.getSmdfUrl(storeId);
     const url = `${baseUrl}${basePath}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      throw {
-        response: { data: errorBody },
-        message: errorBody.message || `HTTP ${response.status}`,
-      };
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.message || `HTTP ${response.status} from S-MDF`);
+      }
+
+      return await response.json();
+    } catch (err: any) {
+      throw new Error(`Échec de connexion S-MDF (${url}): ${err.message || 'Hôte injoignable'}`);
     }
-
-    return response.json();
   }
 
   /**

@@ -295,9 +295,13 @@ export default function NacefConfigClient({
     setIsTesting(true);
     setTestResult(null);
     try {
-      const result = await nacefGetManifestAction(storeId);
-      setTestResult({ json: JSON.stringify(result, null, 2), type: 'success' });
-      setManifest(result);
+      const res = await nacefGetManifestAction(storeId);
+      if (!res.success) {
+        setTestResult({ json: `⚠️ ${res.error || 'Connexion impossible au S-MDF'}\n\nVérifiez que le service S-MDF est bien démarré sur ${smdfUrl}`, type: 'error' });
+      } else {
+        setTestResult({ json: JSON.stringify(res.data, null, 2), type: 'success' });
+        setManifest(res.data);
+      }
     } catch (e: any) {
       setTestResult({ json: e.message || 'Connexion impossible au S-MDF', type: 'error' });
     } finally {
@@ -309,7 +313,7 @@ export default function NacefConfigClient({
     setIsSaving(true);
     setSaveResult(null);
     try {
-      await nacefConfigureAction(storeId, {
+      const res = await nacefConfigureAction(storeId, {
         smdfUrl,
         imdf: imdf || undefined,
         matriculeFiscal: matriculeFiscal || undefined,
@@ -317,7 +321,11 @@ export default function NacefConfigClient({
         commercialName: commercialName || undefined,
         accreditationReference: accreditationRef || undefined,
       });
-      setSaveResult({ msg: '✓ Configuration NACEF enregistrée avec succès.', type: 'success' });
+      if (!res.success) {
+        setSaveResult({ msg: res.error || 'Erreur lors de l\'enregistrement.', type: 'error' });
+      } else {
+        setSaveResult({ msg: '✓ Configuration NACEF enregistrée avec succès.', type: 'success' });
+      }
     } catch (e: any) {
       setSaveResult({ msg: e.message || 'Erreur lors de l\'enregistrement.', type: 'error' });
     } finally {
@@ -329,8 +337,12 @@ export default function NacefConfigClient({
     setIsFetchingManifest(true);
     setManifestError(null);
     try {
-      const result = await nacefGetManifestAction(storeId);
-      setManifest(result);
+      const res = await nacefGetManifestAction(storeId);
+      if (!res.success) {
+        setManifestError(res.error || 'Impossible de récupérer le manifest S-MDF.');
+      } else {
+        setManifest(res.data);
+      }
     } catch (e: any) {
       setManifestError(e.message || 'Impossible de récupérer le manifest S-MDF.');
     } finally {
@@ -342,9 +354,13 @@ export default function NacefConfigClient({
     setIsSyncing(true);
     setSyncResult(null);
     try {
-      const result = await nacefSyncAction(storeId, { requestPINupdate });
-      setSyncResult({ json: JSON.stringify(result, null, 2), type: 'success' });
-      setNacefSyncStatus('SYNCED');
+      const res = await nacefSyncAction(storeId, { requestPINupdate });
+      if (!res.success) {
+        setSyncResult({ json: `❌ Échec de la synchronisation : ${res.error}`, type: 'error' });
+      } else {
+        setSyncResult({ json: JSON.stringify(res.data, null, 2), type: 'success' });
+        setNacefSyncStatus('SYNCED');
+      }
     } catch (e: any) {
       setSyncResult({ json: e.message || 'Erreur lors de la synchronisation.', type: 'error' });
     } finally {
@@ -356,12 +372,16 @@ export default function NacefConfigClient({
     setIsInitializing(true);
     setInitResult(null);
     try {
-      const result = await nacefInitializeAction(storeId, {
+      const res = await nacefInitializeAction(storeId, {
         model: crModel,
         serialNumber: crSerial,
         version: crVersion,
       });
-      setInitResult({ json: JSON.stringify(result, null, 2), type: 'success' });
+      if (!res.success) {
+        setInitResult({ json: `❌ Échec de l'initialisation : ${res.error}`, type: 'error' });
+      } else {
+        setInitResult({ json: JSON.stringify(res.data, null, 2), type: 'success' });
+      }
     } catch (e: any) {
       setInitResult({ json: e.message || 'Erreur lors de l\'initialisation.', type: 'error' });
     } finally {
@@ -373,19 +393,29 @@ export default function NacefConfigClient({
     setIsSimulating(true);
     setSimResult(null);
     try {
-      const result = await nacefSimulateSignAction(storeId, {
+      const res = await nacefSimulateSignAction(storeId, {
         totalHT: Math.round(parseFloat(simAmount) * 1000),
         totalTax: Math.round(parseFloat(simTax) * 1000),
         operationType: simType,
       });
-      const json = JSON.stringify(result, null, 2);
-      setSimResult({ json, type: 'success' });
-      setSimHistory(prev => [{
-        ts: new Date().toLocaleTimeString('fr-FR'),
-        type: simType,
-        result: result.ticketIdentifier || 'OK',
-        ok: true,
-      }, ...prev].slice(0, 5));
+      if (!res.success) {
+        setSimResult({ json: res.error || 'Simulation échouée', type: 'error' });
+        setSimHistory(prev => [{
+          ts: new Date().toLocaleTimeString('fr-FR'),
+          type: simType,
+          result: res.error || 'Erreur',
+          ok: false,
+        }, ...prev].slice(0, 5));
+      } else {
+        const json = JSON.stringify(res.data, null, 2);
+        setSimResult({ json, type: 'success' });
+        setSimHistory(prev => [{
+          ts: new Date().toLocaleTimeString('fr-FR'),
+          type: simType,
+          result: res.data?.ticketIdentifier || 'OK',
+          ok: true,
+        }, ...prev].slice(0, 5));
+      }
     } catch (e: any) {
       const msg = e.message || 'Simulation échouée';
       setSimResult({ json: msg, type: 'error' });
