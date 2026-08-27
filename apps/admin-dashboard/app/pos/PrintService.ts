@@ -199,7 +199,19 @@ export class PrintService {
             <span>TOTAL TTC</span>
             <span>${totalAmount} DT</span>
           </div>
-          ${change > 0 ? `<div class="total-line" style="margin-top:4px;"><span>Monnaie rendue</span><span>${change.toFixed(3)} DT</span></div>` : ''}
+          <div class="total-line" style="margin-top: 4px; font-weight: 600;">
+            <span>Mode de règlement</span>
+            <span>${
+              sale.paymentMethod === 'MEAL_VOUCHER' || sale.paymentMethod === 'PLUXEE' || sale.paymentMethod === 'RESTAURANT_TICKET' 
+                ? 'Ticket Resto / Pluxee' 
+                : sale.paymentMethod === 'CARD' 
+                ? 'Carte Bancaire' 
+                : sale.paymentMethod === 'MIXED' 
+                ? 'Paiement Mixte' 
+                : 'Espèces'
+            }</span>
+          </div>
+          ${change > 0 ? `<div class="total-line" style="margin-top:2px;"><span>Monnaie rendue</span><span>${change.toFixed(3)} DT</span></div>` : ''}
 
           ${isFiscal && sale.hash ? `
             <div class="fiscal-box">

@@ -146,8 +146,8 @@ export default function PremiumPOSClient({
   
   // Payment Modal
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'MIXED'>('CASH');
-  const [amountReceived, setAmountReceived] = useState('0');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'MIXED' | 'MEAL_VOUCHER'>('CASH');
+  const [amountReceived, setAmountReceived] = useState('');
   
   // New Customer Modal
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
@@ -1045,21 +1045,21 @@ export default function PremiumPOSClient({
         </div>
       </aside>
 
-      {/* Main Content Wrapper (Responsive Stack) */}
-      <div className="pos-main-wrapper">
+      {/* Main Content Area */}
+      <div className="pos-main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Mode Formation Warning Banner */}
         {isTrainingMode && (
           <div style={{
-            gridColumn: '1 / -1',
             background: 'linear-gradient(135deg, #D97706, #B45309)',
             color: '#FFFBEB',
-            padding: '10px 20px',
+            padding: '8px 20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             fontSize: '13px',
             fontWeight: 800,
-            boxShadow: '0 4px 12px rgba(217, 119, 6, 0.3)',
+            boxShadow: '0 4px 12px rgba(217, 119, 6, 0.25)',
+            flexShrink: 0,
             zIndex: 100
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1072,8 +1072,8 @@ export default function PremiumPOSClient({
                 background: '#fff',
                 color: '#92400E',
                 border: 'none',
-                padding: '6px 14px',
-                borderRadius: '10px',
+                padding: '5px 14px',
+                borderRadius: '8px',
                 fontSize: '12px',
                 fontWeight: 900,
                 cursor: 'pointer'
@@ -1084,23 +1084,25 @@ export default function PremiumPOSClient({
           </div>
         )}
 
-        {/* Categories Column */}
-        {view === 'POS' && (
-          <div className="pos-categories-column">
-             {currentParentCategoryId ? (
-               <>
-                 <button 
-                   className={`category-vertical-pill`}
-                   onClick={() => {
-                     setCurrentParentCategoryId(null);
-                     setCategory('Tous');
-                   }}
-                 >
-                   <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                     <ArrowLeft size={20} />
-                   </div>
-                   <span>Retour</span>
-                 </button>
+        {/* Main Content Wrapper (Responsive Stack) */}
+        <div className="pos-main-wrapper">
+          {/* Categories Column */}
+          {view === 'POS' && (
+            <div className="pos-categories-column">
+               {currentParentCategoryId ? (
+                 <>
+                   <button 
+                     className={`category-vertical-pill`}
+                     onClick={() => {
+                       setCurrentParentCategoryId(null);
+                       setCategory('Tous');
+                     }}
+                   >
+                     <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                       <ArrowLeft size={20} />
+                     </div>
+                     <span>Retour</span>
+                   </button>
                  {initialCategories.filter(c => c.parentId === currentParentCategoryId).map((cat: any) => {
                     const CatIcon = ICONS[cat.icon || 'Tag'] || Tag;
                     const catColor = cat.color || '#6366F1';
@@ -1854,30 +1856,49 @@ export default function PremiumPOSClient({
       </aside>
       )}
 
-      {/* Payment Modal (Unchanged functional part) */}
+      </div> {/* closes pos-main-content */}
+
+      {/* Floating Mobile Cart Bar */}
+      {view === 'POS' && currentCart.length > 0 && (
+        <div 
+          className="mobile-floating-cart-bar" 
+          onClick={() => setIsCartOpenMobile(true)}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ShoppingCart size={18} />
+            <span>Panier ({currentCart.reduce((sum, i) => sum + i.quantity, 0)} art.)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>{total.toFixed(3)} DT</span>
+            <span>➔</span>
+          </div>
+        </div>
+      )}
+
       {/* Payment Modal (Redesigned UX) */}
       {isPaymentModalOpen && (
         <div className="pos-modal-overlay">
            <div className="pos-modal-card" style={{ maxWidth: 840, width: '90%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
                  <div>
-                   <h2 style={{ margin: 0, fontWeight: 900, color: 'var(--pos-sidebar)', fontSize: 24 }}>Encaissement</h2>
+                   <h2 style={{ margin: 0, fontWeight: 900, color: 'var(--pos-text-main)', fontSize: 22 }}>Encaissement</h2>
                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--pos-text-muted)', marginTop: 4 }}>
                       <span style={{ fontWeight: 800 }}>{selectedTable?.label || 'Vente Directe'}</span>
                       <span>•</span>
                       <span style={{ fontWeight: 800, color: 'var(--pos-primary)' }}>{total.toFixed(3)} DT</span>
                    </div>
                  </div>
-                 <X size={28} onClick={() => setIsPaymentModalOpen(false)} style={{ cursor: 'pointer', color: 'var(--pos-text-muted)' }} />
+                 <X size={26} onClick={() => setIsPaymentModalOpen(false)} style={{ cursor: 'pointer', color: 'var(--pos-text-muted)' }} />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 32 }}>
+              <div className="payment-modal-layout" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 24 }}>
                 {/* Left side: Payment Methods & Keypad */}
                 <div>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-                     <button className={`category-pill ${paymentMethod === 'CASH' ? 'active' : ''}`} style={{ flex: 1, height: 60, fontSize: 16 }} onClick={() => setPaymentMethod('CASH')}>ESPECES</button>
-                     <button className={`category-pill ${paymentMethod === 'CARD' ? 'active' : ''}`} style={{ flex: 1, height: 60, fontSize: 16 }} onClick={() => setPaymentMethod('CARD')}>CARTE</button>
-                     <button className={`category-pill ${paymentMethod === 'MIXED' ? 'active' : ''}`} style={{ flex: 1, height: 60, fontSize: 16 }} onClick={() => setPaymentMethod('MIXED')}>MIXTE</button>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
+                     <button className={`category-pill ${paymentMethod === 'CASH' ? 'active' : ''}`} style={{ height: 48, fontSize: 13, fontWeight: 800 }} onClick={() => setPaymentMethod('CASH')}>💵 ESPÈCES</button>
+                     <button className={`category-pill ${paymentMethod === 'CARD' ? 'active' : ''}`} style={{ height: 48, fontSize: 13, fontWeight: 800 }} onClick={() => setPaymentMethod('CARD')}>💳 CARTE</button>
+                     <button className={`category-pill ${paymentMethod === 'MEAL_VOUCHER' ? 'active' : ''}`} style={{ height: 48, fontSize: 12, fontWeight: 800 }} onClick={() => setPaymentMethod('MEAL_VOUCHER')}>🎟️ PLUXEE / TICKET</button>
+                     <button className={`category-pill ${paymentMethod === 'MIXED' ? 'active' : ''}`} style={{ height: 48, fontSize: 13, fontWeight: 800 }} onClick={() => setPaymentMethod('MIXED')}>🔀 MIXTE</button>
                   </div>
 
                   <div className="keypad-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
@@ -2155,7 +2176,7 @@ export default function PremiumPOSClient({
          </div>
       </nav>
 
-      <style jsx>{`
+      <style>{`
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; inset: 0; background-color: #CBD5E1; transition: .4s; border-radius: 34px; }

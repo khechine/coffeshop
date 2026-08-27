@@ -29,6 +29,11 @@ export function mapPaymentMethod(method: string): string {
     'MOBILE': 'mobile_payment',
     'LOYALTY': 'contre_bon',
     'RESTAURANT_TICKET': 'restaurant_ticket',
+    'MEAL_VOUCHER': 'restaurant_ticket',
+    'PLUXEE': 'restaurant_ticket',
+    'SODEXO': 'restaurant_ticket',
+    'CHEQUE_DEJEUNER': 'restaurant_ticket',
+    'RESTAURANT_CARD': 'restaurant_ticket',
     'WIRE_TRANSFER': 'wire_transfer',
   };
   return mapping[method?.toUpperCase()] || 'cash';
