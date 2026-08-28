@@ -1264,3 +1264,42 @@
   margin-top: 12px;
 }
 
+/* ========================================
+   PRO TOUCHSCREEN - RESPONSIVE MEDIA QUERIES
+   ======================================== */
+@media (max-width: 1024px) {
+  .pos-top-tab-bar {
+    padding: 6px 12px;
+    gap: 6px;
+  }
+  .pos-top-tab-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  .grand-total-banner {
+    font-size: 18px;
+    padding: 12px 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .pos-top-tab-bar {
+    padding: 6px 8px;
+    gap: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .pos-top-tab-btn span {
+    font-size: 10px;
+  }
+  .bottom-touch-actions {
+    grid-template-columns: 44px 44px 1fr 1fr !important;
+    gap: 6px !important;
+  }
+  .grand-total-banner {
+    font-size: 17px !important;
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+  }
+}
+
+
