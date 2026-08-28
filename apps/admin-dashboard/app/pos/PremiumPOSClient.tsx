@@ -1041,77 +1041,6 @@ export default function PremiumPOSClient({
 
   return (
     <div className="pos-premium-container" data-theme={isDarkMode ? 'dark' : 'light'} style={{ transition: 'all 0.3s ease' }}>
-      {/* Module Navigation (Sidebar) */}
-      <aside className="pos-sidebar">
-        <div className="pos-sidebar-icon" onClick={() => router.push('/')} title="Dashboard" style={{ marginBottom: 20 }}>
-          <LayoutDashboard size={28} />
-        </div>
-        <div className={`pos-sidebar-icon ${view === 'DASHBOARD' ? 'active' : ''}`} onClick={() => setView('DASHBOARD')} title="Tableau de bord"><LayoutDashboard size={24} /></div>
-        <div className={`pos-sidebar-icon ${view === 'TABLES' ? 'active' : ''}`} onClick={() => setView('TABLES')} title="Tables"><LayoutGrid size={24} /></div>
-        <div className={`pos-sidebar-icon ${view === 'POS' ? 'active' : ''}`} onClick={() => { if(!selectedTable) setSelectedTable({ id: 'DIRECT', label: 'Vente Directe' }); setView('POS'); }} title="Vente"><ShoppingCart size={24} /></div>
-        <div className={`pos-sidebar-icon ${view === 'ORDERS' ? 'active' : ''}`} onClick={() => setView('ORDERS')} title="Commandes"><History size={24} /></div>
-        <div className={`pos-sidebar-icon ${view === 'CUSTOMERS' ? 'active' : ''}`} onClick={() => setView('CUSTOMERS')} title="Clientèle"><Users size={24} /></div>
-        <div style={{ flex: 1 }} />
-        
-        {/* Offline Indicator */}
-        {isOffline && (
-          <div className="pos-sidebar-icon" title={`${pendingSyncCount} en attente`} style={{ color: '#F59E0B', marginBottom: 10, position: 'relative' }}>
-             <AlertCircle size={28} />
-             {pendingSyncCount > 0 && (
-               <span style={{ position: 'absolute', top: 2, right: 2, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 900, borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                 {pendingSyncCount}
-               </span>
-             )}
-          </div>
-        )}
-
-        {/* Theme Toggle */}
-        <div className="pos-sidebar-icon" onClick={toggleThemeVariant} title="Changer de thème" style={{ cursor: 'pointer', marginBottom: 10 }}>
-           {theme === 'mocha' ? <Cake size={24} /> : <Zap size={24} />}
-        </div>
-
-        {/* Mode Formation / Training */}
-        <div 
-          className={`pos-sidebar-icon ${isTrainingMode ? 'active' : ''}`} 
-          onClick={() => setIsTrainingMode(!isTrainingMode)} 
-          title={isTrainingMode ? "Désactiver le Mode Formation" : "Activer le Mode Formation (Tickets PRO-FORMA)"}
-          style={{
-            cursor: 'pointer',
-            marginBottom: 10,
-            color: isTrainingMode ? '#F59E0B' : 'rgba(255,255,255,0.7)',
-            background: isTrainingMode ? 'rgba(245, 158, 11, 0.25)' : 'transparent',
-            borderRadius: '12px'
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 20 }}>🎓</span>
-            <span style={{ fontSize: 8, fontWeight: 900, color: isTrainingMode ? '#F59E0B' : 'inherit' }}>FORMATION</span>
-          </div>
-        </div>
-
-        {/* Pointage du personnel */}
-        <div className="pos-sidebar-icon" style={{ color: 'var(--pos-primary-light)', cursor: 'pointer', marginBottom: 10 }} onClick={() => { setShowAttendanceModal(true); setAttendancePin(""); setAttendanceError(""); setAttendanceSuccessMessage(""); }} title="Pointage Personnel">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <Clock size={28} />
-            <span style={{ fontSize: 9, fontWeight: 900 }}>POINTAGE</span>
-          </div>
-        </div>
-
-        <div className="pos-sidebar-icon" style={{ color: 'var(--pos-warning)' }} onClick={handleLogout} title="Verrouiller">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <Lock size={28} />
-            <span style={{ fontSize: 9, fontWeight: 900 }}>VERROUILLER</span>
-          </div>
-        </div>
-
-        <div className="pos-sidebar-icon" style={{ color: '#EF4444', height: 70, borderTop: '1px solid rgba(255,255,255,0.1)', borderRadius: 0 }} onClick={() => setShowClosingModal(true)} title="Clôturer Session">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <LogOut size={28} />
-            <span style={{ fontSize: 9, fontWeight: 900 }}>CLÔTURER</span>
-          </div>
-        </div>
-      </aside>
-
       {/* Main Content Area */}
       <div className="pos-main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Mode Formation Warning Banner */}
@@ -1153,6 +1082,9 @@ export default function PremiumPOSClient({
 
         {/* Top Action Nav Bar (Pro Touchscreen Layout) */}
         <div className="pos-top-tab-bar">
+          <button className="pos-top-tab-btn tab-green" onClick={() => router.push('/')} title="Accueil Dashboard">
+            <Home size={15} /> <span>ACCUEIL</span>
+          </button>
           <button className={`pos-top-tab-btn tab-green ${view === 'POS' ? 'active' : ''}`} onClick={() => { if(!selectedTable) setSelectedTable({ id: 'DIRECT', label: 'Vente Directe' }); setView('POS'); }}>
             <ShoppingCart size={15} /> <span>POS / VENTE</span>
           </button>
@@ -1504,6 +1436,41 @@ export default function PremiumPOSClient({
 
 
 
+              {/* Customer & Loyalty Selector (Moved to Header for Space) */}
+              <div style={{ minWidth: 260, position: 'relative', marginLeft: 16 }}>
+                {!selectedCustomer ? (
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      className="customer-selector" 
+                      style={{ width: '100%', borderStyle: 'solid', height: 44, borderRadius: 12, paddingLeft: 14, fontSize: 13, fontWeight: 700 }}
+                      placeholder="🔍 Lier client loyal..."
+                      value={customerSearch}
+                      onChange={e => handleCustomerSearch(e.target.value)}
+                    />
+                    {customerResults.length > 0 && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 12, zIndex: 200, marginTop: 6, boxShadow: '0 10px 25px rgba(0,0,0,0.15)' }}>
+                        {customerResults.map(c => (
+                          <div key={c.id} style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--pos-border)' }} 
+                            onClick={() => { setSelectedCustomer(c); setCustomerResults([]); setCustomerSearch(''); }}>
+                            <div style={{ fontWeight: 800, fontSize: 13 }}>{c.name}</div>
+                            <div style={{ fontSize: 11, color: 'var(--pos-text-muted)' }}>{c.phone} • {c.loyaltyPoints} pts</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="customer-selector" style={{ borderColor: 'var(--pos-primary)', background: '#EEF2FF', height: 44, borderRadius: 12, padding: '0 12px' }}>
+                     <div className="customer-avatar" style={{ background: 'var(--pos-primary)', width: 26, height: 26, fontSize: 11 }}>{selectedCustomer.name.charAt(0)}</div>
+                     <div style={{ flex: 1, overflow: 'hidden' }}>
+                        <div style={{ fontWeight: 800, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedCustomer.name}</div>
+                        <div style={{ fontSize: 10, color: 'var(--pos-primary)', fontWeight: 800 }}>{selectedCustomer.loyaltyPoints} PTS</div>
+                     </div>
+                     <X size={16} onClick={() => { setSelectedCustomer(null); setIsRedeemingPoints(false); }} style={{ color: 'var(--pos-text-muted)', cursor: 'pointer' }} />
+                  </div>
+                )}
+              </div>
+
               {/* Cashier & Terminal Info */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginLeft: 'auto' }}>
                  {cashierName && (
@@ -1540,25 +1507,25 @@ export default function PremiumPOSClient({
                return (
                 <div key={product.id} className="product-card" onClick={() => addToCart(product)} style={{ position: 'relative' }}>
                    {minQty > 1 && (
-                     <div className="product-min-badge">
-                        <Package size={12} /> min. {minQty}
+                     <div className="product-min-badge" style={{ fontSize: 9, padding: '2px 6px' }}>
+                        <Package size={10} /> min. {minQty}
                      </div>
                    )}
-                   <div className="product-image-container" style={{ height: 210 }}>
+                   <div className="product-image-container">
                      {product.image ? (
                        <img src={product.image} className="product-image" alt={product.name} />
                      ) : (
                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#CBD5E1', background: 'linear-gradient(135deg, var(--pos-bg) 0%, var(--pos-input-bg) 100%)' }}>
-                         <Cake size={64} strokeWidth={1} />
+                         <Cake size={36} strokeWidth={1} />
                        </div>
                      )}
                    </div>
-                   <div className="product-info" style={{ padding: 18 }}>
-                     <span className="product-name" style={{ fontSize: 17, marginBottom: 8, height: 44, display: 'block', fontWeight: 900 }}>{product.name}</span>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="product-price" style={{ fontSize: 20, fontWeight: 1000, color: 'var(--pos-primary)' }}>{product.price.toFixed(3)} DT</span>
-                        <div className="btn-premium btn-premium-primary" style={{ width: 36, height: 36, padding: 0, borderRadius: 10, boxShadow: '0 4px 10px rgba(99, 102, 241, 0.3)' }}>
-                           <Plus size={20} />
+                   <div className="product-info">
+                     <span className="product-name" style={{ height: 32, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{product.name}</span>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
+                        <span className="product-price">{product.price.toFixed(3)} DT</span>
+                        <div className="btn-premium btn-premium-primary" style={{ width: 26, height: 26, padding: 0, borderRadius: 8 }}>
+                           <Plus size={14} />
                         </div>
                      </div>
                    </div>
@@ -1831,52 +1798,22 @@ export default function PremiumPOSClient({
       {/* Cart Sidebar (Stay functional always during POS) */}
       {view === 'POS' && (
       <aside className={`pos-cart-sidebar ${isCartOpenMobile ? 'mobile-open' : ''}`}>
-        <div className="cart-header">
-           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div className="cart-header" style={{ padding: '16px 20px 8px' }}>
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                 <div style={{ padding: 10, background: 'var(--pos-bg)', borderRadius: 12 }}>
-                    <Receipt size={20} color="var(--pos-primary)" />
+                 <div style={{ padding: 8, background: 'var(--pos-bg)', borderRadius: 10 }}>
+                    <Receipt size={18} color="var(--pos-primary)" />
                  </div>
                  <h2 style={{ margin: 0, fontWeight: 900, fontSize: 18 }}>Panier</h2>
+                 <span style={{ background: '#EEF2FF', color: 'var(--pos-primary)', padding: '2px 8px', borderRadius: 8, fontSize: 12, fontWeight: 800 }}>
+                   {currentCart.reduce((acc, item) => acc + item.quantity, 0)} arts
+                 </span>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button style={{ background: 'none', border: 'none', color: 'var(--pos-text-muted)', cursor: 'pointer' }} className="mobile-only-btn" onClick={() => setIsCartOpenMobile(false)}><X size={24} /></button>
-                <button style={{ background: 'none', border: 'none', color: 'var(--pos-danger)', cursor: 'pointer' }} onClick={clearCart}><Trash2 size={20} /></button>
+                <button style={{ background: 'none', border: 'none', color: 'var(--pos-danger)', cursor: 'pointer' }} onClick={clearCart} title="Vider panier"><Trash2 size={18} /></button>
               </div>
            </div>
-           
-           {/* Customer Selector Integration */}
-           {!selectedCustomer ? (
-             <div style={{ position: 'relative' }}>
-               <input 
-                 className="customer-selector" 
-                 style={{ width: '100%', borderStyle: 'dashed', height: 54 }}
-                 placeholder="Lier un client loyal..."
-                 value={customerSearch}
-                 onChange={e => handleCustomerSearch(e.target.value)}
-               />
-               {customerResults.length > 0 && (
-                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid var(--pos-border)', borderRadius: 12, zIndex: 100, marginTop: 8, boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }}>
-                   {customerResults.map(c => (
-                     <div key={c.id} style={{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid var(--pos-border)' }} 
-                       onClick={() => { setSelectedCustomer(c); setCustomerResults([]); setCustomerSearch(''); }}>
-                       <div style={{ fontWeight: 800 }}>{c.name}</div>
-                       <div style={{ fontSize: 12, color: 'var(--pos-text-muted)' }}>{c.phone} • {c.loyaltyPoints} pts</div>
-                     </div>
-                   ))}
-                 </div>
-               )}
-             </div>
-           ) : (
-             <div className="customer-selector" style={{ borderColor: 'var(--pos-primary)', background: '#EEF2FF', height: 64 }}>
-                <div className="customer-avatar" style={{ background: 'var(--pos-primary)' }}>{selectedCustomer.name.charAt(0)}</div>
-                <div style={{ flex: 1 }}>
-                   <div style={{ fontWeight: 800, fontSize: 14 }}>{selectedCustomer.name}</div>
-                   <div style={{ fontSize: 11, color: 'var(--pos-primary)', fontWeight: 800 }}>{selectedCustomer.loyaltyPoints} POINTS</div>
-                </div>
-                <X size={18} onClick={() => { setSelectedCustomer(null); setIsRedeemingPoints(false); }} style={{ color: 'var(--pos-text-muted)', cursor: 'pointer' }} />
-             </div>
-           )}
         </div>
 
         <div className="cart-items">
