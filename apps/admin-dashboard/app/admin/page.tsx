@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { 
   ShoppingCart, ShoppingBag, TrendingUp, AlertTriangle, Coffee, ArrowRight, Package, 
   Layers, Users, Zap, ArrowUpRight, User, Wallet, Truck, Boxes, FileText, 
-  Settings, Activity, LayoutGrid, Star 
+  Settings, Activity, LayoutGrid, Star, ShieldCheck, CheckCircle2, Clock, DollarSign, Award, RefreshCw
 } from 'lucide-react';
 
 import { redirect } from 'next/navigation';
@@ -19,9 +19,13 @@ export default async function AdminDashboardPage() {
 
   const hasMarketplace = (store as any)?.subscription?.plan?.hasMarketplace === true;
 
-  const salesCount = await prisma.sale.count({ where: { storeId: store.id } });
-  const salesAgg = await prisma.sale.aggregate({ where: { storeId: store.id }, _sum: { total: true } });
+  // Calculate live metrics
+  const salesCount = await prisma.sale.count({ where: { storeId: store.id, isVoid: false } });
+  const salesAgg = await prisma.sale.aggregate({ where: { storeId: store.id, isVoid: false }, _sum: { total: true, subtotal: true, totalTax: true, discount: true } });
   const revenue = Number(salesAgg?._sum?.total || 0);
+  const revenueHt = Number(salesAgg?._sum?.subtotal || revenue);
+  const totalTax = Number(salesAgg?._sum?.totalTax || 0);
+  const totalDiscounts = Number(salesAgg?._sum?.discount || 0);
 
   const stockItems = (await prisma.stockItem.findMany({ where: { storeId: store.id } })) || [];
   const criticalStockCount = stockItems.filter(i => Number(i.quantity) <= Number(i.minThreshold)).length;
@@ -40,10 +44,20 @@ export default async function AdminDashboardPage() {
   }
   const netProfit = revenue - totalExpenses;
 
+  // NACEF Status
+  const fiscalSalesCount = await prisma.sale.count({ where: { storeId: store.id, isFiscal: true, isVoid: false } });
+
+  // Payment Breakdown
+  const salesByPayment = await prisma.sale.groupBy({
+    by: ['paymentMethod'],
+    where: { storeId: store.id, isVoid: false },
+    _sum: { total: true }
+  });
+
   const draftOrders = await prisma.supplierOrder.findMany({
     where: { storeId: store.id, status: 'PENDING' },
     include: { vendor: true, supplier: true, items: { include: { stockItem: true } } },
-    take: 3,
+    take: 4,
   });
 
   const recentSales = await prisma.sale.findMany({
@@ -52,25 +66,20 @@ export default async function AdminDashboardPage() {
       id: true,
       total: true,
       createdAt: true,
+      paymentMethod: true,
+      fiscalNumber: true,
+      isFiscal: true,
       barista: { select: { id: true, name: true } },
       takenBy: { select: { id: true, name: true } },
       items: { include: { product: true } }
     },
     orderBy: { createdAt: 'desc' },
-    take: 6,
-  });
-
-  const salesByTable = await prisma.sale.groupBy({
-    by: ['tableName'],
-    where: { storeId: store.id, tableName: { not: null } },
-    _sum: { total: true },
-    orderBy: { _sum: { total: 'desc' } },
-    take: 5
+    take: 5,
   });
 
   const salesByBarista = await prisma.sale.groupBy({
     by: ['baristaId'],
-    where: { storeId: store.id, baristaId: { not: null } },
+    where: { storeId: store.id, baristaId: { not: null }, isVoid: false },
     _sum: { total: true },
     orderBy: { _sum: { total: 'desc' } },
     take: 5
@@ -83,7 +92,7 @@ export default async function AdminDashboardPage() {
   });
 
   const saleItems = await prisma.saleItem.findMany({
-    where: { sale: { storeId: store.id } },
+    where: { sale: { storeId: store.id, isVoid: false } },
     include: { product: true }
   });
 
@@ -105,172 +114,152 @@ export default async function AdminDashboardPage() {
   const bestBaristaRev = Number(bestBaristaData?._sum.total || 0);
 
   return (
-    <div className="page-content">
-      <div className="page-header" style={{ marginBottom: '40px' }}>
+    <div className="page-content" style={{ padding: '32px 40px', background: '#F8FAFC', minHeight: '100vh' }}>
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* HEADER SECTION */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '20px' }}>
         <div>
-          <h1 style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-1px' }}>Bonjour, {store.name} 👋</h1>
-          <p style={{ fontSize: '15px', color: '#64748B', marginTop: '6px', fontWeight: 500 }}>Voici l'état de performance de votre établissement aujourd'hui.</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={{ fontSize: '30px', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.8px', margin: 0 }}>
+              Bonjour, {store.name} 👋
+            </h1>
+            {store.isFiscalEnabled && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#DCFCE7', color: '#166534', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+                <ShieldCheck size={14} /> NACEF CONFORME
+              </span>
+            )}
+          </div>
+          <p style={{ fontSize: '14px', color: '#64748B', marginTop: '6px', fontWeight: 600 }}>
+            Tableau de bord de pilotage exécutif & performances en temps réel.
+          </p>
         </div>
 
-        {/* Marketplace Preview Banner */}
-        <Link href="/marketplace" style={{ 
-          flex: 1, 
-          maxWidth: '500px',
-          background: 'linear-gradient(135deg, #E31E24 0%, #991B1B 100%)', 
-          borderRadius: '20px', 
-          padding: '20px 24px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          textDecoration: 'none',
-          color: '#fff',
-          boxShadow: '0 10px 25px rgba(227, 30, 36, 0.2)',
-          border: '1px solid rgba(255,255,255,0.1)'
-        }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <Star size={16} fill="#fff" />
-              <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Aperçu Marketplace B2B</span>
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: 900 }}>Accès Grossistes Direct</div>
-          </div>
-          <div style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ArrowRight size={20} />
-          </div>
-        </Link>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <Link href="/admin/metrics" className="btn" style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid #E2E8F0', color: '#1E293B', fontWeight: 700 }}>
-             <TrendingUp size={16} /> Analyser
+        {/* Quick Action Navigation Buttons */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <Link href="/marketplace" style={{ 
+            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', 
+            color: '#fff', padding: '12px 20px', borderRadius: '14px', textDecoration: 'none',
+            fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px',
+            boxShadow: '0 8px 20px rgba(16, 185, 129, 0.25)'
+          }}>
+            <ShoppingCart size={18} /> Marketplace B2B
           </Link>
-          <Link href="/pos" className="btn btn-primary" style={{ padding: '12px 24px', borderRadius: '14px', fontSize: '14px' }}>
-            <Coffee size={18} />
-            Accès Caisse
-            <ArrowRight size={18} />
+          <Link href="/pos" style={{ 
+            background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)', 
+            color: '#fff', padding: '12px 22px', borderRadius: '14px', textDecoration: 'none',
+            fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px',
+            boxShadow: '0 8px 20px rgba(79, 70, 229, 0.25)'
+          }}>
+            <Coffee size={18} /> Accès Caisse POS <ArrowRight size={16} />
           </Link>
         </div>
       </div>
 
-      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-        {/* REVENU CARD - PREMIUM GRADIENT */}
-        <div className="kpi-card" style={{ 
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* KPI CARDS (4 EXECUTIVE METRICS) */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+        {/* REVENU TTC */}
+        <div style={{ 
           background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)', 
-          color: '#fff', border: 'none', padding: '24px', borderRadius: '24px',
-          boxShadow: '0 20px 40px rgba(79, 70, 229, 0.25)', position: 'relative', overflow: 'hidden'
+          color: '#fff', padding: '24px', borderRadius: '24px',
+          boxShadow: '0 12px 30px rgba(79, 70, 229, 0.25)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-             <div style={{ background: 'rgba(255,255,255,0.2)', width: '64px', height: '64px', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-               <TrendingUp size={32} color="#fff" />
-             </div>
-             <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                   <div className="kpi-label" style={{ color: 'rgba(255,255,255,0.8)', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Chiffre d'Affaires</div>
-                   <span style={{ fontSize: '10px', fontWeight: 800, background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '10px' }}>LIVE</span>
-                </div>
-                <div className="kpi-value" style={{ color: '#fff', fontSize: '28px', fontWeight: 900, display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                  {revenue.toFixed(3)} <span style={{ fontSize: '14px', opacity: 0.8 }}>DT</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
-                  <div style={{ padding: '2px 8px', background: 'rgba(16, 185, 129, 0.25)', borderRadius: '6px', fontSize: '11px', fontWeight: 800, color: '#34D399' }}>+12%</div>
-                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>vs hier</span>
-                </div>
-             </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 800, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Chiffre d'Affaires TTC</span>
+            <span style={{ fontSize: '10px', fontWeight: 900, background: 'rgba(255,255,255,0.2)', padding: '3px 8px', borderRadius: '10px' }}>EN DIRECT</span>
+          </div>
+          <div style={{ fontSize: '30px', fontWeight: 900, marginBottom: '6px' }}>
+            {revenue.toFixed(3)} <span style={{ fontSize: '16px', opacity: 0.85 }}>DT</span>
+          </div>
+          <div style={{ fontSize: '12px', opacity: 0.85, fontWeight: 600 }}>
+            HT: {revenueHt.toFixed(3)} DT • TVA: {totalTax.toFixed(3)} DT
           </div>
         </div>
 
-        {/* TICKETS CARD */}
-        <div className="kpi-card" style={{ 
-          background: '#fff', padding: '24px', borderRadius: '24px', border: '1px solid #F1F5F9',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+        {/* TICKETS & PANIER MOYEN */}
+        <div style={{ 
+          background: '#fff', padding: '24px', borderRadius: '24px', border: '1px solid #E2E8F0',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-             <div style={{ background: '#F0F9FF', width: '64px', height: '64px', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-               <ShoppingCart size={32} color="#0EA5E9" />
-             </div>
-             <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                   <div className="kpi-label" style={{ color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tickets Encaissés</div>
-                   <span style={{ fontSize: '10px', fontWeight: 800, color: '#0EA5E9', background: '#F0F9FF', padding: '2px 8px', borderRadius: '10px' }}>JOUR</span>
-                </div>
-                <div className="kpi-value" style={{ color: '#1E293B', fontSize: '28px', fontWeight: 900, display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                  {salesCount} <span style={{ fontSize: '14px', color: '#94A3B8' }}>cmd.</span>
-                </div>
-                <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600, marginTop: '8px' }}>
-                  Panier moyen: <span style={{ color: '#64748B', fontWeight: 800 }}>{(revenue/salesCount || 0).toFixed(3)} DT</span>
-                </div>
-             </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tickets & Ventes</span>
+            <div style={{ background: '#EFF6FF', padding: '6px', borderRadius: '10px' }}><ShoppingCart size={18} color="#3B82F6" /></div>
+          </div>
+          <div style={{ fontSize: '30px', fontWeight: 900, color: '#0F172A', marginBottom: '6px' }}>
+            {salesCount} <span style={{ fontSize: '16px', color: '#64748B', fontWeight: 600 }}>cmd.</span>
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 700 }}>
+            Panier Moyen: <strong style={{ color: '#3B82F6' }}>{salesCount > 0 ? (revenue / salesCount).toFixed(3) : '0.000'} DT</strong>
           </div>
         </div>
 
-        {/* STAFF CARD */}
-        <div className="kpi-card" style={{ 
-          background: '#fff', padding: '24px', borderRadius: '24px', border: '1px solid #F1F5F9',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+        {/* MARGE & PROFIT EST. */}
+        <div style={{ 
+          background: '#fff', padding: '24px', borderRadius: '24px', border: '1px solid #E2E8F0',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-             <div style={{ background: '#F5F3FF', width: '64px', height: '64px', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-               <User size={32} color="#8B5CF6" />
-             </div>
-             <div style={{ flex: 1 }}>
-                <div className="kpi-label" style={{ color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Meilleur Barista</div>
-                <div className="kpi-value" style={{ color: '#1E293B', fontSize: '22px', fontWeight: 900, marginBottom: '2px' }}>{bestBaristaName}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                   <span style={{ fontSize: '14px', color: '#10B981', fontWeight: 900 }}>{bestBaristaRev.toFixed(3)} DT</span>
-                   <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>réalisés</span>
-                </div>
-             </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Profit Net Est.</span>
+            <div style={{ background: netProfit >= 0 ? '#ECFDF5' : '#FEF2F2', padding: '6px', borderRadius: '10px' }}>
+              <Wallet size={18} color={netProfit >= 0 ? '#10B981' : '#EF4444'} />
+            </div>
+          </div>
+          <div style={{ fontSize: '30px', fontWeight: 900, color: netProfit >= 0 ? '#10B981' : '#EF4444', marginBottom: '6px' }}>
+            {netProfit.toFixed(3)} <span style={{ fontSize: '16px', opacity: 0.8 }}>DT</span>
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
+            Dépenses enregistrées: <strong>{totalExpenses.toFixed(3)} DT</strong>
           </div>
         </div>
 
-        {/* PROFIT / MARGE CARD */}
-        <div className="kpi-card" style={{ 
-          background: netProfit >= 0 ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)' : 'linear-gradient(135deg, #DC2626 0%, #EF4444 100%)', 
-          color: '#fff', border: 'none', padding: '24px', borderRadius: '24px',
-          boxShadow: netProfit >= 0 ? '0 20px 40px rgba(16, 185, 129, 0.15)' : '0 20px 40px rgba(239, 68, 68, 0.15)'
+        {/* NACEF & CONFORMITÉ FISCALE */}
+        <div style={{ 
+          background: '#fff', padding: '24px', borderRadius: '24px', border: '1px solid #E2E8F0',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-             <div style={{ background: 'rgba(255,255,255,0.2)', width: '64px', height: '64px', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-               <Wallet size={32} color="#fff" />
-             </div>
-             <div style={{ flex: 1 }}>
-                <div className="kpi-label" style={{ color: 'rgba(255,255,255,0.8)', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Profit Net Est.</div>
-                <div className="kpi-value" style={{ color: '#fff', fontSize: '28px', fontWeight: 900, display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                  {netProfit.toFixed(3)} <span style={{ fontSize: '14px', opacity: 0.8 }}>DT</span>
-                </div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', fontWeight: 600, marginTop: '8px' }}>
-                   Dépenses: <span style={{ fontWeight: 800, color: '#fff' }}>{totalExpenses.toFixed(3)} DT</span>
-                </div>
-             </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Conformité NACEF</span>
+            <div style={{ background: '#F0FDF4', padding: '6px', borderRadius: '10px' }}><ShieldCheck size={18} color="#166534" /></div>
+          </div>
+          <div style={{ fontSize: '30px', fontWeight: 900, color: '#166534', marginBottom: '6px' }}>
+            {fiscalSalesCount} <span style={{ fontSize: '15px', color: '#64748B', fontWeight: 600 }}>fac. NACEF</span>
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
+            {store.isFiscalEnabled ? 'Securité fiscale NACEF active' : 'Mode Proforma (Formation)'}
           </div>
         </div>
       </div>
 
-
-      {/* CRITICAL ALERTS SECTION */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* ACTIONS REQUISE & ALERTS BANNER */}
+      {/* ══════════════════════════════════════════════════════════════ */}
       {(criticalStockCount > 0 || draftOrders.length > 0) && (
         <div style={{ marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AlertTriangle size={20} color="#F59E0B" /> Actions Requises
+          <h2 style={{ fontSize: '16px', fontWeight: 900, color: '#0F172A', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertTriangle size={20} color="#F59E0B" /> Actions Requises & Alertes Boutique
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
             {criticalStockCount > 0 && (
-              <Link href="/admin/stock" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#FFF7ED', border: '1px solid #FFEDD5', borderRadius: '16px', textDecoration: 'none' }}>
-                <div style={{ width: '40px', height: '40px', background: '#F97316', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Package size={20} color="#fff" />
+              <Link href="/admin/stock" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '18px 20px', background: '#FFF7ED', border: '1px solid #FFEDD5', borderRadius: '18px', textDecoration: 'none' }}>
+                <div style={{ width: '44px', height: '44px', background: '#F97316', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Package size={22} color="#fff" />
                 </div>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#9A3412' }}>{criticalStockCount} Articles en Rupture</div>
-                  <div style={{ fontSize: '12px', color: '#C2410C' }}>Le niveau de stock est inférieur au seuil.</div>
+                  <div style={{ fontSize: '15px', fontWeight: 900, color: '#9A3412' }}>{criticalStockCount} Articles en Rupture ou Stock Bas</div>
+                  <div style={{ fontSize: '12px', color: '#C2410C', fontWeight: 600, marginTop: '2px' }}>Ajustez les niveaux de réserve ou commandez auprès des grossistes B2B.</div>
                 </div>
               </Link>
             )}
             {draftOrders.length > 0 && (
-              <Link href="/admin/orders" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '16px', textDecoration: 'none' }}>
-                <div style={{ width: '40px', height: '40px', background: '#3B82F6', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Truck size={20} color="#fff" />
+              <Link href="/admin/orders" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '18px 20px', background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '18px', textDecoration: 'none' }}>
+                <div style={{ width: '44px', height: '44px', background: '#3B82F6', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Truck size={22} color="#fff" />
                 </div>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#1E40AF' }}>{draftOrders.length} Commandes en Attente</div>
-                  <div style={{ fontSize: '12px', color: '#1D4ED8' }}>Cliquez pour voir & évaluer vos fournisseurs.</div>
+                  <div style={{ fontSize: '15px', fontWeight: 900, color: '#1E40AF' }}>{draftOrders.length} Commandes B2B en Attente</div>
+                  <div style={{ fontSize: '12px', color: '#1D4ED8', fontWeight: 600, marginTop: '2px' }}>Suivez la livraison de vos matières premières avec les fournisseurs.</div>
                 </div>
               </Link>
             )}
@@ -278,103 +267,114 @@ export default async function AdminDashboardPage() {
         </div>
       )}
 
-      {/* MODULE NAVIGATION GRID */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* MODULES REORGANIZED BY DOMAIN */}
+      {/* ══════════════════════════════════════════════════════════════ */}
       <div style={{ marginBottom: '40px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#1E293B', marginBottom: '20px' }}>Pilotage & Modules</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', marginBottom: '20px' }}>
+          Pilotage Exécutif par Domaine
+        </h2>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
           {[
-            { label: 'Marketplace B2B', sub: 'Sourcing fournisseurs', icon: ShoppingCart, color: '#10B981', href: '/marketplace', bg: '#ECFDF5', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
-            { label: 'Commandes Clients', sub: 'Gestion des prep & acomptes', icon: ShoppingBag, color: '#F59E0B', href: '/admin/production/orders', bg: '#FFFBEB', industries: ['BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
-            { label: 'Planning Prod.', sub: 'Quoi préparer et quand', icon: Layers, color: '#F59E0B', href: '/admin/production/planning', bg: '#FFFBEB', industries: ['BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
-            { label: 'Coûts & Marges', sub: 'Calcul auto par recette', icon: TrendingUp, color: '#F59E0B', href: '/admin/production/margins', bg: '#FFFBEB', industries: ['BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
-            { label: 'Mes Achats', sub: 'Suivi commandes B2B', icon: Truck, color: '#6366F1', href: '/admin/orders', bg: '#EEF2FF', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
-            { label: 'Stock & Inventaire', sub: 'Matières premières', icon: Boxes, color: '#F59E0B', href: '/admin/stock', bg: '#FFFBEB', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
-            { label: 'Clients & Fidélité', sub: 'Base client & Points', icon: Users, color: '#10B981', href: '/admin/customers', bg: '#ECFDF5', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
-            { label: 'Reporting & Clôtures', sub: 'Exports & Rapports', icon: FileText, color: '#EC4899', href: '/admin/reports', bg: '#FDF2F8', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
-            { label: 'Dépenses & Finance', sub: 'Suivi des coûts nets', icon: Wallet, color: '#06B6D4', href: '/admin/expenses', bg: '#ECFEFF', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
-            { label: 'Live Tracker', sub: 'Ventes en temps réel', icon: Activity, color: '#EF4444', href: '/admin/live', bg: '#FEF2F2', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP'] },
-            { label: 'Abonnement & Wallet', sub: 'Gérer mon solde & plan', icon: Wallet, color: '#8B5CF6', href: '/admin/subscription', bg: '#F5F3FF', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
-            { label: 'Configuration', sub: 'Paramètres & Terminaux', icon: Settings, color: '#64748B', href: '/admin/configuration', bg: '#F8FAFC', industries: ['COFFEE_SHOP', 'BAKERY', 'PASTRY_SHOP', 'PASTRY_PRO'] },
-          ].filter(m => !m.industries || m.industries.includes((store as any).industry || 'COFFEE_SHOP')).map((mod, i) => (
+            { label: 'Caisse POS', sub: 'Terminal de vente tactile', icon: Coffee, color: '#4F46E5', href: '/pos', bg: '#EEF2FF' },
+            { label: 'Marketplace B2B', sub: 'Grossistes & Achats direct', icon: ShoppingCart, color: '#10B981', href: '/marketplace', bg: '#ECFDF5' },
+            { label: 'Stock & Ingrédients', sub: 'Suivi réserves & ruptures', icon: Boxes, color: '#F59E0B', href: '/admin/stock', bg: '#FFFBEB' },
+            { label: 'Mes Achats B2B', sub: 'Commandes fournisseurs', icon: Truck, color: '#6366F1', href: '/admin/orders', bg: '#EEF2FF' },
+            { label: 'Clients & Fidélité', sub: 'Base clients & points', icon: Users, color: '#06B6D4', href: '/admin/customers', bg: '#ECFEFF' },
+            { label: 'Équipe & Pointage', sub: 'Présence staff & plannings', icon: User, color: '#8B5CF6', href: '/admin/pointage', bg: '#F5F3FF' },
+            { label: 'Rapports & Clôtures Z', sub: 'Fichiers Z & NACEF', icon: FileText, color: '#EC4899', href: '/admin/reports', bg: '#FDF2F8' },
+            { label: 'Dépenses & Marges', sub: 'Rentabilité par recette', icon: TrendingUp, color: '#10B981', href: '/admin/expenses', bg: '#ECFDF5' },
+            { label: 'Direct Live Tracker', sub: 'Ventes caisse en temps réel', icon: Activity, color: '#EF4444', href: '/admin/live', bg: '#FEF2F2' },
+            { label: 'Abonnement & Wallet', sub: 'Plan & Solde B2B', icon: Wallet, color: '#6366F1', href: '/admin/subscription', bg: '#EEF2FF' },
+            { label: 'Terminaux POS', sub: 'Gestion des caisses', icon: LayoutGrid, color: '#3B82F6', href: '/admin/terminals', bg: '#EFF6FF' },
+            { label: 'Configuration', sub: 'Paramètres du magasin', icon: Settings, color: '#64748B', href: '/admin/configuration', bg: '#F8FAFC' },
+          ].map((mod, i) => (
             <Link key={i} href={mod.href} style={{ 
-              display: 'flex', flexDirection: 'column', gap: '12px', padding: '24px', 
-              background: '#fff', border: '1px solid #F1F5F9', borderRadius: '20px', 
-              textDecoration: 'none', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-            }} className="hover-lift">
-              <div style={{ width: '48px', height: '48px', background: mod.bg, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              display: 'flex', alignItems: 'center', gap: '16px', padding: '20px', 
+              background: '#fff', border: '1px solid #E2E8F0', borderRadius: '20px', 
+              textDecoration: 'none', transition: 'all 0.2s ease',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+            }}>
+              <div style={{ width: '48px', height: '48px', background: mod.bg, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <mod.icon size={22} color={mod.color} strokeWidth={2.5} />
               </div>
-              <div>
-                <div style={{ fontSize: '15px', fontWeight: 800, color: '#1E293B' }}>{mod.label}</div>
-                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', fontWeight: 500 }}>{mod.sub}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A' }}>{mod.label}</div>
+                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', fontWeight: 600 }}>{mod.sub}</div>
               </div>
+              <ArrowRight size={16} color="#94A3B8" />
             </Link>
           ))}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '30px' }}>
-        {/* PRODUCT ANALYTICS */}
-        <div className="card" style={{ borderRadius: '24px', border: '1px solid #F1F5F9', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.02)' }}>
-           <div style={{ padding: '24px', background: '#F8FAFC', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-             <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '8px' }}>
-               <Zap size={18} color="#F59E0B" /> Meilleurs Produits
-             </h3>
-             <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>Volume Ventes</span>
-           </div>
-           <div style={{ padding: '24px' }}>
-              {topProducts.map((p: any, idx) => (
-                <div key={idx} style={{ marginBottom: '24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, color: '#64748B' }}>{idx+1}</div>
-                      <span style={{ fontWeight: 700, color: '#334155' }}>{p.name}</span>
-                    </div>
-                    <span style={{ fontWeight: 800, color: '#1E293B' }}>{p.quantity} <span style={{ fontSize: '11px', fontWeight: 500, color: '#94A3B8' }}>u.</span></span>
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* DETAILED ANALYTICS GRID */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
+        {/* TOP PRODUCTS */}
+        <div style={{ background: '#fff', borderRadius: '24px', border: '1px solid #E2E8F0', overflow: 'hidden', padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #F1F5F9', paddingBottom: '14px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Zap size={18} color="#F59E0B" /> Top Produits Vendus
+            </h3>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>Volume & CA</span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {topProducts.map((p: any, idx: number) => (
+              <div key={idx}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontWeight: 900, color: '#4F46E5', fontSize: 12 }}>#{idx + 1}</span>
+                    <span style={{ fontWeight: 800, color: '#1E293B' }}>{p.name}</span>
                   </div>
-                  <div style={{ height: '8px', background: '#F1F5F9', borderRadius: '100px', overflow: 'hidden' }}>
-                    <div style={{ width: `${(p.revenue / revenue) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #6366F1, #8B5CF6)', borderRadius: '100px' }} />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                    <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>CA: {p.revenue.toFixed(3)} DT</span>
-                    <span style={{ fontSize: '11px', color: '#6366F1', fontWeight: 700 }}>{((p.revenue/revenue)*100).toFixed(1)}% du total</span>
-                  </div>
+                  <span style={{ fontWeight: 900, color: '#0F172A' }}>{p.quantity} <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>unités</span></span>
                 </div>
-              ))}
-           </div>
+                <div style={{ height: '8px', background: '#F1F5F9', borderRadius: '100px', overflow: 'hidden' }}>
+                  <div style={{ width: `${revenue > 0 ? (p.revenue / revenue) * 100 : 0}%`, height: '100%', background: 'linear-gradient(90deg, #4F46E5, #7C3AED)', borderRadius: '100px' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '11px', fontWeight: 600, color: '#64748B' }}>
+                  <span>CA: {p.revenue.toFixed(3)} DT</span>
+                  <span style={{ color: '#4F46E5', fontWeight: 800 }}>{revenue > 0 ? ((p.revenue / revenue) * 100).toFixed(1) : '0'}% du total</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* STAFF PERFORMANCE */}
-        <div className="card" style={{ borderRadius: '24px', border: '1px solid #F1F5F9', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.02)' }}>
-           <div style={{ padding: '24px', background: '#F8FAFC', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-             <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '8px' }}>
-               <Users size={18} color="#6366F1" /> Performance Staff
-             </h3>
-             <Link href="/admin/staff" style={{ fontSize: '12px', fontWeight: 700, color: '#6366F1' }}>Gérer l'Équipe</Link>
-           </div>
-           <div style={{ padding: '24px' }}>
-              {salesByBarista.map((b, idx) => {
-                const name = baristas.find(u => u.id === b.baristaId)?.name || 'Inconnu';
-                const rev = Number(b._sum.total || 0);
-                return (
-                  <div key={idx} style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5', fontWeight: 800 }}>
-                      {name.charAt(0).toUpperCase()}
+        <div style={{ background: '#fff', borderRadius: '24px', border: '1px solid #E2E8F0', overflow: 'hidden', padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #F1F5F9', paddingBottom: '14px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 900, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Users size={18} color="#4F46E5" /> Performance Équipe Staff
+            </h3>
+            <Link href="/admin/staff" style={{ fontSize: '12px', fontWeight: 800, color: '#4F46E5', textDecoration: 'none' }}>Gérer l'Équipe</Link>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {salesByBarista.map((b, idx) => {
+              const name = baristas.find(u => u.id === b.baristaId)?.name || 'Vendeur POS';
+              const rev = Number(b._sum.total || 0);
+              return (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #F1F5F9' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F46E5', fontWeight: 900, fontSize: '14px' }}>
+                    {name.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '13px' }}>{name}</span>
+                      <span style={{ fontWeight: 900, color: '#10B981', fontSize: '14px' }}>{rev.toFixed(3)} DT</span>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span style={{ fontWeight: 700, color: '#334155', fontSize: '14px' }}>{name}</span>
-                        <span style={{ fontWeight: 800, color: '#10B981', fontSize: '14px' }}>{rev.toFixed(3)} DT</span>
-                      </div>
-                      <div style={{ height: '6px', background: '#F1F5F9', borderRadius: '100px', overflow: 'hidden' }}>
-                        <div style={{ width: `${(rev/revenue)*100}%`, height: '100%', background: '#10B981', borderRadius: '100px' }} />
-                      </div>
+                    <div style={{ height: '6px', background: '#E2E8F0', borderRadius: '100px', overflow: 'hidden' }}>
+                      <div style={{ width: `${revenue > 0 ? (rev / revenue) * 100 : 0}%`, height: '100%', background: '#10B981', borderRadius: '100px' }} />
                     </div>
                   </div>
-                );
-              })}
-           </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
