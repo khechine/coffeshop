@@ -1273,208 +1273,327 @@ export default function PremiumPOSClient({
           <div className="pos-product-section">
         {view === 'DASHBOARD' ? (
           <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', background: 'var(--pos-bg)' }}>
-            {/* Executive Title & Filters Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+            {/* Executive Title & Role Selector Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
               <div>
                 <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0, color: 'var(--pos-text-main)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <LayoutDashboard size={26} color="var(--pos-primary)" /> Journal des Ventes & Contrôle Propriétaire
+                  <LayoutDashboard size={26} color="var(--pos-primary)" /> Tableau de Bord par Métier
                 </h1>
                 <p style={{ color: 'var(--pos-text-muted)', margin: '4px 0 0', fontSize: 13, fontWeight: 600 }}>
-                  Chiffre d'affaires, répartition des paiements, suivi par serveur et inventaire des stocks
+                  Pilotage dédié selon votre rôle (Gérant Finance, Barista/Caisse ou Gestionnaire Stock)
                 </p>
               </div>
 
-              {/* Filter Controls */}
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                {/* Period Chips */}
-                <div style={{ display: 'flex', background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 12, padding: 3, gap: 2 }}>
-                  {[
-                    { id: 'TODAY', label: "Aujourd'hui" },
-                    { id: 'YESTERDAY', label: 'Hier' },
-                    { id: 'WEEK', label: '7 Jours' },
-                    { id: 'MONTH', label: 'Ce Mois' },
-                    { id: 'LAST_MONTH', label: 'Mois Dernier' },
-                    { id: 'ALL', label: 'Tout' }
-                  ].map(p => (
-                    <button key={p.id} onClick={() => setJournalPeriod(p.id as any)}
-                      style={{ padding: '6px 12px', border: 'none', borderRadius: 9, background: journalPeriod === p.id ? 'var(--pos-primary)' : 'transparent', color: journalPeriod === p.id ? '#fff' : 'var(--pos-text-muted)', fontWeight: 800, fontSize: 11, cursor: 'pointer', transition: 'all 0.15s' }}>
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Barista Filter */}
-                <select
-                  value={journalBarista}
-                  onChange={e => setJournalBarista(e.target.value)}
-                  style={{ padding: '8px 12px', borderRadius: 12, border: '1px solid var(--pos-border)', background: 'var(--pos-card-bg)', color: 'var(--pos-text-main)', fontWeight: 800, fontSize: 12, outline: 'none' }}>
-                  <option value="ALL">Tous les Vendeurs</option>
-                  {initialBaristas.map((b: any) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-
-                {/* Payment Method Filter */}
-                <select
-                  value={journalPaymentMethod}
-                  onChange={e => setJournalPaymentMethod(e.target.value)}
-                  style={{ padding: '8px 12px', borderRadius: 12, border: '1px solid var(--pos-border)', background: 'var(--pos-card-bg)', color: 'var(--pos-text-main)', fontWeight: 800, fontSize: 12, outline: 'none' }}>
-                  <option value="ALL">Tous les Modes</option>
-                  <option value="CASH">💵 Espèces</option>
-                  <option value="CARD">💳 Carte</option>
-                  <option value="MEAL_VOUCHER">🎟️ Ticket Resto</option>
-                  <option value="MIXED">🔀 Mixte</option>
-                </select>
+              {/* Period Chips */}
+              <div style={{ display: 'flex', background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 12, padding: 3, gap: 2 }}>
+                {[
+                  { id: 'TODAY', label: "Aujourd'hui" },
+                  { id: 'YESTERDAY', label: 'Hier' },
+                  { id: 'WEEK', label: '7 Jours' },
+                  { id: 'MONTH', label: 'Ce Mois' },
+                  { id: 'LAST_MONTH', label: 'Mois Dernier' },
+                  { id: 'ALL', label: 'Tout' }
+                ].map(p => (
+                  <button key={p.id} onClick={() => setJournalPeriod(p.id as any)}
+                    style={{ padding: '6px 12px', border: 'none', borderRadius: 9, background: journalPeriod === p.id ? 'var(--pos-primary)' : 'transparent', color: journalPeriod === p.id ? '#fff' : 'var(--pos-text-muted)', fontWeight: 800, fontSize: 11, cursor: 'pointer', transition: 'all 0.15s' }}>
+                    {p.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* KPI Cards Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
-              <div className="metric-card" style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 18 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Chiffre d'Affaires TTC</div>
-                <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--pos-primary)' }}>
-                  {(journalData?.stats?.totalSalesTtc || 0).toFixed(3)} DT
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--pos-text-muted)', marginTop: 4, fontWeight: 600 }}>
-                  HT: {(journalData?.stats?.totalSalesHt || 0).toFixed(3)} DT • TVA: {(journalData?.stats?.totalTax || 0).toFixed(3)} DT
-                </div>
-              </div>
-
-              <div className="metric-card" style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 18 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Nombre de Ventes</div>
-                <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--pos-text-main)' }}>
-                  {journalData?.stats?.salesCount || 0} commandes
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--pos-text-muted)', marginTop: 4, fontWeight: 600 }}>
-                  Panier Moyen: {journalData?.stats?.salesCount ? ((journalData?.stats?.totalSalesTtc || 0) / journalData.stats.salesCount).toFixed(3) : '0.000'} DT
-                </div>
-              </div>
-
-              <div className="metric-card" style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 18 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Répartition par Règlement</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 12, fontWeight: 700, marginTop: 4 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>💵 Espèces:</span><span style={{ fontWeight: 900 }}>{(journalData?.stats?.cashTotal || 0).toFixed(3)} DT</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>💳 Carte:</span><span style={{ fontWeight: 900 }}>{(journalData?.stats?.cardTotal || 0).toFixed(3)} DT</span></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>🎟️ Ticket Resto:</span><span style={{ fontWeight: 900 }}>{(journalData?.stats?.voucherTotal || 0).toFixed(3)} DT</span></div>
-                </div>
-              </div>
-
-              <div className="metric-card" style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 18 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Remises Accordées</div>
-                <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--pos-warning)' }}>
-                  -{(journalData?.stats?.totalDiscounts || 0).toFixed(3)} DT
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--pos-text-muted)', marginTop: 4, fontWeight: 600 }}>
-                  Sur la période sélectionnée
-                </div>
-              </div>
-            </div>
-
-            {/* Sub-Tab Selector */}
-            <div style={{ display: 'flex', gap: 12, marginBottom: 20, borderBottom: '1px solid var(--pos-border)', paddingBottom: 12 }}>
-              <button onClick={() => setActiveJournalTab('JOURNAL')}
-                style={{ padding: '8px 16px', borderRadius: 12, border: 'none', background: activeJournalTab === 'JOURNAL' ? 'var(--pos-primary)' : 'var(--pos-input-bg)', color: activeJournalTab === 'JOURNAL' ? '#fff' : 'var(--pos-text-main)', fontWeight: 800, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Receipt size={16} /> Journal des Ventes
+            {/* ══════════════════════════════════════════════════════════════ */}
+            {/* ROLE / MÉTIER SELECTOR BAR */}
+            {/* ══════════════════════════════════════════════════════════════ */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 24, background: 'var(--pos-card-bg)', padding: 6, borderRadius: 16, border: '1px solid var(--pos-border)' }}>
+              <button
+                onClick={() => setActiveJournalTab('JOURNAL')}
+                style={{
+                  flex: 1, padding: '12px 18px', border: 'none', borderRadius: 12,
+                  background: activeJournalTab === 'JOURNAL' ? 'var(--pos-primary)' : 'transparent',
+                  color: activeJournalTab === 'JOURNAL' ? '#fff' : 'var(--pos-text-main)',
+                  fontWeight: 900, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s'
+                }}>
+                👔 1. PROPRIÉTAIRE & FINANCE (Chiffres / Z / Journal)
               </button>
-              <button onClick={() => setActiveJournalTab('STOCKS')}
-                style={{ padding: '8px 16px', borderRadius: 12, border: 'none', background: activeJournalTab === 'STOCKS' ? 'var(--pos-primary)' : 'var(--pos-input-bg)', color: activeJournalTab === 'STOCKS' ? '#fff' : 'var(--pos-text-main)', fontWeight: 800, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Package size={16} /> Inventaire des Stocks
+              <button
+                onClick={() => setActiveJournalTab('BARISTAS')}
+                style={{
+                  flex: 1, padding: '12px 18px', border: 'none', borderRadius: 12,
+                  background: activeJournalTab === 'BARISTAS' ? 'var(--pos-primary)' : 'transparent',
+                  color: activeJournalTab === 'BARISTAS' ? '#fff' : 'var(--pos-text-main)',
+                  fontWeight: 900, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s'
+                }}>
+                ☕ 2. BARISTA & CAISSIER (Objectif & Affluence)
               </button>
-              <button onClick={() => setActiveJournalTab('BARISTAS')}
-                style={{ padding: '8px 16px', borderRadius: 12, border: 'none', background: activeJournalTab === 'BARISTAS' ? 'var(--pos-primary)' : 'var(--pos-input-bg)', color: activeJournalTab === 'BARISTAS' ? '#fff' : 'var(--pos-text-main)', fontWeight: 800, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Users size={16} /> Performance Vendeurs & Top Produits
+              <button
+                onClick={() => setActiveJournalTab('STOCKS')}
+                style={{
+                  flex: 1, padding: '12px 18px', border: 'none', borderRadius: 12,
+                  background: activeJournalTab === 'STOCKS' ? 'var(--pos-primary)' : 'transparent',
+                  color: activeJournalTab === 'STOCKS' ? '#fff' : 'var(--pos-text-main)',
+                  fontWeight: 900, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s'
+                }}>
+                📦 3. GESTIONNAIRE STOCK & ACHATS (Ajustements & Ruptures)
               </button>
             </div>
 
-            {/* Tab 1: Journal des Ventes Table */}
+            {/* ══════════════════════════════════════════════════════════════ */}
+            {/* MÉTIER 1: PROPRIÉTAIRE & FINANCE */}
+            {/* ══════════════════════════════════════════════════════════════ */}
             {activeJournalTab === 'JOURNAL' && (
-              <div style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16 }}>Historique & Journal des Ventes ({journalData?.sales?.length || 0})</div>
-                  <input
-                    type="text"
-                    placeholder="🔍 Rechercher par N° ticket, client ou vendeur..."
-                    value={journalSearch}
-                    onChange={e => setJournalSearch(e.target.value)}
-                    style={{ width: 280, padding: '8px 14px', border: '1px solid var(--pos-border)', borderRadius: 10, fontSize: 12, fontWeight: 600, outline: 'none' }}
-                  />
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
+                  <div className="metric-card" style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 18 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Chiffre d'Affaires TTC</div>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--pos-primary)' }}>
+                      {(journalData?.stats?.totalSalesTtc || 0).toFixed(3)} DT
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--pos-text-muted)', marginTop: 4, fontWeight: 600 }}>
+                      HT: {(journalData?.stats?.totalSalesHt || 0).toFixed(3)} DT • TVA: {(journalData?.stats?.totalTax || 0).toFixed(3)} DT
+                    </div>
+                  </div>
+
+                  <div className="metric-card" style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 18 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Nombre de Ventes</div>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--pos-text-main)' }}>
+                      {journalData?.stats?.salesCount || 0} commandes
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--pos-text-muted)', marginTop: 4, fontWeight: 600 }}>
+                      Panier Moyen: {journalData?.stats?.salesCount ? ((journalData?.stats?.totalSalesTtc || 0) / journalData.stats.salesCount).toFixed(3) : '0.000'} DT
+                    </div>
+                  </div>
+
+                  <div className="metric-card" style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 18 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Répartition par Règlement</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 12, fontWeight: 700, marginTop: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>💵 Espèces:</span><span style={{ fontWeight: 900 }}>{(journalData?.stats?.cashTotal || 0).toFixed(3)} DT</span></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>💳 Carte:</span><span style={{ fontWeight: 900 }}>{(journalData?.stats?.cardTotal || 0).toFixed(3)} DT</span></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>🎟️ Ticket Resto:</span><span style={{ fontWeight: 900 }}>{(journalData?.stats?.voucherTotal || 0).toFixed(3)} DT</span></div>
+                    </div>
+                  </div>
+
+                  <div className="metric-card" style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 18 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Remises & Annulations</div>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--pos-warning)' }}>
+                      -{(journalData?.stats?.totalDiscounts || 0).toFixed(3)} DT
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--pos-text-muted)', marginTop: 4, fontWeight: 600 }}>
+                      Sur la période sélectionnée
+                    </div>
+                  </div>
                 </div>
 
-                {journalLoading ? (
-                  <div style={{ textAlign: 'center', padding: 40, color: 'var(--pos-text-muted)', fontWeight: 700 }}>Chargement du journal des ventes...</div>
-                ) : (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '2px solid var(--pos-border)', color: 'var(--pos-text-muted)', fontSize: 11, textTransform: 'uppercase' }}>
-                          <th style={{ padding: 12 }}>Réf / Fiscal N°</th>
-                          <th style={{ padding: 12 }}>Date & Heure</th>
-                          <th style={{ padding: 12 }}>Vendeur</th>
-                          <th style={{ padding: 12 }}>Client</th>
-                          <th style={{ padding: 12 }}>Mode</th>
-                          <th style={{ padding: 12, textAlign: 'right' }}>Montant TTC</th>
-                          <th style={{ padding: 12, textAlign: 'center' }}>Statut</th>
-                          <th style={{ padding: 12, textAlign: 'center' }}>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(journalData?.sales || [])
-                          .filter((s: any) => {
-                            if (!journalSearch) return true;
-                            const q = journalSearch.toLowerCase();
-                            return (
-                              (s.fiscalNumber && s.fiscalNumber.toLowerCase().includes(q)) ||
-                              (s.takenBy?.name && s.takenBy.name.toLowerCase().includes(q)) ||
-                              (s.customer?.name && s.customer.name.toLowerCase().includes(q)) ||
-                              (s.id && s.id.toLowerCase().includes(q))
-                            );
-                          })
-                          .map((sale: any) => (
-                            <tr key={sale.id} style={{ borderBottom: '1px solid var(--pos-border)', opacity: sale.isVoid ? 0.5 : 1 }}>
-                              <td style={{ padding: 12, fontWeight: 800, fontFamily: 'monospace' }}>
-                                {sale.fiscalNumber || `PRO-${sale.id.slice(-6).toUpperCase()}`}
-                              </td>
-                              <td style={{ padding: 12, fontWeight: 600 }}>
-                                {new Date(sale.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
-                              </td>
-                              <td style={{ padding: 12, fontWeight: 700 }}>{sale.takenBy?.name || sale.barista?.name || 'Vendeur'}</td>
-                              <td style={{ padding: 12, fontWeight: 600 }}>{sale.customer?.name || 'Client Passager'}</td>
-                              <td style={{ padding: 12 }}>
-                                <span style={{ padding: '3px 8px', borderRadius: 8, fontSize: 11, fontWeight: 800, background: sale.paymentMethod === 'CASH' ? '#EFF6FF' : sale.paymentMethod === 'CARD' ? '#F0FDF4' : sale.paymentMethod === 'MEAL_VOUCHER' ? '#FEF3C7' : '#F3E8FF', color: sale.paymentMethod === 'CASH' ? '#1E40AF' : sale.paymentMethod === 'CARD' ? '#166534' : sale.paymentMethod === 'MEAL_VOUCHER' ? '#92400E' : '#6B21A8' }}>
-                                  {sale.paymentMethod === 'CASH' ? '💵 ESPÈCES' : sale.paymentMethod === 'CARD' ? '💳 CARTE' : sale.paymentMethod === 'MEAL_VOUCHER' ? '🎟️ TICKET' : '🔀 MIXTE'}
-                                </span>
-                              </td>
-                              <td style={{ padding: 12, textAlign: 'right', fontWeight: 900, color: 'var(--pos-primary)' }}>
-                                {sale.total.toFixed(3)} DT
-                              </td>
-                              <td style={{ padding: 12, textAlign: 'center' }}>
-                                {sale.isVoid ? (
-                                  <span style={{ padding: '2px 8px', background: '#FEF2F2', color: '#DC2626', borderRadius: 6, fontSize: 11, fontWeight: 800 }}>ANNULÉE</span>
-                                ) : sale.isFiscal ? (
-                                  <span style={{ padding: '2px 8px', background: '#F0FDF4', color: '#166534', borderRadius: 6, fontSize: 11, fontWeight: 800 }}>NACEF FAC</span>
-                                ) : (
-                                  <span style={{ padding: '2px 8px', background: '#FEF3C7', color: '#92400E', borderRadius: 6, fontSize: 11, fontWeight: 800 }}>PRO-FORMA</span>
-                                )}
-                              </td>
-                              <td style={{ padding: 12, textAlign: 'center' }}>
-                                <button onClick={() => setSelectedSaleDetail(sale)}
-                                  style={{ padding: '5px 10px', background: 'var(--pos-primary)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
-                                  👁️ Détails
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
+                {/* Filters & Sales Journal Table */}
+                <div style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+                    <div style={{ fontWeight: 900, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Receipt size={18} color="var(--pos-primary)" /> Journal Officiel des Ventes ({journalData?.sales?.length || 0})
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input
+                        type="text"
+                        placeholder="🔍 N° ticket, client, serveur..."
+                        value={journalSearch}
+                        onChange={e => setJournalSearch(e.target.value)}
+                        style={{ width: 220, padding: '7px 12px', border: '1px solid var(--pos-border)', borderRadius: 10, fontSize: 12, fontWeight: 600, outline: 'none' }}
+                      />
+                      <select
+                        value={journalPaymentMethod}
+                        onChange={e => setJournalPaymentMethod(e.target.value)}
+                        style={{ padding: '7px 10px', borderRadius: 10, border: '1px solid var(--pos-border)', background: 'var(--pos-bg)', color: 'var(--pos-text-main)', fontWeight: 800, fontSize: 12, outline: 'none' }}>
+                        <option value="ALL">Tous les Modes</option>
+                        <option value="CASH">💵 Espèces</option>
+                        <option value="CARD">💳 Carte</option>
+                        <option value="MEAL_VOUCHER">🎟️ Ticket Resto</option>
+                        <option value="MIXED">🔀 Mixte</option>
+                      </select>
+                    </div>
                   </div>
-                )}
+
+                  {journalLoading ? (
+                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--pos-text-muted)', fontWeight: 700 }}>Chargement du journal des ventes...</div>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '2px solid var(--pos-border)', color: 'var(--pos-text-muted)', fontSize: 11, textTransform: 'uppercase' }}>
+                            <th style={{ padding: 12 }}>Réf / Fiscal N°</th>
+                            <th style={{ padding: 12 }}>Date & Heure</th>
+                            <th style={{ padding: 12 }}>Vendeur</th>
+                            <th style={{ padding: 12 }}>Client</th>
+                            <th style={{ padding: 12 }}>Mode</th>
+                            <th style={{ padding: 12, textAlign: 'right' }}>Montant TTC</th>
+                            <th style={{ padding: 12, textAlign: 'center' }}>Statut</th>
+                            <th style={{ padding: 12, textAlign: 'center' }}>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(journalData?.sales || [])
+                            .filter((s: any) => {
+                              if (!journalSearch) return true;
+                              const q = journalSearch.toLowerCase();
+                              return (
+                                (s.fiscalNumber && s.fiscalNumber.toLowerCase().includes(q)) ||
+                                (s.takenBy?.name && s.takenBy.name.toLowerCase().includes(q)) ||
+                                (s.customer?.name && s.customer.name.toLowerCase().includes(q)) ||
+                                (s.id && s.id.toLowerCase().includes(q))
+                              );
+                            })
+                            .map((sale: any) => (
+                              <tr key={sale.id} style={{ borderBottom: '1px solid var(--pos-border)', opacity: sale.isVoid ? 0.5 : 1 }}>
+                                <td style={{ padding: 12, fontWeight: 800, fontFamily: 'monospace' }}>
+                                  {sale.fiscalNumber || `PRO-${sale.id.slice(-6).toUpperCase()}`}
+                                </td>
+                                <td style={{ padding: 12, fontWeight: 600 }}>
+                                  {new Date(sale.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                                </td>
+                                <td style={{ padding: 12, fontWeight: 700 }}>{sale.takenBy?.name || sale.barista?.name || 'Vendeur'}</td>
+                                <td style={{ padding: 12, fontWeight: 600 }}>{sale.customer?.name || 'Client Passager'}</td>
+                                <td style={{ padding: 12 }}>
+                                  <span style={{ padding: '3px 8px', borderRadius: 8, fontSize: 11, fontWeight: 800, background: sale.paymentMethod === 'CASH' ? '#EFF6FF' : sale.paymentMethod === 'CARD' ? '#F0FDF4' : sale.paymentMethod === 'MEAL_VOUCHER' ? '#FEF3C7' : '#F3E8FF', color: sale.paymentMethod === 'CASH' ? '#1E40AF' : sale.paymentMethod === 'CARD' ? '#166534' : sale.paymentMethod === 'MEAL_VOUCHER' ? '#92400E' : '#6B21A8' }}>
+                                    {sale.paymentMethod === 'CASH' ? '💵 ESPÈCES' : sale.paymentMethod === 'CARD' ? '💳 CARTE' : sale.paymentMethod === 'MEAL_VOUCHER' ? '🎟️ TICKET' : '🔀 MIXTE'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: 12, textAlign: 'right', fontWeight: 900, color: 'var(--pos-primary)' }}>
+                                  {sale.total.toFixed(3)} DT
+                                </td>
+                                <td style={{ padding: 12, textAlign: 'center' }}>
+                                  {sale.isVoid ? (
+                                    <span style={{ padding: '2px 8px', background: '#FEF2F2', color: '#DC2626', borderRadius: 6, fontSize: 11, fontWeight: 800 }}>ANNULÉE</span>
+                                  ) : sale.isFiscal ? (
+                                    <span style={{ padding: '2px 8px', background: '#F0FDF4', color: '#166534', borderRadius: 6, fontSize: 11, fontWeight: 800 }}>NACEF FAC</span>
+                                  ) : (
+                                    <span style={{ padding: '2px 8px', background: '#FEF3C7', color: '#92400E', borderRadius: 6, fontSize: 11, fontWeight: 800 }}>PRO-FORMA</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: 12, textAlign: 'center' }}>
+                                  <button onClick={() => setSelectedSaleDetail(sale)}
+                                    style={{ padding: '5px 10px', background: 'var(--pos-primary)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                                    👁️ Détails
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════════ */}
+            {/* MÉTIER 2: BARISTA & SERVICE CAISSE */}
+            {/* ══════════════════════════════════════════════════════════════ */}
+            {activeJournalTab === 'BARISTAS' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {/* Personal Target & Session Performance */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                  <div className="metric-card" style={{ background: 'linear-gradient(135deg, var(--pos-primary), #4F46E5)', color: '#fff', borderRadius: 16, padding: 24 }}>
+                    <div style={{ fontSize: 13, opacity: 0.9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🎯 OBJECTIF DE VENTE PERSONNEL (VOTRE SESSION)</div>
+                    <div style={{ fontSize: 32, fontWeight: 900, marginTop: 8 }}>
+                       {(sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} / {activeDailyTarget.toFixed(3)} DT
+                    </div>
+                    <div style={{ height: 10, background: 'rgba(255,255,255,0.25)', borderRadius: 5, marginTop: 16, overflow: 'hidden' }}>
+                       <div style={{ 
+                         height: '100%', 
+                         width: `${Math.min(100, Math.floor(((sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)) / activeDailyTarget) * 100))}%`, 
+                         background: '#10B981',
+                         transition: 'all 0.4s ease'
+                       }} />
+                    </div>
+                    <p style={{ margin: '14px 0 0', fontSize: 13, fontWeight: 700, opacity: 0.95 }}>
+                       Vous êtes à {Math.min(100, Math.floor(((sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)) / activeDailyTarget) * 100))}% de votre objectif personnel !
+                    </p>
+                  </div>
+
+                  {/* Baristas Sales Leaderboard */}
+                  <div style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 20 }}>
+                    <div style={{ fontWeight: 900, fontSize: 16, marginBottom: 14 }}>Chiffre d'Affaires par Vendeur / Serveur</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {(journalData?.stats?.perBarista || []).map((b: any) => (
+                        <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--pos-bg)', borderRadius: 12, border: '1px solid var(--pos-border)' }}>
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: 14 }}>{b.name}</div>
+                            <div style={{ fontSize: 11, color: 'var(--pos-text-muted)', fontWeight: 600 }}>{b.count} commandes enregistrées</div>
+                          </div>
+                          <div style={{ fontWeight: 900, fontSize: 16, color: 'var(--pos-primary)' }}>
+                            {b.total.toFixed(3)} DT
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Heatmap & Top Products */}
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
+                  <div className="heatmap-container" style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 20 }}>
+                     <div className="heatmap-header" style={{ marginBottom: 16 }}>
+                        <div>
+                           <h3 style={{ margin: 0, fontWeight: 900, fontSize: 16 }}>🔥 Heures d'Affluence en Caisse</h3>
+                           <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--pos-text-muted)' }}>Distribution horaire du salon de thé pour optimiser les équipes de service</p>
+                        </div>
+                     </div>
+                     
+                     <div className="heatmap-grid">
+                        <div />
+                        {Array.from({ length: 24 }).map((_, i) => (
+                           <div key={i} className="heatmap-col-label">{i}h</div>
+                        ))}
+                        
+                        {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day, dIdx) => (
+                           <React.Fragment key={day}>
+                              <div className="heatmap-row-label">{day}</div>
+                              {peakHoursData.matrix[dIdx].map((val, hIdx) => (
+                                 <div 
+                                    key={hIdx} 
+                                    className={`heatmap-cell ${getIntensityClass(val, peakHoursData.maxVal)}`}
+                                    title={`${day} ${hIdx}h: ${val} ventes`}
+                                 />
+                              ))}
+                           </React.Fragment>
+                        ))}
+                     </div>
+                  </div>
+
+                  <div style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 20 }}>
+                    <div style={{ fontWeight: 900, fontSize: 16, marginBottom: 14 }}>🏆 Top 10 Produit les plus Demandés</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {(journalData?.stats?.topProducts || []).map((p: any, idx: number) => (
+                        <div key={p.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--pos-bg)', borderRadius: 10 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontWeight: 900, color: 'var(--pos-primary)', fontSize: 12 }}>#{idx + 1}</span>
+                            <span style={{ fontWeight: 800, fontSize: 12 }}>{p.name}</span>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: 900, fontSize: 13 }}>{p.total.toFixed(3)} DT</div>
+                            <div style={{ fontSize: 10, color: 'var(--pos-text-muted)' }}>{p.qty} vendus</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Tab 2: Suivi des Stocks */}
+            {/* ══════════════════════════════════════════════════════════════ */}
+            {/* MÉTIER 3: GESTIONNAIRE STOCK & ACHATS */}
+            {/* ══════════════════════════════════════════════════════════════ */}
             {activeJournalTab === 'STOCKS' && (
               <div style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 20 }}>
-                <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>Inventaire des Ingrédients & Matières Premières</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontWeight: 900, fontSize: 18 }}>Inventaire des Ingrédients & Matières Premières</h3>
+                    <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--pos-text-muted)' }}>Suivez vos stocks en temps réel et ajustez les réapprovisionnements en 1 clic</p>
+                  </div>
+                  <button onClick={fetchStockData} style={{ padding: '8px 14px', background: 'var(--pos-primary)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                    🔄 Rafraîchir Stocks
+                  </button>
+                </div>
+
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
                     <thead>
@@ -1527,46 +1646,6 @@ export default function PremiumPOSClient({
                       )}
                     </tbody>
                   </table>
-                </div>
-              </div>
-            )}
-
-            {/* Tab 3: Performance Vendeurs */}
-            {activeJournalTab === 'BARISTAS' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                <div style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 20 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>Chiffre d'Affaires par Vendeur</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {(journalData?.stats?.perBarista || []).map((b: any) => (
-                      <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--pos-bg)', borderRadius: 12, border: '1px solid var(--pos-border)' }}>
-                        <div>
-                          <div style={{ fontWeight: 800, fontSize: 14 }}>{b.name}</div>
-                          <div style={{ fontSize: 11, color: 'var(--pos-text-muted)' }}>{b.count} ventes effectuées</div>
-                        </div>
-                        <div style={{ fontWeight: 900, fontSize: 16, color: 'var(--pos-primary)' }}>
-                          {b.total.toFixed(3)} DT
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 20 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>Top Produits les plus Vendus</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {(journalData?.stats?.topProducts || []).map((p: any, idx: number) => (
-                      <div key={p.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--pos-bg)', borderRadius: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ fontWeight: 900, color: 'var(--pos-primary)', fontSize: 12 }}>#{idx + 1}</span>
-                          <span style={{ fontWeight: 800, fontSize: 13 }}>{p.name}</span>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontWeight: 900, fontSize: 14 }}>{p.total.toFixed(3)} DT</div>
-                          <div style={{ fontSize: 11, color: 'var(--pos-text-muted)' }}>{p.qty} unités</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               </div>
             )}
