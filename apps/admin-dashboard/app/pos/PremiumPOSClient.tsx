@@ -29,6 +29,8 @@ interface Product {
 
 interface CartItem extends Product {
   quantity: number;
+  discountPercent?: number;
+  discountAmount?: number;
 }
 
 interface Customer {
@@ -162,6 +164,8 @@ export default function PremiumPOSClient({
   const [ticketUnitValue, setTicketUnitValue] = useState('8.000');
   const [ticketType, setTicketType] = useState('');
   const [scanInput, setScanInput] = useState('');
+  // Line item discount popover state
+  const [activeDiscountItemId, setActiveDiscountItemId] = useState<string | null>(null);
   
   // New Customer Modal
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
@@ -354,7 +358,22 @@ export default function PremiumPOSClient({
 
   const currentCart = selectedTable ? (tableOrders[selectedTable.id] || []) : [];
 
-  const subtotal = currentCart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  // Helper calculation for line item prices & discounts
+  const getItemNetPrice = (item: CartItem) => {
+    if (item.discountPercent && item.discountPercent > 0) {
+      return item.price * (1 - item.discountPercent / 100);
+    }
+    if (item.discountAmount && item.discountAmount > 0) {
+      return Math.max(0, item.price - item.discountAmount);
+    }
+    return item.price;
+  };
+
+  const getItemLineTotal = (item: CartItem) => getItemNetPrice(item) * item.quantity;
+
+  const subtotalBrut = currentCart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const subtotal = currentCart.reduce((acc, item) => acc + getItemLineTotal(item), 0);
+  const totalLineDiscounts = subtotalBrut - subtotal;
 
   // Cross-selling suggestions
   const suggestedProducts = React.useMemo(() => {
@@ -475,9 +494,8 @@ export default function PremiumPOSClient({
           const minQty = (item as any).minOrderQty || 1;
           let newQty = item.quantity + delta;
           
-          // Enforce min quantity if decreasing
           if (delta < 0 && newQty < minQty) {
-            newQty = 0; // Remove item if it goes below min
+            newQty = 0;
           }
           
           return { ...item, quantity: newQty };
@@ -485,6 +503,24 @@ export default function PremiumPOSClient({
         return item;
       }).filter(item => item.quantity > 0);
 
+      return { ...prev, [tableId]: newCart };
+    });
+  };
+
+  const updateLineDiscount = (id: string, discountPercent?: number, discountAmount?: number) => {
+    const tableId = selectedTable?.id || 'DIRECT';
+    setTableOrders(prev => {
+      const tableCart = prev[tableId] || [];
+      const newCart = tableCart.map(item => {
+        if (item.id === id) {
+          return {
+            ...item,
+            discountPercent,
+            discountAmount
+          };
+        }
+        return item;
+      });
       return { ...prev, [tableId]: newCart };
     });
   };
@@ -1810,19 +1846,180 @@ export default function PremiumPOSClient({
         </div>
 
         <div className="cart-items">
-          {currentCart.map(item => (
-            <div key={item.id} className="cart-item">
-              <div className="cart-item-info">
-                <div className="cart-item-name">{item.name}</div>
-                <div className="cart-item-price">{(item.price * item.quantity).toFixed(3)} DT</div>
+          {currentCart.map(item => {
+            const netUnitPrice = getItemNetPrice(item);
+            const lineTotal = getItemLineTotal(item);
+            const hasDiscount = (item.discountPercent && item.discountPercent > 0) || (item.discountAmount && item.discountAmount > 0);
+            const isDiscountOpen = activeDiscountItemId === item.id;
+
+            return (
+              <div key={item.id} style={{
+                background: 'var(--pos-card-bg)',
+                border: '1px solid var(--pos-border)',
+                borderRadius: 16,
+                padding: '12px 14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                transition: 'all 0.2s ease'
+              }}>
+                {/* Line Header: Product Name + Strikethrough Price + Trash */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--pos-text-main)', lineHeight: 1.2 }}>
+                      {item.name}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                      {hasDiscount ? (
+                        <>
+                          <span style={{ textDecoration: 'line-through', fontSize: 12, color: 'var(--pos-text-muted)', fontWeight: 600 }}>
+                            {item.price.toFixed(3)} DT
+                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--pos-primary)' }}>
+                            {netUnitPrice.toFixed(3)} DT
+                          </span>
+                          <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 6 }}>
+                            {item.discountPercent ? `-${item.discountPercent}%` : `-${item.discountAmount?.toFixed(3)} DT`}
+                          </span>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--pos-text-muted)' }}>
+                          {item.price.toFixed(3)} DT / un.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => updateQty(item.id, -item.quantity)}
+                    title="Supprimer l'article"
+                    style={{ background: 'none', border: 'none', color: 'var(--pos-text-muted)', cursor: 'pointer', padding: 4, borderRadius: 6 }}>
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+
+                {/* Controls & Subtotal Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {/* Quantity Controls + Remise Pill */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="cart-controls" style={{ padding: '4px 6px', borderRadius: 10 }}>
+                      <button className="cart-qty-btn" onClick={() => updateQty(item.id, -1)}><Minus size={13} /></button>
+                      <span style={{ fontWeight: 800, width: 22, textAlign: 'center', fontSize: 14 }}>{item.quantity}</span>
+                      <button className="cart-qty-btn" onClick={() => addToCart(item)}><Plus size={13} /></button>
+                    </div>
+
+                    {/* Discount Trigger Button */}
+                    <button
+                      onClick={() => setActiveDiscountItemId(isDiscountOpen ? null : item.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '6px 10px',
+                        borderRadius: 10,
+                        border: `1px solid ${hasDiscount ? '#F59E0B' : 'var(--pos-border)'}`,
+                        background: hasDiscount ? '#FEF3C7' : 'var(--pos-bg)',
+                        color: hasDiscount ? '#92400E' : 'var(--pos-text-muted)',
+                        fontSize: 11,
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s'
+                      }}>
+                      <Tag size={12} />
+                      <span>{hasDiscount ? 'Remisé' : '% Remise'}</span>
+                    </button>
+                  </div>
+
+                  {/* Line Subtotal */}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--pos-text-main)' }}>
+                      {lineTotal.toFixed(3)} DT
+                    </div>
+                  </div>
+                </div>
+
+                {/* Line Discount Selector Panel */}
+                {isDiscountOpen && (
+                  <div style={{
+                    background: '#F8FAFC',
+                    border: '1.5px solid var(--pos-primary)',
+                    borderRadius: 12,
+                    padding: 10,
+                    marginTop: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                    boxShadow: '0 4px 12px rgba(99,102,241,0.08)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase' }}>
+                        Remise sur {item.name}
+                      </span>
+                      <X size={14} style={{ cursor: 'pointer', color: 'var(--pos-text-muted)' }} onClick={() => setActiveDiscountItemId(null)} />
+                    </div>
+
+                    {/* Quick % Chips */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4 }}>
+                      {[5, 10, 15, 20, 50].map(pct => (
+                        <button
+                          key={pct}
+                          onClick={() => {
+                            updateLineDiscount(item.id, pct, undefined);
+                            setActiveDiscountItemId(null);
+                          }}
+                          style={{
+                            padding: '6px 0',
+                            border: `1px solid ${item.discountPercent === pct ? 'var(--pos-primary)' : 'var(--pos-border)'}`,
+                            borderRadius: 8,
+                            background: item.discountPercent === pct ? 'var(--pos-primary)' : '#fff',
+                            color: item.discountPercent === pct ? '#fff' : 'var(--pos-text-main)',
+                            fontWeight: 800,
+                            fontSize: 11,
+                            cursor: 'pointer'
+                          }}>
+                          -{pct}%
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Custom Discount input row */}
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input
+                        type="number"
+                        placeholder="Ex: 10 (%) ou 0.5 (DT)"
+                        step="0.001"
+                        min="0"
+                        style={{ flex: 1, padding: '6px 10px', border: '1px solid var(--pos-border)', borderRadius: 8, fontSize: 12, fontWeight: 700, background: '#fff', outline: 'none' }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            const val = parseFloat((e.target as HTMLInputElement).value);
+                            if (!isNaN(val) && val > 0) {
+                              if (val <= 100) {
+                                updateLineDiscount(item.id, val, undefined);
+                              } else {
+                                updateLineDiscount(item.id, undefined, val);
+                              }
+                              setActiveDiscountItemId(null);
+                            }
+                          }
+                        }}
+                      />
+                      {hasDiscount && (
+                        <button
+                          onClick={() => {
+                            updateLineDiscount(item.id, undefined, undefined);
+                            setActiveDiscountItemId(null);
+                          }}
+                          style={{ padding: '6px 10px', background: '#FEF2F2', color: 'var(--pos-danger)', border: '1px solid #FCA5A5', borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                          Annuler
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="cart-controls">
-                <button className="cart-qty-btn" onClick={() => updateQty(item.id, -1)}><Minus size={14} /></button>
-                <span style={{ fontWeight: 800, width: 22, textAlign: 'center' }}>{item.quantity}</span>
-                <button className="cart-qty-btn" onClick={() => addToCart(item)}><Plus size={14} /></button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           {currentCart.length === 0 && (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.2, marginTop: 100 }}>
               <ShoppingCart size={80} strokeWidth={1} />
@@ -1867,14 +2064,20 @@ export default function PremiumPOSClient({
              </div>
            )}
 
-           <div className="total-row"><span>Sous-total</span><span style={{ fontWeight: 800 }}>{subtotal.toFixed(3)} DT</span></div>
+           <div className="total-row"><span>Sous-total brut</span><span style={{ fontWeight: 800 }}>{subtotalBrut.toFixed(3)} DT</span></div>
+           {totalLineDiscounts > 0 && (
+             <div className="total-row" style={{ color: 'var(--pos-success)' }}>
+               <span>Remises articles</span>
+               <span style={{ fontWeight: 800 }}>-{totalLineDiscounts.toFixed(3)} DT</span>
+             </div>
+           )}
            {discountFromPoints > 0 && (
              <div className="total-row" style={{ color: 'var(--pos-success)' }}>
                <span>Remise Points</span>
                <span style={{ fontWeight: 800 }}>-{discountFromPoints.toFixed(3)} DT</span>
              </div>
            )}
-           <div className="total-row grand-total"><span>Total</span><span>{total.toFixed(3)} DT</span></div>
+           <div className="total-row grand-total"><span>Total NET</span><span>{total.toFixed(3)} DT</span></div>
         </div>
 
         <div className="cart-actions">
