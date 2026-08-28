@@ -9,7 +9,7 @@ import {
   X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package, Store, Calculator
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction, clockInAction, clockOutAction, getActiveAttendance } from '../actions';
+import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction, clockInAction, clockOutAction, getActiveAttendance, getAdvancedSalesJournal, getStoreStockItemsList, adjustStock } from '../actions';
 import { savePendingAction, getPendingActions, deletePendingAction } from './OfflineSync';
 import { PrintService } from './PrintService';
 import { DenominationCounter } from './DenominationCounter';
@@ -166,6 +166,17 @@ export default function PremiumPOSClient({
   const [scanInput, setScanInput] = useState('');
   // Line item discount popover state
   const [activeDiscountItemId, setActiveDiscountItemId] = useState<string | null>(null);
+
+  // Store Owner Sales Journal & Stock State
+  const [journalPeriod, setJournalPeriod] = useState<'TODAY' | 'YESTERDAY' | 'WEEK' | 'MONTH' | 'LAST_MONTH' | 'ALL'>('TODAY');
+  const [journalBarista, setJournalBarista] = useState<string>('ALL');
+  const [journalPaymentMethod, setJournalPaymentMethod] = useState<string>('ALL');
+  const [journalData, setJournalData] = useState<any>(null);
+  const [journalLoading, setJournalLoading] = useState(false);
+  const [activeJournalTab, setActiveJournalTab] = useState<'JOURNAL' | 'STOCKS' | 'BARISTAS'>('JOURNAL');
+  const [stockItemsList, setStockItemsList] = useState<any[]>([]);
+  const [selectedSaleDetail, setSelectedSaleDetail] = useState<any>(null);
+  const [journalSearch, setJournalSearch] = useState('');
   
   // New Customer Modal
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
@@ -416,7 +427,66 @@ export default function PremiumPOSClient({
     if (view === 'ORDERS') {
       fetchOrders();
     }
-  }, [view]);
+    if (view === 'DASHBOARD' || view === 'ORDERS') {
+      fetchJournalData();
+      fetchStockData();
+    }
+  }, [view, journalPeriod, journalBarista, journalPaymentMethod]);
+
+  const fetchJournalData = async () => {
+    setJournalLoading(true);
+    try {
+      if (isOffline) {
+        setJournalData({
+          sales: sessionSales,
+          stats: {
+            totalSalesTtc: sessionSales.reduce((acc, s) => acc + Number(s.total || 0), 0),
+            totalSalesHt: sessionSales.reduce((acc, s) => acc + Number(s.subtotal || s.total || 0), 0),
+            totalTax: 0,
+            totalDiscounts: sessionSales.reduce((acc, s) => acc + Number(s.discount || 0), 0),
+            salesCount: sessionSales.length,
+            cashTotal: sessionSales.filter(s => s.paymentMethod === 'CASH').reduce((acc, s) => acc + Number(s.total), 0),
+            cardTotal: sessionSales.filter(s => s.paymentMethod === 'CARD').reduce((acc, s) => acc + Number(s.total), 0),
+            voucherTotal: sessionSales.filter(s => s.paymentMethod === 'MEAL_VOUCHER').reduce((acc, s) => acc + Number(s.total), 0),
+            mixedTotal: 0,
+            perBarista: [],
+            topProducts: []
+          }
+        });
+        return;
+      }
+      const data = await getAdvancedSalesJournal({
+        period: journalPeriod,
+        baristaId: journalBarista,
+        paymentMethod: journalPaymentMethod
+      });
+      setJournalData(data);
+    } catch (err) {
+      console.error('Failed to fetch journal data:', err);
+    } finally {
+      setJournalLoading(false);
+    }
+  };
+
+  const fetchStockData = async () => {
+    try {
+      if (!isOffline) {
+        const items = await getStoreStockItemsList();
+        setStockItemsList(items);
+      }
+    } catch (err) {
+      console.error('Failed to fetch stock items:', err);
+    }
+  };
+
+  const handleAdjustStock = async (stockItemId: string, delta: number) => {
+    try {
+      await adjustStock(stockItemId, delta);
+      fetchStockData();
+    } catch (err) {
+      alert("Erreur lors de l'ajustement du stock");
+    }
+  };
 
   const fetchOrders = async () => {
     setIsLoadingOrders(true);
@@ -1202,132 +1272,304 @@ export default function PremiumPOSClient({
           {/* Main Experience Area */}
           <div className="pos-product-section">
         {view === 'DASHBOARD' ? (
-          <div style={{ flex: 1, padding: 40, overflowY: 'auto', background: 'var(--pos-bg)' }}>
-             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
-                <div>
-                   <h1 style={{ fontSize: 32, fontWeight: 900, margin: 0 }}>Tableau de bord</h1>
-                   <p style={{ color: 'var(--pos-text-muted)', margin: 0 }}>Vue d'ensemble de votre boutique</p>
-                </div>
-                <div style={{ display: 'flex', gap: 12 }}>
-                   <div style={{ background: 'var(--pos-card-bg)', padding: '10px 20px', borderRadius: 12, border: '1px solid var(--pos-border)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Clock size={18} /> Aujourd'hui
-                   </div>
-                </div>
-             </div>
+          <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', background: 'var(--pos-bg)' }}>
+            {/* Executive Title & Filters Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0, color: 'var(--pos-text-main)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <LayoutDashboard size={26} color="var(--pos-primary)" /> Journal des Ventes & Contrôle Propriétaire
+                </h1>
+                <p style={{ color: 'var(--pos-text-muted)', margin: '4px 0 0', fontSize: 13, fontWeight: 600 }}>
+                  Chiffre d'affaires, répartition des paiements, suivi par serveur et inventaire des stocks
+                </p>
+              </div>
 
-             <div className="dashboard-metrics-grid">
-                <div className="metric-card">
-                   <div className="metric-card-header">
-                      <span className="metric-label">REVENU TOTAL</span>
-                      <div style={{ background: 'var(--pos-accent)', padding: 8, borderRadius: 10, opacity: 0.2 }}><Banknote size={20} /></div>
-                   </div>
-                   <div className="metric-value">{(sessionSales.reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} DT</div>
-                   <div className="metric-trend trend-up"><ChevronUp size={16} /> 8.8% <span style={{ color: 'var(--pos-text-muted)', fontWeight: 500, marginLeft: 4 }}>vs hier</span></div>
+              {/* Filter Controls */}
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                {/* Period Chips */}
+                <div style={{ display: 'flex', background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 12, padding: 3, gap: 2 }}>
+                  {[
+                    { id: 'TODAY', label: "Aujourd'hui" },
+                    { id: 'YESTERDAY', label: 'Hier' },
+                    { id: 'WEEK', label: '7 Jours' },
+                    { id: 'MONTH', label: 'Ce Mois' },
+                    { id: 'LAST_MONTH', label: 'Mois Dernier' },
+                    { id: 'ALL', label: 'Tout' }
+                  ].map(p => (
+                    <button key={p.id} onClick={() => setJournalPeriod(p.id as any)}
+                      style={{ padding: '6px 12px', border: 'none', borderRadius: 9, background: journalPeriod === p.id ? 'var(--pos-primary)' : 'transparent', color: journalPeriod === p.id ? '#fff' : 'var(--pos-text-muted)', fontWeight: 800, fontSize: 11, cursor: 'pointer', transition: 'all 0.15s' }}>
+                      {p.label}
+                    </button>
+                  ))}
                 </div>
-                <div className="metric-card">
-                   <div className="metric-card-header">
-                      <span className="metric-label">COMMANDES</span>
-                      <div style={{ background: 'var(--pos-success)', padding: 8, borderRadius: 10, opacity: 0.2 }}><ClipboardList size={20} /></div>
-                   </div>
-                   <div className="metric-value">{sessionSales.length}</div>
-                   <div className="metric-trend trend-down"><ChevronDown size={16} /> 2.1% <span style={{ color: 'var(--pos-text-muted)', fontWeight: 500, marginLeft: 4 }}>vs hier</span></div>
-                </div>
-                <div className="metric-card">
-                   <div className="metric-card-header">
-                      <span className="metric-label">VOS VENTES (SESSION)</span>
-                      <div style={{ background: 'var(--pos-primary)', padding: 8, borderRadius: 10, opacity: 0.2 }}><Zap size={20} /></div>
-                   </div>
-                   <div className="metric-value">{(sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} DT</div>
-                   <div className="metric-trend trend-up"><ChevronUp size={16} /> En direct</div>
-                </div>
-                <div className="metric-card">
-                   <div className="metric-card-header">
-                      <span className="metric-label">CLIENTS LOYAUX</span>
-                      <div style={{ background: 'var(--pos-warning)', padding: 8, borderRadius: 10, opacity: 0.2 }}><Users size={20} /></div>
-                   </div>
-                   <div className="metric-value">{new Set(sessionSales.filter(s => s.customerId).map(s => s.customerId)).size}</div>
-                   <div className="metric-trend trend-up"><ChevronUp size={16} /> 5.6% <span style={{ color: 'var(--pos-text-muted)', fontWeight: 500, marginLeft: 4 }}>vs hier</span></div>
-                </div>
-             </div>
 
-             <div className="dashboard-charts-layout">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-                    <div className="heatmap-container">
-                       <div className="heatmap-header">
-                          <div>
-                             <h3 style={{ margin: 0, fontWeight: 900 }}>Heures d'Affluence</h3>
-                             <p style={{ margin: 0, fontSize: 13, color: 'var(--pos-text-muted)' }}>Moyenne sur les 30 derniers jours</p>
-                          </div>
-                          <div style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)' }}>
-                             <span>Bas</span>
-                             <div style={{ width: 12, height: 12, borderRadius: 3, background: '#EFEBE9' }} />
-                             <div style={{ width: 12, height: 12, borderRadius: 3, background: '#BCAAA4' }} />
-                             <div style={{ width: 12, height: 12, borderRadius: 3, background: '#8D6E63' }} />
-                             <div style={{ width: 12, height: 12, borderRadius: 3, background: '#5D4037' }} />
-                             <span>Haut</span>
-                          </div>
-                       </div>
-                       
-                       <div className="heatmap-grid">
-                          <div />
-                          {Array.from({ length: 24 }).map((_, i) => (
-                             <div key={i} className="heatmap-col-label">{i}h</div>
+                {/* Barista Filter */}
+                <select
+                  value={journalBarista}
+                  onChange={e => setJournalBarista(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: 12, border: '1px solid var(--pos-border)', background: 'var(--pos-card-bg)', color: 'var(--pos-text-main)', fontWeight: 800, fontSize: 12, outline: 'none' }}>
+                  <option value="ALL">Tous les Vendeurs</option>
+                  {initialBaristas.map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+
+                {/* Payment Method Filter */}
+                <select
+                  value={journalPaymentMethod}
+                  onChange={e => setJournalPaymentMethod(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: 12, border: '1px solid var(--pos-border)', background: 'var(--pos-card-bg)', color: 'var(--pos-text-main)', fontWeight: 800, fontSize: 12, outline: 'none' }}>
+                  <option value="ALL">Tous les Modes</option>
+                  <option value="CASH">💵 Espèces</option>
+                  <option value="CARD">💳 Carte</option>
+                  <option value="MEAL_VOUCHER">🎟️ Ticket Resto</option>
+                  <option value="MIXED">🔀 Mixte</option>
+                </select>
+              </div>
+            </div>
+
+            {/* KPI Cards Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
+              <div className="metric-card" style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Chiffre d'Affaires TTC</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--pos-primary)' }}>
+                  {(journalData?.stats?.totalSalesTtc || 0).toFixed(3)} DT
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--pos-text-muted)', marginTop: 4, fontWeight: 600 }}>
+                  HT: {(journalData?.stats?.totalSalesHt || 0).toFixed(3)} DT • TVA: {(journalData?.stats?.totalTax || 0).toFixed(3)} DT
+                </div>
+              </div>
+
+              <div className="metric-card" style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Nombre de Ventes</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--pos-text-main)' }}>
+                  {journalData?.stats?.salesCount || 0} commandes
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--pos-text-muted)', marginTop: 4, fontWeight: 600 }}>
+                  Panier Moyen: {journalData?.stats?.salesCount ? ((journalData?.stats?.totalSalesTtc || 0) / journalData.stats.salesCount).toFixed(3) : '0.000'} DT
+                </div>
+              </div>
+
+              <div className="metric-card" style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Répartition par Règlement</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 12, fontWeight: 700, marginTop: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>💵 Espèces:</span><span style={{ fontWeight: 900 }}>{(journalData?.stats?.cashTotal || 0).toFixed(3)} DT</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>💳 Carte:</span><span style={{ fontWeight: 900 }}>{(journalData?.stats?.cardTotal || 0).toFixed(3)} DT</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>🎟️ Ticket Resto:</span><span style={{ fontWeight: 900 }}>{(journalData?.stats?.voucherTotal || 0).toFixed(3)} DT</span></div>
+                </div>
+              </div>
+
+              <div className="metric-card" style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Remises Accordées</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--pos-warning)' }}>
+                  -{(journalData?.stats?.totalDiscounts || 0).toFixed(3)} DT
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--pos-text-muted)', marginTop: 4, fontWeight: 600 }}>
+                  Sur la période sélectionnée
+                </div>
+              </div>
+            </div>
+
+            {/* Sub-Tab Selector */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 20, borderBottom: '1px solid var(--pos-border)', paddingBottom: 12 }}>
+              <button onClick={() => setActiveJournalTab('JOURNAL')}
+                style={{ padding: '8px 16px', borderRadius: 12, border: 'none', background: activeJournalTab === 'JOURNAL' ? 'var(--pos-primary)' : 'var(--pos-input-bg)', color: activeJournalTab === 'JOURNAL' ? '#fff' : 'var(--pos-text-main)', fontWeight: 800, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Receipt size={16} /> Journal des Ventes
+              </button>
+              <button onClick={() => setActiveJournalTab('STOCKS')}
+                style={{ padding: '8px 16px', borderRadius: 12, border: 'none', background: activeJournalTab === 'STOCKS' ? 'var(--pos-primary)' : 'var(--pos-input-bg)', color: activeJournalTab === 'STOCKS' ? '#fff' : 'var(--pos-text-main)', fontWeight: 800, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Package size={16} /> Inventaire des Stocks
+              </button>
+              <button onClick={() => setActiveJournalTab('BARISTAS')}
+                style={{ padding: '8px 16px', borderRadius: 12, border: 'none', background: activeJournalTab === 'BARISTAS' ? 'var(--pos-primary)' : 'var(--pos-input-bg)', color: activeJournalTab === 'BARISTAS' ? '#fff' : 'var(--pos-text-main)', fontWeight: 800, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Users size={16} /> Performance Vendeurs & Top Produits
+              </button>
+            </div>
+
+            {/* Tab 1: Journal des Ventes Table */}
+            {activeJournalTab === 'JOURNAL' && (
+              <div style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <div style={{ fontWeight: 800, fontSize: 16 }}>Historique & Journal des Ventes ({journalData?.sales?.length || 0})</div>
+                  <input
+                    type="text"
+                    placeholder="🔍 Rechercher par N° ticket, client ou vendeur..."
+                    value={journalSearch}
+                    onChange={e => setJournalSearch(e.target.value)}
+                    style={{ width: 280, padding: '8px 14px', border: '1px solid var(--pos-border)', borderRadius: 10, fontSize: 12, fontWeight: 600, outline: 'none' }}
+                  />
+                </div>
+
+                {journalLoading ? (
+                  <div style={{ textAlign: 'center', padding: 40, color: 'var(--pos-text-muted)', fontWeight: 700 }}>Chargement du journal des ventes...</div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--pos-border)', color: 'var(--pos-text-muted)', fontSize: 11, textTransform: 'uppercase' }}>
+                          <th style={{ padding: 12 }}>Réf / Fiscal N°</th>
+                          <th style={{ padding: 12 }}>Date & Heure</th>
+                          <th style={{ padding: 12 }}>Vendeur</th>
+                          <th style={{ padding: 12 }}>Client</th>
+                          <th style={{ padding: 12 }}>Mode</th>
+                          <th style={{ padding: 12, textAlign: 'right' }}>Montant TTC</th>
+                          <th style={{ padding: 12, textAlign: 'center' }}>Statut</th>
+                          <th style={{ padding: 12, textAlign: 'center' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(journalData?.sales || [])
+                          .filter((s: any) => {
+                            if (!journalSearch) return true;
+                            const q = journalSearch.toLowerCase();
+                            return (
+                              (s.fiscalNumber && s.fiscalNumber.toLowerCase().includes(q)) ||
+                              (s.takenBy?.name && s.takenBy.name.toLowerCase().includes(q)) ||
+                              (s.customer?.name && s.customer.name.toLowerCase().includes(q)) ||
+                              (s.id && s.id.toLowerCase().includes(q))
+                            );
+                          })
+                          .map((sale: any) => (
+                            <tr key={sale.id} style={{ borderBottom: '1px solid var(--pos-border)', opacity: sale.isVoid ? 0.5 : 1 }}>
+                              <td style={{ padding: 12, fontWeight: 800, fontFamily: 'monospace' }}>
+                                {sale.fiscalNumber || `PRO-${sale.id.slice(-6).toUpperCase()}`}
+                              </td>
+                              <td style={{ padding: 12, fontWeight: 600 }}>
+                                {new Date(sale.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                              </td>
+                              <td style={{ padding: 12, fontWeight: 700 }}>{sale.takenBy?.name || sale.barista?.name || 'Vendeur'}</td>
+                              <td style={{ padding: 12, fontWeight: 600 }}>{sale.customer?.name || 'Client Passager'}</td>
+                              <td style={{ padding: 12 }}>
+                                <span style={{ padding: '3px 8px', borderRadius: 8, fontSize: 11, fontWeight: 800, background: sale.paymentMethod === 'CASH' ? '#EFF6FF' : sale.paymentMethod === 'CARD' ? '#F0FDF4' : sale.paymentMethod === 'MEAL_VOUCHER' ? '#FEF3C7' : '#F3E8FF', color: sale.paymentMethod === 'CASH' ? '#1E40AF' : sale.paymentMethod === 'CARD' ? '#166534' : sale.paymentMethod === 'MEAL_VOUCHER' ? '#92400E' : '#6B21A8' }}>
+                                  {sale.paymentMethod === 'CASH' ? '💵 ESPÈCES' : sale.paymentMethod === 'CARD' ? '💳 CARTE' : sale.paymentMethod === 'MEAL_VOUCHER' ? '🎟️ TICKET' : '🔀 MIXTE'}
+                                </span>
+                              </td>
+                              <td style={{ padding: 12, textAlign: 'right', fontWeight: 900, color: 'var(--pos-primary)' }}>
+                                {sale.total.toFixed(3)} DT
+                              </td>
+                              <td style={{ padding: 12, textAlign: 'center' }}>
+                                {sale.isVoid ? (
+                                  <span style={{ padding: '2px 8px', background: '#FEF2F2', color: '#DC2626', borderRadius: 6, fontSize: 11, fontWeight: 800 }}>ANNULÉE</span>
+                                ) : sale.isFiscal ? (
+                                  <span style={{ padding: '2px 8px', background: '#F0FDF4', color: '#166534', borderRadius: 6, fontSize: 11, fontWeight: 800 }}>NACEF FAC</span>
+                                ) : (
+                                  <span style={{ padding: '2px 8px', background: '#FEF3C7', color: '#92400E', borderRadius: 6, fontSize: 11, fontWeight: 800 }}>PRO-FORMA</span>
+                                )}
+                              </td>
+                              <td style={{ padding: 12, textAlign: 'center' }}>
+                                <button onClick={() => setSelectedSaleDetail(sale)}
+                                  style={{ padding: '5px 10px', background: 'var(--pos-primary)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                                  👁️ Détails
+                                </button>
+                              </td>
+                            </tr>
                           ))}
-                          
-                          {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day, dIdx) => (
-                             <React.Fragment key={day}>
-                                <div className="heatmap-row-label">{day}</div>
-                                {peakHoursData.matrix[dIdx].map((val, hIdx) => (
-                                   <div 
-                                      key={hIdx} 
-                                      className={`heatmap-cell ${getIntensityClass(val, peakHoursData.maxVal)}`}
-                                      title={`${day} ${hIdx}h: ${val} ventes`}
-                                   />
-                                ))}
-                             </React.Fragment>
-                          ))}
-                       </div>
-                    </div>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
 
-                    <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
-                       <div className="metric-card" style={{ flex: 1, minWidth: 300 }}>
-                          <h3 style={{ margin: '0 0 20px', fontWeight: 900 }}>Top Catégories</h3>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                             {salesByCategory.length > 0 ? salesByCategory.map((cat, idx) => (
-                               <div key={cat.name}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 800, marginBottom: 4 }}>
-                                     <span>{cat.name}</span>
-                                     <span>{cat.val.toFixed(0)}%</span>
-                                  </div>
-                                  <div style={{ height: 8, background: 'var(--pos-input-bg)', borderRadius: 4, overflow: 'hidden' }}>
-                                     <div style={{ height: '100%', width: `${cat.val}%`, background: idx === 0 ? '#5D4037' : idx === 1 ? '#BC6C25' : '#8B5E3C' }} />
-                                  </div>
-                               </div>
-                             )) : (
-                               <p style={{ fontSize: 12, color: 'var(--pos-text-muted)' }}>Aucune donnée de vente</p>
-                             )}
-                          </div>
-                       </div>
-                       
-                       <div className="metric-card" style={{ flex: 1, background: 'var(--pos-primary)', color: '#fff', minWidth: 300 }}>
-                          <div style={{ fontSize: 14, opacity: 0.8, fontWeight: 700 }}>OBJECTIF JOURNALIER (VOTRE SESSION)</div>
-                          <div style={{ fontSize: 24, fontWeight: 900 }}>
-                             {(sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)).toFixed(3)} / {activeDailyTarget.toFixed(3)} DT
-                          </div>
-                          <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 3, marginTop: 12, overflow: 'hidden' }}>
-                             <div style={{ 
-                               height: '100%', 
-                               width: `${Math.min(100, Math.floor(((sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)) / activeDailyTarget) * 100))}%`, 
-                               background: '#fff' 
-                             }} />
-                          </div>
-                          <p style={{ margin: '12px 0 0', fontSize: 11, fontWeight: 600 }}>
-                             Vous êtes à {Math.min(100, Math.floor(((sessionSales.filter(s => String(s.cashierId || s.baristaId) === String(cashierId)).reduce((acc, s) => acc + Number(s.total), 0)) / activeDailyTarget) * 100))}% de votre objectif personnel !
-                          </p>
-                       </div>
-                    </div>
+            {/* Tab 2: Suivi des Stocks */}
+            {activeJournalTab === 'STOCKS' && (
+              <div style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 20 }}>
+                <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>Inventaire des Ingrédients & Matières Premières</div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid var(--pos-border)', color: 'var(--pos-text-muted)', fontSize: 11, textTransform: 'uppercase' }}>
+                        <th style={{ padding: 12 }}>Ingrédient / Produit</th>
+                        <th style={{ padding: 12, textAlign: 'center' }}>Stock Actuel</th>
+                        <th style={{ padding: 12, textAlign: 'center' }}>Seuil Alerte</th>
+                        <th style={{ padding: 12, textAlign: 'right' }}>Coût Unitaire</th>
+                        <th style={{ padding: 12, textAlign: 'center' }}>Statut</th>
+                        <th style={{ padding: 12, textAlign: 'center' }}>Ajustement Rapide</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stockItemsList.map((item: any) => {
+                        const isLow = item.quantity <= item.minThreshold;
+                        const isEmpty = item.quantity <= 0;
+                        return (
+                          <tr key={item.id} style={{ borderBottom: '1px solid var(--pos-border)' }}>
+                            <td style={{ padding: 12, fontWeight: 800 }}>{item.name}</td>
+                            <td style={{ padding: 12, textAlign: 'center', fontWeight: 900, fontSize: 15, color: isEmpty ? '#DC2626' : isLow ? '#D97706' : '#166534' }}>
+                              {item.quantity}
+                            </td>
+                            <td style={{ padding: 12, textAlign: 'center', fontWeight: 700, color: 'var(--pos-text-muted)' }}>{item.minThreshold}</td>
+                            <td style={{ padding: 12, textAlign: 'right', fontWeight: 800 }}>{item.cost.toFixed(3)} DT</td>
+                            <td style={{ padding: 12, textAlign: 'center' }}>
+                              {isEmpty ? (
+                                <span style={{ padding: '2px 8px', background: '#FEF2F2', color: '#DC2626', borderRadius: 6, fontSize: 11, fontWeight: 800 }}>RUPTURE</span>
+                              ) : isLow ? (
+                                <span style={{ padding: '2px 8px', background: '#FEF3C7', color: '#92400E', borderRadius: 6, fontSize: 11, fontWeight: 800 }}>STOCK BAS</span>
+                              ) : (
+                                <span style={{ padding: '2px 8px', background: '#F0FDF4', color: '#166534', borderRadius: 6, fontSize: 11, fontWeight: 800 }}>STABLE</span>
+                              )}
+                            </td>
+                            <td style={{ padding: 12, textAlign: 'center' }}>
+                              <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                                <button onClick={() => handleAdjustStock(item.id, -1)} style={{ padding: '4px 8px', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626', borderRadius: 6, fontWeight: 900, cursor: 'pointer' }}>-1</button>
+                                <button onClick={() => handleAdjustStock(item.id, 1)} style={{ padding: '4px 8px', background: '#F0FDF4', border: '1px solid #86EFAC', color: '#166534', borderRadius: 6, fontWeight: 900, cursor: 'pointer' }}>+1</button>
+                                <button onClick={() => handleAdjustStock(item.id, 5)} style={{ padding: '4px 8px', background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF', borderRadius: 6, fontWeight: 900, cursor: 'pointer' }}>+5</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {stockItemsList.length === 0 && (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', padding: 30, color: 'var(--pos-text-muted)', fontWeight: 700 }}>
+                            Aucun article en stock enregistré.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-             </div>
+              </div>
+            )}
+
+            {/* Tab 3: Performance Vendeurs */}
+            {activeJournalTab === 'BARISTAS' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 20 }}>
+                  <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>Chiffre d'Affaires par Vendeur</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {(journalData?.stats?.perBarista || []).map((b: any) => (
+                      <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--pos-bg)', borderRadius: 12, border: '1px solid var(--pos-border)' }}>
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: 14 }}>{b.name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--pos-text-muted)' }}>{b.count} ventes effectuées</div>
+                        </div>
+                        <div style={{ fontWeight: 900, fontSize: 16, color: 'var(--pos-primary)' }}>
+                          {b.total.toFixed(3)} DT
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 16, padding: 20 }}>
+                  <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 16 }}>Top Produits les plus Vendus</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {(journalData?.stats?.topProducts || []).map((p: any, idx: number) => (
+                      <div key={p.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--pos-bg)', borderRadius: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ fontWeight: 900, color: 'var(--pos-primary)', fontSize: 12 }}>#{idx + 1}</span>
+                          <span style={{ fontWeight: 800, fontSize: 13 }}>{p.name}</span>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 900, fontSize: 14 }}>{p.total.toFixed(3)} DT</div>
+                          <div style={{ fontSize: 11, color: 'var(--pos-text-muted)' }}>{p.qty} unités</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : view === 'TABLES' ? (
           <main className="pos-main-content-scroll" style={{ flex: 1, padding: 40, overflowY: 'auto' }}>
@@ -2613,6 +2855,71 @@ export default function PremiumPOSClient({
         input:checked + .slider { background-color: var(--pos-primary); }
         input:checked + .slider:before { transform: translateX(20px); }
       `}</style>
+      {/* Selected Sale Detail Modal */}
+      {selectedSaleDetail && (
+        <div className="pos-modal-overlay" style={{ zIndex: 1000 }}>
+          <div className="pos-modal-card" style={{ maxWidth: 540, width: '92%', padding: 24, borderRadius: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: '1px solid var(--pos-border)', paddingBottom: 12 }}>
+              <div>
+                <h3 style={{ margin: 0, fontWeight: 900, fontSize: 18, color: 'var(--pos-text-main)' }}>Détail de la Vente</h3>
+                <div style={{ fontSize: 12, color: 'var(--pos-primary)', fontFamily: 'monospace', fontWeight: 800, marginTop: 2 }}>
+                  {selectedSaleDetail.fiscalNumber || `PRO-${selectedSaleDetail.id.slice(-6).toUpperCase()}`}
+                </div>
+              </div>
+              <div style={{ background: '#F1F5F9', padding: 6, borderRadius: 10, cursor: 'pointer' }} onClick={() => setSelectedSaleDetail(null)}>
+                <X size={20} color="var(--pos-text-main)" />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '60vh', overflowY: 'auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12, background: 'var(--pos-bg)', padding: 14, borderRadius: 12, border: '1px solid var(--pos-border)' }}>
+                <div><span style={{ color: 'var(--pos-text-muted)', fontWeight: 600 }}>Date & Heure :</span> <br /><strong style={{ color: 'var(--pos-text-main)' }}>{new Date(selectedSaleDetail.createdAt).toLocaleString('fr-FR')}</strong></div>
+                <div><span style={{ color: 'var(--pos-text-muted)', fontWeight: 600 }}>Mode Règlement :</span> <br /><strong style={{ color: 'var(--pos-text-main)' }}>{selectedSaleDetail.paymentMethod}</strong></div>
+                <div><span style={{ color: 'var(--pos-text-muted)', fontWeight: 600 }}>Vendeur / Barista :</span> <br /><strong style={{ color: 'var(--pos-text-main)' }}>{selectedSaleDetail.takenBy?.name || selectedSaleDetail.barista?.name || 'Vendeur POS'}</strong></div>
+                <div><span style={{ color: 'var(--pos-text-muted)', fontWeight: 600 }}>Client :</span> <br /><strong style={{ color: 'var(--pos-text-main)' }}>{selectedSaleDetail.customer?.name || 'Passager'}</strong></div>
+              </div>
+
+              <div style={{ fontWeight: 900, fontSize: 14, color: 'var(--pos-text-main)', marginTop: 4 }}>Articles Commandés ({selectedSaleDetail.items?.length || 0}) :</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {selectedSaleDetail.items?.map((it: any) => (
+                  <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--pos-card-bg)', border: '1px solid var(--pos-border)', borderRadius: 10, fontSize: 13 }}>
+                    <div>
+                      <div style={{ fontWeight: 800, color: 'var(--pos-text-main)' }}>{it.product?.name || 'Produit'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--pos-text-muted)', fontWeight: 600 }}>{it.quantity} x {Number(it.price).toFixed(3)} DT</div>
+                    </div>
+                    <div style={{ fontWeight: 900, color: 'var(--pos-primary)', fontSize: 14 }}>
+                      {(it.quantity * Number(it.price)).toFixed(3)} DT
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ borderTop: '2px dashed var(--pos-border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--pos-text-muted)' }}><span>Sous-total Brut :</span><span style={{ fontWeight: 800 }}>{Number(selectedSaleDetail.subtotal || selectedSaleDetail.total).toFixed(3)} DT</span></div>
+                {Number(selectedSaleDetail.discount) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--pos-success)' }}><span>Remises Accordées :</span><span style={{ fontWeight: 800 }}>-{Number(selectedSaleDetail.discount).toFixed(3)} DT</span></div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 18, marginTop: 4, color: 'var(--pos-text-main)' }}>
+                  <span>TOTAL NET TTC :</span>
+                  <span style={{ color: 'var(--pos-primary)' }}>{Number(selectedSaleDetail.total).toFixed(3)} DT</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button className="btn-premium" style={{ flex: 1, background: 'var(--pos-bg)', border: '1px solid var(--pos-border)', color: 'var(--pos-text-main)', fontSize: 13 }} onClick={() => { printTicket(selectedSaleDetail, selectedSaleDetail.items); setSelectedSaleDetail(null); }}>
+                🖨️ Imprimer Ticket
+              </button>
+              {!selectedSaleDetail.isVoid && (
+                <button className="btn-premium btn-premium-secondary" style={{ flex: 1, backgroundColor: '#EF4444', color: '#fff', fontSize: 13 }} onClick={() => { handleVoidOrder(selectedSaleDetail.id); setSelectedSaleDetail(null); }}>
+                  🚫 Annuler Vente
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAttendanceModal && renderAttendanceModal()}
     </div>
   );

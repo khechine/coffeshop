@@ -8326,3 +8326,160 @@ export async function getMonthlyAttendanceReport(storeId: string, year: number, 
 
   return JSON.parse(JSON.stringify(attendances));
 }
+
+// ══════════════════════════════════════════════════════════════
+//  STORE OWNER SALES JOURNAL & ANALYTICS ACTIONS
+// ══════════════════════════════════════════════════════════════
+
+export async function getAdvancedSalesJournal(filters?: {
+  period?: 'TODAY' | 'YESTERDAY' | 'WEEK' | 'MONTH' | 'LAST_MONTH' | 'ALL';
+  baristaId?: string;
+  paymentMethod?: string;
+}) {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  const now = new Date();
+  const whereClause: any = { storeId: store.id };
+
+  if (filters?.period && filters.period !== 'ALL') {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+
+    if (filters.period === 'TODAY') {
+      whereClause.createdAt = { gte: start };
+    } else if (filters.period === 'YESTERDAY') {
+      const yestStart = new Date(start);
+      yestStart.setDate(yestStart.getDate() - 1);
+      const yestEnd = new Date(start);
+      yestEnd.setMilliseconds(-1);
+      whereClause.createdAt = { gte: yestStart, lte: yestEnd };
+    } else if (filters.period === 'WEEK') {
+      const weekStart = new Date(start);
+      weekStart.setDate(weekStart.getDate() - 7);
+      whereClause.createdAt = { gte: weekStart };
+    } else if (filters.period === 'MONTH') {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      whereClause.createdAt = { gte: monthStart };
+    } else if (filters.period === 'LAST_MONTH') {
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      whereClause.createdAt = { gte: lastMonthStart, lte: lastMonthEnd };
+    }
+  }
+
+  if (filters?.baristaId && filters.baristaId !== 'ALL') {
+    whereClause.OR = [
+      { baristaId: filters.baristaId },
+      { takenById: filters.baristaId }
+    ];
+  }
+
+  if (filters?.paymentMethod && filters.paymentMethod !== 'ALL') {
+    whereClause.paymentMethod = filters.paymentMethod;
+  }
+
+  const sales = await prisma.sale.findMany({
+    where: whereClause,
+    include: {
+      items: { include: { product: true } },
+      customer: true,
+      takenBy: true,
+      barista: true
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 300
+  });
+
+  let totalSalesTtc = 0;
+  let totalSalesHt = 0;
+  let totalTax = 0;
+  let totalDiscounts = 0;
+  let cashTotal = 0;
+  let cardTotal = 0;
+  let voucherTotal = 0;
+  let mixedTotal = 0;
+
+  const perBarista: Record<string, { id: string; name: string; count: number; total: number }> = {};
+  const perProduct: Record<string, { name: string; qty: number; total: number }> = {};
+
+  sales.forEach(s => {
+    if (s.isVoid) return;
+    const ttc = Number(s.total || 0);
+    const ht = Number(s.totalHt || s.subtotal || s.total || 0);
+    const tax = Number(s.totalTax || 0);
+    const disc = Number(s.discount || 0);
+
+    totalSalesTtc += ttc;
+    totalSalesHt += ht;
+    totalTax += tax;
+    totalDiscounts += disc;
+
+    const pm = s.paymentMethod || 'CASH';
+    const pDetails = (s.paymentDetails as any) || {};
+    if (pm === 'CASH') cashTotal += ttc;
+    else if (pm === 'CARD') cardTotal += ttc;
+    else if (pm === 'MEAL_VOUCHER') voucherTotal += ttc;
+    else if (pm === 'MIXED') {
+      mixedTotal += ttc;
+      cashTotal += Number(pDetails.cash || 0);
+      cardTotal += Number(pDetails.card || 0);
+      voucherTotal += Number(pDetails.voucher || 0);
+    }
+
+    const bId = s.baristaId || s.takenById || 'internal';
+    const bName = s.takenBy?.name || s.barista?.name || 'Vendeur POS';
+    if (!perBarista[bId]) perBarista[bId] = { id: bId, name: bName, count: 0, total: 0 };
+    perBarista[bId].count += 1;
+    perBarista[bId].total += ttc;
+
+    s.items.forEach((item: any) => {
+      const pName = item.product?.name || 'Produit';
+      if (!perProduct[pName]) perProduct[pName] = { name: pName, qty: 0, total: 0 };
+      perProduct[pName].qty += item.quantity;
+      perProduct[pName].total += Number(item.price) * item.quantity;
+    });
+  });
+
+  return {
+    sales: sales.map(s => ({
+      ...s,
+      total: Number(s.total),
+      subtotal: Number(s.subtotal),
+      discount: Number(s.discount),
+      totalHt: Number(s.totalHt || 0),
+      totalTax: Number(s.totalTax || 0)
+    })),
+    stats: {
+      totalSalesTtc,
+      totalSalesHt,
+      totalTax,
+      totalDiscounts,
+      salesCount: sales.filter(s => !s.isVoid).length,
+      cashTotal,
+      cardTotal,
+      voucherTotal,
+      mixedTotal,
+      perBarista: Object.values(perBarista),
+      topProducts: Object.values(perProduct).sort((a, b) => b.total - a.total).slice(0, 10)
+    }
+  };
+}
+
+export async function getStoreStockItemsList() {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  const stockItems = await (prisma as any).stockItem.findMany({
+    where: { storeId: store.id },
+    orderBy: { name: 'asc' }
+  });
+
+  return stockItems.map((item: any) => ({
+    ...item,
+    quantity: Number(item.quantity || 0),
+    minThreshold: Number(item.minThreshold || 0),
+    cost: Number(item.cost || 0)
+  }));
+}
+
