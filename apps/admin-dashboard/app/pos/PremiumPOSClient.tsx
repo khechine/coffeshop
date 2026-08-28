@@ -148,6 +148,15 @@ export default function PremiumPOSClient({
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'MIXED' | 'MEAL_VOUCHER'>('CASH');
   const [amountReceived, setAmountReceived] = useState('');
+  // Mixed / per-method amounts
+  const [mixedCash, setMixedCash] = useState('');
+  const [mixedCard, setMixedCard] = useState('');
+  const [mixedVoucher, setMixedVoucher] = useState('');
+  // Reference numbers
+  const [cardRef, setCardRef] = useState('');
+  const [voucherRef, setVoucherRef] = useState('');
+  // Which keypad field is active in MIXTE mode ('cash'|'card'|'voucher')
+  const [mixedTarget, setMixedTarget] = useState<'cash'|'card'|'voucher'>('cash');
   
   // New Customer Modal
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
@@ -537,18 +546,36 @@ export default function PremiumPOSClient({
 
   const processPayment = async () => {
     setLastActivity(Date.now());
+
+    // Build detailed payment split
+    let cashAmt = 0, cardAmt = 0, voucherAmt = 0;
+    if (paymentMethod === 'CASH') {
+      cashAmt = parseFloat(amountReceived) || total;
+    } else if (paymentMethod === 'CARD') {
+      cardAmt = total;
+    } else if (paymentMethod === 'MEAL_VOUCHER') {
+      voucherAmt = total;
+    } else if (paymentMethod === 'MIXED') {
+      cashAmt = parseFloat(mixedCash) || 0;
+      cardAmt = parseFloat(mixedCard) || 0;
+      voucherAmt = parseFloat(mixedVoucher) || 0;
+    }
+
     const saleData = {
       total,
       subtotal,
       discount: discountFromPoints,
-      items: currentCart.map(i => ({ productId: i.id, quantity: i.quantity, price: i.price, product: i })), // added product: i for local display
+      items: currentCart.map(i => ({ productId: i.id, quantity: i.quantity, price: i.price, product: i })),
       baristaId: cashierId || 'pos-internal',
       terminalId: selectedTerminalId || undefined,
       tableName: selectedTable?.label || 'Directe',
       paymentMethod: paymentMethod,
       paymentDetails: {
-        cash: paymentMethod === 'CASH' ? total : 0,
-        card: paymentMethod === 'CARD' ? total : 0,
+        cash: cashAmt,
+        card: cardAmt,
+        voucher: voucherAmt,
+        cardRef: cardRef || undefined,
+        voucherRef: voucherRef || undefined,
         points: discountFromPoints * loyaltyRedeemRate
       },
       customerId: (selectedCustomer?.id && selectedCustomer.id !== 'passager') ? selectedCustomer.id : undefined,
@@ -598,18 +625,15 @@ export default function PremiumPOSClient({
       }
 
       clearCart();
-      setSelectedCustomer({
-        id: 'passager',
-        name: 'Client Passager',
-        phone: '',
-        loyaltyPoints: 0
-      });
+      setSelectedCustomer({ id: 'passager', name: 'Client Passager', phone: '', loyaltyPoints: 0 });
       setIsPaymentModalOpen(false);
       setIsRedeemingPoints(false);
       setIsCartOpenMobile(false);
+      setAmountReceived('');
+      setMixedCash(''); setMixedCard(''); setMixedVoucher('');
+      setCardRef(''); setVoucherRef('');
     } catch (err) {
       console.error(err);
-      // En cas d'erreur réseau inattendue, forcer le mode offline et sauvegarder
       setIsOffline(true);
       await savePendingAction('pendingSales', saleData);
       finalSaleObject = { 
@@ -623,25 +647,24 @@ export default function PremiumPOSClient({
       setSessionSales(prev => [finalSaleObject, ...prev]);
       setPendingSyncCount(prev => prev + 1);
       alert("Erreur réseau détectée. Passage en mode hors ligne. Vente sauvegardée localement !");
-      
-      // Try to print offline ticket
       const shouldAutoPrint = ticketConfig?.autoPrint ?? true;
-      if (shouldAutoPrint) {
-        await printTicket(finalSaleObject, autoPrintList);
-      }
-
+      if (shouldAutoPrint) await printTicket(finalSaleObject, autoPrintList);
       clearCart();
       setIsPaymentModalOpen(false);
     }
   };
 
   const handleKeypad = (val: string) => {
-    if (val === 'C') setAmountReceived('0');
-    else if (val === '.') {
-      if (!amountReceived.includes('.')) setAmountReceived(prev => prev + '.');
-    }
-    else {
-      setAmountReceived(prev => prev === '0' ? val : prev + val);
+    if (paymentMethod === 'MIXED') {
+      const setter = mixedTarget === 'cash' ? setMixedCash : mixedTarget === 'card' ? setMixedCard : setMixedVoucher;
+      const current = mixedTarget === 'cash' ? mixedCash : mixedTarget === 'card' ? mixedCard : mixedVoucher;
+      if (val === 'C') setter('');
+      else if (val === '.') { if (!current.includes('.')) setter(prev => prev + '.'); }
+      else setter(prev => prev === '' || prev === '0' ? val : prev + val);
+    } else {
+      if (val === 'C') setAmountReceived('0');
+      else if (val === '.') { if (!amountReceived.includes('.')) setAmountReceived(prev => prev + '.'); }
+      else setAmountReceived(prev => prev === '0' ? val : prev + val);
     }
   };
 
@@ -1876,70 +1899,206 @@ export default function PremiumPOSClient({
       )}
 
       {/* Payment Modal (Redesigned UX) */}
-      {isPaymentModalOpen && (
+      {isPaymentModalOpen && (() => {
+        // Computed helpers
+        const mixedTotal = (parseFloat(mixedCash)||0) + (parseFloat(mixedCard)||0) + (parseFloat(mixedVoucher)||0);
+        const mixedRemaining = Math.max(0, total - mixedTotal);
+        const mixedChange = Math.max(0, mixedTotal - total);
+        const mixedValid = paymentMethod !== 'MIXED' || Math.abs(mixedTotal - total) < 0.001 || mixedTotal > total;
+        const cashChange = paymentMethod === 'CASH' ? Math.max(0, (parseFloat(amountReceived)||0) - total) : 0;
+        const canValidate = paymentMethod === 'MIXED' ? mixedTotal >= total - 0.001 : true;
+
+        return (
         <div className="pos-modal-overlay">
-           <div className="pos-modal-card" style={{ maxWidth: 840, width: '90%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+           <div className="pos-modal-card" style={{ maxWidth: 900, width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
                  <div>
                    <h2 style={{ margin: 0, fontWeight: 900, color: 'var(--pos-text-main)', fontSize: 22 }}>Encaissement</h2>
                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--pos-text-muted)', marginTop: 4 }}>
-                      <span style={{ fontWeight: 800 }}>{selectedTable?.label || 'Vente Directe'}</span>
+                      <span style={{ fontWeight: 700 }}>{selectedTable?.label || 'Vente Directe'}</span>
                       <span>•</span>
-                      <span style={{ fontWeight: 800, color: 'var(--pos-primary)' }}>{total.toFixed(3)} DT</span>
+                      <span style={{ fontWeight: 900, color: 'var(--pos-primary)', fontSize: 18 }}>{total.toFixed(3)} DT</span>
+                      {isTrainingMode && <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 20 }}>🎓 FORMATION</span>}
                    </div>
                  </div>
                  <X size={26} onClick={() => setIsPaymentModalOpen(false)} style={{ cursor: 'pointer', color: 'var(--pos-text-muted)' }} />
               </div>
 
-              <div className="payment-modal-layout" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 24 }}>
-                {/* Left side: Payment Methods & Keypad */}
-                <div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
-                     <button className={`category-pill ${paymentMethod === 'CASH' ? 'active' : ''}`} style={{ height: 48, fontSize: 13, fontWeight: 800 }} onClick={() => setPaymentMethod('CASH')}>💵 ESPÈCES</button>
-                     <button className={`category-pill ${paymentMethod === 'CARD' ? 'active' : ''}`} style={{ height: 48, fontSize: 13, fontWeight: 800 }} onClick={() => setPaymentMethod('CARD')}>💳 CARTE</button>
-                     <button className={`category-pill ${paymentMethod === 'MEAL_VOUCHER' ? 'active' : ''}`} style={{ height: 48, fontSize: 12, fontWeight: 800 }} onClick={() => setPaymentMethod('MEAL_VOUCHER')}>🎟️ PLUXEE / TICKET</button>
-                     <button className={`category-pill ${paymentMethod === 'MIXED' ? 'active' : ''}`} style={{ height: 48, fontSize: 13, fontWeight: 800 }} onClick={() => setPaymentMethod('MIXED')}>🔀 MIXTE</button>
-                  </div>
+              {/* Payment Method Tabs */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 24 }}>
+                 {[{id:'CASH', emoji:'💵', label:'ESPÈCES'},{id:'CARD', emoji:'💳', label:'CARTE'},{id:'MEAL_VOUCHER', emoji:'🎟️', label:'PLUXEE / TICKET'},{id:'MIXED', emoji:'🔀', label:'MIXTE'}].map(m => (
+                   <button key={m.id}
+                     onClick={() => { setPaymentMethod(m.id as any); setAmountReceived(''); setMixedCash(''); setMixedCard(''); setMixedVoucher(''); setCardRef(''); setVoucherRef(''); }}
+                     style={{ padding: '12px 8px', border: `2px solid ${paymentMethod === m.id ? 'var(--pos-primary)' : 'var(--pos-border)'}`, borderRadius: 16, background: paymentMethod === m.id ? 'var(--pos-primary)' : 'var(--pos-bg)', color: paymentMethod === m.id ? '#fff' : 'var(--pos-text-main)', fontWeight: 800, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                     <span style={{ fontSize: 22 }}>{m.emoji}</span>
+                     <span>{m.label}</span>
+                   </button>
+                 ))}
+              </div>
 
-                  <div className="keypad-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'C'].map(k => (
-                       <button key={k} className="keypad-btn" style={{ height: 68, fontSize: 24, borderRadius: 16 }} onClick={() => handleKeypad(k.toString())}>{k}</button>
-                     ))}
-                  </div>
-                </div>
-
-                {/* Right side: Amount & Actions */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 24 }}>
+                {/* Left: Keypad + specific fields */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div style={{ background: '#F8FAFC', padding: 28, borderRadius: 24, textAlign: 'center', border: '1px solid var(--pos-border)' }}>
-                     <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 8, letterSpacing: '0.05em' }}>MONTANT REÇU</div>
-                     <div style={{ fontSize: 52, fontWeight: 900, color: 'var(--pos-primary)', lineHeight: 1 }}>{amountReceived || '0'} <span style={{ fontSize: 24 }}>DT</span></div>
-                  </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                     {[5, 10, 20, 50].map(amt => (
-                       <button key={amt} className="category-pill" style={{ height: 48, background: '#EFF6FF', color: '#1E40AF', borderColor: '#BFDBFE', fontSize: 16 }} onClick={() => setAmountReceived(amt.toString())}>+{amt}</button>
-                     ))}
-                  </div>
-
-                  {change > 0 ? (
-                    <div style={{ flex: 1, textAlign: 'center', background: '#D1FAE5', padding: 20, borderRadius: 20, border: '2px solid #10B981', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                       <div style={{ fontSize: 13, fontWeight: 800, color: '#065F46', marginBottom: 4 }}>À RENDRE</div>
-                       <div style={{ fontWeight: 900, color: '#065F46', fontSize: 32, lineHeight: 1 }}>{change.toFixed(3)} DT</div>
-                    </div>
-                  ) : (
-                    <div style={{ flex: 1, border: '2px dashed var(--pos-border)', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--pos-text-muted)' }}>
-                      <span style={{ fontWeight: 600 }}>Montant exact ou insuffisant</span>
+                  {/* MIXTE: split fields with tab selector */}
+                  {paymentMethod === 'MIXED' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Saisir les montants par mode :</div>
+                      {[
+                        { key: 'cash' as const, label: '💵 Espèces', val: mixedCash },
+                        { key: 'card' as const, label: '💳 Carte', val: mixedCard },
+                        { key: 'voucher' as const, label: '🎟️ Ticket/Pluxee', val: mixedVoucher },
+                      ].map(f => (
+                        <div key={f.key}
+                          onClick={() => setMixedTarget(f.key)}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', border: `2px solid ${mixedTarget === f.key ? 'var(--pos-primary)' : 'var(--pos-border)'}`, borderRadius: 14, cursor: 'pointer', background: mixedTarget === f.key ? '#EEF2FF' : 'var(--pos-bg)', transition: 'all 0.15s' }}>
+                          <span style={{ fontWeight: 700, fontSize: 13 }}>{f.label}</span>
+                          <span style={{ fontWeight: 900, fontSize: 18, color: 'var(--pos-primary)', minWidth: 80, textAlign: 'right' }}>{f.val ? parseFloat(f.val).toFixed(3) : '0.000'} DT</span>
+                        </div>
+                      ))}
                     </div>
                   )}
 
-                  <button className="btn-premium btn-premium-success" style={{ width: '100%', height: 72, fontSize: 18, borderRadius: 20, display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center' }} onClick={processPayment}>
-                     <CheckCircle size={24} /> VALIDER LA VENTE
+                  {/* CARD: reference number */}
+                  {paymentMethod === 'CARD' && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>N° Autorisation / Transaction (optionnel)</label>
+                      <input type="text" value={cardRef} onChange={e => setCardRef(e.target.value)}
+                        placeholder="Ex: TXN-20240823-001"
+                        style={{ width: '100%', padding: '10px 14px', border: '2px solid var(--pos-border)', borderRadius: 12, fontSize: 14, fontWeight: 700, background: 'var(--pos-bg)', color: 'var(--pos-text-main)', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                  )}
+
+                  {/* MEAL_VOUCHER: ticket details */}
+                  {paymentMethod === 'MEAL_VOUCHER' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type de ticket</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          {['Pluxee (Sodexo)', 'Ticket Restaurant', 'Chèque Déjeuner', 'Carte Edenred'].map(t => (
+                            <button key={t}
+                              onClick={() => setVoucherRef(prev => prev === t ? '' : t)}
+                              style={{ padding: '8px 10px', border: `2px solid ${voucherRef === t ? 'var(--pos-primary)' : 'var(--pos-border)'}`, borderRadius: 10, background: voucherRef === t ? '#EEF2FF' : 'var(--pos-bg)', color: voucherRef === t ? 'var(--pos-primary)' : 'var(--pos-text-main)', fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}>
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>N° Ticket / Référence (optionnel)</label>
+                        <input type="text" value={voucherRef && !['Pluxee (Sodexo)','Ticket Restaurant','Chèque Déjeuner','Carte Edenred'].includes(voucherRef) ? voucherRef : ''}
+                          onChange={e => setVoucherRef(e.target.value)}
+                          placeholder="Ex: 1234-5678-ABCD"
+                          style={{ width: '100%', padding: '10px 14px', border: '2px solid var(--pos-border)', borderRadius: 12, fontSize: 14, fontWeight: 700, background: 'var(--pos-bg)', color: 'var(--pos-text-main)', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CASH: quick amount + keypad */}
+                  {paymentMethod === 'CASH' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                      {[5, 10, 20, 50].map(amt => (
+                        <button key={amt} onClick={() => setAmountReceived(amt.toString())}
+                          style={{ padding: '10px 0', border: '2px solid #BFDBFE', borderRadius: 12, background: '#EFF6FF', color: '#1E40AF', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>
+                          {amt} DT
+                        </button>
+                      ))}
+                      <button onClick={() => setAmountReceived(total.toFixed(3))}
+                        style={{ gridColumn: 'span 4', padding: '10px 0', border: '2px solid var(--pos-primary)', borderRadius: 12, background: '#EEF2FF', color: 'var(--pos-primary)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+                        💯 Montant exact : {total.toFixed(3)} DT
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Keypad */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'C'].map(k => (
+                      <button key={k} onClick={() => handleKeypad(k.toString())}
+                        style={{ height: 60, fontSize: 22, fontWeight: 800, border: '2px solid var(--pos-border)', borderRadius: 14, background: k === 'C' ? '#FEF2F2' : 'var(--pos-bg)', color: k === 'C' ? 'var(--pos-danger)' : 'var(--pos-text-main)', cursor: 'pointer', transition: 'all 0.1s' }}>
+                        {k}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right: Summary & Validate */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {/* Amount display */}
+                  <div style={{ background: '#F8FAFC', padding: 24, borderRadius: 20, textAlign: 'center', border: '2px solid var(--pos-border)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 6, letterSpacing: '0.05em' }}>TOTAL À PAYER</div>
+                    <div style={{ fontSize: 42, fontWeight: 900, color: 'var(--pos-text-main)', lineHeight: 1 }}>{total.toFixed(3)} <span style={{ fontSize: 20 }}>DT</span></div>
+                  </div>
+
+                  {paymentMethod === 'CASH' && (
+                    <>
+                      <div style={{ background: 'var(--pos-bg)', padding: 16, borderRadius: 16, border: '1px solid var(--pos-border)' }}>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 4 }}>MONTANT REÇU</div>
+                        <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--pos-primary)' }}>{amountReceived || '0.000'} <span style={{ fontSize: 16 }}>DT</span></div>
+                      </div>
+                      {cashChange > 0 && (
+                        <div style={{ background: '#D1FAE5', padding: 16, borderRadius: 16, border: '2px solid #10B981', textAlign: 'center' }}>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: '#065F46', marginBottom: 4 }}>À RENDRE</div>
+                          <div style={{ fontSize: 32, fontWeight: 900, color: '#065F46' }}>{cashChange.toFixed(3)} DT</div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {paymentMethod === 'MIXED' && (
+                    <>
+                      <div style={{ background: 'var(--pos-bg)', padding: 14, borderRadius: 16, border: '1px solid var(--pos-border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, marginBottom: 8 }}><span>💵 Espèces</span><span>{(parseFloat(mixedCash)||0).toFixed(3)} DT</span></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, marginBottom: 8 }}><span>💳 Carte</span><span>{(parseFloat(mixedCard)||0).toFixed(3)} DT</span></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700 }}><span>🎟️ Ticket</span><span>{(parseFloat(mixedVoucher)||0).toFixed(3)} DT</span></div>
+                        <div style={{ height: 1, background: 'var(--pos-border)', margin: '10px 0' }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 900 }}><span>Total saisi</span><span style={{ color: mixedTotal >= total - 0.001 ? 'var(--pos-success)' : 'var(--pos-danger)' }}>{mixedTotal.toFixed(3)} DT</span></div>
+                      </div>
+                      {mixedRemaining > 0.001 && (
+                        <div style={{ background: '#FEF3C7', padding: 14, borderRadius: 14, border: '2px solid #F59E0B', textAlign: 'center' }}>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: '#92400E', marginBottom: 4 }}>RESTE À COUVRIR</div>
+                          <div style={{ fontSize: 26, fontWeight: 900, color: '#92400E' }}>{mixedRemaining.toFixed(3)} DT</div>
+                        </div>
+                      )}
+                      {mixedChange > 0.001 && (
+                        <div style={{ background: '#D1FAE5', padding: 14, borderRadius: 14, border: '2px solid #10B981', textAlign: 'center' }}>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: '#065F46', marginBottom: 4 }}>MONNAIE À RENDRE</div>
+                          <div style={{ fontSize: 26, fontWeight: 900, color: '#065F46' }}>{mixedChange.toFixed(3)} DT</div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {(paymentMethod === 'CARD') && cardRef && (
+                    <div style={{ background: '#EFF6FF', padding: 12, borderRadius: 14, fontSize: 12, fontWeight: 700, color: '#1E40AF' }}>
+                      💳 Réf. : {cardRef}
+                    </div>
+                  )}
+
+                  {paymentMethod === 'MEAL_VOUCHER' && voucherRef && (
+                    <div style={{ background: '#F0FDF4', padding: 12, borderRadius: 14, fontSize: 12, fontWeight: 700, color: '#166534' }}>
+                      🎟️ {voucherRef}
+                    </div>
+                  )}
+
+                  <div style={{ flex: 1 }} />
+
+                  <button
+                    className="btn-premium btn-premium-success"
+                    style={{ width: '100%', height: 68, fontSize: 18, borderRadius: 18, display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', opacity: canValidate ? 1 : 0.5 }}
+                    disabled={!canValidate}
+                    onClick={processPayment}>
+                    <CheckCircle size={24} /> VALIDER LA VENTE
                   </button>
+                  {!canValidate && (
+                    <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--pos-danger)', fontWeight: 700 }}>Veuillez couvrir la totalité du montant</div>
+                  )}
                 </div>
               </div>
            </div>
         </div>
-      )}
+        );
+      })()}
       
       {/* Add Customer Modal */}
       {isAddCustomerModalOpen && (
