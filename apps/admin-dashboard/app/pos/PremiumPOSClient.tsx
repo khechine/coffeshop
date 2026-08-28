@@ -157,6 +157,11 @@ export default function PremiumPOSClient({
   const [voucherRef, setVoucherRef] = useState('');
   // Which keypad field is active in MIXTE mode ('cash'|'card'|'voucher')
   const [mixedTarget, setMixedTarget] = useState<'cash'|'card'|'voucher'>('cash');
+  // Ticket scanning (MEAL_VOUCHER)
+  const [scannedTickets, setScannedTickets] = useState<string[]>([]);
+  const [ticketUnitValue, setTicketUnitValue] = useState('8.000');
+  const [ticketType, setTicketType] = useState('');
+  const [scanInput, setScanInput] = useState('');
   
   // New Customer Modal
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
@@ -554,7 +559,9 @@ export default function PremiumPOSClient({
     } else if (paymentMethod === 'CARD') {
       cardAmt = total;
     } else if (paymentMethod === 'MEAL_VOUCHER') {
-      voucherAmt = total;
+      voucherAmt = scannedTickets.length > 0
+        ? scannedTickets.length * (parseFloat(ticketUnitValue) || 0)
+        : total;
     } else if (paymentMethod === 'MIXED') {
       cashAmt = parseFloat(mixedCash) || 0;
       cardAmt = parseFloat(mixedCard) || 0;
@@ -632,6 +639,7 @@ export default function PremiumPOSClient({
       setAmountReceived('');
       setMixedCash(''); setMixedCard(''); setMixedVoucher('');
       setCardRef(''); setVoucherRef('');
+      setScannedTickets([]); setScanInput(''); setTicketType('');
     } catch (err) {
       console.error(err);
       setIsOffline(true);
@@ -1970,28 +1978,87 @@ export default function PremiumPOSClient({
                     </div>
                   )}
 
-                  {/* MEAL_VOUCHER: ticket details */}
+                  {/* MEAL_VOUCHER: scan / manual entry of tickets */}
                   {paymentMethod === 'MEAL_VOUCHER' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {/* Ticket type selector */}
                       <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type de ticket</label>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type de ticket</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                           {['Pluxee (Sodexo)', 'Ticket Restaurant', 'Chèque Déjeuner', 'Carte Edenred'].map(t => (
                             <button key={t}
-                              onClick={() => setVoucherRef(prev => prev === t ? '' : t)}
-                              style={{ padding: '8px 10px', border: `2px solid ${voucherRef === t ? 'var(--pos-primary)' : 'var(--pos-border)'}`, borderRadius: 10, background: voucherRef === t ? '#EEF2FF' : 'var(--pos-bg)', color: voucherRef === t ? 'var(--pos-primary)' : 'var(--pos-text-main)', fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s' }}>
+                              onClick={() => setTicketType(prev => prev === t ? '' : t)}
+                              style={{ padding: '7px 8px', border: `2px solid ${ticketType === t ? 'var(--pos-primary)' : 'var(--pos-border)'}`, borderRadius: 10, background: ticketType === t ? '#EEF2FF' : 'var(--pos-bg)', color: ticketType === t ? 'var(--pos-primary)' : 'var(--pos-text-main)', fontWeight: 700, fontSize: 11, cursor: 'pointer', transition: 'all 0.15s' }}>
                               {t}
                             </button>
                           ))}
                         </div>
                       </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>N° Ticket / Référence (optionnel)</label>
-                        <input type="text" value={voucherRef && !['Pluxee (Sodexo)','Ticket Restaurant','Chèque Déjeuner','Carte Edenred'].includes(voucherRef) ? voucherRef : ''}
-                          onChange={e => setVoucherRef(e.target.value)}
-                          placeholder="Ex: 1234-5678-ABCD"
-                          style={{ width: '100%', padding: '10px 14px', border: '2px solid var(--pos-border)', borderRadius: 12, fontSize: 14, fontWeight: 700, background: 'var(--pos-bg)', color: 'var(--pos-text-main)', outline: 'none', boxSizing: 'border-box' }} />
+
+                      {/* Unit value per ticket */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <label style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Valeur / ticket :</label>
+                        <div style={{ display: 'flex', gap: 4, flex: 1 }}>
+                          {['5.000', '7.500', '8.000', '10.000'].map(v => (
+                            <button key={v} onClick={() => setTicketUnitValue(v)}
+                              style={{ flex: 1, padding: '6px 0', border: `2px solid ${ticketUnitValue === v ? 'var(--pos-primary)' : 'var(--pos-border)'}`, borderRadius: 8, background: ticketUnitValue === v ? '#EEF2FF' : 'var(--pos-bg)', color: ticketUnitValue === v ? 'var(--pos-primary)' : 'var(--pos-text-main)', fontWeight: 800, fontSize: 11, cursor: 'pointer' }}>
+                              {v} DT
+                            </button>
+                          ))}
+                        </div>
+                        <input
+                          type="number" step="0.001" min="0"
+                          value={ticketUnitValue}
+                          onChange={e => setTicketUnitValue(e.target.value)}
+                          style={{ width: 72, padding: '6px 8px', border: '2px solid var(--pos-border)', borderRadius: 8, fontSize: 13, fontWeight: 800, color: 'var(--pos-primary)', outline: 'none', textAlign: 'center' }}
+                        />
                       </div>
+
+                      {/* Scan input */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Scanner ou saisir N° ticket → Entrée</label>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <input
+                            id="ticket-scan-input"
+                            type="text"
+                            autoFocus
+                            value={scanInput}
+                            onChange={e => setScanInput(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' && scanInput.trim()) {
+                                const ref = scanInput.trim().toUpperCase();
+                                setScannedTickets(prev => [...prev, ref]);
+                                setScanInput('');
+                              }
+                            }}
+                            placeholder="Ex: 1234-5678-ABCD"
+                            style={{ flex: 1, padding: '10px 14px', border: '2px solid var(--pos-primary)', borderRadius: 12, fontSize: 14, fontWeight: 700, background: 'var(--pos-bg)', color: 'var(--pos-text-main)', outline: 'none' }}
+                          />
+                          <button
+                            onClick={() => {
+                              if (scanInput.trim()) {
+                                setScannedTickets(prev => [...prev, scanInput.trim().toUpperCase()]);
+                                setScanInput('');
+                              }
+                            }}
+                            style={{ padding: '0 14px', background: 'var(--pos-primary)', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
+                            + Ajouter
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Scanned ticket list */}
+                      {scannedTickets.length > 0 && (
+                        <div style={{ maxHeight: 130, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {scannedTickets.map((ref, idx) => (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: 10 }}>
+                              <span style={{ fontSize: 12, fontWeight: 800, color: '#065F46', fontFamily: 'monospace' }}>🎟️ #{idx + 1} — {ref}</span>
+                              <button onClick={() => setScannedTickets(prev => prev.filter((_, i) => i !== idx))}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--pos-danger)', fontSize: 16, lineHeight: 1 }}>✕</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -2075,9 +2142,29 @@ export default function PremiumPOSClient({
                     </div>
                   )}
 
-                  {paymentMethod === 'MEAL_VOUCHER' && voucherRef && (
-                    <div style={{ background: '#F0FDF4', padding: 12, borderRadius: 14, fontSize: 12, fontWeight: 700, color: '#166534' }}>
-                      🎟️ {voucherRef}
+                  {paymentMethod === 'MEAL_VOUCHER' && scannedTickets.length > 0 && (
+                    <div style={{ background: '#F0FDF4', padding: 14, borderRadius: 14, border: '2px solid #10B981' }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: '#065F46', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {ticketType || '🎟️ Tickets scannés'}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+                        <span>Nombre de tickets</span>
+                        <span style={{ fontWeight: 900 }}>{scannedTickets.length}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+                        <span>Valeur / ticket</span>
+                        <span style={{ fontWeight: 900 }}>{parseFloat(ticketUnitValue || '0').toFixed(3)} DT</span>
+                      </div>
+                      <div style={{ height: 1, background: '#A7F3D0', margin: '8px 0' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 900, color: '#065F46' }}>
+                        <span>Total tickets</span>
+                        <span>{(scannedTickets.length * (parseFloat(ticketUnitValue) || 0)).toFixed(3)} DT</span>
+                      </div>
+                      {scannedTickets.length * (parseFloat(ticketUnitValue) || 0) < total - 0.001 && (
+                        <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: '#92400E', background: '#FEF3C7', padding: '6px 10px', borderRadius: 8 }}>
+                          ⚠️ Insuffisant — reste {(total - scannedTickets.length * (parseFloat(ticketUnitValue) || 0)).toFixed(3)} DT
+                        </div>
+                      )}
                     </div>
                   )}
 
