@@ -1999,36 +1999,32 @@ export default function PremiumPOSClient({
           )}
         </div>
 
-        {/* Cross-Selling / Upselling Section */}
+        {/* Cross-Selling / Upselling Section (Compact 1-Line) */}
         {suggestedProducts.length > 0 && (
-          <div style={{ padding: '0 24px 16px' }}>
-            <div style={{ fontSize: 11, fontWeight: 900, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Star size={14} fill="#F59E0B" /> Suggestion pour ce client
+          <div style={{ padding: '4px 16px 8px', borderTop: '1px solid var(--pos-border)' }}>
+            <div style={{ fontSize: 10, fontWeight: 900, color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Star size={12} fill="#F59E0B" /> Suggestions rapides
             </div>
-            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
               {suggestedProducts.map(p => (
-                <div key={p.id} onClick={() => addToCart(p)} style={{ flex: '0 0 auto', width: '140px', background: 'var(--pos-bg)', border: '1px solid var(--pos-border)', borderRadius: 12, padding: '10px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4, transition: 'all 0.2s' }} className="hover:border-indigo-400 hover:shadow-md">
-                   <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--pos-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                     <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--pos-primary)' }}>+{p.price.toFixed(3)} DT</div>
-                     <div style={{ background: '#EEF2FF', padding: 4, borderRadius: 6, color: 'var(--pos-primary)' }}><Plus size={14} /></div>
-                   </div>
-                </div>
+                <button key={p.id} onClick={() => addToCart(p)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 8, color: '#92400E', fontWeight: 800, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <span>{p.name} (+{p.price.toFixed(3)})</span>
+                  <Plus size={12} />
+                </button>
               ))}
             </div>
           </div>
         )}
 
-        <div className="cart-totals">
+        <div className="cart-totals" style={{ padding: '12px 16px' }}>
            {selectedCustomer && (
-             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: 14, borderRadius: 14, marginBottom: 12, border: '1px solid var(--pos-primary)', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.05)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ background: 'var(--pos-accent)', padding: 6, borderRadius: 8 }}>
-                    <Wallet size={16} color="#fff" />
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 800 }}>Utiliser Fidélité</span>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#EEF2FF', padding: '6px 12px', borderRadius: 10, marginBottom: 6, border: '1px solid var(--pos-primary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Wallet size={14} color="var(--pos-primary)" />
+                  <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--pos-primary)' }}>Fidélité ({selectedCustomer.loyaltyPoints} pts)</span>
                 </div>
-                <label className="switch">
+                <label className="switch" style={{ width: 38, height: 20 }}>
                    <input type="checkbox" checked={isRedeemingPoints} onChange={e => setIsRedeemingPoints(e.target.checked)} />
                    <span className="slider round"></span>
                 </label>
@@ -2048,26 +2044,25 @@ export default function PremiumPOSClient({
                <span style={{ fontWeight: 800 }}>-{discountFromPoints.toFixed(3)} DT</span>
              </div>
            )}
-           <div className="total-row grand-total" style={{ borderTop: '2px solid var(--pos-border)', paddingTop: 10 }}><span>Total NET</span><span>{total.toFixed(3)} DT</span></div>
 
            {/* Pro Touchscreen Grand Total Banner */}
-           <div className="grand-total-banner">
+           <div className="grand-total-banner" style={{ padding: '10px 14px', fontSize: 18, marginTop: 4 }}>
              Grand Total : {total.toFixed(3)} DT
            </div>
 
            {/* Pro Touchscreen Bottom Action Buttons */}
-           <div className="bottom-touch-actions">
-             <button className="pos-top-tab-btn tab-blue" style={{ height: 48, justifyContent: 'center' }} title="Calculatrice / Pavé" onClick={() => setIsPaymentModalOpen(true)}>
-               <Calculator size={20} />
+           <div className="bottom-touch-actions" style={{ marginTop: 8 }}>
+             <button className="pos-top-tab-btn tab-blue" style={{ height: 42, justifyContent: 'center' }} title="Calculatrice / Pavé" onClick={() => setIsPaymentModalOpen(true)}>
+               <Calculator size={18} />
              </button>
-             <button className="pos-top-tab-btn tab-dark" style={{ height: 48, justifyContent: 'center', background: '#EF4444' }} title="Vider le panier" onClick={clearCart}>
-               <Trash2 size={20} />
+             <button className="pos-top-tab-btn tab-dark" style={{ height: 42, justifyContent: 'center', background: '#EF4444' }} title="Vider le panier" onClick={clearCart}>
+               <Trash2 size={18} />
              </button>
-             <button className="pos-top-tab-btn tab-green" style={{ height: 48, justifyContent: 'center', fontSize: 13 }} onClick={() => setIsPaymentModalOpen(true)}>
+             <button className="pos-top-tab-btn tab-green" style={{ height: 42, justifyContent: 'center', fontSize: 13 }} onClick={() => setIsPaymentModalOpen(true)}>
                ⚡ Encaisser
              </button>
-             <button className="pos-top-tab-btn tab-orange" style={{ height: 48, justifyContent: 'center', fontSize: 14 }} disabled={currentCart.length === 0} onClick={() => setIsPaymentModalOpen(true)}>
-               <CheckCircle size={18} /> Valider
+             <button className="pos-top-tab-btn tab-orange" style={{ height: 42, justifyContent: 'center', fontSize: 13 }} disabled={currentCart.length === 0} onClick={() => setIsPaymentModalOpen(true)}>
+               <CheckCircle size={16} /> Valider
              </button>
            </div>
         </div>
