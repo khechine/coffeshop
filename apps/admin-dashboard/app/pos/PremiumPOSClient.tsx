@@ -6,7 +6,7 @@ import {
   History, User, Cake, LogOut, Lock, LayoutGrid, CreditCard,
   ChevronRight, AlertCircle, Save, ArrowLeft, MoreVertical, ClipboardList,
   ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, Search,
-  X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package, Store
+  X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package, Store, Calculator
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction, clockInAction, clockOutAction, getActiveAttendance } from '../actions';
@@ -1151,6 +1151,40 @@ export default function PremiumPOSClient({
           </div>
         )}
 
+        {/* Top Action Nav Bar (Pro Touchscreen Layout) */}
+        <div className="pos-top-tab-bar">
+          <button className={`pos-top-tab-btn tab-green ${view === 'POS' ? 'active' : ''}`} onClick={() => { if(!selectedTable) setSelectedTable({ id: 'DIRECT', label: 'Vente Directe' }); setView('POS'); }}>
+            <ShoppingCart size={15} /> <span>POS / VENTE</span>
+          </button>
+          <button className={`pos-top-tab-btn tab-orange ${view === 'TABLES' ? 'active' : ''}`} onClick={() => setView('TABLES')}>
+            <LayoutGrid size={15} /> <span>TABLES ({initialTables.length})</span>
+          </button>
+          <button className={`pos-top-tab-btn tab-blue ${view === 'DASHBOARD' ? 'active' : ''}`} onClick={() => setView('DASHBOARD')}>
+            <LayoutDashboard size={15} /> <span>TABLEAU DE BORD</span>
+          </button>
+          <button className={`pos-top-tab-btn tab-cyan ${view === 'ORDERS' ? 'active' : ''}`} onClick={() => setView('ORDERS')}>
+            <History size={15} /> <span>HISTORIQUE</span>
+          </button>
+          <button className={`pos-top-tab-btn tab-purple ${view === 'CUSTOMERS' ? 'active' : ''}`} onClick={() => setView('CUSTOMERS')}>
+            <Users size={15} /> <span>CLIENTÈLE</span>
+          </button>
+          <button className="pos-top-tab-btn tab-dark" onClick={() => { setShowAttendanceModal(true); setAttendancePin(""); setAttendanceError(""); setAttendanceSuccessMessage(""); }}>
+            <Clock size={15} /> <span>POINTAGE</span>
+          </button>
+          <button className={`pos-top-tab-btn ${isTrainingMode ? 'tab-orange active' : 'tab-dark'}`} onClick={() => setIsTrainingMode(!isTrainingMode)}>
+            <span>🎓 FORMATION</span>
+          </button>
+          <button className="pos-top-tab-btn tab-dark" onClick={() => setShowClosingModal(true)}>
+            <LogOut size={15} /> <span>CLÔTURER</span>
+          </button>
+          <div style={{ flex: 1 }} />
+          {isOffline && (
+            <div style={{ color: '#F59E0B', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(245,158,11,0.15)', padding: '4px 10px', borderRadius: 8 }}>
+              <AlertCircle size={14} /> <span>Hors-ligne ({pendingSyncCount})</span>
+            </div>
+          )}
+        </div>
+
         {/* Main Content Wrapper (Responsive Stack) */}
         <div className="pos-main-wrapper">
           {/* Categories Column */}
@@ -2077,14 +2111,28 @@ export default function PremiumPOSClient({
                <span style={{ fontWeight: 800 }}>-{discountFromPoints.toFixed(3)} DT</span>
              </div>
            )}
-           <div className="total-row grand-total"><span>Total NET</span><span>{total.toFixed(3)} DT</span></div>
-        </div>
+           <div className="total-row grand-total" style={{ borderTop: '2px solid var(--pos-border)', paddingTop: 10 }}><span>Total NET</span><span>{total.toFixed(3)} DT</span></div>
 
-        <div className="cart-actions">
-           <button className="btn-premium btn-premium-orange" style={{ height: 60 }} onClick={() => { setView('TABLES'); setSelectedTable(null); }}><Save size={20} /> Mettre en attente</button>
-           <button className="btn-premium btn-premium-primary" style={{ height: 60 }} disabled={currentCart.length === 0} onClick={() => setIsPaymentModalOpen(true)}>
-             <CheckCircle size={22} /> Encaisser
-           </button>
+           {/* Pro Touchscreen Grand Total Banner */}
+           <div className="grand-total-banner">
+             Grand Total : {total.toFixed(3)} DT
+           </div>
+
+           {/* Pro Touchscreen Bottom Action Buttons */}
+           <div className="bottom-touch-actions">
+             <button className="pos-top-tab-btn tab-blue" style={{ height: 48, justifyContent: 'center' }} title="Calculatrice / Pavé" onClick={() => setIsPaymentModalOpen(true)}>
+               <Calculator size={20} />
+             </button>
+             <button className="pos-top-tab-btn tab-dark" style={{ height: 48, justifyContent: 'center', background: '#EF4444' }} title="Vider le panier" onClick={clearCart}>
+               <Trash2 size={20} />
+             </button>
+             <button className="pos-top-tab-btn tab-green" style={{ height: 48, justifyContent: 'center', fontSize: 13 }} onClick={() => setIsPaymentModalOpen(true)}>
+               ⚡ Encaisser
+             </button>
+             <button className="pos-top-tab-btn tab-orange" style={{ height: 48, justifyContent: 'center', fontSize: 14 }} disabled={currentCart.length === 0} onClick={() => setIsPaymentModalOpen(true)}>
+               <CheckCircle size={18} /> Valider
+             </button>
+           </div>
         </div>
       </aside>
       )}

@@ -1085,3 +1085,182 @@
     box-shadow: -8px 0 30px rgba(0,0,0,0.25) !important;
   }
 }
+
+/* ========================================
+   PRO TOUCHSCREEN POS - DARK THEME STYLES
+   ======================================== */
+:root {
+  --pos-touch-dark-bg: #111827;
+  --pos-touch-card-bg: #1F2937;
+  --pos-touch-sidebar-bg: #1F2937;
+  --pos-touch-border: #374151;
+  --pos-touch-green: #22C55E;
+  --pos-touch-orange: #EAB308;
+  --pos-touch-blue: #3B82F6;
+  --pos-touch-cyan: #06B6D4;
+  --pos-touch-purple: #A855F7;
+  --pos-touch-red: #EF4444;
+}
+
+.pos-top-tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #0F172A;
+  border-bottom: 1px solid #1E293B;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.pos-top-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  color: #F8FAFC;
+}
+
+.pos-top-tab-btn.tab-green { background: #15803D; color: #fff; }
+.pos-top-tab-btn.tab-green:hover { background: #166534; }
+.pos-top-tab-btn.tab-green.active { background: #22C55E; color: #000; box-shadow: 0 0 12px rgba(34, 197, 94, 0.4); }
+
+.pos-top-tab-btn.tab-orange { background: #B45309; color: #fff; }
+.pos-top-tab-btn.tab-orange:hover { background: #92400E; }
+.pos-top-tab-btn.tab-orange.active { background: #F59E0B; color: #000; box-shadow: 0 0 12px rgba(245, 158, 11, 0.4); }
+
+.pos-top-tab-btn.tab-blue { background: #1D4ED8; color: #fff; }
+.pos-top-tab-btn.tab-blue:hover { background: #1E40AF; }
+.pos-top-tab-btn.tab-blue.active { background: #3B82F6; color: #fff; box-shadow: 0 0 12px rgba(59, 130, 246, 0.4); }
+
+.pos-top-tab-btn.tab-purple { background: #6D28D9; color: #fff; }
+.pos-top-tab-btn.tab-purple.active { background: #8B5CF6; color: #fff; }
+
+.pos-top-tab-btn.tab-cyan { background: #0E7490; color: #fff; }
+.pos-top-tab-btn.tab-cyan.active { background: #06B6D4; color: #000; }
+
+.pos-top-tab-btn.tab-dark { background: #334155; color: #CBD5E1; }
+.pos-top-tab-btn.tab-dark:hover { background: #475569; color: #FFF; }
+.pos-top-tab-btn.tab-dark.active { background: #64748B; color: #FFF; }
+
+/* Accordion Categories Menu */
+.pos-categories-accordion {
+  width: 230px;
+  background: #0F172A;
+  border-right: 1px solid #1E293B;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.category-accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #1E293B;
+  color: #F1F5F9;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 1px solid #334155;
+  transition: background 0.15s;
+}
+
+.category-accordion-header:hover {
+  background: #334155;
+}
+
+.category-accordion-subitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px 10px 32px;
+  background: #0F172A;
+  color: #94A3B8;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #1E293B;
+  transition: all 0.15s;
+}
+
+.category-accordion-subitem:hover {
+  background: #1E293B;
+  color: #F8FAFC;
+}
+
+.category-accordion-subitem.active {
+  background: #15803D;
+  color: #FFFFFF;
+  font-weight: 900;
+  border-left: 4px solid #22C55E;
+}
+
+/* Cart Table Layout */
+.cart-table-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cart-table-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 36px;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #1E293B;
+  color: #94A3B8;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 8px;
+}
+
+.cart-table-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 36px;
+  gap: 6px;
+  align-items: center;
+  padding: 10px 12px;
+  background: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  transition: border-color 0.15s;
+}
+
+.cart-table-row:hover {
+  border-color: #475569;
+}
+
+/* Grand Total Banner */
+.grand-total-banner {
+  background: linear-gradient(135deg, #15803D 0%, #16A34A 100%);
+  color: #FFFFFF;
+  padding: 16px 20px;
+  border-radius: 16px;
+  text-align: center;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
+  margin-top: 10px;
+}
+
+/* Bottom Tactile Action Buttons */
+.bottom-touch-actions {
+  display: grid;
+  grid-template-columns: 48px 48px 1fr 1.2fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
