@@ -1,5 +1,0 @@
-# Recommandations pour l'Intégration NACEF
-
-*   **Sécurisation en Parallèle :** Ne supprimez pas votre logique actuelle de `FiscalLog` et de sécurisation interne. Elle protège votre base de données contre la fraude interne. Exécutez-la *en parallèle* ou en complément de la certification S-MDF.
-*   **Architecture S-MDF "Server" vs "Terminal" :** Le cahier des charges distingue S-MDF « Server » (un seul module pour tout le point de vente) et S-MDF « Terminal » (un module par caisse). Étant donné que ElKassa/coffeeshop-b2B est une solution SaaS/Cloud avec des terminaux potentiellement mobiles (iPad, etc.), privilégiez l'architecture S-MDF « Server » installé sur une passerelle réseau locale dans le café, ou étudiez la possibilité d'héberger le S-MDF client dans votre infrastructure cloud si l'administration fiscale l'autorise.
-*   **Documentation technique et Tests :** Demandez d'urgence l'accès à l'API Swagger/Postman du S-MDF auprès du CIMF pour commencer les développements d'intégration et les tests techniques de communication.

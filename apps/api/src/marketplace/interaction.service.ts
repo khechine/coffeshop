@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { prisma } from '@coffeeshop/database';
+import { computeLeakageScore as computeLeakageScoreDomain } from '../domains';
 
 export type InteractionType =
   | 'VIEW_PROFILE'
@@ -99,23 +100,14 @@ export class InteractionService {
       }),
     ]);
 
-    // Score formula:
-    // High score = many views, few orders → leakage risk
-    // Low score  = views followed by orders → healthy platform usage
-    let score = 0;
-
-    if (interactions > 0) {
-      const conversionRate = orders / interactions;
-      score = Math.round((1 - Math.min(conversionRate, 1)) * 80);
-    }
-
-    // Bonus risk: discovered 30+ days ago, never ordered
-    if (relationship && relationship.totalOrders === 0) {
-      const daysSinceDiscovery = Math.floor(
-        (Date.now() - new Date(relationship.discoveredAt).getTime()) / (1000 * 60 * 60 * 24),
-      );
-      if (daysSinceDiscovery > 30) score = Math.min(100, score + 20);
-    }
+    // Score delegué au domaine (logique pure, testée unitairement)
+    const decision = computeLeakageScoreDomain({
+      interactions30d: interactions,
+      orders30d: orders,
+      totalOrders: relationship?.totalOrders || 0,
+      discoveredAt: relationship?.discoveredAt || new Date(),
+    });
+    const score = decision.score;
 
     // Persist the score
     await db.storeVendorRelationship.updateMany({
@@ -124,7 +116,7 @@ export class InteractionService {
     });
 
     // Auto-flag if high risk (≥ 80)
-    if (score >= 80) {
+    if (decision.shouldAutoFlag) {
       await db.storeVendorRelationship.updateMany({
         where: { storeId, vendorId, isFlagged: false },
         data: { isFlagged: true, flagReason: `Score de risque élevé: ${score}/100` },

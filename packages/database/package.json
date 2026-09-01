@@ -17,7 +17,6 @@
     "db:seed:tunisia": "tsx src/seed_tunisia.ts",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
-    "db:audit": "tsx src/audit_fiscal.ts",
     "build": "tsc"
   },
   "dependencies": {

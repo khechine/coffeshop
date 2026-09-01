@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { prisma } from '@coffeeshop/database';
+import { evaluateBnplEligibility } from '../domains';
 
 const db = prisma as any;
 
@@ -190,39 +191,9 @@ export class ContractService {
       take: 10,
     });
 
-    if (orders.length === 0) {
-      return {
-        eligible: false,
-        reason: 'Aucune commande complète sur la plateforme. Historique requis pour BNPL.',
-        minimumOrders: 3,
-        currentOrders: 0,
-      };
-    }
-
-    const totalSpent = orders.reduce((sum, o) => sum + Number(o.total), 0);
-    const avgOrder = totalSpent / orders.length;
-
-    // Min 3 delivered orders to be BNPL eligible
-    if (orders.length < 3) {
-      return {
-        eligible: false,
-        reason: `${3 - orders.length} commande(s) supplémentaire(s) nécessaire(s) avant éligibilité BNPL.`,
-        minimumOrders: 3,
-        currentOrders: orders.length,
-        totalSpent: totalSpent.toFixed(3) + ' DT',
-      };
-    }
-
-    // BNPL limit = 2× average order, capped at 5000 DT
-    const limit = Math.min(avgOrder * 2, 5000);
-
-    return {
-      eligible: true,
-      limit: limit.toFixed(3) + ' DT',
-      terms: '30 jours net sans intérêt',
-      basedOn: `${orders.length} commandes sur la plateforme`,
-      totalHistoryOnPlatform: totalSpent.toFixed(3) + ' DT',
-      note: 'Ce service est exclusivement disponible pour les partenaires de la marketplace.',
-    };
+    // Décision déléguée au domaine (logique pure, testée unitairement)
+    return evaluateBnplEligibility(
+      orders.map((o) => ({ ...o, total: Number(o.total) })),
+    );
   }
 }

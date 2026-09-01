@@ -11,3 +11,4 @@ build
 .pnpm-debug.log
 node_modules
 scratch/
+_archive/

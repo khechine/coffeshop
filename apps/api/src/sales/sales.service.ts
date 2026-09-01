@@ -4,6 +4,11 @@ import { CreateSaleDto } from './dto/create-sale.dto';
 import { InventoryService } from '../inventory/inventory.service';
 import { SalesGateway } from '../websockets/sales.gateway';
 import { NacefService } from '../nacef/nacef.service';
+import {
+  calculateTaxTotals,
+  buildNextFiscalMetadata,
+  buildVoidHash,
+} from '../domains';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -33,49 +38,21 @@ export class SalesService {
           where: { id: { in: productIds } },
           select: { id: true, taxRate: true }
         });
-        const productMap = new Map(dbProducts.map(p => [p.id, Number(p.taxRate)]));
+        const productTaxRates: Record<string, number> = {};
+        for (const p of dbProducts) productTaxRates[p.id] = Number(p.taxRate);
 
-        // 2. Pre-calculate Fiscal Totals
-        let totalHtGlobal = 0;
-        let totalTaxGlobal = 0;
-        const taxBreakdown: Record<string, number> = {};
+        // 2. Pre-calculate Fiscal Totals (délégué au domaine fiscal)
+        const tax = calculateTaxTotals(dto.items, productTaxRates);
+        const itemsWithTax = tax.items;
+        const totalTtcGlobal = tax.totalTtc;
+        const taxBreakdown = tax.taxBreakdown;
 
-        const itemsWithTax = dto.items.map(item => {
-          const taxRate = productMap.get(item.productId) ?? 0.19;
-          const unitPriceHt = item.price / (1 + taxRate);
-          const itemTotalHt = unitPriceHt * item.quantity;
-          const itemTaxAmount = itemTotalHt * taxRate;
-
-          totalHtGlobal += itemTotalHt;
-          totalTaxGlobal += itemTaxAmount;
-
-          const rateLabel = `${(taxRate * 100).toFixed(2)}%`;
-          taxBreakdown[rateLabel] = (taxBreakdown[rateLabel] || 0) + itemTaxAmount;
-
-          return {
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price,
-            unitPriceHt: Math.round(unitPriceHt * 1000) / 1000,
-            taxRate: taxRate,
-            taxAmount: Math.round(itemTaxAmount * 1000) / 1000,
-            totalHt: Math.round(itemTotalHt * 1000) / 1000,
-            totalTtc: Math.round((itemTotalHt + itemTaxAmount) * 1000) / 1000,
-          };
-        });
-
-        // --- NACEF / FISCAL CHAINING ---
-        // storeInfo is already fetched above
+        // --- NACEF / FISCAL CHAINING (délégué au domaine fiscal) ---
         let fiscalSecret = (storeInfo as any).fiscalSecret;
         if (!fiscalSecret) {
           fiscalSecret = crypto.randomBytes(32).toString('hex');
           await tx.store.update({ where: { id: dto.storeId }, data: { fiscalSecret } });
         }
-
-        const currentSeq = (storeInfo as any).currentFiscalSequence + 1;
-        const fiscalNumber = `FAC-${new Date().getFullYear()}-${String(currentSeq).padStart(6, '0')}`;
-        const totalTtcGlobal = Math.round((totalHtGlobal + totalTaxGlobal) * 1000) / 1000;
-        const timestampIso = new Date().toISOString();
 
         const previousSale = await tx.sale.findFirst({
           where: { storeId: dto.storeId, isFiscal: true },
@@ -83,12 +60,17 @@ export class SalesService {
         });
         const previousHash = previousSale?.hash || 'GENESIS_HASH';
 
-        const hashInput = `${dto.storeId}|${fiscalNumber}|${totalTtcGlobal}|${timestampIso}|${previousHash}`;
-        const signature = crypto.createHmac('sha256', fiscalSecret).update(hashInput).digest('hex');
+        const fiscal = buildNextFiscalMetadata({
+          storeId: dto.storeId,
+          fiscalSecret,
+          currentFiscalSequence: (storeInfo as any).currentFiscalSequence,
+          previousHash,
+          totalTtc: totalTtcGlobal,
+        });
 
-        await tx.store.update({ 
-          where: { id: dto.storeId }, 
-          data: { currentFiscalSequence: currentSeq } 
+        await tx.store.update({
+          where: { id: dto.storeId },
+          data: { currentFiscalSequence: fiscal.sequenceNumber }
         });
         // -------------------------------
 
@@ -97,8 +79,8 @@ export class SalesService {
             id: dto.id || undefined,
             storeId: dto.storeId,
             total: totalTtcGlobal,
-            totalHt: Math.round(totalHtGlobal * 1000) / 1000,
-            totalTax: Math.round(totalTaxGlobal * 1000) / 1000,
+            totalHt: tax.totalHt,
+            totalTax: tax.totalTax,
             taxBreakdown: taxBreakdown as any,
             baristaId: dto.baristaId,
             takenById: dto.takenById || dto.baristaId,
@@ -106,13 +88,13 @@ export class SalesService {
             sessionId: dto.sessionId,
             terminalId: (dto as any).terminalId || undefined,
             isFiscal: true,
-            fiscalNumber: fiscalNumber,
-            sequenceNumber: currentSeq,
-            fiscalDay: timestampIso.split('T')[0],
-            previousHash: previousHash,
-            hashInput: hashInput,
-            hash: signature,
-            signature: signature,
+            fiscalNumber: fiscal.fiscalNumber,
+            sequenceNumber: fiscal.sequenceNumber,
+            fiscalDay: fiscal.fiscalDay,
+            previousHash: fiscal.previousHash,
+            hashInput: fiscal.hashInput,
+            hash: fiscal.hash,
+            signature: fiscal.hash,
             items: {
               create: itemsWithTax
             }
@@ -125,7 +107,7 @@ export class SalesService {
           data: {
             saleId: newSale.id,
             action: 'CREATE_TICKET',
-            hash: signature
+            hash: fiscal.hash
           }
         });
 
@@ -268,7 +250,7 @@ export class SalesService {
         if (!sale) throw new Error('Sale not found');
         if (sale.isVoid) throw new Error('Sale is already voided');
 
-        // Logic for fiscal void chaining
+        // Logic for fiscal void chaining (délégué au domaine fiscal)
         let newHash = null;
         if (sale.isFiscal) {
           const store = await tx.store.findUnique({ where: { id: sale.storeId } });
@@ -277,8 +259,12 @@ export class SalesService {
             orderBy: { sequenceNumber: 'desc' }
           });
           const previousHash = previousSale?.hash || 'GENESIS_HASH';
-          const cancelInput = `VOID|${sale.fiscalNumber}|${new Date().toISOString()}|${previousHash}`;
-          newHash = crypto.createHmac('sha256', store.fiscalSecret || '').update(cancelInput).digest('hex');
+          const voidResult = buildVoidHash({
+            fiscalNumber: sale.fiscalNumber,
+            previousHash,
+            fiscalSecret: store.fiscalSecret || '',
+          });
+          newHash = voidResult.hash;
 
           await tx.fiscalLog.create({
             data: {
