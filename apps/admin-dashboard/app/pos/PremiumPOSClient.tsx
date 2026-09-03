@@ -845,7 +845,7 @@ export default function PremiumPOSClient({
     }
   };
 
-  const printTicket = async (sale: any, itemsList: any[]) => {
+  const printTicket = async (sale: any, itemsList: any[], isDuplicate: boolean = false) => {
     try {
       const printItems = itemsList.map(item => ({
         id: item.id || item.productId,
@@ -866,7 +866,11 @@ export default function PremiumPOSClient({
         imdf,
         logoUrl,
         ticketConfig,
-        sale,
+        sale: {
+          ...sale,
+          isDuplicate: isDuplicate || sale.isDuplicate,
+          ...(isDuplicate ? { nacefOperationType: 'DUPLICATA' } : {})
+        },
         items: printItems
       }, { 
         paperSize: printerConfig?.paperSize || '80mm' 
@@ -2329,7 +2333,7 @@ export default function PremiumPOSClient({
                         </div>
                         
                         <div style={{ display: 'flex', gap: 12 }}>
-                           <button className="btn-premium" style={{ flex: 1, background: '#fff', border: '1px solid var(--pos-border)' }} onClick={() => printTicket(selectedOrder, selectedOrder.items)}>Imprimer</button>
+                           <button className="btn-premium" style={{ flex: 1, background: '#fff', border: '1px solid var(--pos-border)' }} onClick={() => printTicket(selectedOrder, selectedOrder.items, true)}>Imprimer Duplicata</button>
                            {!selectedOrder.isVoid && (
                              <button className="btn-premium btn-premium-secondary" style={{ flex: 1, backgroundColor: 'var(--pos-danger)', color: '#fff' }} onClick={() => handleVoidOrder(selectedOrder.id)}>Annuler</button>
                            )}
@@ -3654,8 +3658,8 @@ export default function PremiumPOSClient({
             </div>
 
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-              <button className="btn-premium" style={{ flex: 1, background: 'var(--pos-bg)', border: '1px solid var(--pos-border)', color: 'var(--pos-text-main)', fontSize: 13 }} onClick={() => { printTicket(selectedSaleDetail, selectedSaleDetail.items); setSelectedSaleDetail(null); }}>
-                🖨️ Imprimer Ticket
+              <button className="btn-premium" style={{ flex: 1, background: 'var(--pos-bg)', border: '1px solid var(--pos-border)', color: 'var(--pos-text-main)', fontSize: 13 }} onClick={() => { printTicket(selectedSaleDetail, selectedSaleDetail.items, true); setSelectedSaleDetail(null); }}>
+                🖨️ Imprimer Duplicata
               </button>
               {!selectedSaleDetail.isVoid && (
                 <button className="btn-premium btn-premium-secondary" style={{ flex: 1, backgroundColor: '#EF4444', color: '#fff', fontSize: 13 }} onClick={() => { handleVoidOrder(selectedSaleDetail.id); setSelectedSaleDetail(null); }}>
