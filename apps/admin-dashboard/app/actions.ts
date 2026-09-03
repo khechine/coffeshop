@@ -8683,3 +8683,74 @@ export async function getStoreStockItemsList() {
   }));
 }
 
+// ─────────────────────────────────────────────────────────────
+// 🍳 KITCHEN DISPLAY SYSTEM (KDS) SERVER ACTIONS
+// ─────────────────────────────────────────────────────────────
+
+export async function getKdsOrdersAction(stationFilter?: string) {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  // Fetch sales created today or in active cash session that are not served
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const sales = await (prisma as any).sale.findMany({
+    where: {
+      storeId: store.id,
+      createdAt: { gte: startOfDay },
+      isVoid: false,
+      kdsStatus: { not: 'SERVED' }
+    },
+    include: {
+      items: {
+        include: {
+          product: {
+            select: { name: true, category: true }
+          }
+        }
+      },
+      barista: {
+        select: { name: true }
+      }
+    },
+    orderBy: { createdAt: 'asc' }
+  });
+
+  return sales.map((sale: any) => ({
+    id: sale.id,
+    orderNumber: sale.fiscalNumber || sale.sequenceNumber || sale.id.slice(-6),
+    tableName: sale.tableName || (sale.paymentDetails?.tableNumber ? `Table ${sale.paymentDetails.tableNumber}` : 'À Emporter'),
+    customerName: sale.customerName || 'Client',
+    status: sale.kdsStatus || 'PENDING',
+    createdAt: sale.createdAt.toISOString(),
+    items: (sale.items || []).map((item: any) => ({
+      id: item.id,
+      name: item.name || item.product?.name || 'Article',
+      category: item.product?.category || 'Cuisine',
+      quantity: Number(item.quantity || 1),
+      notes: item.notes || ''
+    }))
+  }));
+}
+
+export async function updateKdsOrderStatusAction(saleId: string, newStatus: string) {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  const validStatuses = ['PENDING', 'PREPARING', 'READY', 'SERVED'];
+  if (!validStatuses.includes(newStatus)) {
+    throw new Error('Statut KDS invalide');
+  }
+
+  const updatedSale = await (prisma as any).sale.update({
+    where: { id: saleId },
+    data: { kdsStatus: newStatus }
+  });
+
+  revalidatePath('/kds');
+  revalidatePath('/pos');
+  return { success: true, status: updatedSale.kdsStatus };
+}
+
+

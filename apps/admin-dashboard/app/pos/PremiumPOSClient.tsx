@@ -6,7 +6,7 @@ import {
   History, User, Cake, LogOut, Lock, LayoutGrid, CreditCard,
   ChevronRight, AlertCircle, Save, ArrowLeft, MoreVertical, ClipboardList,
   ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, Search,
-  X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package, Store, Calculator, RefreshCw
+  X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package, Store, Calculator, RefreshCw, ChefHat
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction, clockInAction, clockOutAction, getActiveAttendance, getAdvancedSalesJournal, getStoreStockItemsList, adjustStock } from '../actions';
@@ -1462,6 +1462,9 @@ export default function PremiumPOSClient({
           <button className={`pos-top-tab-btn tab-purple ${view === 'CUSTOMERS' ? 'active' : ''}`} onClick={() => setView('CUSTOMERS')}>
             <Users size={15} /> <span>CLIENTÈLE</span>
           </button>
+          <a href="/kds" target="_blank" rel="noopener noreferrer" className="pos-top-tab-btn tab-blue" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <ChefHat size={15} /> <span>👨‍🍳 ÉCRAN KDS</span>
+          </a>
           <button className="pos-top-tab-btn tab-dark" onClick={() => { setShowAttendanceModal(true); setAttendancePin(""); setAttendanceError(""); setAttendanceSuccessMessage(""); }}>
             <Clock size={15} /> <span>POINTAGE</span>
           </button>
