@@ -949,6 +949,7 @@ model SaleItem {
   product   Product @relation(fields: [productId], references: [id])
   quantity  Int
   price     Decimal                // Prix TTC unitaire (tel que vendu)
+  notes     String?                // Instructions spéciales / Options (ex: Lait d'Amande)
 
   // ── Champs Fiscaux NACEF (calculés au moment de la vente) ────
   unitPriceHt  Decimal?           // Prix HT unitaire = price / (1 + taxRate)
