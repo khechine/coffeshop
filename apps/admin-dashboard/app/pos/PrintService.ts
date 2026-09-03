@@ -244,7 +244,7 @@ export class PrintService {
             <div>Date : ${isoDateStr}</div>
             <div>ID transaction : ${sale.fiscalNumber || sale.sequenceNumber || (sale.id ? sale.id.slice(-10) : '2600000058')}</div>
             <div class="line-dashed"></div>
-            <div>Type transaction : ${sale.isVoid ? 'ANNULATION' : (sale.nacefOperationType || 'VENTE - NORMALE')}</div>
+            <div>Type transaction : ${sale.isVoid ? 'ANNULATION' : (sale.isOffline || String(sale.id).startsWith('offline') ? 'VENTE - HORS LIGNE' : (sale.nacefOperationType || 'VENTE - NORMALE'))}</div>
             <div>Categorie client : ${sale.customerCategory || 'NP'}</div>
             <div>Avantage fiscal : ${sale.fiscalAdvantage || 'SA'}</div>
           </div>

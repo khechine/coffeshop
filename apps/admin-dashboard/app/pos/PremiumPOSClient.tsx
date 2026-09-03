@@ -928,6 +928,8 @@ export default function PremiumPOSClient({
         finalSaleObject = { 
           ...saleData, 
           id: 'offline-' + Date.now(),
+          isOffline: true,
+          nacefOperationType: 'VENTE - HORS LIGNE',
           totalHt: saleData.subtotal,
           totalTax: saleData.total - saleData.subtotal,
           isFiscal: false,
@@ -1019,6 +1021,8 @@ export default function PremiumPOSClient({
       finalSaleObject = { 
         ...saleData, 
         id: 'offline-' + Date.now(),
+        isOffline: true,
+        nacefOperationType: 'VENTE - HORS LIGNE',
         totalHt: saleData.subtotal,
         totalTax: saleData.total - saleData.subtotal,
         isFiscal: false,
