@@ -6,7 +6,7 @@ import {
   History, User, Cake, LogOut, Lock, LayoutGrid, CreditCard,
   ChevronRight, AlertCircle, Save, ArrowLeft, MoreVertical, ClipboardList,
   ChevronDown, ChevronUp, ShoppingBag, Edit2, Users, Settings, LayoutDashboard, Search,
-  X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package, Store, Calculator
+  X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package, Store, Calculator, RefreshCw
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction, clockInAction, clockOutAction, getActiveAttendance, getAdvancedSalesJournal, getStoreStockItemsList, adjustStock } from '../actions';
@@ -189,12 +189,51 @@ export default function PremiumPOSClient({
   const [activeSession, setActiveSession] = useState<any>(null);
   const [showOpeningModal, setShowOpeningModal] = useState(false);
   const [showClosingModal, setShowClosingModal] = useState(false);
+  const [closingTab, setClosingTab] = useState<'COUNT' | 'SALES'>('COUNT');
+  const [closingSalesFilter, setClosingSalesFilter] = useState<'ALL' | 'CASH' | 'CARD' | 'MEAL_VOUCHER'>('ALL');
+  const [closingSalesSearch, setClosingSalesSearch] = useState('');
+  const [isRefreshingSession, setIsRefreshingSession] = useState(false);
   const [openingBalance, setOpeningBalance] = useState('0');
   const [openingCounts, setOpeningCounts] = useState<Record<string, number>>({});
   const [closingBalance, setClosingBalance] = useState('0');
   const [closingCounts, setClosingCounts] = useState<Record<string, number>>({});
   const [fondDeCaisse, setFondDeCaisse] = useState('0');
   const [sessionNotes, setSessionNotes] = useState('');
+
+  // Derived session sales and finances
+  const sessionSalesList = React.useMemo(() => {
+    if (activeSession?.sales && Array.isArray(activeSession.sales) && activeSession.sales.length > 0) {
+      return activeSession.sales;
+    }
+    if (activeSession?.openedAt && Array.isArray(sessionSales)) {
+      const openedTime = new Date(activeSession.openedAt).getTime();
+      return sessionSales.filter((s: any) => {
+        const saleTime = new Date(s.createdAt).getTime();
+        return !isNaN(saleTime) && saleTime >= openedTime && !s.isVoid;
+      });
+    }
+    return Array.isArray(sessionSales) ? sessionSales : [];
+  }, [activeSession, sessionSales]);
+
+  const sessionTotalSales = Number(activeSession?.totalSales ?? sessionSalesList.reduce((acc: number, s: any) => acc + Number(s.total || 0), 0));
+  const sessionCashSales = Number(activeSession?.cashSales ?? sessionSalesList.reduce((acc: number, s: any) => {
+    if (s.paymentMethod === 'CASH') return acc + Number(s.total || 0);
+    if (s.paymentMethod === 'MIXED') return acc + Number(s.paymentDetails?.cash || 0);
+    return acc;
+  }, 0));
+  const sessionCardSales = Number(activeSession?.cardSales ?? sessionSalesList.reduce((acc: number, s: any) => {
+    if (s.paymentMethod === 'CARD') return acc + Number(s.total || 0);
+    if (s.paymentMethod === 'MIXED') return acc + Number(s.paymentDetails?.card || 0);
+    return acc;
+  }, 0));
+  const sessionVoucherSales = Number(activeSession?.voucherSales ?? sessionSalesList.reduce((acc: number, s: any) => {
+    if (s.paymentMethod === 'MEAL_VOUCHER') return acc + Number(s.total || 0);
+    if (s.paymentMethod === 'MIXED') return acc + Number(s.paymentDetails?.voucher || 0);
+    return acc;
+  }, 0));
+  const sessionOpeningBalance = Number(activeSession?.openingBalance || 0);
+  const expectedCashTotal = sessionOpeningBalance + sessionCashSales;
+  const ecartMontant = Number(closingBalance) - expectedCashTotal;
   
   // Auto-lock & Inactivity Timer
   const [lastActivity, setLastActivity] = useState(Date.now());
@@ -731,6 +770,51 @@ export default function PremiumPOSClient({
         }
       }
 
+      // Update local activeSession in real time
+      if (!isTrainingMode && finalSaleObject) {
+        const saleAmt = Number(saleData.total || 0);
+        const cashAdded = saleData.paymentMethod === 'CASH'
+          ? saleAmt
+          : (saleData.paymentMethod === 'MIXED' ? Number(saleData.paymentDetails?.cash || 0) : 0);
+        const cardAdded = saleData.paymentMethod === 'CARD'
+          ? saleAmt
+          : (saleData.paymentMethod === 'MIXED' ? Number(saleData.paymentDetails?.card || 0) : 0);
+        const voucherAdded = saleData.paymentMethod === 'MEAL_VOUCHER'
+          ? saleAmt
+          : (saleData.paymentMethod === 'MIXED' ? Number(saleData.paymentDetails?.voucher || 0) : 0);
+
+        setActiveSession((prev: any) => {
+          if (!prev) return prev;
+          const formattedSale = {
+            id: finalSaleObject.id,
+            total: saleAmt,
+            subtotal: Number(saleData.subtotal || saleAmt),
+            paymentMethod: saleData.paymentMethod || 'CASH',
+            paymentDetails: saleData.paymentDetails,
+            tableName: saleData.tableName || 'Directe',
+            cashier: cashierName || 'Caissier',
+            baristaId: cashierId,
+            createdAt: finalSaleObject.createdAt || new Date().toISOString(),
+            time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+            items: (saleData.items || []).map((i: any) => ({
+              id: i.productId,
+              name: i.product?.name || 'Article',
+              quantity: Number(i.quantity),
+              price: Number(i.price)
+            }))
+          };
+          return {
+            ...prev,
+            totalSales: Number(prev.totalSales || 0) + saleAmt,
+            cashSales: Number(prev.cashSales || 0) + cashAdded,
+            cardSales: Number(prev.cardSales || 0) + cardAdded,
+            voucherSales: Number(prev.voucherSales || 0) + voucherAdded,
+            salesCount: (prev.salesCount || (prev.sales || []).length || 0) + 1,
+            sales: [formattedSale, ...(prev.sales || [])]
+          };
+        });
+      }
+
       // Automatic Printing
       const shouldAutoPrint = ticketConfig?.autoPrint ?? true;
       if (shouldAutoPrint && finalSaleObject) {
@@ -783,9 +867,9 @@ export default function PremiumPOSClient({
   };
 
   // --- Auth Handlers ---
-  const checkSession = async () => {
+  const checkSession = async (bId?: string) => {
     try {
-      const session = await getActiveCashSession();
+      const session = await getActiveCashSession(bId || cashierId || undefined);
       if (session) {
         setActiveSession(session);
         setShowOpeningModal(false);
@@ -805,7 +889,7 @@ export default function PremiumPOSClient({
       localStorage.setItem('pos_cashier_id', barista.id);
       localStorage.setItem('pos_cashier_name', barista.name);
       setPin("");
-      await checkSession();
+      await checkSession(barista.id);
     } else {
       setError("PIN invalide");
       setPin("");
@@ -814,7 +898,7 @@ export default function PremiumPOSClient({
 
   const handleOpenSession = async () => {
     try {
-      const session = await openCashSessionAction(Number(openingBalance), openingCounts);
+      const session = await openCashSessionAction(Number(openingBalance), openingCounts, cashierId || undefined);
       setActiveSession(session);
       setShowOpeningModal(false);
       
@@ -837,12 +921,26 @@ export default function PremiumPOSClient({
     }
   };
 
+  const handleOpenClosingModal = async () => {
+    setIsRefreshingSession(true);
+    try {
+      const session = await getActiveCashSession(cashierId || undefined);
+      if (session) {
+        setActiveSession(session);
+      }
+    } catch (err) {
+      console.error("Session refresh failed", err);
+    } finally {
+      setIsRefreshingSession(false);
+      setClosingTab('COUNT');
+      setShowClosingModal(true);
+    }
+  };
+
   const handleCloseSession = async () => {
     if (!activeSession) return;
     try {
-      const expectedTotal = Number(activeSession.openingBalance || 0) + Number(activeSession.totalSales || 0);
-      const ecart = Number(closingBalance) - expectedTotal;
-      const notes = sessionNotes + `\nTotal compté: ${closingBalance} DT\nFond de caisse gardé: ${fondDeCaisse} DT\nÉcart: ${ecart.toFixed(3)} DT\nMontant à déposer: ${Math.max(0, Number(closingBalance) - Number(fondDeCaisse)).toFixed(3)} DT`;
+      const notes = sessionNotes + `\nTotal compté: ${Number(closingBalance).toFixed(3)} DT\nFond initial: ${sessionOpeningBalance.toFixed(3)} DT\nVentes espèces: ${sessionCashSales.toFixed(3)} DT\nVentes totales: ${sessionTotalSales.toFixed(3)} DT\nFond de caisse gardé: ${fondDeCaisse} DT\nÉcart: ${ecartMontant.toFixed(3)} DT\nMontant à déposer: ${Math.max(0, Number(closingBalance) - Number(fondDeCaisse)).toFixed(3)} DT`;
       
       await closeCashSessionAction(activeSession.id, Number(closingBalance), notes, closingCounts);
       
@@ -852,13 +950,17 @@ export default function PremiumPOSClient({
           storeName,
           storeAddress,
           storePhone,
-          openTime: activeSession.createdAt,
+          openTime: activeSession.openedAt || activeSession.createdAt,
           closeTime: new Date().toISOString(),
-          openingCash: Number(activeSession.openingBalance || 0),
-          salesCashTotal: Number(activeSession.totalSales || 0),
-          expectedTotal,
+          openingCash: sessionOpeningBalance,
+          totalSales: sessionTotalSales,
+          salesCashTotal: sessionCashSales,
+          salesCardTotal: sessionCardSales,
+          salesVoucherTotal: sessionVoucherSales,
+          salesCount: sessionSalesList.length,
+          expectedTotal: expectedCashTotal,
           countedTotal: Number(closingBalance),
-          difference: ecart,
+          difference: ecartMontant,
           fondDeCaisse: Number(fondDeCaisse),
           montantDepot: Math.max(0, Number(closingBalance) - Number(fondDeCaisse))
         };
@@ -1176,7 +1278,7 @@ export default function PremiumPOSClient({
           <button className={`pos-top-tab-btn ${isTrainingMode ? 'tab-orange active' : 'tab-dark'}`} onClick={() => setIsTrainingMode(!isTrainingMode)}>
             <span>🎓 FORMATION</span>
           </button>
-          <button className="pos-top-tab-btn tab-dark" onClick={() => setShowClosingModal(true)}>
+          <button className="pos-top-tab-btn tab-dark" onClick={handleOpenClosingModal}>
             <LogOut size={15} /> <span>CLÔTURER</span>
           </button>
           <div style={{ flex: 1 }} />
@@ -2824,81 +2926,518 @@ export default function PremiumPOSClient({
       {/* Closing Session Modal */}
       {showClosingModal && (
         <div className="pos-modal-overlay" style={{ zIndex: 4000 }}>
-          <div className="pos-modal-card" style={{ width: 850, maxWidth: '95vw', padding: 32 }}>
-             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0 }}>Clôture de Caisse</h2>
-                <X size={24} onClick={() => setShowClosingModal(false)} style={{ cursor: 'pointer' }} />
-             </div>
-             
-             <div style={{ display: 'flex', gap: 32 }}>
-                {/* Left Column: Denomination Counter */}
-                <div style={{ flex: '1 1 50%', maxHeight: '60vh', overflowY: 'auto' }}>
-                   <DenominationCounter onChange={(counts, total) => {
-                     setClosingCounts(counts);
-                     setClosingBalance(total.toString());
-                   }} />
+          <div className="pos-modal-card" style={{ width: 960, maxWidth: '96vw', maxHeight: '92vh', padding: 28, display: 'flex', flexDirection: 'column' }}>
+             {/* Header */}
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0, color: 'var(--pos-text-main)' }}>Clôture de Caisse</h2>
+                    <span style={{ 
+                      fontSize: 12, 
+                      fontWeight: 800, 
+                      background: 'rgba(16, 185, 129, 0.15)', 
+                      color: '#10B981', 
+                      padding: '4px 10px', 
+                      borderRadius: 8,
+                      letterSpacing: 0.5
+                    }}>
+                      SESSION OUVERTE
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--pos-text-muted)', marginTop: 4, fontWeight: 600 }}>
+                    Ouverte le {activeSession?.openedAt ? new Date(activeSession.openedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Aujourd\'hui'} à {activeSession?.openedAt ? new Date(activeSession.openedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '--:--'} • Caissier: <strong style={{ color: 'var(--pos-text-main)' }}>{activeSession?.barista?.name || cashierName || 'Caisse Principale'}</strong>
+                  </div>
                 </div>
-
-                {/* Right Column: Summary & Actions */}
-                <div style={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column' }}>
-                   <div style={{ background: 'var(--pos-bg)', padding: 16, borderRadius: 16, marginBottom: 16 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                         <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)' }}>Ventes Session:</span>
-                         <span style={{ fontWeight: 900, color: 'var(--pos-primary)' }}>{Number(activeSession?.totalSales || 0).toFixed(3)} DT</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                         <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)' }}>Fond initial:</span>
-                         <span style={{ fontWeight: 900 }}>{Number(activeSession?.openingBalance || 0).toFixed(3)} DT</span>
-                      </div>
-                      <div style={{ height: 1, background: 'var(--pos-border)', margin: '12px 0' }} />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, marginBottom: 12 }}>
-                         <span style={{ fontWeight: 900 }}>Total Attendu:</span>
-                         <span style={{ fontWeight: 900 }}>{(Number(activeSession?.openingBalance || 0) + Number(activeSession?.totalSales || 0)).toFixed(3)} DT</span>
-                      </div>
-                      
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                         <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)' }}>Total Compté:</span>
-                         <span style={{ fontWeight: 900, color: 'var(--pos-primary)' }}>{Number(closingBalance).toFixed(3)} DT</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                         <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)' }}>Écart:</span>
-                         <span style={{ fontWeight: 900, color: (Number(closingBalance) - (Number(activeSession?.openingBalance || 0) + Number(activeSession?.totalSales || 0))) < 0 ? '#EF4444' : '#10B981' }}>
-                           {(Number(closingBalance) - (Number(activeSession?.openingBalance || 0) + Number(activeSession?.totalSales || 0))).toFixed(3)} DT
-                         </span>
-                      </div>
-                   </div>
-
-                   <div style={{ marginBottom: 16 }}>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 800, marginBottom: 8, color: 'var(--pos-text-muted)', textAlign: 'left' }}>FOND DE CAISSE (À CONSERVER)</label>
-                      <input
-                         type="number"
-                         style={{ width: '100%', borderRadius: 12, border: '1px solid var(--pos-border)', padding: 12, background: 'var(--pos-bg)', color: 'var(--pos-text-main)', fontSize: 18, fontWeight: 'bold' }}
-                         value={fondDeCaisse}
-                         onChange={e => setFondDeCaisse(e.target.value)}
-                      />
-                   </div>
-
-                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, background: 'var(--pos-accent)', padding: 16, borderRadius: 12, marginBottom: 16 }}>
-                      <span style={{ fontWeight: 900, color: 'var(--pos-primary)' }}>Montant à Déposer:</span>
-                      <span style={{ fontWeight: 900, color: 'var(--pos-primary)' }}>{Math.max(0, Number(closingBalance) - Number(fondDeCaisse)).toFixed(3)} DT</span>
-                   </div>
-
-                   <div style={{ marginBottom: 24 }}>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 800, marginBottom: 8, color: 'var(--pos-text-muted)' }}>NOTES DE CLÔTURE</label>
-                      <textarea 
-                        style={{ width: '100%', borderRadius: 12, border: '1px solid var(--pos-border)', padding: 12, background: 'var(--pos-bg)', color: 'var(--pos-text-main)' }}
-                        rows={2}
-                        placeholder="Écart de caisse, remarques..."
-                        value={sessionNotes}
-                        onChange={e => setSessionNotes(e.target.value)}
-                      />
-                   </div>
-
-                   <button className="btn-premium btn-premium-danger" style={{ width: '100%', height: 60, fontSize: 18, marginTop: 'auto' }} onClick={handleCloseSession}>
-                      VALIDER LA CLÔTURE
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                   <button 
+                     onClick={handleOpenClosingModal} 
+                     disabled={isRefreshingSession}
+                     title="Actualiser les données de caisse"
+                     style={{
+                       display: 'flex',
+                       alignItems: 'center',
+                       gap: 6,
+                       padding: '8px 14px',
+                       borderRadius: 10,
+                       border: '1px solid var(--pos-border)',
+                       background: 'var(--pos-bg)',
+                       color: 'var(--pos-text-main)',
+                       fontSize: 12,
+                       fontWeight: 700,
+                       cursor: 'pointer'
+                     }}
+                   >
+                     <RefreshCw size={14} className={isRefreshingSession ? 'spin-anim' : ''} />
+                     <span>{isRefreshingSession ? 'Calcul...' : 'Actualiser'}</span>
                    </button>
+                   <div 
+                     style={{ width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--pos-bg)', cursor: 'pointer', border: '1px solid var(--pos-border)' }} 
+                     onClick={() => setShowClosingModal(false)}
+                   >
+                     <X size={20} />
+                   </div>
                 </div>
              </div>
+
+             {/* Tab Navigation */}
+             <div style={{ display: 'flex', gap: 10, marginBottom: 20, borderBottom: '1px solid var(--pos-border)', paddingBottom: 12 }}>
+                <button 
+                  onClick={() => setClosingTab('COUNT')}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: 12,
+                    border: 'none',
+                    background: closingTab === 'COUNT' ? 'var(--pos-primary)' : 'var(--pos-bg)',
+                    color: closingTab === 'COUNT' ? '#fff' : 'var(--pos-text-muted)',
+                    fontWeight: 800,
+                    fontSize: 14,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Banknote size={18} />
+                  <span>Comptage & Bilan Caisse</span>
+                </button>
+                <button 
+                  onClick={() => setClosingTab('SALES')}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: 12,
+                    border: 'none',
+                    background: closingTab === 'SALES' ? 'var(--pos-primary)' : 'var(--pos-bg)',
+                    color: closingTab === 'SALES' ? '#fff' : 'var(--pos-text-muted)',
+                    fontWeight: 800,
+                    fontSize: 14,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Receipt size={18} />
+                  <span>Historique des Ventes ({sessionSalesList.length})</span>
+                  <span style={{ 
+                    fontSize: 11, 
+                    padding: '2px 8px', 
+                    borderRadius: 10, 
+                    background: closingTab === 'SALES' ? 'rgba(255,255,255,0.25)' : 'var(--pos-border)',
+                    fontWeight: 900 
+                  }}>
+                    {sessionTotalSales.toFixed(3)} DT
+                  </span>
+                </button>
+             </div>
+
+             {/* Tab 1: Comptage & Bilan */}
+             {closingTab === 'COUNT' && (
+               <div style={{ display: 'flex', gap: 28, flex: 1, overflowY: 'auto', paddingRight: 4 }}>
+                  {/* Left Column: Denomination Counter */}
+                  <div style={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column' }}>
+                     <div style={{ marginBottom: 12 }}>
+                        <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--pos-text-main)' }}>Dénombrement des Coupures</div>
+                        <div style={{ fontSize: 12, color: 'var(--pos-text-muted)' }}>Saisissez le nombre de billets et pièces physiques présents dans le tiroir.</div>
+                     </div>
+                     <div style={{ flex: 1, maxHeight: '55vh', overflowY: 'auto', paddingRight: 4 }}>
+                        <DenominationCounter onChange={(counts, total) => {
+                          setClosingCounts(counts);
+                          setClosingBalance(total.toString());
+                        }} />
+                     </div>
+                  </div>
+
+                  {/* Right Column: Summary & Actions */}
+                  <div style={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column' }}>
+                     <div style={{ background: 'var(--pos-bg)', padding: 18, borderRadius: 16, marginBottom: 16, border: '1px solid var(--pos-border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                           <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)', fontSize: 13 }}>Ventes Session (Total TTC):</span>
+                           <span style={{ fontWeight: 900, fontSize: 17, color: 'var(--pos-primary)' }}>{sessionTotalSales.toFixed(3)} DT</span>
+                        </div>
+                        {/* Breakdown per payment mode */}
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+                           <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '3px 8px', borderRadius: 6 }}>
+                             💵 Espèces: {sessionCashSales.toFixed(3)} DT
+                           </span>
+                           <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', padding: '3px 8px', borderRadius: 6 }}>
+                             💳 Carte: {sessionCardSales.toFixed(3)} DT
+                           </span>
+                           {sessionVoucherSales > 0 && (
+                             <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6', padding: '3px 8px', borderRadius: 6 }}>
+                               🎟️ Tickets: {sessionVoucherSales.toFixed(3)} DT
+                             </span>
+                           )}
+                           <span style={{ fontSize: 11, fontWeight: 700, background: 'var(--pos-border)', color: 'var(--pos-text-muted)', padding: '3px 8px', borderRadius: 6 }}>
+                             {sessionSalesList.length} ticket(s)
+                           </span>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                           <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)', fontSize: 13 }}>Fond initial de caisse:</span>
+                           <span style={{ fontWeight: 900, fontSize: 15 }}>{sessionOpeningBalance.toFixed(3)} DT</span>
+                        </div>
+                        <div style={{ height: 1, background: 'var(--pos-border)', margin: '12px 0' }} />
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                           <div>
+                             <span style={{ fontWeight: 900, fontSize: 15 }}>Total Espèces Attendu :</span>
+                             <div style={{ fontSize: 11, color: 'var(--pos-text-muted)' }}>(Fond initial + Espèces encaissées)</div>
+                           </div>
+                           <span style={{ fontWeight: 900, fontSize: 17 }}>{expectedCashTotal.toFixed(3)} DT</span>
+                        </div>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 8 }}>
+                           <span style={{ fontWeight: 700, color: 'var(--pos-text-muted)', fontSize: 13 }}>Total Espèces Compté:</span>
+                           <span style={{ fontWeight: 900, fontSize: 17, color: 'var(--pos-primary)' }}>{Number(closingBalance).toFixed(3)} DT</span>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 6, borderTop: '1px dashed var(--pos-border)' }}>
+                           <span style={{ fontWeight: 800, fontSize: 14 }}>Écart de Caisse:</span>
+                           <span style={{ 
+                             fontWeight: 900, 
+                             fontSize: 16, 
+                             color: ecartMontant < 0 ? '#EF4444' : '#10B981',
+                             background: ecartMontant < 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                             padding: '2px 8px',
+                             borderRadius: 6
+                           }}>
+                             {ecartMontant > 0 ? `+${ecartMontant.toFixed(3)}` : ecartMontant.toFixed(3)} DT
+                           </span>
+                        </div>
+                     </div>
+
+                     <div style={{ marginBottom: 14 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <label style={{ fontSize: 11, fontWeight: 800, color: 'var(--pos-text-muted)', textTransform: 'uppercase' }}>Fond de caisse à conserver</label>
+                          <span style={{ fontSize: 11, color: 'var(--pos-primary)', cursor: 'pointer', fontWeight: 700 }} onClick={() => setFondDeCaisse(sessionOpeningBalance.toString())}>Remettre fond initial ({sessionOpeningBalance.toFixed(3)} DT)</span>
+                        </div>
+                        <input
+                           type="number"
+                           style={{ width: '100%', borderRadius: 12, border: '1px solid var(--pos-border)', padding: '10px 14px', background: 'var(--pos-bg)', color: 'var(--pos-text-main)', fontSize: 16, fontWeight: 'bold' }}
+                           value={fondDeCaisse}
+                           onChange={e => setFondDeCaisse(e.target.value)}
+                           placeholder="0.000"
+                        />
+                     </div>
+
+                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 16, background: 'var(--pos-accent)', padding: '12px 16px', borderRadius: 12, marginBottom: 14 }}>
+                        <span style={{ fontWeight: 900, color: 'var(--pos-primary)', fontSize: 14 }}>Montant net à Déposer :</span>
+                        <span style={{ fontWeight: 900, color: 'var(--pos-primary)', fontSize: 18 }}>{Math.max(0, Number(closingBalance) - Number(fondDeCaisse)).toFixed(3)} DT</span>
+                     </div>
+
+                     <div style={{ marginBottom: 16 }}>
+                        <label style={{ display: 'block', fontSize: 11, fontWeight: 800, marginBottom: 6, color: 'var(--pos-text-muted)', textTransform: 'uppercase' }}>Notes & Remarques de clôture</label>
+                        <textarea 
+                          style={{ width: '100%', borderRadius: 12, border: '1px solid var(--pos-border)', padding: 10, background: 'var(--pos-bg)', color: 'var(--pos-text-main)', fontSize: 13 }}
+                          rows={2}
+                          placeholder="Justification d'écart, événements de service..."
+                          value={sessionNotes}
+                          onChange={e => setSessionNotes(e.target.value)}
+                        />
+                     </div>
+
+                     <div style={{ display: 'flex', gap: 10, marginTop: 'auto' }}>
+                        <button 
+                          style={{ 
+                            flex: 1, 
+                            padding: '12px', 
+                            borderRadius: 12, 
+                            border: '1px solid var(--pos-border)', 
+                            background: 'var(--pos-bg)', 
+                            color: 'var(--pos-text-main)', 
+                            fontSize: 13, 
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }} 
+                          onClick={() => setClosingTab('SALES')}
+                        >
+                          Voir tickets ({sessionSalesList.length})
+                        </button>
+                        <button 
+                          className="btn-premium btn-premium-danger" 
+                          style={{ flex: 2, height: 50, fontSize: 16, fontWeight: 900 }} 
+                          onClick={handleCloseSession}
+                        >
+                          VALIDER LA CLÔTURE
+                        </button>
+                     </div>
+                  </div>
+               </div>
+             )}
+
+             {/* Tab 2: Historique Détaillé des Ventes */}
+             {closingTab === 'SALES' && (
+               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                  {/* Stats Bar */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+                     <div style={{ background: 'var(--pos-bg)', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--pos-border)' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--pos-text-muted)' }}>TOTAL ENCAISSÉ</div>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--pos-primary)', marginTop: 2 }}>{sessionTotalSales.toFixed(3)} DT</div>
+                     </div>
+                     <div style={{ background: 'var(--pos-bg)', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--pos-border)' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--pos-text-muted)' }}>ESPÈCES</div>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: '#10B981', marginTop: 2 }}>{sessionCashSales.toFixed(3)} DT</div>
+                     </div>
+                     <div style={{ background: 'var(--pos-bg)', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--pos-border)' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--pos-text-muted)' }}>CARTE BANCAIRE</div>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: '#3B82F6', marginTop: 2 }}>{sessionCardSales.toFixed(3)} DT</div>
+                     </div>
+                     <div style={{ background: 'var(--pos-bg)', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--pos-border)' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--pos-text-muted)' }}>TICKETS & PANIER</div>
+                        <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--pos-text-main)', marginTop: 2 }}>
+                          {sessionSalesList.length} v. • {sessionSalesList.length > 0 ? (sessionTotalSales / sessionSalesList.length).toFixed(3) : '0.000'} DT
+                        </div>
+                     </div>
+                  </div>
+
+                  {/* Filter Toolbar */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                     <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          onClick={() => setClosingSalesFilter('ALL')}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: 8,
+                            border: 'none',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            background: closingSalesFilter === 'ALL' ? 'var(--pos-primary)' : 'var(--pos-bg)',
+                            color: closingSalesFilter === 'ALL' ? '#fff' : 'var(--pos-text-muted)'
+                          }}
+                        >
+                          Tous ({sessionSalesList.length})
+                        </button>
+                        <button
+                          onClick={() => setClosingSalesFilter('CASH')}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: 8,
+                            border: 'none',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            background: closingSalesFilter === 'CASH' ? '#10B981' : 'var(--pos-bg)',
+                            color: closingSalesFilter === 'CASH' ? '#fff' : 'var(--pos-text-muted)'
+                          }}
+                        >
+                          💵 Espèces ({sessionSalesList.filter((s: any) => s.paymentMethod === 'CASH' || s.paymentDetails?.cash > 0).length})
+                        </button>
+                        <button
+                          onClick={() => setClosingSalesFilter('CARD')}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: 8,
+                            border: 'none',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            background: closingSalesFilter === 'CARD' ? '#3B82F6' : 'var(--pos-bg)',
+                            color: closingSalesFilter === 'CARD' ? '#fff' : 'var(--pos-text-muted)'
+                          }}
+                        >
+                          💳 Carte ({sessionSalesList.filter((s: any) => s.paymentMethod === 'CARD' || s.paymentDetails?.card > 0).length})
+                        </button>
+                        {sessionSalesList.some((s: any) => s.paymentMethod === 'MEAL_VOUCHER' || s.paymentDetails?.voucher > 0) && (
+                          <button
+                            onClick={() => setClosingSalesFilter('MEAL_VOUCHER')}
+                            style={{
+                              padding: '6px 14px',
+                              borderRadius: 8,
+                              border: 'none',
+                              fontSize: 12,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              background: closingSalesFilter === 'MEAL_VOUCHER' ? '#8B5CF6' : 'var(--pos-bg)',
+                              color: closingSalesFilter === 'MEAL_VOUCHER' ? '#fff' : 'var(--pos-text-muted)'
+                            }}
+                          >
+                            🎟️ Tickets
+                          </button>
+                        )}
+                     </div>
+
+                     <div style={{ position: 'relative', width: 220 }}>
+                        <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--pos-text-muted)' }} />
+                        <input
+                          type="text"
+                          placeholder="Rechercher ticket, table..."
+                          value={closingSalesSearch}
+                          onChange={e => setClosingSalesSearch(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '6px 10px 6px 30px',
+                            borderRadius: 8,
+                            border: '1px solid var(--pos-border)',
+                            background: 'var(--pos-bg)',
+                            fontSize: 12,
+                            color: 'var(--pos-text-main)'
+                          }}
+                        />
+                     </div>
+                  </div>
+
+                  {/* Scrollable Sales Table */}
+                  <div style={{ flex: 1, overflowY: 'auto', border: '1px solid var(--pos-border)', borderRadius: 12 }}>
+                     {sessionSalesList
+                       .filter((s: any) => {
+                         if (closingSalesFilter === 'CASH') return s.paymentMethod === 'CASH' || s.paymentDetails?.cash > 0;
+                         if (closingSalesFilter === 'CARD') return s.paymentMethod === 'CARD' || s.paymentDetails?.card > 0;
+                         if (closingSalesFilter === 'MEAL_VOUCHER') return s.paymentMethod === 'MEAL_VOUCHER' || s.paymentDetails?.voucher > 0;
+                         return true;
+                       })
+                       .filter((s: any) => {
+                         if (!closingSalesSearch) return true;
+                         const term = closingSalesSearch.toLowerCase();
+                         return (
+                           s.id?.toLowerCase().includes(term) ||
+                           (s.tableName || '').toLowerCase().includes(term) ||
+                           (s.cashier || '').toLowerCase().includes(term) ||
+                           (s.items || []).some((i: any) => (i.name || i.product?.name || '').toLowerCase().includes(term))
+                         );
+                       })
+                       .length === 0 ? (
+                         <div style={{ padding: 40, textAlign: 'center', color: 'var(--pos-text-muted)' }}>
+                            <Receipt size={36} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+                            <div style={{ fontWeight: 800, fontSize: 14 }}>Aucune vente trouvée</div>
+                            <div style={{ fontSize: 12 }}>Aucun ticket ne correspond aux filtres actuels pour cette session.</div>
+                         </div>
+                       ) : (
+                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                            <thead style={{ position: 'sticky', top: 0, background: 'var(--pos-bg)', zIndex: 10, borderBottom: '1px solid var(--pos-border)' }}>
+                               <tr style={{ textAlign: 'left', color: 'var(--pos-text-muted)', fontSize: 11, fontWeight: 800 }}>
+                                  <th style={{ padding: '10px 14px' }}>TICKET / HEURE</th>
+                                  <th style={{ padding: '10px 14px' }}>TABLE / CLIENT</th>
+                                  <th style={{ padding: '10px 14px' }}>CAISSIER</th>
+                                  <th style={{ padding: '10px 14px' }}>RÈGLEMENT</th>
+                                  <th style={{ padding: '10px 14px' }}>ARTICLES</th>
+                                  <th style={{ padding: '10px 14px', textAlign: 'right' }}>MONTANT</th>
+                                  <th style={{ padding: '10px 14px', textAlign: 'center' }}>ACTION</th>
+                               </tr>
+                            </thead>
+                            <tbody>
+                               {sessionSalesList
+                                 .filter((s: any) => {
+                                   if (closingSalesFilter === 'CASH') return s.paymentMethod === 'CASH' || s.paymentDetails?.cash > 0;
+                                   if (closingSalesFilter === 'CARD') return s.paymentMethod === 'CARD' || s.paymentDetails?.card > 0;
+                                   if (closingSalesFilter === 'MEAL_VOUCHER') return s.paymentMethod === 'MEAL_VOUCHER' || s.paymentDetails?.voucher > 0;
+                                   return true;
+                                 })
+                                 .filter((s: any) => {
+                                   if (!closingSalesSearch) return true;
+                                   const term = closingSalesSearch.toLowerCase();
+                                   return (
+                                     s.id?.toLowerCase().includes(term) ||
+                                     (s.tableName || '').toLowerCase().includes(term) ||
+                                     (s.cashier || '').toLowerCase().includes(term) ||
+                                     (s.items || []).some((i: any) => (i.name || i.product?.name || '').toLowerCase().includes(term))
+                                   );
+                                 })
+                                 .map((s: any) => (
+                                   <tr 
+                                     key={s.id} 
+                                     style={{ borderBottom: '1px solid var(--pos-border)' }}
+                                     className="order-row-hover"
+                                   >
+                                      <td style={{ padding: '12px 14px' }}>
+                                         <div style={{ fontWeight: 800, fontFamily: 'monospace' }}>#{s.id.slice(-6).toUpperCase()}</div>
+                                         <div style={{ fontSize: 11, color: 'var(--pos-text-muted)' }}>
+                                           {s.time || (s.createdAt ? new Date(s.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '--:--')}
+                                         </div>
+                                      </td>
+                                      <td style={{ padding: '12px 14px' }}>
+                                         <div style={{ fontWeight: 700 }}>{s.tableName || 'Directe'}</div>
+                                         <div style={{ fontSize: 11, color: 'var(--pos-text-muted)' }}>{s.customer?.name || 'Passager'}</div>
+                                      </td>
+                                      <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--pos-text-muted)', fontSize: 12 }}>
+                                         {s.cashier || 'Caissier'}
+                                      </td>
+                                      <td style={{ padding: '12px 14px' }}>
+                                         {s.paymentMethod === 'CASH' && (
+                                           <span style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10B981', fontWeight: 800, padding: '3px 8px', borderRadius: 6, fontSize: 11 }}>
+                                             Espèces
+                                           </span>
+                                         )}
+                                         {s.paymentMethod === 'CARD' && (
+                                           <span style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#3B82F6', fontWeight: 800, padding: '3px 8px', borderRadius: 6, fontSize: 11 }}>
+                                             Carte
+                                           </span>
+                                         )}
+                                         {s.paymentMethod === 'MEAL_VOUCHER' && (
+                                           <span style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#8B5CF6', fontWeight: 800, padding: '3px 8px', borderRadius: 6, fontSize: 11 }}>
+                                             Ticket Resto
+                                           </span>
+                                         )}
+                                         {s.paymentMethod === 'MIXED' && (
+                                           <span style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#F59E0B', fontWeight: 800, padding: '3px 8px', borderRadius: 6, fontSize: 11 }}>
+                                             Mixte
+                                           </span>
+                                         )}
+                                         {!['CASH', 'CARD', 'MEAL_VOUCHER', 'MIXED'].includes(s.paymentMethod) && (
+                                           <span style={{ background: 'var(--pos-bg)', color: 'var(--pos-text-muted)', fontWeight: 800, padding: '3px 8px', borderRadius: 6, fontSize: 11 }}>
+                                             {s.paymentMethod || 'Espèces'}
+                                           </span>
+                                         )}
+                                      </td>
+                                      <td style={{ padding: '12px 14px', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, color: 'var(--pos-text-muted)' }}>
+                                         {(s.items || []).map((it: any) => `${it.quantity}x ${it.name || it.product?.name || 'Art.'}`).join(', ') || 'Articles divers'}
+                                      </td>
+                                      <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 900, color: 'var(--pos-primary)' }}>
+                                         {Number(s.total).toFixed(3)} DT
+                                      </td>
+                                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                         <button 
+                                           onClick={() => setSelectedSaleDetail(s)}
+                                           style={{ 
+                                             border: 'none', 
+                                             background: 'var(--pos-bg)', 
+                                             padding: '5px 10px', 
+                                             borderRadius: 6, 
+                                             cursor: 'pointer', 
+                                             fontSize: 11, 
+                                             fontWeight: 800, 
+                                             color: 'var(--pos-text-main)' 
+                                           }}
+                                         >
+                                           Détail
+                                         </button>
+                                      </td>
+                                   </tr>
+                                 ))}
+                            </tbody>
+                         </table>
+                       )}
+                  </div>
+
+                  {/* Return to Count button */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--pos-border)' }}>
+                     <button
+                       onClick={() => setClosingTab('COUNT')}
+                       style={{
+                         padding: '10px 18px',
+                         borderRadius: 10,
+                         border: '1px solid var(--pos-border)',
+                         background: 'var(--pos-bg)',
+                         color: 'var(--pos-text-main)',
+                         fontWeight: 800,
+                         fontSize: 13,
+                         cursor: 'pointer',
+                         display: 'flex',
+                         alignItems: 'center',
+                         gap: 6
+                       }}
+                     >
+                       <ArrowLeft size={16} />
+                       <span>Retour au comptage de caisse</span>
+                     </button>
+                     <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--pos-text-main)' }}>
+                       Total Ventes : <span style={{ color: 'var(--pos-primary)', fontSize: 16 }}>{sessionTotalSales.toFixed(3)} DT</span>
+                     </div>
+                  </div>
+               </div>
+             )}
           </div>
         </div>
       )}
@@ -2933,10 +3472,12 @@ export default function PremiumPOSClient({
         .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--pos-primary); }
         input:checked + .slider:before { transform: translateX(20px); }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spin-anim { animation: spin 1s linear infinite; }
       `}</style>
       {/* Selected Sale Detail Modal */}
       {selectedSaleDetail && (
-        <div className="pos-modal-overlay" style={{ zIndex: 1000 }}>
+        <div className="pos-modal-overlay" style={{ zIndex: 5000 }}>
           <div className="pos-modal-card" style={{ maxWidth: 540, width: '92%', padding: 24, borderRadius: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: '1px solid var(--pos-border)', paddingBottom: 12 }}>
               <div>

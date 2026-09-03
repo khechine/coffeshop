@@ -303,8 +303,12 @@ export class PrintService {
           
           <div class="separator"></div>
           
-          <div class="line"><span>Fond initial:</span><span>${data.openingCash.toFixed(3)} DT</span></div>
-          <div class="line"><span>Ventes Espèces:</span><span>${data.salesCashTotal.toFixed(3)} DT</span></div>
+          <div class="line"><span>Fond initial:</span><span>${(data.openingCash || 0).toFixed(3)} DT</span></div>
+          <div class="line bold"><span>Total Ventes (TTC):</span><span>${(data.totalSales || data.salesCashTotal || 0).toFixed(3)} DT</span></div>
+          <div class="line" style="padding-left: 10px; font-size: 10px;"><span>• Dont Espèces:</span><span>${(data.salesCashTotal || 0).toFixed(3)} DT</span></div>
+          ${data.salesCardTotal ? `<div class="line" style="padding-left: 10px; font-size: 10px;"><span>• Dont Carte:</span><span>${Number(data.salesCardTotal).toFixed(3)} DT</span></div>` : ''}
+          ${data.salesVoucherTotal ? `<div class="line" style="padding-left: 10px; font-size: 10px;"><span>• Dont Tickets:</span><span>${Number(data.salesVoucherTotal).toFixed(3)} DT</span></div>` : ''}
+          ${data.salesCount ? `<div class="line" style="padding-left: 10px; font-size: 10px;"><span>• Nb Tickets:</span><span>${data.salesCount}</span></div>` : ''}
           
           <div class="separator"></div>
           

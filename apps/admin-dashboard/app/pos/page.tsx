@@ -81,6 +81,9 @@ export default async function POSPage() {
     cashier: s.barista?.name || 'Inconnu',
     takenBy: (s as any).takenBy?.name || s.barista?.name || 'Inconnu',
     cashierId: s.baristaId,
+    paymentMethod: s.paymentMethod || 'CASH',
+    paymentDetails: s.paymentDetails,
+    isVoid: !!s.isVoid,
     createdAt: s.createdAt,
     time: new Date(s.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
     items: s.items.map((i: any) => ({

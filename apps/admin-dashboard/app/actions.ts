@@ -1578,6 +1578,21 @@ export async function recordSale(data: {
       const fiscalDay = now.toISOString().split('T')[0]; // "2026-04-18"
       const sequenceNumber = isFiscal ? finalSequenceNumber : null;
 
+      // Find open cash session for this store
+      const activeCashSession = await (tx as any).cashSession.findFirst({
+        where: {
+          storeId: store.id,
+          status: 'OPEN',
+          ...(data.baristaId ? {
+            OR: [
+              { baristaId: data.baristaId },
+              { storeId: store.id }
+            ]
+          } : {})
+        },
+        orderBy: { openedAt: 'desc' }
+      });
+
       const s = await (tx.sale as any).create({
         data: {
           total: data.total,
@@ -1591,6 +1606,7 @@ export async function recordSale(data: {
           takenById: data.takenById || data.baristaId,
           customerId: data.customerId,
           consumeType: data.consumeType || 'DINE_IN',
+          sessionId: activeCashSession?.id || null,
           isFiscal,
           fiscalNumber,
           sequenceNumber,
@@ -1620,7 +1636,12 @@ export async function recordSale(data: {
       });
 
       // Update active cash session ONLY if NOT training mode
-      if (data.baristaId && !isTraining) {
+      if (activeCashSession && !isTraining) {
+        await (tx as any).cashSession.update({
+          where: { id: activeCashSession.id },
+          data: { totalSales: { increment: data.total } }
+        });
+      } else if (data.baristaId && !isTraining) {
         await (tx as any).cashSession.updateMany({
           where: { storeId: store.id, baristaId: data.baristaId, status: 'OPEN' },
           data: { totalSales: { increment: data.total } }
@@ -5317,43 +5338,180 @@ export async function getAllStaffForAttendance() {
 }
 
 // ── Cash Session Management ─────────────────────────────────────
-export async function getActiveCashSession() {
+export async function getActiveCashSession(baristaId?: string) {
   const store = await getStore();
   if (!store) return null;
   const userId = cookies().get('userId')?.value;
-  if (!userId) return null;
+  const effectiveBaristaId = baristaId || userId;
 
-  return (prisma as any).cashSession.findFirst({
+  let session = null;
+  if (effectiveBaristaId) {
+    session = await (prisma as any).cashSession.findFirst({
+      where: {
+        storeId: store.id,
+        baristaId: effectiveBaristaId,
+        status: 'OPEN'
+      },
+      include: {
+        barista: { select: { id: true, name: true } }
+      },
+      orderBy: { openedAt: 'desc' }
+    });
+  }
+
+  if (!session) {
+    session = await (prisma as any).cashSession.findFirst({
+      where: {
+        storeId: store.id,
+        status: 'OPEN'
+      },
+      include: {
+        barista: { select: { id: true, name: true } }
+      },
+      orderBy: { openedAt: 'desc' }
+    });
+  }
+
+  if (!session) return null;
+
+  // Retrieve all non-void real sales belonging to this cash session
+  const sales = await prisma.sale.findMany({
     where: {
       storeId: store.id,
-      baristaId: userId,
-      status: 'OPEN'
-    }
+      OR: [
+        { sessionId: session.id },
+        {
+          createdAt: { gte: session.openedAt },
+          isVoid: false
+        }
+      ],
+      isVoid: false,
+      nacefContext: { not: 'TRAINING' }
+    },
+    include: {
+      barista: { select: { id: true, name: true } },
+      takenBy: { select: { id: true, name: true } },
+      items: {
+        include: {
+          product: { select: { id: true, name: true } }
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
   });
+
+  // Calculate totals
+  let totalSales = 0;
+  let cashSales = 0;
+  let cardSales = 0;
+  let voucherSales = 0;
+
+  for (const s of sales) {
+    const amt = Number(s.total || 0);
+    totalSales += amt;
+
+    const method = s.paymentMethod;
+    if (method === 'CASH') {
+      cashSales += amt;
+    } else if (method === 'CARD') {
+      cardSales += amt;
+    } else if (method === 'MEAL_VOUCHER') {
+      voucherSales += amt;
+    } else if (method === 'MIXED') {
+      const details = (s.paymentDetails as any) || {};
+      cashSales += Number(details.cash || 0);
+      cardSales += Number(details.card || 0);
+      voucherSales += Number(details.voucher || 0);
+    } else {
+      cashSales += amt;
+    }
+  }
+
+  const expectedBalance = Number(session.openingBalance || 0) + cashSales;
+
+  // Synchronize in database if needed
+  if (Number(session.totalSales || 0) !== totalSales || Number(session.expectedBalance || 0) !== expectedBalance) {
+    await (prisma as any).cashSession.update({
+      where: { id: session.id },
+      data: {
+        totalSales,
+        expectedBalance
+      }
+    });
+  }
+
+  return {
+    ...session,
+    openingBalance: Number(session.openingBalance || 0),
+    totalSales,
+    cashSales,
+    cardSales,
+    voucherSales,
+    salesCount: sales.length,
+    expectedBalance,
+    sales: sales.map((s: any) => ({
+      id: s.id,
+      total: Number(s.total),
+      subtotal: Number(s.subtotal || s.total),
+      tableName: s.tableName || 'Directe',
+      cashier: s.barista?.name || s.takenBy?.name || 'Caissier',
+      baristaId: s.baristaId,
+      paymentMethod: s.paymentMethod || 'CASH',
+      paymentDetails: s.paymentDetails,
+      isFiscal: !!s.isFiscal,
+      fiscalNumber: s.fiscalNumber,
+      createdAt: s.createdAt,
+      time: new Date(s.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      items: (s.items || []).map((i: any) => ({
+        id: i.id,
+        productId: i.productId,
+        name: i.product?.name || 'Article',
+        quantity: Number(i.quantity),
+        price: Number(i.price)
+      }))
+    }))
+  };
 }
 
-export async function openCashSessionAction(openingBalance: number, details?: any) {
+export async function openCashSessionAction(openingBalance: number, details?: any, baristaId?: string) {
   const store = await getStore();
   if (!store) throw new Error('Non autorisé');
   const userId = cookies().get('userId')?.value;
-  if (!userId) throw new Error('Session expirée');
+  const effectiveBaristaId = baristaId || userId;
+  if (!effectiveBaristaId) throw new Error('Session expirée');
 
-  // Close any existing open session just in case
+  // Close any existing open session for this store
   await (prisma as any).cashSession.updateMany({
-    where: { storeId: store.id, baristaId: userId, status: 'OPEN' },
+    where: { storeId: store.id, status: 'OPEN' },
     data: { status: 'CLOSED', closedAt: new Date() }
   });
 
-  return (prisma as any).cashSession.create({
+  const created = await (prisma as any).cashSession.create({
     data: {
       storeId: store.id,
-      baristaId: userId,
+      baristaId: effectiveBaristaId,
       openingBalance,
       totalSales: 0,
+      expectedBalance: openingBalance,
       status: 'OPEN',
       openingDetails: details || null
+    },
+    include: {
+      barista: { select: { id: true, name: true } }
     }
   });
+
+  return {
+    ...created,
+    openingBalance: Number(created.openingBalance || 0),
+    totalSales: 0,
+    cashSales: 0,
+    cardSales: 0,
+    voucherSales: 0,
+    salesCount: 0,
+    expectedBalance: Number(created.openingBalance || 0),
+    sales: []
+  };
 }
 
 export async function closeCashSessionAction(id: string, closingBalance: number, notes?: string, details?: any) {
@@ -5362,10 +5520,44 @@ export async function closeCashSessionAction(id: string, closingBalance: number,
   });
   if (!session) throw new Error('Session non trouvée');
 
+  // Compute final real-time stats
+  const sales = await prisma.sale.findMany({
+    where: {
+      storeId: session.storeId,
+      OR: [
+        { sessionId: session.id },
+        {
+          createdAt: { gte: session.openedAt },
+          isVoid: false
+        }
+      ],
+      isVoid: false,
+      nacefContext: { not: 'TRAINING' }
+    }
+  });
+
+  let totalSales = 0;
+  let cashSales = 0;
+  for (const s of sales) {
+    const amt = Number(s.total || 0);
+    totalSales += amt;
+    if (s.paymentMethod === 'CASH') {
+      cashSales += amt;
+    } else if (s.paymentMethod === 'MIXED') {
+      cashSales += Number((s.paymentDetails as any)?.cash || 0);
+    } else if (!s.paymentMethod) {
+      cashSales += amt;
+    }
+  }
+
+  const expectedBalance = Number(session.openingBalance || 0) + cashSales;
+
   return (prisma as any).cashSession.update({
     where: { id },
     data: {
       closingBalance,
+      expectedBalance,
+      totalSales,
       notes,
       status: 'CLOSED',
       closedAt: new Date(),
@@ -6035,7 +6227,7 @@ export async function seedDemoProductsAction(storeId: string) {
 }
 
 export async function resetDemoDataAction(storeId: string) {
-  const store = await prisma.store.findUnique({ where: { id: storeId }, select: { id: true, name: true, city: true } });
+  const store = await prisma.store.findUnique({ where: { id: storeId }, select: { id: true, name: true, city: true, isFiscalEnabled: true } });
   if (store?.isFiscalEnabled) {
     throw new Error("Impossible : Le mode fiscal NACEF est actif, l'historique des ventes est scellé et ne peut pas être effacé.");
   }
