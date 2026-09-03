@@ -12,3 +12,6 @@ build
 node_modules
 scratch/
 _archive/
+apps/pos-mobile
+static/
+
