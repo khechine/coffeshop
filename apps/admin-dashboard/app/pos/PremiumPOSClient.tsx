@@ -2587,6 +2587,12 @@ export default function PremiumPOSClient({
                <span style={{ fontWeight: 800 }}>-{discountFromPoints.toFixed(3)} DT</span>
              </div>
            )}
+            {isFiscalEnabled && currentCart.length > 0 && (
+              <div className="total-row" style={{ color: 'var(--pos-primary)', fontWeight: 800 }}>
+                <span>Timbre fiscal (Fixe)</span>
+                <span>+0.100 DT</span>
+              </div>
+            )}
 
            {/* Pro Touchscreen Grand Total Banner */}
            <div className="grand-total-banner" style={{ padding: '10px 14px', fontSize: 18, marginTop: 4 }}>
