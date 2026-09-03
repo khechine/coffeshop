@@ -347,7 +347,6 @@ export class PrintService {
       </html>
     `;
   }
-  }
 
   static async printShiftReport(data: any, settings: PrinterSettings) {
     const html = this.generateShiftReportHtml(data, settings);
