@@ -45,6 +45,12 @@ export default async function POSPage() {
 
   const tables = await prisma.storeTable.findMany({
     where: { storeId: store.id },
+    include: { zone: true },
+    orderBy: { createdAt: 'asc' }
+  });
+
+  const zones = await prisma.storeZone.findMany({
+    where: { storeId: store.id },
     orderBy: { createdAt: 'asc' }
   });
 
@@ -116,6 +122,7 @@ export default async function POSPage() {
         initialBaristas={baristas as any} 
         initialSales={serializedSales}
         initialTables={tables}
+        initialZones={zones}
         terminals={terminals}
         loyaltyEarnRate={Number(store.loyaltyEarnRate || 1)}
         loyaltyRedeemRate={Number(store.loyaltyRedeemRate || 100)}

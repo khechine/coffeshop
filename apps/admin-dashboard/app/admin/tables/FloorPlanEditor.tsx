@@ -27,7 +27,24 @@ interface Zone {
 
 export default function FloorPlanEditor({ initialTables, initialZones }: { initialTables: any[], initialZones: any[] }) {
   const [zones, setZones] = useState<Zone[]>(initialZones);
-  const [activeZoneId, setActiveZoneId] = useState<string | null>(initialZones[0]?.id || null);
+  const [activeZoneId, setActiveZoneId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('floorplan_active_zone_id');
+      if (saved && initialZones.some(z => z.id === saved)) {
+        return saved;
+      }
+    }
+    return initialZones[0]?.id || null;
+  });
+
+  const selectZone = (zoneId: string) => {
+    setActiveZoneId(zoneId);
+    setSelectedTableId(null);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('floorplan_active_zone_id', zoneId);
+    }
+  };
+
   const [tables, setTables] = useState<Table[]>(initialTables.map(t => ({
     ...t,
     posX: t.posX ?? 50,
@@ -82,8 +99,13 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
       const table = tables.find(t => t.id === selectedTableId);
       if (table) {
         setIsSaving(true);
-        await updateTablePositionAction(table.id, table.posX, table.posY);
-        setIsSaving(false);
+        try {
+          await updateTablePositionAction(table.id, table.posX, table.posY);
+        } catch (err) {
+          console.error("Erreur mise à jour position table", err);
+        } finally {
+          setIsSaving(false);
+        }
       }
     }
     setIsDragging(false);
@@ -92,55 +114,102 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
   const updateTableProperty = async (id: string, updates: Partial<Table>) => {
     setTables(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
     setIsSaving(true);
-    await updateTableAction(id, updates as any);
-    setIsSaving(false);
+    try {
+      await updateTableAction(id, updates as any);
+    } catch (err) {
+      console.error("Erreur mise à jour table", err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const addNewTable = async () => {
-    if (!activeZoneId) return;
-    const newTable = {
-      label: `T-${tables.length + 1}`,
-      capacity: 2,
-      zoneId: activeZoneId,
-      posX: 50,
-      posY: 50,
-      shape: 'SQUARE',
-      width: 80,
-      height: 80
-    };
-    await createTableAction(newTable as any);
-    window.location.reload(); // Refresh to get the real ID
+    if (!activeZoneId) {
+      alert("Veuillez d'abord sélectionner ou créer une zone.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const currentZoneTables = tables.filter(t => t.zoneId === activeZoneId);
+      const newTable = {
+        label: `T-${tables.length + 1}`,
+        capacity: 2,
+        zoneId: activeZoneId,
+        posX: 50 + ((currentZoneTables.length * 30) % 320),
+        posY: 50 + ((currentZoneTables.length * 20) % 220),
+        shape: 'SQUARE',
+        width: 80,
+        height: 80
+      };
+      const created = await createTableAction(newTable as any);
+      if (created) {
+        const formatted: Table = {
+          id: created.id,
+          label: created.label || newTable.label,
+          capacity: created.capacity || 2,
+          zoneId: created.zoneId || activeZoneId,
+          posX: created.posX ?? newTable.posX,
+          posY: created.posY ?? newTable.posY,
+          width: created.width ?? 80,
+          height: created.height ?? 80,
+          shape: (created.shape as any) ?? 'SQUARE'
+        };
+        setTables(prev => [...prev, formatted]);
+        setSelectedTableId(formatted.id);
+      }
+    } catch (err) {
+      console.error("Erreur création table", err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const removeTable = async (id: string) => {
     if (confirm('Supprimer cette table ?')) {
       setTables(prev => prev.filter(t => t.id !== id));
       setSelectedTableId(null);
-      await deleteTableAction(id);
+      setIsSaving(true);
+      try {
+        await deleteTableAction(id);
+      } catch (err) {
+        console.error("Erreur suppression table", err);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
   const handleAddZone = async () => {
     const name = prompt('Nom de la nouvelle zone (ex: Terrasse) :');
-    if (name) {
+    if (name && name.trim()) {
       setIsSaving(true);
-      const zone = await createZoneAction(name);
-      if (zone) {
-        setZones(prev => [...prev, zone]);
-        setActiveZoneId(zone.id);
+      try {
+        const zone = await createZoneAction(name.trim());
+        if (zone) {
+          setZones(prev => [...prev, zone]);
+          selectZone(zone.id);
+        }
+      } catch (err) {
+        console.error("Erreur création zone", err);
+      } finally {
+        setIsSaving(false);
       }
-      setIsSaving(false);
     }
   };
 
   const handleRenameZone = async (e: React.MouseEvent, id: string, currentName: string) => {
     e.stopPropagation();
     const newName = prompt('Nouveau nom de la zone :', currentName);
-    if (newName && newName !== currentName) {
+    if (newName && newName.trim() && newName !== currentName) {
       setIsSaving(true);
-      await updateZoneAction(id, newName);
-      setZones(prev => prev.map(z => z.id === id ? { ...z, name: newName } : z));
-      setIsSaving(false);
+      try {
+        await updateZoneAction(id, newName.trim());
+        setZones(prev => prev.map(z => z.id === id ? { ...z, name: newName.trim() } : z));
+      } catch (err) {
+        console.error("Erreur renommage zone", err);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -148,11 +217,26 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
     e.stopPropagation();
     if (confirm('Supprimer cette zone ? Les tables seront conservées mais n\'auront plus de zone.')) {
       setIsSaving(true);
-      await deleteZoneAction(id);
-      setZones(prev => prev.filter(z => z.id !== id));
-      if (activeZoneId === id) setActiveZoneId(null);
-      setTables(prev => prev.map(t => t.zoneId === id ? { ...t, zoneId: null } : t));
-      setIsSaving(false);
+      try {
+        await deleteZoneAction(id);
+        setZones(prev => {
+          const next = prev.filter(z => z.id !== id);
+          if (activeZoneId === id) {
+            const nextActive = next[0]?.id || null;
+            if (nextActive) selectZone(nextActive);
+            else {
+              setActiveZoneId(null);
+              if (typeof window !== 'undefined') localStorage.removeItem('floorplan_active_zone_id');
+            }
+          }
+          return next;
+        });
+        setTables(prev => prev.map(t => t.zoneId === id ? { ...t, zoneId: null } : t));
+      } catch (err) {
+        console.error("Erreur suppression zone", err);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -172,7 +256,7 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
           {zones.map(z => (
             <div key={z.id} className="relative group">
               <button
-                onClick={() => setActiveZoneId(z.id)}
+                onClick={() => selectZone(z.id)}
                 className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${
                   activeZoneId === z.id 
                     ? 'bg-white dark:bg-slate-800 shadow-lg border border-indigo-100 dark:border-indigo-900/30' 
@@ -272,7 +356,13 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Zone de Service</label>
                 <select 
                   value={selectedTable.zoneId || ''} 
-                  onChange={(e) => updateTableProperty(selectedTable.id, { zoneId: e.target.value || null })}
+                  onChange={(e) => {
+                    const newZoneId = e.target.value || null;
+                    updateTableProperty(selectedTable.id, { zoneId: newZoneId });
+                    if (newZoneId) {
+                      selectZone(newZoneId);
+                    }
+                  }}
                   className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 rounded-xl border-none text-xs font-bold outline-none ring-1 ring-slate-100 dark:ring-slate-800 focus:ring-indigo-500 appearance-none"
                 >
                   <option value="">Sans zone</option>
@@ -294,10 +384,12 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
           <div className="flex gap-2 pointer-events-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-2 rounded-2xl border border-white dark:border-slate-800 shadow-xl">
              <div className="px-4 py-2 flex items-center gap-2 border-r border-slate-100 dark:border-slate-800">
                 <LayoutGrid size={16} className="text-indigo-600" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">Plan de Salle</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white">
+                  Zone : {zones.find(z => z.id === activeZoneId)?.name || 'Toutes'} ({activeTables.length} tables)
+                </span>
              </div>
              <button onClick={addNewTable} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all flex items-center gap-2 px-4">
-                <Plus size={16} /> <span className="text-[10px] font-black uppercase tracking-widest">Nouvelle Table</span>
+                <Plus size={16} /> <span className="text-[10px] font-black uppercase tracking-widest">Nouvelle Table dans {zones.find(z => z.id === activeZoneId)?.name || 'cette zone'}</span>
              </button>
           </div>
           

@@ -40,6 +40,167 @@ interface Customer {
   loyaltyPoints: number;
 }
 
+// ── Zone-aware Tables View ──────────────────────────────────────
+function TablesZoneView({
+  initialTables,
+  initialZones,
+  tableOrders,
+  onSelectTable,
+  onVenteDirecte,
+}: {
+  initialTables: any[];
+  initialZones: any[];
+  tableOrders: Record<string, any[]>;
+  onSelectTable: (t: any) => void;
+  onVenteDirecte: () => void;
+}) {
+  const [activeZoneId, setActiveZoneId] = React.useState<string | 'ALL'>('ALL');
+
+  const zones = initialZones;
+  const tablesInView = activeZoneId === 'ALL'
+    ? initialTables
+    : initialTables.filter((t: any) => t.zoneId === activeZoneId);
+
+  return (
+    <main className="pos-main-content-scroll" style={{ flex: 1, padding: 40, overflowY: 'auto' }}>
+      {/* Header */}
+      <div className="tables-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 20 }}>
+        <div>
+          <h1 style={{ color: 'var(--pos-text-main)', fontSize: 32, fontWeight: 900, margin: 0 }}>Plan de Salle</h1>
+          <p style={{ color: 'var(--pos-text-muted)', margin: 0 }}>Sélectionnez une table pour commencer le service</p>
+        </div>
+        <button
+          className="btn-premium btn-premium-primary vente-directe-btn"
+          style={{ padding: '20px 40px', fontSize: 18 }}
+          onClick={onVenteDirecte}
+        >
+          <ShoppingBag size={24} /> VENTE DIRECTE
+        </button>
+      </div>
+
+      {/* Zone Filter Pills */}
+      {zones.length > 0 && (
+        <div style={{ display: 'flex', gap: 10, marginBottom: 32, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveZoneId('ALL')}
+            style={{
+              padding: '10px 22px',
+              borderRadius: 999,
+              border: '2px solid',
+              borderColor: activeZoneId === 'ALL' ? 'var(--pos-primary)' : 'var(--pos-border)',
+              background: activeZoneId === 'ALL' ? 'var(--pos-primary)' : 'transparent',
+              color: activeZoneId === 'ALL' ? '#fff' : 'var(--pos-text-muted)',
+              fontWeight: 900,
+              fontSize: 13,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Toutes ({initialTables.length})
+          </button>
+          {zones.map((z: any) => {
+            const count = initialTables.filter((t: any) => t.zoneId === z.id).length;
+            const isActive = activeZoneId === z.id;
+            return (
+              <button
+                key={z.id}
+                onClick={() => setActiveZoneId(z.id)}
+                style={{
+                  padding: '10px 22px',
+                  borderRadius: 999,
+                  border: '2px solid',
+                  borderColor: isActive ? 'var(--pos-primary)' : 'var(--pos-border)',
+                  background: isActive ? 'var(--pos-primary)' : 'transparent',
+                  color: isActive ? '#fff' : 'var(--pos-text-muted)',
+                  fontWeight: 900,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {z.name} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Tables Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 24 }}>
+        {tablesInView.map((t: any) => {
+          const tableCart = tableOrders[t.id] || [];
+          const hasOrder = tableCart.length > 0;
+          const tableTotal = tableCart.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
+          const zoneName = initialZones.find((z: any) => z.id === t.zoneId)?.name;
+
+          return (
+            <div
+              key={t.id}
+              className={`customer-selector ${hasOrder ? 'has-active-order' : ''}`}
+              style={{
+                height: 180,
+                flexDirection: 'column',
+                background: hasOrder ? 'var(--pos-accent)' : 'var(--pos-input-bg)',
+                borderColor: hasOrder ? 'var(--pos-primary)' : 'var(--pos-border)',
+                borderWidth: hasOrder ? 2 : 1,
+                justifyContent: 'center',
+                gap: 12,
+                cursor: 'pointer',
+                position: 'relative',
+                boxShadow: hasOrder ? '0 10px 25px -5px rgba(99, 102, 241, 0.4)' : 'none'
+              }}
+              onClick={() => onSelectTable(t)}
+            >
+              {hasOrder && (
+                <div style={{
+                  position: 'absolute', top: 12, right: 12,
+                  background: 'var(--pos-primary)', color: '#fff',
+                  padding: '4px 10px', borderRadius: 10,
+                  fontSize: 12, fontWeight: 900,
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
+                }}>
+                  {tableTotal.toFixed(3)} DT
+                </div>
+              )}
+
+              {zoneName && activeZoneId === 'ALL' && (
+                <div style={{
+                  position: 'absolute', top: 12, left: 12,
+                  background: 'var(--pos-border)', color: 'var(--pos-text-muted)',
+                  padding: '3px 8px', borderRadius: 8,
+                  fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1
+                }}>
+                  {zoneName}
+                </div>
+              )}
+
+              <div style={{
+                width: 70, height: 70, borderRadius: '50%',
+                background: hasOrder ? 'var(--pos-primary)' : 'var(--pos-border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.3s'
+              }}>
+                <Users size={32} color={hasOrder ? '#fff' : 'var(--pos-text-muted)'} />
+              </div>
+              <div style={{ color: 'var(--pos-text-main)', fontWeight: 900, fontSize: 22 }}>{t.label}</div>
+              <div style={{ color: 'var(--pos-text-muted)', fontSize: 13, fontWeight: 700 }}>
+                {hasOrder ? `${tableCart.length} articles` : `${t.capacity} pers.`}
+              </div>
+            </div>
+          );
+        })}
+        {tablesInView.length === 0 && (
+          <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 80, color: 'var(--pos-text-muted)' }}>
+            <AlertCircle size={64} style={{ margin: '0 auto 20px' }} />
+            <h2 style={{ fontWeight: 900 }}>Aucune table{activeZoneId !== 'ALL' ? ' dans cette zone' : ' configurée'}</h2>
+            <p>{activeZoneId !== 'ALL' ? 'Ajoutez des tables à cette zone depuis le plan de salle admin.' : 'Utilisez le bouton "Vente Directe" pour continuer.'}</p>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
 export default function PremiumPOSClient({ 
   storeId,
   storeName,
@@ -53,6 +214,7 @@ export default function PremiumPOSClient({
   initialBaristas = [],
   initialSales = [],
   initialTables = [],
+  initialZones = [],
   terminals = [],
   planName = 'STARTER',
   isFiscalEnabled = false,
@@ -71,6 +233,7 @@ export default function PremiumPOSClient({
   initialBaristas?: any[];
   initialSales?: any[];
   initialTables?: any[];
+  initialZones?: any[];
   terminals?: any[];
   planName?: string;
   isFiscalEnabled?: boolean;
@@ -1753,75 +1916,13 @@ export default function PremiumPOSClient({
             )}
           </div>
         ) : view === 'TABLES' ? (
-          <main className="pos-main-content-scroll" style={{ flex: 1, padding: 40, overflowY: 'auto' }}>
-             <div className="tables-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40, flexWrap: 'wrap', gap: 20 }}>
-                <div>
-                   <h1 style={{ color: 'var(--pos-text-main)', fontSize: 32, fontWeight: 900, margin: 0 }}>Plan de Salle</h1>
-                   <p style={{ color: 'var(--pos-text-muted)', margin: 0 }}>Sélectionnez une table pour commencer le service</p>
-                </div>
-                <button className="btn-premium btn-premium-primary vente-directe-btn" style={{ padding: '20px 40px', fontSize: 18 }} onClick={() => { setSelectedTable({ id: 'DIRECT', label: 'Vente Directe' }); setView('POS'); }}>
-                   <ShoppingBag size={24} /> VENTE DIRECTE
-                </button>
-             </div>
-
-             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 24 }}>
-                 {initialTables.map((t: any) => {
-                   const tableCart = tableOrders[t.id] || [];
-                   const hasOrder = tableCart.length > 0;
-                   const tableTotal = tableCart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-
-                   return (
-                     <div key={t.id} className={`customer-selector ${hasOrder ? 'has-active-order' : ''}`} 
-                       style={{ 
-                         height: 180, 
-                         flexDirection: 'column', 
-                         background: hasOrder ? 'var(--pos-accent)' : 'var(--pos-input-bg)', 
-                         borderColor: hasOrder ? 'var(--pos-primary)' : 'var(--pos-border)', 
-                         borderWidth: hasOrder ? 2 : 1,
-                         justifyContent: 'center', 
-                         gap: 12, 
-                         cursor: 'pointer',
-                         position: 'relative',
-                         boxShadow: hasOrder ? '0 10px 25px -5px rgba(99, 102, 241, 0.4)' : 'none'
-                       }}
-                       onClick={() => { setSelectedTable(t); setView('POS'); }}>
-                        
-                        {hasOrder && (
-                          <div style={{ 
-                            position: 'absolute', top: 12, right: 12, 
-                            background: 'var(--pos-primary)', color: '#fff', 
-                            padding: '4px 10px', borderRadius: 10, 
-                            fontSize: 12, fontWeight: 900,
-                            boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
-                          }}>
-                             {tableTotal.toFixed(3)} DT
-                          </div>
-                        )}
-
-                        <div style={{ 
-                          width: 70, height: 70, borderRadius: '50%', 
-                          background: hasOrder ? 'var(--pos-primary)' : 'var(--pos-border)', 
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          transition: 'all 0.3s'
-                        }}>
-                           <Users size={32} color={hasOrder ? '#fff' : 'var(--pos-text-muted)'} />
-                        </div>
-                        <div style={{ color: 'var(--pos-text-main)', fontWeight: 900, fontSize: 22 }}>{t.label}</div>
-                        <div style={{ color: 'var(--pos-text-muted)', fontSize: 13, fontWeight: 700 }}>
-                           {hasOrder ? `${tableCart.length} articles` : `Table ${t.capacity} pers.`}
-                        </div>
-                     </div>
-                   );
-                 })}
-                {initialTables.length === 0 && (
-                   <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 80, color: 'var(--pos-text-muted)' }}>
-                      <AlertCircle size={64} style={{ margin: '0 auto 20px' }} />
-                      <h2 style={{ fontWeight: 900 }}>Aucune table configurée</h2>
-                      <p>Utilisez le bouton "Vente Directe" pour continuer.</p>
-                   </div>
-                )}
-             </div>
-          </main>
+          <TablesZoneView
+            initialTables={initialTables}
+            initialZones={initialZones}
+            tableOrders={tableOrders}
+            onSelectTable={(t) => { setSelectedTable(t); setView('POS'); }}
+            onVenteDirecte={() => { setSelectedTable({ id: 'DIRECT', label: 'Vente Directe' }); setView('POS'); }}
+          />
         ) : view === 'POS' ? (
         <>
           <header className="pos-header">

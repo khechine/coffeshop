@@ -5605,8 +5605,8 @@ export async function createTableAction(data: {
   height?: number;
 }) {
   const store = await getStore();
-  if (!store) return;
-  await (prisma as any).storeTable.create({
+  if (!store) return null;
+  const created = await (prisma as any).storeTable.create({
     data: {
       ...data,
       storeId: store.id
@@ -5614,6 +5614,7 @@ export async function createTableAction(data: {
   });
   revalidatePath('/admin/tables');
   revalidatePath('/pos');
+  return created;
 }
 
 export async function updateTableAction(id: string, data: {
@@ -5626,12 +5627,13 @@ export async function updateTableAction(id: string, data: {
   width?: number;
   height?: number;
 }) {
-  await (prisma as any).storeTable.update({
+  const updated = await (prisma as any).storeTable.update({
     where: { id },
     data
   });
   revalidatePath('/admin/tables');
   revalidatePath('/pos');
+  return updated;
 }
 
 export async function updateTablePositionAction(id: string, posX: number, posY: number) {
