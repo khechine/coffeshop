@@ -166,6 +166,9 @@ export class PrintService {
       const ttcPrice = Number(item.price);
       const qty = Number(item.quantity);
       const lineTtc = ttcPrice * qty;
+      const optionsList = (item as any).options || [];
+      const notes = (item as any).notes || '';
+      const hasExtras = optionsList.length > 0 || !!notes;
 
       return `
         <tr>
@@ -175,6 +178,15 @@ export class PrintService {
           <td style="text-align: center;">${qty}</td>
           <td style="text-align: right; font-weight: bold;">${lineTtc.toFixed(3).replace('.', ',')}</td>
         </tr>
+        ${hasExtras ? `
+          <tr>
+            <td></td>
+            <td colspan="4" style="font-size: 8px; color: #333; font-style: italic; padding-bottom: 2px;">
+              ${optionsList.length > 0 ? `* ${optionsList.join(', ')}` : ''}
+              ${notes ? ` [Note: ${notes}]` : ''}
+            </td>
+          </tr>
+        ` : ''}
       `;
     }).join('');
 

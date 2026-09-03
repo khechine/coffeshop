@@ -13,6 +13,7 @@ import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale,
 import { savePendingAction, getPendingActions, deletePendingAction } from './OfflineSync';
 import { PrintService } from './PrintService';
 import { DenominationCounter } from './DenominationCounter';
+import { ItemCustomizationModal } from './ItemCustomizationModal';
 import './pos-premium.css';
 
 const ICONS: Record<string, React.FC<any>> = {
@@ -31,6 +32,9 @@ interface CartItem extends Product {
   quantity: number;
   discountPercent?: number;
   discountAmount?: number;
+  options?: string[];
+  notes?: string;
+  extraPrice?: number;
 }
 
 interface Customer {
@@ -264,6 +268,7 @@ export default function PremiumPOSClient({
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [customizingItem, setCustomizingItem] = useState<{ index: number; item: CartItem } | null>(null);
 
   // --- Theme Management ---
   useEffect(() => {
@@ -585,18 +590,19 @@ export default function PremiumPOSClient({
 
   // Helper calculation for line item prices & discounts
   const getItemNetPrice = (item: CartItem) => {
+    const basePriceWithExtras = item.price + (item.extraPrice || 0);
     if (item.discountPercent && item.discountPercent > 0) {
-      return item.price * (1 - item.discountPercent / 100);
+      return basePriceWithExtras * (1 - item.discountPercent / 100);
     }
     if (item.discountAmount && item.discountAmount > 0) {
-      return Math.max(0, item.price - item.discountAmount);
+      return Math.max(0, basePriceWithExtras - item.discountAmount);
     }
-    return item.price;
+    return basePriceWithExtras;
   };
 
   const getItemLineTotal = (item: CartItem) => getItemNetPrice(item) * item.quantity;
 
-  const subtotalBrut = currentCart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const subtotalBrut = currentCart.reduce((acc, item) => acc + (item.price + (item.extraPrice || 0)) * item.quantity, 0);
   const subtotal = currentCart.reduce((acc, item) => acc + getItemLineTotal(item), 0);
   const totalLineDiscounts = subtotalBrut - subtotal;
 
@@ -852,7 +858,9 @@ export default function PremiumPOSClient({
         productId: item.productId || item.id,
         name: item.name || item.product?.name || 'Article',
         quantity: Number(item.quantity),
-        price: Number(item.price)
+        price: Number(item.price + (item.extraPrice || 0)),
+        options: item.options || [],
+        notes: item.notes || ''
       }));
       await PrintService.printTicket({
         storeName,
@@ -903,7 +911,16 @@ export default function PremiumPOSClient({
       total,
       subtotal,
       discount: discountFromPoints,
-      items: currentCart.map(i => ({ productId: i.id, quantity: i.quantity, price: i.price, product: i })),
+      items: currentCart.map(i => ({ 
+        productId: i.id, 
+        quantity: i.quantity, 
+        price: i.price + (i.extraPrice || 0), 
+        notes: [...(i.options || []), ...(i.notes ? [i.notes] : [])].join(', '),
+        product: {
+          ...i,
+          name: i.name + (i.options && i.options.length > 0 ? ` (${i.options.join(', ')})` : '')
+        }
+      })),
       baristaId: cashierId || 'pos-internal',
       terminalId: selectedTerminalId || undefined,
       tableName: selectedTable?.label || 'Directe',
@@ -2371,7 +2388,7 @@ export default function PremiumPOSClient({
         </div>
 
         <div className="cart-items">
-          {currentCart.map(item => {
+          {currentCart.map((item, idx) => {
             const netUnitPrice = getItemNetPrice(item);
             const lineTotal = getItemLineTotal(item);
             const hasDiscount = (item.discountPercent && item.discountPercent > 0) || (item.discountAmount && item.discountAmount > 0);
@@ -2395,11 +2412,25 @@ export default function PremiumPOSClient({
                     <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--pos-text-main)', lineHeight: 1.2 }}>
                       {item.name}
                     </div>
+                    {((item.options && item.options.length > 0) || item.notes) && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                        {item.options?.map((opt, oIdx) => (
+                          <span key={oIdx} style={{ fontSize: 10, fontWeight: 800, backgroundColor: 'rgba(37, 99, 235, 0.12)', color: '#2563EB', padding: '2px 6px', borderRadius: 6 }}>
+                            {opt}
+                          </span>
+                        ))}
+                        {item.notes && (
+                          <span style={{ fontSize: 10, fontWeight: 800, backgroundColor: 'rgba(239, 68, 68, 0.12)', color: '#EF4444', padding: '2px 6px', borderRadius: 6 }}>
+                            Note: {item.notes}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                       {hasDiscount ? (
                         <>
                           <span style={{ textDecoration: 'line-through', fontSize: 12, color: 'var(--pos-text-muted)', fontWeight: 600 }}>
-                            {item.price.toFixed(3)} DT
+                            {(item.price + (item.extraPrice || 0)).toFixed(3)} DT
                           </span>
                           <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--pos-primary)' }}>
                             {netUnitPrice.toFixed(3)} DT
@@ -2410,7 +2441,7 @@ export default function PremiumPOSClient({
                         </>
                       ) : (
                         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--pos-text-muted)' }}>
-                          {item.price.toFixed(3)} DT / un.
+                          {(item.price + (item.extraPrice || 0)).toFixed(3)} DT / un.
                         </span>
                       )}
                     </div>
@@ -2425,13 +2456,33 @@ export default function PremiumPOSClient({
 
                 {/* Controls & Subtotal Row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  {/* Quantity Controls + Remise Pill */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {/* Quantity Controls + Options & Remise Pills */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <div className="cart-controls" style={{ padding: '4px 6px', borderRadius: 10 }}>
                       <button className="cart-qty-btn" onClick={() => updateQty(item.id, -1)}><Minus size={13} /></button>
                       <span style={{ fontWeight: 800, width: 22, textAlign: 'center', fontSize: 14 }}>{item.quantity}</span>
                       <button className="cart-qty-btn" onClick={() => addToCart(item)}><Plus size={13} /></button>
                     </div>
+
+                    {/* Options Trigger Button */}
+                    <button
+                      onClick={() => setCustomizingItem({ index: idx, item })}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '6px 8px',
+                        borderRadius: 10,
+                        border: '1px solid var(--pos-border)',
+                        background: (item.options?.length || item.notes) ? '#EFF6FF' : 'var(--pos-bg)',
+                        color: (item.options?.length || item.notes) ? '#2563EB' : 'var(--pos-text-muted)',
+                        fontSize: 11,
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}>
+                      <Settings size={12} />
+                      <span>Options</span>
+                    </button>
 
                     {/* Discount Trigger Button */}
                     <button
@@ -2927,6 +2978,27 @@ export default function PremiumPOSClient({
         );
       })()}
       
+      {/* Item Customization Modal */}
+      {customizingItem && (
+        <ItemCustomizationModal
+          product={customizingItem.item}
+          initialOptions={customizingItem.item.options}
+          initialNotes={customizingItem.item.notes}
+          onSave={(options: string[], notes: string, extraPrice: number) => {
+            const tableId = selectedTable?.id || 'DIRECT';
+            setTableOrders((prev: any) => {
+              const tableCart = prev[tableId] || [];
+              const updatedCart = tableCart.map((item: any, idx: number) => 
+                idx === customizingItem.index ? { ...item, options, notes, extraPrice } : item
+              );
+              return { ...prev, [tableId]: updatedCart };
+            });
+            setCustomizingItem(null);
+          }}
+          onClose={() => setCustomizingItem(null)}
+        />
+      )}
+
       {/* Add Customer Modal */}
       {isAddCustomerModalOpen && (
         <div className="pos-modal-overlay">
