@@ -2585,9 +2585,6 @@ export default function PremiumPOSClient({
              <button className="pos-top-tab-btn tab-green" style={{ height: 42, justifyContent: 'center', fontSize: 13 }} onClick={() => setIsPaymentModalOpen(true)}>
                ⚡ Encaisser
              </button>
-             <button className="pos-top-tab-btn tab-orange" style={{ height: 42, justifyContent: 'center', fontSize: 13 }} disabled={currentCart.length === 0} onClick={() => setIsPaymentModalOpen(true)}>
-               <CheckCircle size={16} /> Valider
-             </button>
            </div>
         </div>
       </aside>
