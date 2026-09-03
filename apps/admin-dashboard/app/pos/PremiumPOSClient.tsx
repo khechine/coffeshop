@@ -9,7 +9,7 @@ import {
   X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package, Store, Calculator, RefreshCw, ChefHat
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction, clockInAction, clockOutAction, getActiveAttendance, getAdvancedSalesJournal, getStoreStockItemsList, adjustStock } from '../actions';
+import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction, clockInAction, clockOutAction, getActiveAttendance, getAdvancedSalesJournal, getStoreStockItemsList, adjustStock, sendOrderToKitchenAction, getUnpaidOrdersAction, payOrderAction } from '../actions';
 import { savePendingAction, getPendingActions, deletePendingAction } from './OfflineSync';
 import { PrintService } from './PrintService';
 import { DenominationCounter } from './DenominationCounter';
@@ -379,6 +379,11 @@ export default function PremiumPOSClient({
   const [closingCounts, setClosingCounts] = useState<Record<string, number>>({});
   const [fondDeCaisse, setFondDeCaisse] = useState('0');
   const [sessionNotes, setSessionNotes] = useState('');
+
+  // Push & Pay Later — Commandes en attente de paiement
+  const [unpaidOrders, setUnpaidOrders] = useState<any[]>([]);
+  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+  const [isSendingToKitchen, setIsSendingToKitchen] = useState(false);
 
   // Derived session sales and finances
   const sessionSalesList = React.useMemo(() => {
@@ -756,6 +761,20 @@ export default function PremiumPOSClient({
     localStorage.setItem('pos_premium_orders', JSON.stringify(tableOrders));
   }, [tableOrders]);
 
+  // --- Load unpaid kitchen orders on mount + refresh every 30s ---
+  useEffect(() => {
+    const loadUnpaid = async () => {
+      try {
+        const orders = await getUnpaidOrdersAction();
+        setUnpaidOrders(orders);
+      } catch (e) { console.error('Failed to load unpaid orders', e); }
+    };
+    loadUnpaid();
+    const interval = setInterval(loadUnpaid, 30000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const addToCart = (product: Product & { minOrderQty?: number }) => {
     const tableId = selectedTable?.id || 'DIRECT';
     const minQty = Number(product.minOrderQty || 1);
@@ -887,6 +906,65 @@ export default function PremiumPOSClient({
       console.error("Print failed:", err);
     }
   };
+
+  // ── Push & Pay Later ─────────────────────────────────────────────
+  const handleSendToKitchen = async () => {
+    if (currentCart.length === 0) return;
+    setIsSendingToKitchen(true);
+    try {
+      await sendOrderToKitchenAction({
+        items: currentCart.map(i => ({
+          productId: i.id,
+          quantity: i.quantity,
+          price: i.price + (i.extraPrice || 0),
+          notes: [...(i.options || []), ...(i.notes ? [i.notes] : [])].join(', ') || undefined,
+        })),
+        tableName: selectedTable?.label || 'En salle',
+        baristaId: cashierId || undefined,
+        customerId: (selectedCustomer?.id && selectedCustomer.id !== 'passager') ? selectedCustomer.id : undefined,
+        total: subtotalBrut,
+        subtotal: subtotal,
+      });
+      clearCart();
+      const orders = await getUnpaidOrdersAction();
+      setUnpaidOrders(orders);
+      alert('✅ Commande envoyée en cuisine ! (Table: ' + (selectedTable?.label || 'En salle') + ')');
+    } catch (err: any) {
+      alert('Erreur : ' + err.message);
+    } finally {
+      setIsSendingToKitchen(false);
+    }
+  };
+
+  const handlePayOrder = async (orderId: string, orderTotal: number) => {
+    const order = unpaidOrders.find((o: any) => o.id === orderId);
+    if (!order) return;
+    setPayingOrderId(orderId);
+    let cashAmt = 0, cardAmt = 0;
+    cashAmt = orderTotal;
+    try {
+      const sale = await payOrderAction(orderId, {
+        paymentMethod: 'CASH',
+        paymentDetails: { cash: cashAmt, card: cardAmt },
+        total: orderTotal,
+        baristaId: cashierId || undefined,
+        terminalId: selectedTerminalId || undefined,
+        isTraining: isTrainingMode,
+      });
+      setSessionSales(prev => [sale, ...prev]);
+      const orders = await getUnpaidOrdersAction();
+      setUnpaidOrders(orders);
+      setPayingOrderId(null);
+      alert('✅ Paiement enregistré !');
+      if (ticketConfig?.autoPrint ?? true) {
+        await printTicket(sale, order.items.map((i: any) => ({ ...i, extraPrice: 0 })));
+      }
+    } catch (err: any) {
+      alert('Erreur paiement : ' + err.message);
+      setPayingOrderId(null);
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────
 
   const processPayment = async () => {
     setLastActivity(Date.now());
@@ -2662,14 +2740,23 @@ export default function PremiumPOSClient({
            </div>
 
            {/* Pro Touchscreen Bottom Action Buttons */}
-           <div className="bottom-touch-actions" style={{ marginTop: 8 }}>
+           <div className="bottom-touch-actions" style={{ marginTop: 8, flexWrap: 'wrap', gap: 6 }}>
              <button className="pos-top-tab-btn tab-blue" style={{ height: 42, justifyContent: 'center' }} title="Calculatrice / Pavé" onClick={() => setIsPaymentModalOpen(true)}>
                <Calculator size={18} />
              </button>
              <button className="pos-top-tab-btn tab-dark" style={{ height: 42, justifyContent: 'center', background: '#EF4444' }} title="Vider le panier" onClick={clearCart}>
                <Trash2 size={18} />
              </button>
-             <button className="pos-top-tab-btn tab-green" style={{ height: 42, justifyContent: 'center', fontSize: 13 }} onClick={() => setIsPaymentModalOpen(true)}>
+             {/* 📤 Envoyer en cuisine — Push & Pay Later */}
+             <button
+               style={{ height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, background: '#F97316', color: '#FFF', borderRadius: 10, border: 'none', cursor: isSendingToKitchen ? 'not-allowed' : 'pointer', opacity: isSendingToKitchen ? 0.7 : 1, flex: 1, fontWeight: 800, gap: 4, padding: '0 10px' }}
+               title="Envoyer en cuisine sans encaisser"
+               onClick={handleSendToKitchen}
+               disabled={isSendingToKitchen || currentCart.length === 0}
+             >
+               {isSendingToKitchen ? '⏳...' : '📤 Cuisine'}
+             </button>
+             <button className="pos-top-tab-btn tab-green" style={{ height: 42, justifyContent: 'center', fontSize: 13, flex: 2 }} onClick={() => setIsPaymentModalOpen(true)}>
                ⚡ Encaisser
              </button>
            </div>
@@ -3123,7 +3210,7 @@ export default function PremiumPOSClient({
                  <button className="btn-premium btn-premium-primary" style={{ width: '100%', height: 60, fontSize: 18 }} onClick={handleOpenSession}>
                     OUVRIR LA SESSION
                  </button>
-              </div>
+             </div>
             </div>
           </div>
         </div>
@@ -3235,6 +3322,24 @@ export default function PremiumPOSClient({
                   }}>
                     {sessionTotalSales.toFixed(3)} DT
                   </span>
+                </button>
+                {/* ⏳ En attente tab */}
+                <button
+                  onClick={() => setClosingTab('UNPAID' as any)}
+                  style={{
+                    padding: '10px 20px', borderRadius: 12, border: 'none',
+                    background: (closingTab as any) === 'UNPAID' ? '#F97316' : 'var(--pos-bg)',
+                    color: (closingTab as any) === 'UNPAID' ? '#fff' : 'var(--pos-text-muted)',
+                    fontWeight: 800, fontSize: 14, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span>⏳ En attente</span>
+                  {unpaidOrders.length > 0 && (
+                    <span style={{ background: '#EF4444', color: '#fff', borderRadius: '50%', width: 20, height: 20, fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {unpaidOrders.length}
+                    </span>
+                  )}
                 </button>
              </div>
 
@@ -3617,6 +3722,80 @@ export default function PremiumPOSClient({
                        )}
                   </div>
 
+
+             {/* Tab 3: En attente — Commandes cuisine non payées */}
+             {(closingTab as any) === 'UNPAID' && (
+               <div style={{ flex: 1, overflowY: 'auto' }}>
+                 <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <div style={{ fontWeight: 900, fontSize: 16, color: 'var(--pos-text-main)' }}>
+                     🍽️ Commandes en cuisine non encaissées
+                   </div>
+                   <span style={{ background: '#F97316', color: '#fff', borderRadius: 8, padding: '4px 12px', fontWeight: 800, fontSize: 13 }}>
+                     {unpaidOrders.length} en attente
+                   </span>
+                 </div>
+                 {unpaidOrders.length === 0 ? (
+                   <div style={{ padding: 48, textAlign: 'center', color: 'var(--pos-text-muted)' }}>
+                     <div style={{ fontSize: 36, marginBottom: 12 }}>🍽️</div>
+                     <div style={{ fontWeight: 800, fontSize: 15 }}>Aucune commande en attente</div>
+                     <div style={{ fontSize: 12, marginTop: 4 }}>Utilisez le bouton "📤 Cuisine" dans le panier pour envoyer des commandes sans encaisser.</div>
+                   </div>
+                 ) : (
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                     {unpaidOrders.map((order: any) => (
+                       <div key={order.id} style={{ background: 'var(--pos-bg)', border: '2px solid #F97316', borderRadius: 16, padding: 18, display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                         <div style={{ flex: 1 }}>
+                           <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
+                             <span style={{ fontWeight: 900, fontSize: 15, color: 'var(--pos-text-main)' }}>
+                               🪑 {order.tableName}
+                             </span>
+                             <span style={{ fontSize: 11, color: 'var(--pos-text-muted)' }}>
+                               {new Date(order.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                             </span>
+                             <span style={{ fontSize: 11, background: order.preparationStatus === 'READY' ? '#10B98120' : order.preparationStatus === 'PREPARING' ? '#3B82F620' : '#F59E0B20', color: order.preparationStatus === 'READY' ? '#10B981' : order.preparationStatus === 'PREPARING' ? '#3B82F6' : '#F59E0B', borderRadius: 6, padding: '2px 8px', fontWeight: 800 }}>
+                               {order.preparationStatus === 'READY' ? '✅ Prêt' : order.preparationStatus === 'PREPARING' ? '👨‍🍳 En prép.' : '⏳ En attente'}
+                             </span>
+                           </div>
+                           <div style={{ fontSize: 12, color: 'var(--pos-text-muted)', marginBottom: 6 }}>
+                             {(order.items || []).map((it: any) => `${it.quantity}x ${it.name}`).join(' • ')}
+                           </div>
+                           <div style={{ fontWeight: 900, fontSize: 18, color: '#F97316' }}>
+                             {Number(order.total).toFixed(3)} DT
+                           </div>
+                         </div>
+                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 130 }}>
+                           <button
+                             onClick={() => handlePayOrder(order.id, Number(order.total))}
+                             disabled={payingOrderId === order.id}
+                             style={{ background: '#10B981', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontWeight: 900, fontSize: 13, cursor: payingOrderId === order.id ? 'not-allowed' : 'pointer', opacity: payingOrderId === order.id ? 0.7 : 1 }}
+                           >
+                             {payingOrderId === order.id ? '⏳ Paiement...' : '⚡ Encaisser (Espèces)'}
+                           </button>
+                           <button
+                             onClick={async () => {
+                               // Load items into cart then open payment modal
+                               const tableId = selectedTable?.id || 'DIRECT';
+                               const cartItems = (order.items || []).map((it: any) => ({
+                                 id: it.id,
+                                 name: it.name,
+                                 price: it.price,
+                                 quantity: it.quantity,
+                                 category: it.category || 'Café'
+                               }));
+                               setTableOrders((prev: any) => ({ ...prev, [tableId]: cartItems }));
+                               setShowClosingModal(false);
+                             }}
+                             style={{ background: 'var(--pos-border)', color: 'var(--pos-text-main)', border: 'none', borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+                           >
+                             🛒 Charger dans panier
+                           </button>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </div>
+             )}
                   {/* Return to Count button */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--pos-border)' }}>
                      <button

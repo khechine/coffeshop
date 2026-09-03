@@ -1631,6 +1631,8 @@ export async function recordSale(data: {
           change: (isNaN(data.change || 0)) ? 0 : data.change,
           appVersion: '1.0.0',
           createdAt: now,
+          preparationStatus: 'PENDING',
+          paymentStatus: isTraining ? 'PAID' : 'PAID',
           items: {
             create: itemsWithTax
           }
@@ -7641,7 +7643,7 @@ export async function vendorConvertDiscussionToOrderAction(data: {
     const products = await (prisma as any).vendorProduct.findMany({
       where: { id: { in: productIds } }
     });
-    const productsMap = new Map(products.map((p: any) => [p.id, p]));
+    const productsMap = new Map<string, any>(products.map((p: any) => [p.id, p]));
 
     const buyerStore = await (prisma as any).store.findUnique({
       where: { id: buyer.storeId },
@@ -8686,21 +8688,23 @@ export async function getStoreStockItemsList() {
 // ─────────────────────────────────────────────────────────────
 // 🍳 KITCHEN DISPLAY SYSTEM (KDS) SERVER ACTIONS
 // ─────────────────────────────────────────────────────────────
+// KDS Actions
+// ─────────────────────────────────────────────────────────────
 
 export async function getKdsOrdersAction(stationFilter?: string) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
 
-  // Fetch sales created today or in active cash session that are not served
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
+  // Fetch ALL sales today that are not served (both PAID and UNPAID kitchen orders)
   const sales = await (prisma as any).sale.findMany({
     where: {
       storeId: store.id,
       createdAt: { gte: startOfDay },
       isVoid: false,
-      kdsStatus: { not: 'SERVED' }
+      preparationStatus: { not: 'SERVED' }
     },
     include: {
       items: {
@@ -8722,7 +8726,8 @@ export async function getKdsOrdersAction(stationFilter?: string) {
     orderNumber: sale.fiscalNumber || sale.sequenceNumber || sale.id.slice(-6),
     tableName: sale.tableName || (sale.paymentDetails?.tableNumber ? `Table ${sale.paymentDetails.tableNumber}` : 'À Emporter'),
     customerName: sale.customerName || 'Client',
-    status: sale.kdsStatus || 'PENDING',
+    status: sale.preparationStatus || 'PENDING',
+    paymentStatus: sale.paymentStatus || 'PAID',
     createdAt: sale.createdAt.toISOString(),
     items: (sale.items || []).map((item: any) => ({
       id: item.id,
@@ -8745,12 +8750,258 @@ export async function updateKdsOrderStatusAction(saleId: string, newStatus: stri
 
   const updatedSale = await (prisma as any).sale.update({
     where: { id: saleId },
-    data: { kdsStatus: newStatus }
+    data: { preparationStatus: newStatus }
   });
 
   revalidatePath('/kds');
   revalidatePath('/pos');
-  return { success: true, status: updatedSale.kdsStatus };
+  return { success: true, status: updatedSale.preparationStatus };
 }
 
+// ─────────────────────────────────────────────────────────────
+// Push & Pay Later — Envoyer en cuisine sans encaisser
+// ─────────────────────────────────────────────────────────────
+
+export async function sendOrderToKitchenAction(data: {
+  items: { productId: string; quantity: number; price: number; notes?: string }[];
+  tableName?: string;
+  baristaId?: string;
+  customerId?: string;
+  total: number;
+  subtotal?: number;
+}) {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  if (store.isRestricted) {
+    throw new Error('ACCES_RESTREINT : Votre accès au POS est restreint.');
+  }
+
+  const now = new Date();
+  const fiscalDay = now.toISOString().split('T')[0];
+
+  // Create a pre-sale (UNPAID kitchen order)
+  const sale = await (prisma as any).sale.create({
+    data: {
+      storeId: store.id,
+      total: data.total,
+      subtotal: data.subtotal || data.total,
+      discount: 0,
+      paymentMethod: 'PENDING',
+      paymentDetails: {},
+      tableName: data.tableName || 'En salle',
+      baristaId: data.baristaId,
+      takenById: data.baristaId,
+      customerId: data.customerId,
+      consumeType: 'DINE_IN',
+      isVoid: false,
+      isFiscal: false,
+      nacefContext: 'SALE',
+      nacefOperationType: 'TICKET',
+      paymentStatus: 'UNPAID',
+      preparationStatus: 'PENDING',
+      fiscalDay,
+      appVersion: '1.0.0',
+      createdAt: now,
+      items: {
+        create: data.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+          unitPriceHt: item.price,
+          taxRate: 0,
+          taxAmount: 0,
+          totalHt: item.price * item.quantity,
+          totalTtc: item.price * item.quantity,
+          ...(item.notes ? { notes: item.notes } : {})
+        }))
+      }
+    },
+    include: {
+      items: { include: { product: true } }
+    }
+  });
+
+  revalidatePath('/kds');
+  revalidatePath('/pos');
+  return { success: true, orderId: sale.id, sale };
+}
+
+export async function getUnpaidOrdersAction() {
+  const store = await getStore();
+  if (!store) return [];
+
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const orders = await (prisma as any).sale.findMany({
+    where: {
+      storeId: store.id,
+      paymentStatus: 'UNPAID',
+      isVoid: false,
+      createdAt: { gte: startOfDay }
+    },
+    include: {
+      items: {
+        include: {
+          product: { select: { name: true, category: true, price: true } }
+        }
+      }
+    },
+    orderBy: { createdAt: 'asc' }
+  });
+
+  return orders.map((o: any) => ({
+    id: o.id,
+    tableName: o.tableName || 'En salle',
+    preparationStatus: o.preparationStatus || 'PENDING',
+    total: Number(o.total),
+    createdAt: o.createdAt.toISOString(),
+    items: (o.items || []).map((item: any) => ({
+      id: item.id,
+      name: item.name || item.product?.name || 'Article',
+      quantity: Number(item.quantity),
+      price: Number(item.price),
+      notes: item.notes || ''
+    }))
+  }));
+}
+
+export async function payOrderAction(orderId: string, paymentData: {
+  paymentMethod: string;
+  paymentDetails?: any;
+  total?: number;
+  baristaId?: string;
+  terminalId?: string;
+  isTraining?: boolean;
+}) {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  // Find the unpaid order
+  const order = await (prisma as any).sale.findUnique({
+    where: { id: orderId },
+    include: {
+      items: {
+        include: { product: true }
+      }
+    }
+  });
+
+  if (!order) throw new Error('Commande introuvable');
+  if (order.paymentStatus === 'PAID') throw new Error('Cette commande est déjà payée');
+  if (order.storeId !== store.id) throw new Error('Commande non autorisée');
+
+  // Verify fiscal requirements if needed
+  let isFiscal = false;
+  let fiscalNumber = null;
+  let hash = null;
+  let previousHash = null;
+  let signature = null;
+  let finalSequenceNumber: number | null = null;
+
+  if (store.isFiscalEnabled && !paymentData.isTraining) {
+    const planName = (store as any).subscription?.plan?.name?.toUpperCase();
+    const validPlans = ['PRO', 'STARTER', 'RACHMA'];
+    if (validPlans.includes(planName || '')) {
+      if (paymentData.terminalId) {
+        const terminal = await (prisma as any).posTerminal.findUnique({
+          where: { id: paymentData.terminalId, storeId: store.id }
+        });
+        if (terminal) {
+          isFiscal = true;
+          const currentYear = new Date().getFullYear();
+          const updatedStore = await (prisma as any).store.update({
+            where: { id: store.id },
+            data: { currentFiscalSequence: { increment: 1 } }
+          });
+          finalSequenceNumber = updatedStore.currentFiscalSequence;
+          if (finalSequenceNumber !== null) {
+            fiscalNumber = `FAC-${currentYear}-${finalSequenceNumber.toString().padStart(6, '0')}`;
+          }
+          const lastSale = await (prisma as any).sale.findFirst({
+            where: { storeId: store.id, isFiscal: true },
+            orderBy: { createdAt: 'desc' }
+          });
+          previousHash = lastSale?.hash || '0'.repeat(64);
+          const now = new Date();
+          const hashInput = `${fiscalNumber}|${order.total}|${now.toISOString()}|${previousHash}`;
+          hash = crypto.createHash('sha256').update(hashInput).digest('hex');
+          const secret = process.env.FISCAL_SECRET || 'nacef-default-secret-2026';
+          signature = crypto.createHmac('sha256', secret).update(hash).digest('hex');
+        }
+      }
+    }
+  }
+
+  const now = new Date();
+  const fiscalDay = now.toISOString().split('T')[0];
+  const total = paymentData.total ?? Number(order.total);
+
+  // Update the existing sale with payment information
+  const updatedSale = await (prisma as any).sale.update({
+    where: { id: orderId },
+    data: {
+      paymentStatus: 'PAID',
+      paymentMethod: paymentData.paymentMethod || 'CASH',
+      paymentDetails: paymentData.paymentDetails || {},
+      total,
+      isFiscal,
+      fiscalNumber,
+      sequenceNumber: finalSequenceNumber,
+      fiscalDay,
+      hash,
+      previousHash,
+      signature,
+      baristaId: paymentData.baristaId || order.baristaId,
+      nacefContext: paymentData.isTraining ? 'TRAINING' : 'SALE',
+      nacefOperationType: paymentData.isTraining ? 'PROFORMA' : 'TICKET'
+    },
+    include: {
+      items: { include: { product: true } },
+      takenBy: true
+    }
+  });
+
+  // Deduct stock
+  for (const item of order.items) {
+    const recipes = await (prisma as any).recipeItem.findMany({
+      where: { productId: item.productId }
+    });
+    for (const recipe of recipes) {
+      const totalToDeduct = Number(recipe.quantity) * Number(item.quantity);
+      await (prisma as any).stockItem.update({
+        where: { id: recipe.stockItemId },
+        data: { quantity: { decrement: totalToDeduct } }
+      });
+    }
+  }
+
+  // Fiscal log
+  if (isFiscal && !paymentData.isTraining) {
+    await (prisma as any).fiscalLog.create({
+      data: {
+        saleId: orderId,
+        action: 'PAY_ORDER',
+        data: { hash, sequenceNumber: finalSequenceNumber, timestamp: now.toISOString() }
+      }
+    });
+  }
+
+  // Update cash session
+  const activeCashSession = await (prisma as any).cashSession.findFirst({
+    where: { storeId: store.id, status: 'OPEN' },
+    orderBy: { openedAt: 'desc' }
+  });
+  if (activeCashSession && !paymentData.isTraining) {
+    await (prisma as any).cashSession.update({
+      where: { id: activeCashSession.id },
+      data: { totalSales: { increment: total } }
+    });
+  }
+
+  revalidatePath('/kds');
+  revalidatePath('/pos');
+  return updatedSale;
+}
 
