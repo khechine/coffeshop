@@ -3055,6 +3055,15 @@ export default function PremiumPOSClient({
                     onClick={processPayment}>
                     <CheckCircle size={24} /> VALIDER LA VENTE
                   </button>
+                  <button
+                    style={{ width: '100%', height: 50, fontSize: 14, borderRadius: 14, background: '#F97316', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center' }}
+                    onClick={async () => {
+                      setIsPaymentModalOpen(false);
+                      await handleSendToKitchen();
+                    }}
+                  >
+                    📤 ENVOYER EN CUISINE (PAYER PLUS TARD)
+                  </button>
                   {!canValidate && (
                     <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--pos-danger)', fontWeight: 700 }}>Veuillez couvrir la totalité du montant</div>
                   )}
