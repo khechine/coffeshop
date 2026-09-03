@@ -1564,6 +1564,12 @@ export async function recordSale(data: {
         };
       }));
 
+      // Add 0.100 DT Timbre Fiscal (Code 20) if sale is fiscal
+      if (isFiscal) {
+        taxBreakdown['20'] = 0.100;
+        totalTaxGlobal += 0.100;
+      }
+
       // Generate SHA-256 Hash (Chain)
       let hashInputS = null;
       if (isFiscal) {

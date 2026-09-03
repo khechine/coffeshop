@@ -633,7 +633,8 @@ export default function PremiumPOSClient({
   const discountFromPoints = isRedeemingPoints && selectedCustomer 
     ? Math.min(selectedCustomer.loyaltyPoints / loyaltyRedeemRate, subtotal)
     : 0;
-  const total = subtotal - discountFromPoints;
+  const fiscalStampAmount = (isFiscalEnabled && currentCart.length > 0) ? 0.100 : 0;
+  const total = currentCart.length > 0 ? (subtotal - discountFromPoints + fiscalStampAmount) : 0;
   const change = Number(amountReceived) > total ? Number(amountReceived) - total : 0;
 
   // --- Handlers ---
