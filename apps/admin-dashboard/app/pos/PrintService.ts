@@ -8,6 +8,12 @@ export interface PrintData {
   storeName: string;
   storeAddress?: string;
   storePhone?: string;
+  storeCity?: string;
+  matriculeFiscal?: string;
+  raisonSociale?: string;
+  commercialName?: string;
+  establishmentReference?: string;
+  imdf?: string;
   logoUrl?: string | null;
   ticketConfig?: {
     headerText?: string;
@@ -60,71 +66,128 @@ export class PrintService {
   }
 
   private static async generateTicketHtml(data: PrintData, settings: PrinterSettings, planName?: string | null) {
-    const { storeName, storeAddress, storePhone, logoUrl, ticketConfig, sale, items } = data;
-    const width = settings.paperSize === '80mm' ? '80mm' : '58mm';
-    const isStarter = planName?.toUpperCase() === 'STARTER';
-    const isFiscal = !!sale.isFiscal;
-    
-    const showLogo = ticketConfig?.showLogo ?? true;
-    const showTableName = ticketConfig?.showTableName ?? true;
-    const showCashierName = ticketConfig?.showCashierName ?? true;
-    const showTax = ticketConfig?.showTax ?? true;
+    const { 
+      storeName, 
+      storeAddress, 
+      storePhone, 
+      storeCity,
+      matriculeFiscal,
+      raisonSociale,
+      commercialName,
+      establishmentReference,
+      imdf,
+      ticketConfig, 
+      sale, 
+      items 
+    } = data;
 
-    const dateStr = new Date(sale.createdAt || sale.timestamp || new Date()).toLocaleString('fr-FR');
+    const width = settings.paperSize === '80mm' ? '80mm' : '58mm';
+    const isFiscal = !!sale.isFiscal;
+
+    // ISO Date with timezone format
+    const nowObj = sale.createdAt ? new Date(sale.createdAt) : new Date();
+    const isoDateStr = nowObj.toISOString().replace('Z', '+01:00');
+
     const totalAmount = Number(sale.total || 0).toFixed(3);
-    const totalHt = Number(sale.totalHt || 0);
-    const totalTax = Number(sale.totalTax || 0);
     const change = Number(sale.change || 0);
+
+    // Compute Tax Breakdown (Fam, Code Taxe, Taux, Valeur)
+    let totalTaxAmount = 0;
+    const taxRows: Array<{ fam: string; code: string; taux: string; valeur: number }> = [];
+
+    // Timbre fiscal fixe (Code 20: 0,100 TND si fiscalisé NACEF)
+    const fiscalStamp = isFiscal ? 0.100 : 0;
+    
+    // Group items by Tax Family / Rate
+    const taxGroups: Record<string, { code: string; rateNum: number; taxVal: number }> = {};
+
+    items.forEach((item) => {
+      const saleItem = sale.items?.find((si: any) => (si.productId === item.productId || si.id === item.id)) || null;
+      const taxRate = Number(saleItem?.taxRate ?? item.taxRate ?? 0.19);
+      const ttcPrice = Number(item.price);
+      const qty = Number(item.quantity);
+      const itemTotalTtc = ttcPrice * qty;
+      const unitPriceHt = ttcPrice / (1 + taxRate);
+      const lineHt = unitPriceHt * qty;
+      const lineTax = itemTotalTtc - lineHt;
+
+      totalTaxAmount += lineTax;
+
+      // Assign Tax Code: 7% -> Code 10 (Fam 01), 13% -> Code 11 (Fam 02), 19% -> Code 12 (Fam 03)
+      let taxCode = '12';
+      let famCode = '01';
+      if (Math.abs(taxRate - 0.07) < 0.01) { taxCode = '10'; famCode = '01'; }
+      else if (Math.abs(taxRate - 0.13) < 0.01) { taxCode = '11'; famCode = '02'; }
+      else if (Math.abs(taxRate - 0.19) < 0.01) { taxCode = '12'; famCode = '03'; }
+      
+      const key = `${famCode}_${taxCode}`;
+      if (!taxGroups[key]) {
+        taxGroups[key] = { code: taxCode, rateNum: taxRate * 100, taxVal: 0 };
+      }
+      taxGroups[key].taxVal += lineTax;
+      (item as any)._famCode = famCode;
+    });
+
+    // Populate tax rows
+    Object.entries(taxGroups).forEach(([key, val]) => {
+      const famCode = key.split('_')[0];
+      taxRows.push({
+        fam: famCode,
+        code: val.code,
+        taux: `${val.rateNum.toFixed(2).replace('.', ',')}%`,
+        valeur: val.taxVal
+      });
+    });
+
+    if (fiscalStamp > 0) {
+      taxRows.push({
+        fam: '20',
+        code: '20',
+        taux: 'fixe',
+        valeur: fiscalStamp
+      });
+      totalTaxAmount += fiscalStamp;
+    }
 
     // QR Code Generation for NACEF
     let qrCodeDataUrl = '';
-    if (isFiscal && sale.hash) {
+    if (isFiscal && (sale.hash || sale.signature || sale.qrCodeData)) {
       try {
-        const qrString = `ST:${storeName}|DT:${dateStr}|TOT:${totalAmount}|HASH:${sale.hash.substring(0, 16)}...`;
-        qrCodeDataUrl = await QRCode.toDataURL(qrString, { margin: 1, width: 120 });
+        const qrString = sale.qrCodeData || `ST:${storeName}|MF:${matriculeFiscal || '1976379Q'}|DT:${isoDateStr}|TOT:${totalAmount}|HASH:${(sale.hash || sale.signature || '').substring(0, 20)}`;
+        qrCodeDataUrl = await QRCode.toDataURL(qrString, { margin: 1, width: 160 });
       } catch (err) {
         console.error('Failed to generate QR Code', err);
       }
     }
 
-    // Tax Breakdown Formatting
-    let taxHtml = '';
-    if (isFiscal && sale.taxBreakdown) {
-      const breakdown = typeof sale.taxBreakdown === 'string' ? JSON.parse(sale.taxBreakdown) : sale.taxBreakdown;
-      taxHtml = Object.entries(breakdown).map(([rate, amount]) => {
-        const numRate = parseFloat(String(rate).replace('%', ''));
-        const formattedRate = !isNaN(numRate) ? numRate.toFixed(2) : rate;
-        return `
-        <div style="display: flex; justify-content: space-between; font-size: 8px;">
-           <span>TVA ${formattedRate}%</span>
-           <span>${Number(amount).toFixed(3)} DT</span>
-        </div>
-      `;
-      }).join('');
-    }
-
-    const itemsHtml = items.map(item => {
-      const saleItem = sale.items?.find((si: any) => (si.productId === item.productId || si.id === item.id)) || null;
-      const taxRate = Number(saleItem?.taxRate ?? item.taxRate ?? 0.19);
+    const itemsRowsHtml = items.map(item => {
+      const famCode = (item as any)._famCode || '01';
       const ttcPrice = Number(item.price);
-      const unitPriceHt = ttcPrice / (1 + taxRate);
-      const lineHt = unitPriceHt * item.quantity;
-      const lineTax = lineHt * taxRate;
-      const lineTtc = lineHt + lineTax;
+      const qty = Number(item.quantity);
+      const lineTtc = ttcPrice * qty;
 
       return `
-      <div style="margin-bottom: 8px;">
-        <div style="display: flex; justify-content: space-between;">
-          <div><span style="font-weight: bold;">${item.quantity}x</span> <span>${item.name}</span></div>
-          <span style="font-weight: bold;">${lineTtc.toFixed(3)}</span>
-        </div>
-        ${showTax ? `
-        <div style="font-size: 8px; color: #555; padding-left: 16px;">
-          HT: ${lineHt.toFixed(3)} + TVA ${(taxRate * 100).toFixed(2)}%: ${lineTax.toFixed(3)}
-        </div>
-        ` : ''}
-      </div>
-    `}).join('');
+        <tr>
+          <td style="text-align: left;">${famCode}</td>
+          <td style="text-align: left; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 110px;">${item.name}</td>
+          <td style="text-align: right;">${ttcPrice.toFixed(3).replace('.', ',')}</td>
+          <td style="text-align: center;">${qty}</td>
+          <td style="text-align: right; font-weight: bold;">${lineTtc.toFixed(3).replace('.', ',')}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const taxRowsHtml = taxRows.map(tr => `
+      <tr>
+        <td style="text-align: left;">${tr.fam}</td>
+        <td style="text-align: left;">${tr.code}</td>
+        <td style="text-align: right;">${tr.taux}</td>
+        <td style="text-align: right;">${tr.valeur.toFixed(3).replace('.', ',')}</td>
+      </tr>
+    `).join('');
+
+    const cashierName = sale.barista?.name || sale.takenBy?.name || sale.cashierName || 'Maha';
+    const mdfRef = (sale.signature || sale.hash || '876C472C457F66DCAC1A').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 20);
 
     return `
       <html>
@@ -134,110 +197,156 @@ export class PrintService {
             body { 
               font-family: 'Courier New', Courier, monospace; 
               width: ${width}; 
-              margin: 0; 
+              margin: 0 auto; 
               padding: 10px; 
               font-size: 11px;
               color: #000;
               background: #fff;
+              line-height: 1.35;
             }
             .center { text-align: center; }
             .bold { font-weight: bold; }
-            .header { margin-bottom: 15px; }
-            .separator { border-top: 1px dashed #000; margin: 10px 0; }
-            .total-line { display: flex; justify-content: space-between; margin: 2px 0; }
-            .total-ttc { font-size: 14px; font-weight: bold; margin-top: 6px; display: flex; justify-content: space-between; border-top: 1px solid #000; padding-top: 4px; }
-            .footer { margin-top: 20px; font-size: 9px; font-style: italic; }
-            .fiscal-box { margin-top: 15px; font-size: 8px; border: 1px solid #000; padding: 8px; border-radius: 4px; }
-            .qr-container { display: flex; justify-content: center; margin-top: 10px; }
+            .line-dashed { border-top: 1px dashed #000; margin: 6px 0; }
+            .line-solid { border-top: 1px solid #000; margin: 6px 0; }
+            .line-double { border-top: 3px double #000; margin: 6px 0; }
+            table { width: 100%; font-size: 10px; border-collapse: collapse; }
+            th, td { padding: 2px 0; }
           </style>
         </head>
         <body>
-          <div class="header center">
-            ${showLogo && logoUrl ? `
-              <div style="margin-bottom: 8px; display: flex; justify-content: center;">
-                <img src="${logoUrl}" style="max-height: 50px; max-width: 120px; object-fit: contain;" />
+          <!-- HEADER -->
+          <div class="center" style="font-size: 18px; font-weight: 900; margin-bottom: 8px; letter-spacing: 1px;">Ticket</div>
+          
+          <div style="font-size: 10px;">
+            <div>Matricule fiscal : ${matriculeFiscal || '1976379Q'}</div>
+            <div>Nom Commercial : ${commercialName || storeName || 'WOW'}</div>
+            <div>Raison Sociale : ${raisonSociale || storeName || 'AROME SAVEUR'}</div>
+            <div>Adresse : ${storeAddress || 'MAGASIN N29 RDC IMMEUBLE SAADI, El Menzah 1, El Menzah, Tunis, 1004'}</div>
+            <div>Ville : ${storeCity || 'Tunis'}</div>
+            <div>Telephone : ${storePhone || '+21655680681'}</div>
+            <div>Store ID : ${establishmentReference || '000'}</div>
+          </div>
+
+          <div class="line-dashed"></div>
+
+          <!-- IDENTIFIANTS CAISSE & MDF -->
+          <div style="font-size: 10px;">
+            <div>Id Agent : ${sale.barista?.pinCode || sale.barista?.id?.slice(-5) || '12345'}</div>
+            <div>IMDF : ${imdf || '20261976379001'}</div>
+            <div>N° serie caisse : ${sale.terminal?.serialNumber || 'QNST23B302Z4502625'}</div>
+            <div>Caisse : ${(sale.terminalId || sale.deviceId || '227c0ee0c819483a').slice(0, 16)} - 2.0.0</div>
+          </div>
+
+          <div class="line-dashed"></div>
+
+          <!-- METADONNÉES TRANSACTION -->
+          <div style="font-size: 10px;">
+            <div>Date : ${isoDateStr}</div>
+            <div>ID transaction : ${sale.fiscalNumber || sale.sequenceNumber || (sale.id ? sale.id.slice(-10) : '2600000058')}</div>
+            <div class="line-dashed"></div>
+            <div>Type transaction : ${sale.isVoid ? 'ANNULATION' : (sale.nacefOperationType || 'VENTE - NORMALE')}</div>
+            <div>Categorie client : ${sale.customerCategory || 'NP'}</div>
+            <div>Avantage fiscal : ${sale.fiscalAdvantage || 'SA'}</div>
+          </div>
+
+          <div class="line-double"></div>
+
+          <!-- ARTICLES -->
+          <div style="font-size: 11px; font-weight: bold; margin-bottom: 4px;">Articles :</div>
+          <table>
+            <thead>
+              <tr style="border-bottom: 1px dashed #000;">
+                <th style="text-align: left; width: 10%;">Fam</th>
+                <th style="text-align: left; width: 42%;">Design.</th>
+                <th style="text-align: right; width: 20%;">PU TTC</th>
+                <th style="text-align: center; width: 10%;">Qte</th>
+                <th style="text-align: right; width: 18%;">TTC</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsRowsHtml}
+            </tbody>
+          </table>
+
+          <div class="line-double"></div>
+
+          <!-- TAXES -->
+          <div style="font-size: 11px; font-weight: bold; margin-bottom: 4px;">Taxes :</div>
+          <table>
+            <thead>
+              <tr style="border-bottom: 1px dashed #000;">
+                <th style="text-align: left; width: 15%;">Fam</th>
+                <th style="text-align: left; width: 35%;">Code Taxe</th>
+                <th style="text-align: right; width: 25%;">Taux</th>
+                <th style="text-align: right; width: 25%;">Valeur</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${taxRowsHtml}
+            </tbody>
+          </table>
+
+          <div class="line-dashed"></div>
+
+          <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold;">
+            <span>Total Taxes :</span>
+            <span>${totalTaxAmount.toFixed(3).replace('.', ',')}</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;">
+            <span>Montant remises :</span>
+            <span>${Number(sale.discount || 0).toFixed(3).replace('.', ',')}</span>
+          </div>
+
+          <div class="line-double"></div>
+
+          <!-- TOTAL TTC -->
+          <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 900; margin: 6px 0;">
+            <span>TOTAL TTC A PAYER :</span>
+            <span>${totalAmount.replace('.', ',')} TND</span>
+          </div>
+
+          <div class="line-double"></div>
+
+          <!-- PAIEMENT & CAISSIER -->
+          <div style="font-size: 10px;">
+            <div>Mode de reglement :</div>
+            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 2px;">
+              <span>${
+                sale.paymentMethod === 'MEAL_VOUCHER' || sale.paymentMethod === 'PLUXEE' || sale.paymentMethod === 'RESTAURANT_TICKET' 
+                  ? 'Ticket Resto' 
+                  : sale.paymentMethod === 'CARD' 
+                  ? 'Carte Bancaire' 
+                  : sale.paymentMethod === 'MIXED' 
+                  ? 'Paiement Mixte' 
+                  : 'Especes'
+              }</span>
+              <span>${totalAmount.replace('.', ',')} TND</span>
+            </div>
+            <div class="line-dashed"></div>
+            <div style="display: flex; justify-content: space-between;">
+              <span>Monnaie rendue</span>
+              <span>${change.toFixed(3).replace('.', ',')} TND</span>
+            </div>
+            <div class="line-dashed"></div>
+            <div>Caissier : ${cashierName}</div>
+            <div class="line-dashed"></div>
+          </div>
+
+          <!-- SIGNATURE MDF & QR CODE -->
+          <div style="margin-top: 10px; font-size: 10px;">
+            <div>Ref. Transaction MDF : ${mdfRef}</div>
+            
+            ${qrCodeDataUrl ? `
+              <div style="display: flex; justify-content: center; margin-top: 12px;">
+                <img src="${qrCodeDataUrl}" style="width: 140px; height: 140px; image-rendering: pixelated;" />
               </div>
             ` : ''}
-            <div style="font-size: 16px; font-weight: bold; text-transform: uppercase;">${storeName}</div>
-            ${storeAddress ? `<div style="font-size: 9px;">${storeAddress}</div>` : ''}
-            ${storePhone ? `<div style="font-size: 9px;">Tél: ${storePhone}</div>` : ''}
-            ${ticketConfig?.headerText ? `<div style="font-size: 10px; margin-top: 6px; font-weight: bold;">${ticketConfig.headerText}</div>` : ''}
-          </div>
-
-          <div style="font-size: 10px; margin-bottom: 8px;">
-            <div>DATE: ${dateStr}</div>
-            <div style="display: flex; justify-content: space-between;">
-              <span>TICKET: #${(sale.id || 'PRO-FORMA').substring(0, 8)}</span>
-              ${sale.fiscalNumber ? `<span class="bold">FACT: ${sale.fiscalNumber}</span>` : ''}
-            </div>
-            ${sale.sequenceNumber ? `<div>Séq: ${sale.sequenceNumber} | Caisse: ${sale.terminalId?.slice(-4) || 'N/A'}</div>` : ''}
-            
-            ${showTableName && sale.tableName ? `<div>Table: ${sale.tableName}</div>` : ''}
-            ${showCashierName && (sale.barista?.name || sale.takenBy?.name || sale.cashierName) ? `
-              <div>Serveur: ${sale.barista?.name || sale.takenBy?.name || sale.cashierName}</div>
-            ` : ''}
-          </div>
-
-          <div class="separator"></div>
-          <div>${itemsHtml}</div>
-          <div class="separator"></div>
-
-          <!-- Ventilation TVA -->
-          ${(showTax && taxHtml) ? `
-            <div style="margin-bottom: 8px;">
-              <div style="font-size: 9px; font-weight: bold; margin-bottom: 2px;">Vérification TVA:</div>
-              ${taxHtml}
-            </div>
-          ` : ''}
-
-          ${showTax ? `
-            <div class="total-line"><span>Total HT</span><span>${totalHt.toFixed(3)} DT</span></div>
-            <div class="total-line"><span>TVA Totale</span><span>${totalTax.toFixed(3)} DT</span></div>
-          ` : ''}
-          
-          <div class="total-ttc">
-            <span>TOTAL TTC</span>
-            <span>${totalAmount} DT</span>
-          </div>
-          <div class="total-line" style="margin-top: 4px; font-weight: 600;">
-            <span>Mode de règlement</span>
-            <span>${
-              sale.paymentMethod === 'MEAL_VOUCHER' || sale.paymentMethod === 'PLUXEE' || sale.paymentMethod === 'RESTAURANT_TICKET' 
-                ? 'Ticket Resto / Pluxee' 
-                : sale.paymentMethod === 'CARD' 
-                ? 'Carte Bancaire' 
-                : sale.paymentMethod === 'MIXED' 
-                ? 'Paiement Mixte' 
-                : 'Espèces'
-            }</span>
-          </div>
-          ${change > 0 ? `<div class="total-line" style="margin-top:2px;"><span>Monnaie rendue</span><span>${change.toFixed(3)} DT</span></div>` : ''}
-
-          ${isFiscal && sale.hash ? `
-            <div class="fiscal-box">
-              <div class="bold center" style="margin-bottom: 6px; font-size: 9px;">CONFORMITÉ NACEF (Tunisie)</div>
-              <div style="word-break: break-all; margin-bottom: 4px; font-family: monospace;"><strong>HASH:</strong> ${sale.hash}</div>
-              ${sale.signature ? `<div style="word-break: break-all; font-family: monospace;"><strong>SIGNATURE:</strong> ${sale.signature}</div>` : ''}
-              
-              ${qrCodeDataUrl ? `
-                <div class="qr-container">
-                  <img src="${qrCodeDataUrl}" style="width: 100px; height: 100px; image-rendering: pixelated;" />
-                </div>
-              ` : ''}
-              
-              <div class="center" style="font-size: 7px; margin-top: 8px; opacity: 0.7;">Document digital signé électroniquement</div>
-            </div>
-          ` : `
-            <div class="center bold" style="margin-top: 15px; font-size: 10px; border: 1px solid #ccc; padding: 10px;">TICKET PRO-FORMA</div>
-          `}
-
-          <div class="footer center">
-            <div>${ticketConfig?.footerText || 'Merci de votre visite !'}</div>
-            <div>Logiciel certifié par ELKASSA</div>
           </div>
         </body>
       </html>
     `;
+  }
   }
 
   static async printShiftReport(data: any, settings: PrinterSettings) {

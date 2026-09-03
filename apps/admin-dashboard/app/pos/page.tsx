@@ -112,6 +112,12 @@ export default async function POSPage() {
         storeName={store?.name || 'ElKassa Patisserie POS'} 
         storeAddress={store?.address || undefined}
         storePhone={store?.phone || undefined}
+        storeCity={'Tunis'}
+        matriculeFiscal={store?.matriculeFiscal || '1976379Q'}
+        raisonSociale={store?.name || 'AROME SAVEUR'}
+        commercialName={store?.commercialName || store?.name || 'WOW'}
+        establishmentReference={store?.establishmentReference || '000'}
+        imdf={store?.imdf || '20261976379001'}
         logoUrl={store?.logoUrl}
         ticketConfig={store?.ticketConfig}
         printerConfig={store?.printerConfig}

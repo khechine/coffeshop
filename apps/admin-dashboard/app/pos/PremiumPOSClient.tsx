@@ -206,6 +206,12 @@ export default function PremiumPOSClient({
   storeName,
   storeAddress,
   storePhone,
+  storeCity,
+  matriculeFiscal,
+  raisonSociale,
+  commercialName,
+  establishmentReference,
+  imdf,
   logoUrl,
   ticketConfig,
   printerConfig,
@@ -225,6 +231,12 @@ export default function PremiumPOSClient({
   storeName: string;
   storeAddress?: string;
   storePhone?: string;
+  storeCity?: string;
+  matriculeFiscal?: string;
+  raisonSociale?: string;
+  commercialName?: string;
+  establishmentReference?: string;
+  imdf?: string;
   logoUrl?: string | null;
   ticketConfig?: any;
   printerConfig?: any;
@@ -845,6 +857,12 @@ export default function PremiumPOSClient({
         storeName,
         storeAddress,
         storePhone,
+        storeCity,
+        matriculeFiscal,
+        raisonSociale,
+        commercialName,
+        establishmentReference,
+        imdf,
         logoUrl,
         ticketConfig,
         sale,
