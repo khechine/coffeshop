@@ -131,8 +131,18 @@ export default function FloorPlanEditor({ initialTables, initialZones }: { initi
     setIsSaving(true);
     try {
       const currentZoneTables = tables.filter(t => t.zoneId === activeZoneId);
+      // Find highest numerical suffix among existing tables to prevent duplicate labels like T-1, T-1
+      let maxNum = 0;
+      tables.forEach(t => {
+        const match = (t.label || '').match(/\d+/);
+        if (match) {
+          const num = parseInt(match[0], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      });
+      const nextNum = maxNum > 0 ? maxNum + 1 : tables.length + 1;
       const newTable = {
-        label: `T-${tables.length + 1}`,
+        label: `T-${nextNum}`,
         capacity: 2,
         zoneId: activeZoneId,
         posX: 50 + ((currentZoneTables.length * 30) % 320),

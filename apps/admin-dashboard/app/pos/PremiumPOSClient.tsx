@@ -52,6 +52,7 @@ function TablesZoneView({
   unpaidOrders = [],
   onSelectTable,
   onVenteDirecte,
+  onCancelOrder,
 }: {
   initialTables: any[];
   initialZones: any[];
@@ -59,6 +60,7 @@ function TablesZoneView({
   unpaidOrders?: any[];
   onSelectTable: (t: any, activeKitchenOrder?: any) => void;
   onVenteDirecte: () => void;
+  onCancelOrder?: (orderId: string, tableName?: string) => void;
 }) {
   const [activeZoneId, setActiveZoneId] = React.useState<string | 'ALL'>('ALL');
 
@@ -179,7 +181,7 @@ function TablesZoneView({
                     : 'var(--pos-border)',
                 borderWidth: hasOrder ? 2 : 1,
                 justifyContent: 'center',
-                gap: 10,
+                gap: 8,
                 cursor: 'pointer',
                 position: 'relative',
                 boxShadow: hasKitchenOrder 
@@ -222,25 +224,43 @@ function TablesZoneView({
               )}
 
               <div style={{
-                width: 64, height: 64, borderRadius: '50%',
+                width: 58, height: 58, borderRadius: '50%',
                 background: hasKitchenOrder ? '#F97316' : hasDraftCart ? 'var(--pos-primary)' : 'var(--pos-border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all 0.3s'
               }}>
-                <Users size={30} color={hasOrder ? '#fff' : 'var(--pos-text-muted)'} />
+                <Users size={28} color={hasOrder ? '#fff' : 'var(--pos-text-muted)'} />
               </div>
 
-              <div style={{ color: 'var(--pos-text-main)', fontWeight: 900, fontSize: 20 }}>{t.label}</div>
+              <div style={{ color: 'var(--pos-text-main)', fontWeight: 900, fontSize: 18 }}>{t.label}</div>
 
-              <div style={{ fontSize: 12, fontWeight: 800, color: hasKitchenOrder ? '#C2410C' : hasDraftCart ? 'var(--pos-primary)' : 'var(--pos-text-muted)' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: hasKitchenOrder ? '#C2410C' : hasDraftCart ? 'var(--pos-primary)' : 'var(--pos-text-muted)' }}>
                 {hasKitchenOrder ? (
                   `🍽️ Cuisine: ${activeKitchenOrder.preparationStatus === 'READY' ? 'Prêt' : activeKitchenOrder.preparationStatus === 'PREPARING' ? 'En prép.' : 'En attente'} (${itemCount} art.)`
                 ) : hasDraftCart ? (
-                  `🛒 Panier en cours (${itemCount} art.)`
+                  `🛒 Panier (${itemCount} art.)`
                 ) : (
                   `🟢 Libre (${t.capacity || 4} pers.)`
                 )}
               </div>
+
+              {hasKitchenOrder && onCancelOrder && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCancelOrder(activeKitchenOrder.id, t.label);
+                  }}
+                  title="Annuler commande cuisine"
+                  style={{
+                    position: 'absolute', bottom: 8, right: 8,
+                    background: '#FEF2F2', color: '#EF4444', border: '1px solid #FCA5A5',
+                    borderRadius: 8, padding: '3px 8px', fontSize: 10, fontWeight: 900,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3
+                  }}
+                >
+                  <Trash2 size={11} /> Annuler
+                </button>
+              )}
             </div>
           );
         })}
@@ -424,7 +444,7 @@ export default function PremiumPOSClient({
   const [activeSession, setActiveSession] = useState<any>(null);
   const [showOpeningModal, setShowOpeningModal] = useState(false);
   const [showClosingModal, setShowClosingModal] = useState(false);
-  const [closingTab, setClosingTab] = useState<'COUNT' | 'SALES'>('COUNT');
+  const [closingTab, setClosingTab] = useState<'COUNT' | 'SALES' | 'UNPAID'>('COUNT');
   const [closingSalesFilter, setClosingSalesFilter] = useState<'ALL' | 'CASH' | 'CARD' | 'MEAL_VOUCHER'>('ALL');
   const [closingSalesSearch, setClosingSalesSearch] = useState('');
   const [isRefreshingSession, setIsRefreshingSession] = useState(false);
@@ -1632,6 +1652,19 @@ export default function PremiumPOSClient({
           <button className={`pos-top-tab-btn tab-orange ${view === 'TABLES' ? 'active' : ''}`} onClick={() => setView('TABLES')}>
             <LayoutGrid size={15} /> <span>TABLES ({initialTables.length})</span>
           </button>
+          {unpaidOrders.length > 0 && (
+            <button
+              className="pos-top-tab-btn tab-orange"
+              style={{ background: '#F97316', color: '#fff', fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              onClick={() => {
+                setClosingTab('UNPAID');
+                setShowClosingModal(true);
+              }}
+              title="Voir les commandes cuisine non encaissées"
+            >
+              <Clock size={15} /> <span>⏳ EN ATTENTE ({unpaidOrders.length})</span>
+            </button>
+          )}
           <button className={`pos-top-tab-btn tab-blue ${view === 'DASHBOARD' ? 'active' : ''}`} onClick={() => setView('DASHBOARD')}>
             <LayoutDashboard size={15} /> <span>TABLEAU DE BORD</span>
           </button>
@@ -1651,7 +1684,7 @@ export default function PremiumPOSClient({
             <span>🎓 FORMATION</span>
           </button>
           <button className="pos-top-tab-btn tab-dark" onClick={handleOpenClosingModal}>
-            <LogOut size={15} /> <span>CLÔTURER</span>
+            <LogOut size={15} /> <span>CLÔTURER / CAISSE</span>
           </button>
           <div style={{ flex: 1 }} />
           {isOffline && (
@@ -2146,6 +2179,7 @@ export default function PremiumPOSClient({
               setView('POS');
             }}
             onVenteDirecte={() => { setSelectedTable({ id: 'DIRECT', label: 'Vente Directe' }); setView('POS'); }}
+            onCancelOrder={handleCancelOrder}
           />
         ) : view === 'POS' ? (
         <>
@@ -2800,6 +2834,35 @@ export default function PremiumPOSClient({
         )}
 
         <div className="cart-totals" style={{ padding: '12px 16px' }}>
+           {(() => {
+             const activeKitchenOrderForTable = selectedTable ? (unpaidOrders || []).find((u: any) => 
+               u.tableName === selectedTable.label || 
+               u.tableName === selectedTable.name || 
+               u.tableId === selectedTable.id
+             ) : null;
+             if (!activeKitchenOrderForTable) return null;
+             return (
+               <div style={{ background: '#FFF7ED', border: '2px solid #F97316', borderRadius: 14, padding: '10px 12px', marginBottom: 10 }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                   <span style={{ fontWeight: 900, fontSize: 12, color: '#C2410C' }}>
+                     🍽️ Commande cuisine en attente
+                   </span>
+                   <span style={{ fontSize: 10, background: activeKitchenOrderForTable.preparationStatus === 'READY' ? '#10B981' : activeKitchenOrderForTable.preparationStatus === 'PREPARING' ? '#3B82F6' : '#F59E0B', color: '#fff', borderRadius: 6, padding: '2px 8px', fontWeight: 800 }}>
+                     {activeKitchenOrderForTable.preparationStatus === 'READY' ? '✅ Prêt' : activeKitchenOrderForTable.preparationStatus === 'PREPARING' ? '👨‍🍳 En prép.' : '⏳ En attente'}
+                   </span>
+                 </div>
+                 <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                   <button
+                     onClick={() => handleCancelOrder(activeKitchenOrderForTable.id, activeKitchenOrderForTable.tableName)}
+                     style={{ flex: 1, background: '#FEF2F2', color: '#EF4444', border: '1.5px solid #FCA5A5', borderRadius: 10, padding: '8px 10px', fontWeight: 900, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                   >
+                     🗑️ Annuler commande cuisine
+                   </button>
+                 </div>
+               </div>
+             );
+           })()}
+
            {selectedCustomer && (
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#EEF2FF', padding: '6px 12px', borderRadius: 10, marginBottom: 6, border: '1px solid var(--pos-primary)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

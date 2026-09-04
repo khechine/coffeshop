@@ -5614,9 +5614,30 @@ export async function createTableAction(data: {
 }) {
   const store = await getStore();
   if (!store) return null;
+
+  // Guarantee table label uniqueness within the store
+  let finalLabel = (data.label || 'T1').trim();
+  const existingTables = await (prisma as any).storeTable.findMany({
+    where: { storeId: store.id },
+    select: { label: true }
+  });
+  const existingLabels = new Set(existingTables.map((t: any) => (t.label || '').trim().toUpperCase()));
+
+  if (existingLabels.has(finalLabel.toUpperCase())) {
+    let counter = 1;
+    const base = finalLabel.replace(/[\s-]*\d+$/, '');
+    let candidate = `${base || 'T'}-${counter}`;
+    while (existingLabels.has(candidate.toUpperCase())) {
+      counter++;
+      candidate = `${base || 'T'}-${counter}`;
+    }
+    finalLabel = candidate;
+  }
+
   const created = await (prisma as any).storeTable.create({
     data: {
       ...data,
+      label: finalLabel,
       storeId: store.id
     }
   });
@@ -6219,15 +6240,20 @@ export async function seedDemoProductsAction(storeId: string) {
     }
   }
 
-  // Also create demo tables
+  // Also create demo tables (checking existing labels to avoid redundant generation)
+  const existingTablesList = await (prisma as any).storeTable.findMany({ where: { storeId }, select: { label: true } });
+  const existingLabelsSet = new Set(existingTablesList.map((t: any) => (t.label || '').trim().toUpperCase()));
   const demoTables = ['T1', 'T2', 'T3', 'T4', 'T5'];
-  await Promise.all(
-    demoTables.map(label =>
-      (prisma as any).storeTable.create({
-        data: { label, capacity: 4, storeId }
-      })
-    )
-  );
+  const tablesToCreate = demoTables.filter(label => !existingLabelsSet.has(label.toUpperCase()));
+  if (tablesToCreate.length > 0) {
+    await Promise.all(
+      tablesToCreate.map(label =>
+        (prisma as any).storeTable.create({
+          data: { label, capacity: 4, storeId }
+        })
+      )
+    );
+  }
 
   revalidatePath('/admin/products');
   revalidatePath('/admin/stock');
