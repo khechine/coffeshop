@@ -166,3 +166,24 @@ Tout ticket généré en conformité NACEF doit obligatoirement comporter :
 4. **Tableau de Ventilation des Taxes** (HT, TVA 7% / 19%, Timbre Fiscal 0,100 TND).
 5. **QR Code NACEF** encodé et scannable par la DGI.
 6. **Badge Spécifique** en cas de duplicata (`*** DUPLICATA - COPIE TICKET ***`) ou d'opération hors-ligne (`*** VENTE HORS LIGNE (OFFLINE) ***`).
+
+---
+
+## 7. Conformité aux Annexes A4 & A5 du CDC NACEF (Codification des Taxes)
+
+Conformément à la réglementation de la DGI (Notice NACEF Annexes A4 et A5) :
+
+### 📊 Annexe A4 : Taux de TVA applicables par Activité (Cafés, Pâtisserie, Restauration, Salons de Thé)
+- **Code Activité `4409` (Cafés 1ère Catégorie)** / **`4417` (Salons de Thé)** / **`2102` (Pâtisserie & Glace)** / **`4403` (Pizzerias, Crêperies, Sandwicheries)** :
+  - Famille `01` : Tous les produits de consommation sur place ➔ **TVA 7%**
+- **Code Activité `4410` (Cafés & Bars)** / **`4401` (Restaurants)** :
+  - Famille `01` / `02` : Produits de consommation sur place (hors alcool) ➔ **TVA 7%**
+  - Famille `10` : Produits alcooliques ➔ **TVA 19%**
+
+### 🏷️ Annexe A5 : Tableau Officiel de Codification des Taxes
+| Code Taxe NACEF | Libellé Officiel | Taux / Valeur | Application dans ElKassa POS |
+| :--- | :--- | :--- | :--- |
+| **`10`** | **TVA 7%** | **7.00%** | Consommation sur place (café, thé, pâtisserie, repas) |
+| **`11`** | **TVA 19%** | **19.00%** | Produits emportés / vente au détail / alcools |
+| **`20`** | **Droit de timbre sur franchises** | **0.100 DT** | Timbre fiscal obligatoire par ticket fiscalisé |
+
