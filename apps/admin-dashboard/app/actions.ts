@@ -255,28 +255,35 @@ export async function installDataPackAction(industry: string) {
     }
   }
 
-  // 2. Installe les matières premières (StockItems)
+  // 2. Installe les matières premières & emballages (StockItems)
+  const stockItemMap: Record<string, string> = {};
   const existingStockItems = await prisma.stockItem.findMany({
     where: { storeId: store.id },
   });
-  const existingStockNames = new Set(existingStockItems.map((s) => s.name.toLowerCase().trim()));
+
+  for (const s of existingStockItems) {
+    stockItemMap[s.name.toLowerCase().trim()] = s.id;
+  }
 
   for (const item of pack.stockItems) {
-    if (!existingStockNames.has(item.name.toLowerCase().trim())) {
-      await prisma.stockItem.create({
+    const key = item.name.toLowerCase().trim();
+    if (!stockItemMap[key]) {
+      const created = await prisma.stockItem.create({
         data: {
           name: item.name,
           unitId: item.unit,
           cost: item.cost,
           quantity: item.quantity,
           minThreshold: item.minThreshold,
+          categoryType: item.categoryType || 'INGREDIENT',
           storeId: store.id,
         },
       });
+      stockItemMap[key] = created.id;
     }
   }
 
-  // 3. Installe les produits
+  // 3. Installe les produits et leurs nomenclatures (BOM)
   const existingProducts = await prisma.product.findMany({
     where: { storeId: store.id },
   });
@@ -286,6 +293,22 @@ export async function installDataPackAction(industry: string) {
     if (!existingProdNames.has(prod.name.toLowerCase().trim())) {
       const catId = categoryMap[prod.category];
       if (catId) {
+        // Préparation de la recette s'il y en a une définie dans le pack
+        const recipeData = prod.recipe ? {
+          create: prod.recipe
+            .map((r) => {
+              const stockId = stockItemMap[r.stockItemName.toLowerCase().trim()];
+              if (!stockId) return null;
+              return {
+                stockItemId: stockId,
+                quantity: r.quantity,
+                consumeType: r.consumeType || 'BOTH',
+                isPackaging: r.isPackaging || false,
+              };
+            })
+            .filter(Boolean) as any[],
+        } : undefined;
+
         await prisma.product.create({
           data: {
             name: prod.name,
@@ -293,6 +316,7 @@ export async function installDataPackAction(industry: string) {
             taxRate: prod.taxRate,
             categoryId: catId,
             storeId: store.id,
+            recipe: recipeData,
           },
         });
       }
@@ -518,7 +542,7 @@ export async function toggleFiscalMode(enabled: boolean, pinCode?: string) {
 // ══════════════════════════════════════════════════════════════
 //  PRODUCTS
 // ══════════════════════════════════════════════════════════════
-export async function createProduct(data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; image?: string | null; recipe?: { stockItemId: string; quantity: number; consumeType?: string; isPackaging?: boolean }[] }) {
+export async function createProduct(data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; image?: string | null; recipe?: { stockItemId: string; quantity: number; consumeType?: string; isPackaging?: boolean; sizeVariant?: string }[] }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
 
@@ -539,7 +563,8 @@ export async function createProduct(data: { name: string; price: number; categor
           stockItemId: r.stockItemId,
           quantity: r.quantity,
           consumeType: r.consumeType || 'BOTH',
-          isPackaging: r.isPackaging || false
+          isPackaging: r.isPackaging || false,
+          sizeVariant: r.sizeVariant || null
         }))
       } : undefined
     }
@@ -548,7 +573,7 @@ export async function createProduct(data: { name: string; price: number; categor
 }
 
 
-export async function updateProduct(id: string, data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; image?: string | null; recipe?: { stockItemId: string; quantity: number; consumeType?: string; isPackaging?: boolean }[] }) {
+export async function updateProduct(id: string, data: { name: string; price: number; categoryId: string; unitId?: string; taxRate?: number; taxCode?: string; active?: boolean; canBeTakeaway?: boolean; image?: string | null; recipe?: { stockItemId: string; quantity: number; consumeType?: string; isPackaging?: boolean; sizeVariant?: string }[] }) {
   await prisma.recipeItem.deleteMany({ where: { productId: id } });
   await prisma.product.update({
     where: { id },
@@ -567,7 +592,8 @@ export async function updateProduct(id: string, data: { name: string; price: num
           stockItemId: r.stockItemId,
           quantity: r.quantity,
           consumeType: r.consumeType || 'BOTH',
-          isPackaging: r.isPackaging || false
+          isPackaging: r.isPackaging || false,
+          sizeVariant: r.sizeVariant || null
         }))
       } : undefined
     }
@@ -598,13 +624,14 @@ export async function deleteProduct(id: string) {
 // ══════════════════════════════════════════════════════════════
 //  STOCK ITEMS
 // ══════════════════════════════════════════════════════════════
-export async function createStockItem(data: { name: string; unitId?: string; quantity: number; minThreshold: number; cost: number; taxRate?: number; preferredVendorId?: string; preferredSupplierId?: string }) {
+export async function createStockItem(data: { name: string; unitId?: string; quantity: number; minThreshold: number; cost: number; taxRate?: number; categoryType?: string; preferredVendorId?: string; preferredSupplierId?: string }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
-  const { unitId, preferredVendorId, preferredSupplierId, taxRate, ...rest } = data;
+  const { unitId, preferredVendorId, preferredSupplierId, taxRate, categoryType, ...rest } = data;
   await prisma.stockItem.create({
     data: {
       ...rest,
+      categoryType: categoryType || 'INGREDIENT',
       taxRate: taxRate ?? 0.19,
       storeId: store.id,
       unitId: unitId || undefined,
@@ -615,11 +642,12 @@ export async function createStockItem(data: { name: string; unitId?: string; qua
   revalidatePath('/admin/stock');
 }
 
-export async function updateStockItem(id: string, data: { name: string; unitId?: string; quantity: number; minThreshold: number; cost: number; taxRate?: number; preferredVendorId?: string; preferredSupplierId?: string }) {
-  const { unitId, preferredVendorId, preferredSupplierId, taxRate, ...rest } = data;
+export async function updateStockItem(id: string, data: { name: string; unitId?: string; quantity: number; minThreshold: number; cost: number; taxRate?: number; categoryType?: string; preferredVendorId?: string; preferredSupplierId?: string }) {
+  const { unitId, preferredVendorId, preferredSupplierId, taxRate, categoryType, ...rest } = data;
   await prisma.stockItem.update({
     where: { id }, data: {
       ...rest,
+      categoryType: categoryType || 'INGREDIENT',
       taxRate: taxRate ?? 0.19,
       unitId: unitId || undefined,
       preferredVendorId: preferredVendorId || undefined,
@@ -1582,6 +1610,41 @@ export async function updateStoreLoyaltyRates(earnRate: number, redeemRate: numb
   });
 }
 
+export async function deductStockForSaleItems(
+  tx: any,
+  items: { productId: string; quantity: number; notes?: string; consumeType?: string }[],
+  saleConsumeType: string = 'DINE_IN'
+) {
+  for (const item of items) {
+    const recipes = await tx.recipeItem.findMany({
+      where: { productId: item.productId }
+    });
+
+    for (const recipe of recipes) {
+      const itemConsumeType = (item as any).consumeType || saleConsumeType || 'DINE_IN';
+      
+      let modeMatches = false;
+      if (recipe.consumeType === 'BOTH' || !recipe.consumeType) {
+        modeMatches = true;
+      } else if (recipe.consumeType === itemConsumeType) {
+        modeMatches = true;
+      } else if (recipe.isPackaging && itemConsumeType === 'TAKEAWAY') {
+        modeMatches = true;
+      }
+
+      if (!modeMatches) continue;
+
+      const totalToDeduct = Number(recipe.quantity) * Number(item.quantity);
+      await tx.stockItem.update({
+        where: { id: recipe.stockItemId },
+        data: {
+          quantity: { decrement: totalToDeduct }
+        }
+      });
+    }
+  }
+}
+
 export async function recordSale(data: {
   total: number;
   subtotal?: number;
@@ -1801,25 +1864,7 @@ export async function recordSale(data: {
 
       // Deduct stock based on recipes ONLY for real sales (NOT in training mode)
       if (!isTraining) {
-        for (const item of data.items) {
-          const recipes = await tx.recipeItem.findMany({
-            where: { productId: item.productId }
-          });
-
-          for (const recipe of recipes) {
-            const itemConsumeType = (item as any).consumeType || s.consumeType;
-            const modeMatches = recipe.consumeType === 'BOTH' || recipe.consumeType === itemConsumeType;
-            if (!modeMatches) continue;
-
-            const totalToDeduct = Number(recipe.quantity) * item.quantity;
-            await tx.stockItem.update({
-              where: { id: recipe.stockItemId },
-              data: {
-                quantity: { decrement: totalToDeduct }
-              }
-            });
-          }
-        }
+        await deductStockForSaleItems(tx, data.items, s.consumeType);
       }
 
       // 3. Loyalty integration
@@ -9164,18 +9209,9 @@ export async function payOrderAction(orderId: string, paymentData: {
     }
   });
 
-  // Deduct stock
-  for (const item of order.items) {
-    const recipes = await (prisma as any).recipeItem.findMany({
-      where: { productId: item.productId }
-    });
-    for (const recipe of recipes) {
-      const totalToDeduct = Number(recipe.quantity) * Number(item.quantity);
-      await (prisma as any).stockItem.update({
-        where: { id: recipe.stockItemId },
-        data: { quantity: { decrement: totalToDeduct } }
-      });
-    }
+  // Deduct stock using mode-aware helper
+  if (!paymentData.isTraining) {
+    await deductStockForSaleItems(prisma, order.items, order.consumeType || 'DINE_IN');
   }
 
   // Fiscal log

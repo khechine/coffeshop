@@ -450,10 +450,10 @@ export default function SetupWizard({ storeName, initialIndustry = 'COFFEE_SHOP'
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '32px' }}>
               {[
-                { title: 'Caisse Tactile (POS)', icon: Coffee, color: '#818CF8', desc: 'Saisie rapide des commandes, plan de salle interactif et impression de tickets' },
+                { title: 'Caisse Tactile (POS)', icon: Coffee, color: '#818CF8', desc: 'Saisie rapide des commandes sur place ou à emporter, plan de salle et impression tickets' },
                 { title: 'Écran Cuisine (KDS)', icon: Zap, color: '#F43F5E', desc: 'Gestion en temps réel des commandes envoyées en cuisine ou bar' },
-                { title: 'Gestion de Stock', icon: Layers, color: '#34D399', desc: 'Fiches techniques, alertes de niveau critique et inventaires automatisés' },
-                { title: 'Marketplace B2B', icon: Store, color: '#F59E0B', desc: 'Commandez vos matières premières directement auprès des fournisseurs' },
+                { title: 'Stock & Emballages (BOM)', icon: Layers, color: '#34D399', desc: 'Nomenclatures produits, déduction automatique des emballages à emporter (gobelets, couvercles) et alertes seuil bas' },
+                { title: 'Marketplace B2B', icon: Store, color: '#F59E0B', desc: 'Commandez vos matières premières et emballages directement auprès des fournisseurs' },
               ].map((feat) => {
                 const Icon = feat.icon;
                 return (

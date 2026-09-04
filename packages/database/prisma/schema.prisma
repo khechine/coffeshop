@@ -828,6 +828,7 @@ model RecipeItem {
   isPackaging Boolean @default(false)
   // BOTH = toujours décompté | DINE_IN = sur place only | TAKEAWAY = à emporter only
   consumeType String  @default("BOTH")
+  sizeVariant String? // Optionnel: "SMALL", "MEDIUM", "LARGE"
 }
 
 model Sale {
@@ -975,6 +976,7 @@ model StockItem {
   cost         Decimal @default(0)
   taxRate      Decimal @default(0.19)  // Taux TVA achat: 0, 0.07, 0.13, 0.19
   minThreshold Decimal @default(0)
+  categoryType String  @default("INGREDIENT") // "INGREDIENT" | "PACKAGING" | "CONSUMABLE"
   storeId      String
   store        Store   @relation(fields: [storeId], references: [id])
   

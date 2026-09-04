@@ -314,30 +314,34 @@ export default function ProductForm({ initialData, categories, stockItems, globa
                         {stockItems.map(s => <option key={s.id} value={s.id}>{s.name} ({s.unit})</option>)}
                       </select>
                     </div>
-                    <div style={{ flex: '1 1 120px' }}>
-                      <label style={{ fontSize: '10px', fontWeight: 900, color: '#94A3B8', marginBottom: '6px', display: 'block', textTransform: 'uppercase' }}>Quantité</label>
-                      <div style={{ position: 'relative' }}>
-                        <input 
-                          style={{ ...inputStyle, padding: '10px 40px 10px 14px', fontSize: '14px', border: '1.5px solid #CBD5E1', textAlign: 'right' }} 
-                          type="number" step="0.001" 
-                          value={item.quantity} 
-                          onChange={e => updateRecipeItem(idx, 'quantity', parseFloat(e.target.value))} 
-                          required 
-                        />
-                        <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: 800, color: '#94A3B8' }}>
-                          {stock?.unit || ''}
-                        </span>
-                      </div>
+                    <div style={{ flex: '1 1 140px' }}>
+                      <label style={{ fontSize: '10px', fontWeight: 900, color: '#94A3B8', marginBottom: '6px', display: 'block', textTransform: 'uppercase' }}>Mode de Service</label>
+                      <select
+                        style={{ ...inputStyle, padding: '10px 12px', fontSize: '13px', border: '1.5px solid #CBD5E1', background: '#FFF' }}
+                        value={item.consumeType || (item.isPackaging ? 'TAKEAWAY' : 'BOTH')}
+                        onChange={e => updateRecipeItem(idx, 'consumeType', e.target.value)}
+                      >
+                        <option value="BOTH">♾️ Toujours</option>
+                        <option value="TAKEAWAY">🥤 À emporter uniquement</option>
+                        <option value="DINE_IN">🍽️ Sur place uniquement</option>
+                      </select>
                     </div>
+
                     <div style={{ display: 'flex', alignItems: 'center', paddingTop: '20px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: item.isPackaging ? '#EEF2FF' : '#F1F5F9', padding: '10px', borderRadius: '12px', border: item.isPackaging ? '1.5px solid #6366F1' : '1.5px solid #E2E8F0' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: item.isPackaging ? '#EEF2FF' : '#F1F5F9', padding: '10px 12px', borderRadius: '12px', border: item.isPackaging ? '1.5px solid #6366F1' : '1.5px solid #E2E8F0' }}>
                         <input 
                           type="checkbox" 
                           checked={item.isPackaging} 
-                          onChange={e => updateRecipeItem(idx, 'isPackaging', e.target.checked)} 
+                          onChange={e => {
+                            const isPack = e.target.checked;
+                            updateRecipeItem(idx, 'isPackaging', isPack);
+                            if (isPack && item.consumeType === 'BOTH') {
+                              updateRecipeItem(idx, 'consumeType', 'TAKEAWAY');
+                            }
+                          }} 
                           style={{ width: '16px', height: '16px', accentColor: '#6366F1' }} 
                         />
-                        <span style={{ fontSize: '13px', fontWeight: 800, color: item.isPackaging ? '#4F46E5' : '#64748B' }}>Emballage</span>
+                        <span style={{ fontSize: '12px', fontWeight: 800, color: item.isPackaging ? '#4F46E5' : '#64748B' }}>Emballage</span>
                       </label>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', paddingTop: '20px' }}>

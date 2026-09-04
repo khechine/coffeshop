@@ -51,10 +51,11 @@ export default function StockClient({
   const [isPending, startTransition] = useTransition();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
-  const [form, setForm] = useState({ name: '', unitId: '', quantity: '', minThreshold: '', cost: '', taxRate: '0.19', preferredVendorId: '', preferredSupplierId: '' });
+  const [form, setForm] = useState({ name: '', unitId: '', quantity: '', minThreshold: '', cost: '', taxRate: '0.19', categoryType: 'INGREDIENT', preferredVendorId: '', preferredSupplierId: '' });
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [adjustTarget, setAdjustTarget] = useState<any | null>(null);
   const [adjustDelta, setAdjustDelta] = useState('');
+  const [filterCategory, setFilterCategory] = useState<'ALL' | 'INGREDIENT' | 'PACKAGING'>('ALL');
 
   // AI Scanner & Manual Invoice States
   const [scanModalOpen, setScanModalOpen] = useState(false);
@@ -66,7 +67,7 @@ export default function StockClient({
 
   const openCreate = () => { 
     setEditing(null); 
-    setForm({ name: '', unitId: '', quantity: '0', minThreshold: '0', cost: '0', taxRate: '0.19', preferredVendorId: '', preferredSupplierId: '' }); 
+    setForm({ name: '', unitId: '', quantity: '0', minThreshold: '0', cost: '0', taxRate: '0.19', categoryType: 'INGREDIENT', preferredVendorId: '', preferredSupplierId: '' }); 
     setModalOpen(true); 
   };
 
@@ -79,6 +80,7 @@ export default function StockClient({
       minThreshold: String(Number(item.minThreshold)),
       cost: String(Number(item.cost || 0)),
       taxRate: String(Number(item.taxRate ?? 0.19)),
+      categoryType: item.categoryType || 'INGREDIENT',
       preferredVendorId: item.preferredVendorId || '',
       preferredSupplierId: item.preferredSupplierId || ''
     });
@@ -95,6 +97,7 @@ export default function StockClient({
         minThreshold: parseFloat(form.minThreshold),
         cost: parseFloat(form.cost),
         taxRate: parseFloat(form.taxRate),
+        categoryType: form.categoryType,
         preferredVendorId: form.preferredVendorId || undefined,
         preferredSupplierId: form.preferredSupplierId || undefined
       };
