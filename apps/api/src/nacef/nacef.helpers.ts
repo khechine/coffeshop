@@ -55,9 +55,8 @@ export function mapOperationType(isVoid: boolean, isDuplicate?: boolean, isProfo
 export function taxRateToCode(taxRate: number, existingCode?: string): string {
   if (existingCode) return existingCode;
   if (taxRate === 0) return 'EXONERE';
-  if (taxRate <= 0.07) return 'TVA7';
-  if (taxRate <= 0.13) return 'TVA13';
-  if (taxRate <= 0.19) return 'TVA19';
+  if (taxRate <= 0.07) return '10'; // Code 10 NACEF = TVA 7%
+  if (taxRate <= 0.19) return '11'; // Code 11 NACEF = TVA 19%
   return `TVA${Math.round(taxRate * 100)}`;
 }
 

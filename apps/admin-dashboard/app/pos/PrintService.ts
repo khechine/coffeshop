@@ -115,12 +115,15 @@ export class PrintService {
 
       totalTaxAmount += lineTax;
 
-      // Assign Tax Code: 7% -> Code 10 (Fam 01), 13% -> Code 11 (Fam 02), 19% -> Code 12 (Fam 03)
-      let taxCode = '12';
+      // Assign Tax Code per NACEF Annex A5:
+      // Code 10 -> TVA 7% (Fam 01: Conso sur place cafés/pâtisserie/resto)
+      // Code 11 -> TVA 19% (Fam 01/02/10)
+      // Code 20 -> Timbre fiscal 0.100 DT
+      let taxCode = '11';
       let famCode = '01';
       if (Math.abs(taxRate - 0.07) < 0.01) { taxCode = '10'; famCode = '01'; }
+      else if (Math.abs(taxRate - 0.19) < 0.01) { taxCode = '11'; famCode = '01'; }
       else if (Math.abs(taxRate - 0.13) < 0.01) { taxCode = '11'; famCode = '02'; }
-      else if (Math.abs(taxRate - 0.19) < 0.01) { taxCode = '12'; famCode = '03'; }
       
       const key = `${famCode}_${taxCode}`;
       if (!taxGroups[key]) {
