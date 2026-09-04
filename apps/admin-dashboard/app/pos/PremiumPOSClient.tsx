@@ -49,13 +49,15 @@ function TablesZoneView({
   initialTables,
   initialZones,
   tableOrders,
+  unpaidOrders = [],
   onSelectTable,
   onVenteDirecte,
 }: {
   initialTables: any[];
   initialZones: any[];
   tableOrders: Record<string, any[]>;
-  onSelectTable: (t: any) => void;
+  unpaidOrders?: any[];
+  onSelectTable: (t: any, activeKitchenOrder?: any) => void;
   onVenteDirecte: () => void;
 }) {
   const [activeZoneId, setActiveZoneId] = React.useState<string | 'ALL'>('ALL');
@@ -71,7 +73,7 @@ function TablesZoneView({
       <div className="tables-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 20 }}>
         <div>
           <h1 style={{ color: 'var(--pos-text-main)', fontSize: 32, fontWeight: 900, margin: 0 }}>Plan de Salle</h1>
-          <p style={{ color: 'var(--pos-text-muted)', margin: 0 }}>Sélectionnez une table pour commencer le service</p>
+          <p style={{ color: 'var(--pos-text-muted)', margin: 0 }}>Sélectionnez une table pour commencer le service ou encaisser une commande</p>
         </div>
         <button
           className="btn-premium btn-premium-primary vente-directe-btn"
@@ -130,11 +132,32 @@ function TablesZoneView({
       )}
 
       {/* Tables Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 24 }}>
         {tablesInView.map((t: any) => {
+          const activeKitchenOrder = (unpaidOrders || []).find((u: any) => 
+            u.tableName === t.label || 
+            u.tableName === t.name || 
+            u.tableName === `Table ${t.number || t.name}` ||
+            u.tableId === t.id
+          );
+
           const tableCart = tableOrders[t.id] || [];
-          const hasOrder = tableCart.length > 0;
-          const tableTotal = tableCart.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
+          const hasDraftCart = tableCart.length > 0;
+          const hasKitchenOrder = !!activeKitchenOrder;
+          const hasOrder = hasDraftCart || hasKitchenOrder;
+
+          const orderTotal = hasDraftCart 
+            ? tableCart.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0)
+            : hasKitchenOrder 
+              ? Number(activeKitchenOrder.total) 
+              : 0;
+
+          const itemCount = hasDraftCart
+            ? tableCart.reduce((acc: number, item: any) => acc + item.quantity, 0)
+            : hasKitchenOrder
+              ? (activeKitchenOrder.items || []).reduce((acc: number, item: any) => acc + (item.quantity || 1), 0)
+              : 0;
+
           const zoneName = initialZones.find((z: any) => z.id === t.zoneId)?.name;
 
           return (
@@ -142,34 +165,54 @@ function TablesZoneView({
               key={t.id}
               className={`customer-selector ${hasOrder ? 'has-active-order' : ''}`}
               style={{
-                height: 180,
+                height: 190,
                 flexDirection: 'column',
-                background: hasOrder ? 'var(--pos-accent)' : 'var(--pos-input-bg)',
-                borderColor: hasOrder ? 'var(--pos-primary)' : 'var(--pos-border)',
+                background: hasKitchenOrder 
+                  ? '#FFF7ED' 
+                  : hasDraftCart 
+                    ? 'var(--pos-accent)' 
+                    : 'var(--pos-input-bg)',
+                borderColor: hasKitchenOrder 
+                  ? '#F97316' 
+                  : hasDraftCart 
+                    ? 'var(--pos-primary)' 
+                    : 'var(--pos-border)',
                 borderWidth: hasOrder ? 2 : 1,
                 justifyContent: 'center',
-                gap: 12,
+                gap: 10,
                 cursor: 'pointer',
                 position: 'relative',
-                boxShadow: hasOrder ? '0 10px 25px -5px rgba(99, 102, 241, 0.4)' : 'none'
+                boxShadow: hasKitchenOrder 
+                  ? '0 10px 25px -5px rgba(249, 115, 22, 0.4)' 
+                  : hasDraftCart 
+                    ? '0 10px 25px -5px rgba(99, 102, 241, 0.4)' 
+                    : 'none',
+                transition: 'all 0.2s ease'
               }}
-              onClick={() => onSelectTable(t)}
+              onClick={() => onSelectTable(t, activeKitchenOrder)}
             >
               {hasOrder && (
                 <div style={{
-                  position: 'absolute', top: 12, right: 12,
-                  background: 'var(--pos-primary)', color: '#fff',
+                  position: 'absolute', top: 10, right: 10,
+                  background: hasKitchenOrder ? '#F97316' : 'var(--pos-primary)',
+                  color: '#fff',
                   padding: '4px 10px', borderRadius: 10,
                   fontSize: 12, fontWeight: 900,
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+                  display: 'flex', alignItems: 'center', gap: 4
                 }}>
-                  {tableTotal.toFixed(3)} DT
+                  {hasKitchenOrder && (
+                    <span>
+                      {activeKitchenOrder.preparationStatus === 'READY' ? '✅' : activeKitchenOrder.preparationStatus === 'PREPARING' ? '👨‍🍳' : '⏳'}
+                    </span>
+                  )}
+                  <span>{orderTotal.toFixed(3)} DT</span>
                 </div>
               )}
 
               {zoneName && activeZoneId === 'ALL' && (
                 <div style={{
-                  position: 'absolute', top: 12, left: 12,
+                  position: 'absolute', top: 10, left: 10,
                   background: 'var(--pos-border)', color: 'var(--pos-text-muted)',
                   padding: '3px 8px', borderRadius: 8,
                   fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1
@@ -179,16 +222,24 @@ function TablesZoneView({
               )}
 
               <div style={{
-                width: 70, height: 70, borderRadius: '50%',
-                background: hasOrder ? 'var(--pos-primary)' : 'var(--pos-border)',
+                width: 64, height: 64, borderRadius: '50%',
+                background: hasKitchenOrder ? '#F97316' : hasDraftCart ? 'var(--pos-primary)' : 'var(--pos-border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all 0.3s'
               }}>
-                <Users size={32} color={hasOrder ? '#fff' : 'var(--pos-text-muted)'} />
+                <Users size={30} color={hasOrder ? '#fff' : 'var(--pos-text-muted)'} />
               </div>
-              <div style={{ color: 'var(--pos-text-main)', fontWeight: 900, fontSize: 22 }}>{t.label}</div>
-              <div style={{ color: 'var(--pos-text-muted)', fontSize: 13, fontWeight: 700 }}>
-                {hasOrder ? `${tableCart.length} articles` : `${t.capacity} pers.`}
+
+              <div style={{ color: 'var(--pos-text-main)', fontWeight: 900, fontSize: 20 }}>{t.label}</div>
+
+              <div style={{ fontSize: 12, fontWeight: 800, color: hasKitchenOrder ? '#C2410C' : hasDraftCart ? 'var(--pos-primary)' : 'var(--pos-text-muted)' }}>
+                {hasKitchenOrder ? (
+                  `🍽️ Cuisine: ${activeKitchenOrder.preparationStatus === 'READY' ? 'Prêt' : activeKitchenOrder.preparationStatus === 'PREPARING' ? 'En prép.' : 'En attente'} (${itemCount} art.)`
+                ) : hasDraftCart ? (
+                  `🛒 Panier en cours (${itemCount} art.)`
+                ) : (
+                  `🟢 Libre (${t.capacity || 4} pers.)`
+                )}
               </div>
             </div>
           );
@@ -2062,7 +2113,22 @@ export default function PremiumPOSClient({
             initialTables={initialTables}
             initialZones={initialZones}
             tableOrders={tableOrders}
-            onSelectTable={(t) => { setSelectedTable(t); setView('POS'); }}
+            unpaidOrders={unpaidOrders}
+            onSelectTable={(t, activeKitchenOrder) => {
+              setSelectedTable(t);
+              if (activeKitchenOrder && (tableOrders[t.id] || []).length === 0) {
+                const cartItems = (activeKitchenOrder.items || []).map((it: any) => ({
+                  id: it.id,
+                  name: it.name || it.product?.name || 'Article',
+                  price: Number(it.price),
+                  quantity: Number(it.quantity),
+                  category: it.category || 'Café',
+                  notes: it.notes
+                }));
+                setTableOrders(prev => ({ ...prev, [t.id]: cartItems }));
+              }
+              setView('POS');
+            }}
             onVenteDirecte={() => { setSelectedTable({ id: 'DIRECT', label: 'Vente Directe' }); setView('POS'); }}
           />
         ) : view === 'POS' ? (
