@@ -1612,10 +1612,11 @@ export async function updateStoreLoyaltyRates(earnRate: number, redeemRate: numb
 
 export async function deductStockForSaleItems(
   tx: any,
-  items: { productId: string; quantity: number; notes?: string; consumeType?: string }[],
+  items: { productId: string; quantity: number; notes?: string; options?: string[]; consumeType?: string }[],
   saleConsumeType: string = 'DINE_IN'
 ) {
   for (const item of items) {
+    // 1. Deduct standard recipe items
     const recipes = await tx.recipeItem.findMany({
       where: { productId: item.productId }
     });
@@ -1641,6 +1642,42 @@ export async function deductStockForSaleItems(
           quantity: { decrement: totalToDeduct }
         }
       });
+    }
+
+    // 2. Deduct option stock items if selected in options or notes (e.g. Lait d'Avoine, Sirop Vanille, Extra Fromage)
+    const optionsText = [
+      ...((item as any).options || []),
+      item.notes || ''
+    ].join(' ').toLowerCase();
+
+    if (optionsText.trim()) {
+      const OPTION_STOCK_MAPPINGS: { keyword: string; stockName: string; quantity: number }[] = [
+        { keyword: "avoine", stockName: "lait d'avoine", quantity: 0.1 },
+        { keyword: "amande", stockName: "lait d'amande", quantity: 0.1 },
+        { keyword: "vanille", stockName: "sirop de vanille", quantity: 0.02 },
+        { keyword: "caramel", stockName: "sirop de caramel", quantity: 0.02 },
+        { keyword: "noisette", stockName: "sirop de noisette", quantity: 0.02 },
+        { keyword: "chantilly", stockName: "crème fraîche", quantity: 0.03 },
+        { keyword: "fromage", stockName: "fromage", quantity: 0.05 },
+        { keyword: "harissa", stockName: "harissa", quantity: 0.02 },
+      ];
+
+      for (const optMap of OPTION_STOCK_MAPPINGS) {
+        if (optionsText.includes(optMap.keyword)) {
+          const matchedStock = await tx.stockItem.findFirst({
+            where: {
+              name: { contains: optMap.stockName, mode: 'insensitive' }
+            }
+          });
+          if (matchedStock) {
+            const deductQty = optMap.quantity * Number(item.quantity);
+            await tx.stockItem.update({
+              where: { id: matchedStock.id },
+              data: { quantity: { decrement: deductQty } }
+            });
+          }
+        }
+      }
     }
   }
 }
