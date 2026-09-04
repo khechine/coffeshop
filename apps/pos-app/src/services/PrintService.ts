@@ -28,6 +28,7 @@ export class PrintService {
     const { storeName, storeAddress, storePhone, sale, items } = data;
     const width = settings.paperSize === '80mm' ? '80mm' : '58mm';
     const isStarter = planName?.toUpperCase() === 'STARTER';
+    const isDuplicate = !!(sale.isDuplicate || sale.nacefOperationType === 'DUPLICATA' || sale.nacefOperationType === 'COPIE' || sale.reprint || sale.isReprint || sale.isCopy);
     
     const dateStr = new Date(sale.createdAt || sale.timestamp || new Date()).toLocaleString('fr-FR');
     const totalAmount = Number(sale.total || 0).toFixed(3);
@@ -65,6 +66,7 @@ export class PrintService {
         <body>
           <div class="header center">
             <h1 style="font-size: 18px; margin: 0; text-transform: uppercase;">${storeName}</h1>
+            ${isDuplicate ? '<div style="font-size: 12px; font-weight: bold; border: 1px dashed #000; padding: 2px; margin: 4px 0;">*** DUPLICATA - COPIE TICKET ***</div>' : ''}
             ${storeAddress ? `<p style="font-size: 10px; margin: 2px 0;">${storeAddress}</p>` : ''}
             ${storePhone ? `<p style="font-size: 10px; margin: 2px 0;">Tél: ${storePhone}</p>` : ''}
           </div>

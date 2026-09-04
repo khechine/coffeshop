@@ -33,7 +33,11 @@ export default function SalesClient({ initialSales, storeName, storeAddress, sto
         total: Number(sale.total),
         totalHt: Number(sale.totalHt),
         totalTax: Number(sale.totalTax),
-        change: Number(sale.change)
+        change: Number(sale.change),
+        isDuplicate: true,
+        nacefOperationType: 'DUPLICATA',
+        reprint: true,
+        isCopy: true
       },
       items: printItems
     }, { paperSize: '80mm' }, planName);

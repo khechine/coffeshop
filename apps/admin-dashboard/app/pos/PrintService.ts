@@ -83,7 +83,7 @@ export class PrintService {
 
     const width = settings.paperSize === '80mm' ? '80mm' : '58mm';
     const isFiscal = !!sale.isFiscal;
-    const isDuplicate = !!(sale.isDuplicate || sale.nacefOperationType === 'DUPLICATA' || sale.reprint);
+    const isDuplicate = !!(sale.isDuplicate || sale.nacefOperationType === 'DUPLICATA' || sale.nacefOperationType === 'COPIE' || sale.reprint || sale.isReprint || sale.isCopy);
 
     // ISO Date with timezone format
     const nowObj = sale.createdAt ? new Date(sale.createdAt) : new Date();
@@ -230,7 +230,7 @@ export class PrintService {
           <!-- HEADER -->
           <div class="center" style="font-size: 18px; font-weight: 900; margin-bottom: 4px; letter-spacing: 1px;">Ticket</div>
           ${isDuplicate ? `
-            <div class="center bold" style="font-size: 12px; border: 1px dashed #000; padding: 2px 6px; margin: 4px auto 8px auto; display: inline-block;">*** DUPLICATA ***</div>
+            <div class="center bold" style="font-size: 12px; border: 1px dashed #000; padding: 2px 6px; margin: 4px auto 8px auto; display: inline-block;">*** DUPLICATA - COPIE TICKET ***</div>
           ` : ''}
           
           <div style="font-size: 10px;">
