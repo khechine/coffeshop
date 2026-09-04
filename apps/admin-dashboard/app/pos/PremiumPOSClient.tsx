@@ -1135,7 +1135,7 @@ export default function PremiumPOSClient({
           nacefOperationType: 'VENTE - HORS LIGNE',
           totalHt: saleData.subtotal,
           totalTax: saleData.total - saleData.subtotal,
-          isFiscal: false,
+          isFiscal: true,
           cashierName: cashierName
         };
         setSessionSales(prev => [finalSaleObject, ...prev]);
@@ -1228,7 +1228,7 @@ export default function PremiumPOSClient({
         nacefOperationType: 'VENTE - HORS LIGNE',
         totalHt: saleData.subtotal,
         totalTax: saleData.total - saleData.subtotal,
-        isFiscal: false,
+        isFiscal: true,
         cashierName: cashierName
       };
       setSessionSales(prev => [finalSaleObject, ...prev]);

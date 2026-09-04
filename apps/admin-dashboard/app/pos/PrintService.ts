@@ -82,8 +82,9 @@ export class PrintService {
     } = data;
 
     const width = settings.paperSize === '80mm' ? '80mm' : '58mm';
-    const isFiscal = !!sale.isFiscal;
     const isDuplicate = !!(sale.isDuplicate || sale.nacefOperationType === 'DUPLICATA' || sale.nacefOperationType === 'COPIE' || sale.reprint || sale.isReprint || sale.isCopy);
+    const isOffline = !!(sale.isOffline || sale.offline || String(sale.id).startsWith('offline') || sale.nacefOperationType === 'VENTE_OFFLINE' || sale.nacefOperationType === 'VENTE - HORS LIGNE');
+    const isFiscal = sale.isFiscal !== false;
 
     // ISO Date with timezone format
     const nowObj = sale.createdAt ? new Date(sale.createdAt) : new Date();
@@ -231,6 +232,8 @@ export class PrintService {
           <div class="center" style="font-size: 18px; font-weight: 900; margin-bottom: 4px; letter-spacing: 1px;">Ticket</div>
           ${isDuplicate ? `
             <div class="center bold" style="font-size: 12px; border: 1px dashed #000; padding: 2px 6px; margin: 4px auto 8px auto; display: inline-block;">*** DUPLICATA - COPIE TICKET ***</div>
+          ` : isOffline ? `
+            <div class="center bold" style="font-size: 12px; border: 1px dashed #000; padding: 2px 6px; margin: 4px auto 8px auto; display: inline-block;">*** VENTE HORS LIGNE (OFFLINE) ***</div>
           ` : ''}
           
           <div style="font-size: 10px;">
@@ -260,7 +263,7 @@ export class PrintService {
             <div>Date : ${isoDateStr}</div>
             <div>ID transaction : ${sale.fiscalNumber || sale.sequenceNumber || (sale.id ? sale.id.slice(-10) : '2600000058')}</div>
             <div class="line-dashed"></div>
-            <div>Type transaction : ${sale.isVoid ? 'ANNULATION' : (isDuplicate ? 'DUPLICATA' : (sale.isOffline || String(sale.id).startsWith('offline') ? 'VENTE - HORS LIGNE' : (sale.nacefOperationType || 'VENTE - NORMALE')))}</div>
+            <div>Type transaction : ${sale.isVoid ? 'ANNULATION' : (isDuplicate ? 'DUPLICATA' : (isOffline ? 'VENTE - HORS LIGNE' : (sale.nacefOperationType || 'VENTE - NORMALE')))}</div>
             <div>Categorie client : ${sale.customerCategory || 'NP'}</div>
             <div>Avantage fiscal : ${sale.fiscalAdvantage || 'SA'}</div>
           </div>
