@@ -9004,6 +9004,7 @@ export async function sendOrderToKitchenAction(data: {
   customerId?: string;
   total: number;
   subtotal?: number;
+  consumeType?: string;
 }) {
   const store = await getStore();
   if (!store) throw new Error('Store not found');
@@ -9036,7 +9037,7 @@ export async function sendOrderToKitchenAction(data: {
       baristaId: data.baristaId,
       takenById: data.baristaId,
       customerId: data.customerId,
-      consumeType: 'DINE_IN',
+      consumeType: data.consumeType || 'DINE_IN',
       isVoid: false,
       isFiscal: false,
       nacefContext: 'SALE',

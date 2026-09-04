@@ -343,6 +343,7 @@ export default function PremiumPOSClient({
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [consumeType, setConsumeType] = useState<'DINE_IN' | 'TAKEAWAY'>('DINE_IN');
   const [customizingItem, setCustomizingItem] = useState<{ index: number; item: CartItem } | null>(null);
 
   // --- Theme Management ---
@@ -1001,6 +1002,7 @@ export default function PremiumPOSClient({
     setIsSendingToKitchen(true);
     try {
       await sendOrderToKitchenAction({
+        consumeType: consumeType,
         items: currentCart.map(i => ({
           productId: i.id,
           quantity: i.quantity,
@@ -1093,6 +1095,7 @@ export default function PremiumPOSClient({
       total,
       subtotal,
       discount: discountFromPoints,
+      consumeType: consumeType,
       items: currentCart.map(i => ({ 
         productId: i.id, 
         quantity: i.quantity, 
@@ -2595,6 +2598,54 @@ export default function PremiumPOSClient({
                 <button style={{ background: 'none', border: 'none', color: 'var(--pos-text-muted)', cursor: 'pointer' }} className="mobile-only-btn" onClick={() => setIsCartOpenMobile(false)}><X size={24} /></button>
                 <button style={{ background: 'none', border: 'none', color: 'var(--pos-danger)', cursor: 'pointer' }} onClick={clearCart} title="Vider panier"><Trash2 size={18} /></button>
               </div>
+           </div>
+
+           {/* Mode de consommation Toggle (Sur Place / À Emporter) */}
+           <div style={{ display: 'flex', gap: 6, marginTop: 12, background: 'var(--pos-bg)', padding: 4, borderRadius: 12, border: '1px solid var(--pos-border)' }}>
+             <button 
+               type="button"
+               onClick={() => setConsumeType('DINE_IN')}
+               style={{
+                 flex: 1,
+                 padding: '8px 10px',
+                 borderRadius: 9,
+                 border: 'none',
+                 fontWeight: 800,
+                 fontSize: 12,
+                 cursor: 'pointer',
+                 display: 'flex',
+                 alignItems: 'center',
+                 justifyContent: 'center',
+                 gap: 6,
+                 transition: 'all 0.2s ease',
+                 background: consumeType === 'DINE_IN' ? 'var(--pos-primary)' : 'transparent',
+                 color: consumeType === 'DINE_IN' ? '#ffffff' : 'var(--pos-text-muted)',
+                 boxShadow: consumeType === 'DINE_IN' ? '0 2px 6px rgba(99, 102, 241, 0.3)' : 'none'
+               }}>
+               ☕ Sur Place
+             </button>
+             <button 
+               type="button"
+               onClick={() => setConsumeType('TAKEAWAY')}
+               style={{
+                 flex: 1,
+                 padding: '8px 10px',
+                 borderRadius: 9,
+                 border: 'none',
+                 fontWeight: 800,
+                 fontSize: 12,
+                 cursor: 'pointer',
+                 display: 'flex',
+                 alignItems: 'center',
+                 justifyContent: 'center',
+                 gap: 6,
+                 transition: 'all 0.2s ease',
+                 background: consumeType === 'TAKEAWAY' ? '#EA580C' : 'transparent',
+                 color: consumeType === 'TAKEAWAY' ? '#ffffff' : 'var(--pos-text-muted)',
+                 boxShadow: consumeType === 'TAKEAWAY' ? '0 2px 6px rgba(234, 88, 12, 0.3)' : 'none'
+               }}>
+               🛍️ À Emporter
+             </button>
            </div>
         </div>
 
