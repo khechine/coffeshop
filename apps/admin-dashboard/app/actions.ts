@@ -8857,6 +8857,24 @@ export async function updateKdsSettingsAction(settings: {
   return { success: true, store: updated };
 }
 
+export async function cancelKitchenOrderAction(orderId: string, reason?: string) {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  const sale = await (prisma as any).sale.update({
+    where: { id: orderId, storeId: store.id },
+    data: {
+      isVoid: true,
+      paymentStatus: 'CANCELLED',
+      preparationStatus: 'SERVED'
+    }
+  });
+
+  revalidatePath('/pos');
+  revalidatePath('/kds');
+  return { success: true, sale };
+}
+
 export async function getUnpaidOrdersAction() {
   const store = await getStore();
   if (!store) return [];

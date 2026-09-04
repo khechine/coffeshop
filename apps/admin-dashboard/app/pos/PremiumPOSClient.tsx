@@ -9,7 +9,7 @@ import {
   X, Wallet, Banknote, Smartphone, Receipt, Tag, Star, Heart, Smile, Zap, Home, Box, Sun, Moon, ShieldCheck, Package, Store, Calculator, RefreshCw, ChefHat
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction, clockInAction, clockOutAction, getActiveAttendance, getAdvancedSalesJournal, getStoreStockItemsList, adjustStock, sendOrderToKitchenAction, getUnpaidOrdersAction, payOrderAction } from '../actions';
+import { recordSale, searchCustomers, createCustomer, getRecentOrders, voidSale, getActiveCashSession, openCashSessionAction, closeCashSessionAction, clockInAction, clockOutAction, getActiveAttendance, getAdvancedSalesJournal, getStoreStockItemsList, adjustStock, sendOrderToKitchenAction, getUnpaidOrdersAction, payOrderAction, cancelKitchenOrderAction } from '../actions';
 import { savePendingAction, getPendingActions, deletePendingAction } from './OfflineSync';
 import { PrintService } from './PrintService';
 import { DenominationCounter } from './DenominationCounter';
@@ -1030,6 +1030,22 @@ export default function PremiumPOSClient({
     } catch (err: any) {
       alert('Erreur paiement : ' + err.message);
       setPayingOrderId(null);
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string, tableName?: string) => {
+    if (!confirm(`Êtes-vous sûr de vouloir annuler la commande cuisine pour "${tableName || 'cette table'}" et libérer la table ?`)) return;
+    try {
+      await cancelKitchenOrderAction(orderId);
+      const orders = await getUnpaidOrdersAction();
+      setUnpaidOrders(orders);
+      const matchedTable = initialTables.find((t: any) => t.label === tableName || t.name === tableName);
+      if (matchedTable) {
+        setTableOrders(prev => ({ ...prev, [matchedTable.id]: [] }));
+      }
+      alert('✅ Commande cuisine annulée et table libérée !');
+    } catch (err: any) {
+      alert('Erreur : ' + err.message);
     }
   };
   // ─────────────────────────────────────────────────────────────────
@@ -3882,6 +3898,12 @@ export default function PremiumPOSClient({
                              style={{ background: 'var(--pos-border)', color: 'var(--pos-text-main)', border: 'none', borderRadius: 10, padding: '8px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
                            >
                              🛒 Charger dans panier
+                           </button>
+                           <button
+                             onClick={() => handleCancelOrder(order.id, order.tableName)}
+                             style={{ background: '#FEF2F2', color: '#EF4444', border: '1px solid #FCA5A5', borderRadius: 10, padding: '8px 12px', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}
+                           >
+                             🗑️ Annuler commande
                            </button>
                          </div>
                        </div>
