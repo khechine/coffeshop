@@ -7,14 +7,15 @@ import {
   resetDemoDataAction, 
   seedTunisianStarterPackAction,
   updateStoreLogoAction,
-  updateStorePrintConfigAction
+  updateStorePrintConfigAction,
+  updateKdsSettingsAction
 } from '../../actions';
 import {
    Building2, MapPin, Store, Crosshair, Save, Clock,
    CheckCircle2, FileCheck, AlertCircle, ShieldCheck,
    FileUp, Eye, Upload, X, ShoppingCart, Sparkles,
    RotateCcw, Search, Map as MapIcon, Navigation, RefreshCw, Coins,
-   Printer, Image, FileText, Trash2, Wifi, Usb, Bluetooth
+   Printer, Image, FileText, Trash2, Wifi, Usb, Bluetooth, Utensils
 } from 'lucide-react';
 
 import 'leaflet/dist/leaflet.css';
@@ -38,6 +39,9 @@ interface StoreProps {
    officialDocs: any[] | null;
    forceMarketplaceAccess: boolean;
    isFiscalEnabled: boolean;
+   logoUrl?: string | null;
+   isKdsEnabled?: boolean;
+   requireTableForKitchen?: boolean;
    ticketConfig?: any;
    printerConfig?: any;
    loyaltyEarnRate?: number | any;
@@ -89,6 +93,24 @@ export default function SettingsClient({ store, token }: { store: StoreProps; to
    });
 
    const [isSavingConfig, setIsSavingConfig] = useState(false);
+
+   const [kdsConfig, setKdsConfig] = useState({
+      isKdsEnabled: (store as any).isKdsEnabled ?? true,
+      requireTableForKitchen: (store as any).requireTableForKitchen ?? true,
+   });
+   const [isSavingKds, setIsSavingKds] = useState(false);
+
+   const handleSaveKds = async () => {
+      setIsSavingKds(true);
+      try {
+         await updateKdsSettingsAction(kdsConfig);
+         alert('Paramètres KDS & Cuisine enregistrés avec succès !');
+      } catch (err: any) {
+         alert('Erreur: ' + err.message);
+      } finally {
+         setIsSavingKds(false);
+      }
+   };
 
    const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -197,6 +219,7 @@ export default function SettingsClient({ store, token }: { store: StoreProps; to
       loyaltyRedeemRate: number | string;
    }>({
       name: store.name,
+      address: store.address || '',
       city: store.city || '',
       governorate: store.governorate || '',
       phone: store.phone || '',
@@ -881,6 +904,69 @@ export default function SettingsClient({ store, token }: { store: StoreProps; to
                      <div className="text-center text-[9px] italic border-t border-dashed border-black pt-2">
                         <div>{ticketConfig.footerText}</div>
                         <div>Logiciel certifié par ELKASSA</div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+
+         {/* KDS & Kitchen Configuration Card */}
+         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] shadow-sm overflow-hidden my-8">
+            <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
+               <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-50 dark:bg-orange-500/10 text-orange-600 rounded-2xl flex items-center justify-center shadow-sm">
+                     <Utensils size={20} />
+                  </div>
+                  <div>
+                     <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Cuisine & Kitchen Display System (KDS)</h3>
+                     <p className="text-xs text-slate-400 font-medium mt-0.5">Contrôle du flux de préparation en cuisine et de l'obligation de sélection de table.</p>
+                  </div>
+               </div>
+               <button
+                  type="button"
+                  onClick={handleSaveKds}
+                  disabled={isSavingKds}
+                  className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-orange-600/20 flex items-center gap-2"
+               >
+                  <Save size={14} /> {isSavingKds ? 'Enregistrement...' : 'Enregistrer KDS'}
+               </button>
+            </div>
+
+            <div className="p-10 space-y-6">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Option 1: Activer KDS */}
+                  <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+                     <div>
+                        <div className="flex justify-between items-center mb-3">
+                           <span className="font-extrabold text-sm text-slate-900 dark:text-white">Activer le module KDS & Envoi Cuisine</span>
+                           <input
+                              type="checkbox"
+                              checked={kdsConfig.isKdsEnabled}
+                              onChange={e => setKdsConfig({ ...kdsConfig, isKdsEnabled: e.target.checked })}
+                              className="w-5 h-5 accent-orange-600 rounded cursor-pointer"
+                           />
+                        </div>
+                        <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                           Affiche les boutons <strong className="text-orange-600">📤 Cuisine</strong> sur le POS et active les bons de préparation pour les cuisiniers/baristas.
+                        </p>
+                     </div>
+                  </div>
+
+                  {/* Option 2: Exiger une Table */}
+                  <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+                     <div>
+                        <div className="flex justify-between items-center mb-3">
+                           <span className="font-extrabold text-sm text-slate-900 dark:text-white">Exiger l'association à une Table</span>
+                           <input
+                              type="checkbox"
+                              checked={kdsConfig.requireTableForKitchen}
+                              onChange={e => setKdsConfig({ ...kdsConfig, requireTableForKitchen: e.target.checked })}
+                              className="w-5 h-5 accent-orange-600 rounded cursor-pointer"
+                           />
+                        </div>
+                        <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                           Oblige le serveur à choisir une table avant d'envoyer la commande en cuisine. Évite les commandes anonymes sans numéro de table.
+                        </p>
                      </div>
                   </div>
                </div>

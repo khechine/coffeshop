@@ -212,6 +212,10 @@ model Store {
   ticketConfig  Json?    // { headerText, footerText, showTax, showTableName, showCashierName, showLogo, autoPrint, copies }
   printerConfig Json?    // { paperSize, connectionType, printerName, ipAddress, port, autoCut }
 
+  // KDS & Kitchen Configuration
+  isKdsEnabled           Boolean  @default(true)
+  requireTableForKitchen Boolean  @default(true)
+
   // NACEF / Fiscal Requirements
   isFiscalEnabled Boolean  @default(false)
   currentFiscalSequence Int @default(0) // Compteur atomique pour la numérotation NACEF

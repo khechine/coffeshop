@@ -8777,6 +8777,14 @@ export async function sendOrderToKitchenAction(data: {
     throw new Error('ACCES_RESTREINT : Votre accès au POS est restreint.');
   }
 
+  if ((store as any).isKdsEnabled === false) {
+    throw new Error("Le module KDS & Envoi Cuisine est désactivé pour cet établissement.");
+  }
+
+  if ((store as any).requireTableForKitchen && (!data.tableName || data.tableName === 'Vente Directe' || data.tableName === 'DIRECT')) {
+    throw new Error("Veuillez associer la commande à une table avant de l'envoyer en cuisine.");
+  }
+
   const now = new Date();
   const fiscalDay = now.toISOString().split('T')[0];
 
@@ -8825,6 +8833,28 @@ export async function sendOrderToKitchenAction(data: {
   revalidatePath('/kds');
   revalidatePath('/pos');
   return { success: true, orderId: sale.id, sale };
+}
+
+export async function updateKdsSettingsAction(settings: {
+  isKdsEnabled?: boolean;
+  requireTableForKitchen?: boolean;
+}) {
+  const store = await getStore();
+  if (!store) throw new Error('Store not found');
+
+  const updated = await (prisma.store as any).update({
+    where: { id: store.id },
+    data: {
+      ...(typeof settings.isKdsEnabled === 'boolean' ? { isKdsEnabled: settings.isKdsEnabled } : {}),
+      ...(typeof settings.requireTableForKitchen === 'boolean' ? { requireTableForKitchen: settings.requireTableForKitchen } : {})
+    }
+  });
+
+  revalidatePath('/admin/settings');
+  revalidatePath('/admin/configuration');
+  revalidatePath('/pos');
+  revalidatePath('/kds');
+  return { success: true, store: updated };
 }
 
 export async function getUnpaidOrdersAction() {

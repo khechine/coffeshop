@@ -228,6 +228,8 @@ export default function PremiumPOSClient({
   terminals = [],
   planName = 'STARTER',
   isFiscalEnabled = false,
+  isKdsEnabled = true,
+  requireTableForKitchen = true,
   loyaltyEarnRate = 1,
   loyaltyRedeemRate = 100
 }: { 
@@ -253,6 +255,8 @@ export default function PremiumPOSClient({
   terminals?: any[];
   planName?: string;
   isFiscalEnabled?: boolean;
+  isKdsEnabled?: boolean;
+  requireTableForKitchen?: boolean;
   loyaltyEarnRate?: number;
   loyaltyRedeemRate?: number;
 }) {
@@ -910,6 +914,19 @@ export default function PremiumPOSClient({
   // ── Push & Pay Later ─────────────────────────────────────────────
   const handleSendToKitchen = async () => {
     if (currentCart.length === 0) return;
+
+    if (!isKdsEnabled) {
+      alert("⚠️ Le module KDS et l'envoi en cuisine sont désactivés dans les paramètres.");
+      return;
+    }
+
+    const isNoTableSelected = !selectedTable || selectedTable.id === 'DIRECT' || selectedTable.label === 'Vente Directe';
+    if (requireTableForKitchen && isNoTableSelected) {
+      alert("🪑 Veuillez d'abord associer la commande à une table avant de l'envoyer en cuisine.");
+      setView('TABLES');
+      return;
+    }
+
     setIsSendingToKitchen(true);
     try {
       await sendOrderToKitchenAction({
@@ -3055,15 +3072,17 @@ export default function PremiumPOSClient({
                     onClick={processPayment}>
                     <CheckCircle size={24} /> VALIDER LA VENTE
                   </button>
-                  <button
-                    style={{ width: '100%', height: 50, fontSize: 14, borderRadius: 14, background: '#F97316', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center' }}
-                    onClick={async () => {
-                      setIsPaymentModalOpen(false);
-                      await handleSendToKitchen();
-                    }}
-                  >
-                    📤 ENVOYER EN CUISINE (PAYER PLUS TARD)
-                  </button>
+                  {isKdsEnabled && (
+                    <button
+                      style={{ width: '100%', height: 50, fontSize: 14, borderRadius: 14, background: '#F97316', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center' }}
+                      onClick={async () => {
+                        setIsPaymentModalOpen(false);
+                        await handleSendToKitchen();
+                      }}
+                    >
+                      📤 ENVOYER EN CUISINE (PAYER PLUS TARD)
+                    </button>
+                  )}
                   {!canValidate && (
                     <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--pos-danger)', fontWeight: 700 }}>Veuillez couvrir la totalité du montant</div>
                   )}

@@ -103,6 +103,8 @@ export default async function POSPage() {
   
   const planNameUpper = (store.subscription?.plan?.name || '').toUpperCase();
   const isFiscal = !!store.isFiscalEnabled;
+  const isKdsEnabled = store.isKdsEnabled !== false;
+  const requireTableForKitchen = store.requireTableForKitchen !== false;
 
   // Premium POS pour tout le monde (Désactivation du mode Rachma Legacy sur demande utilisateur)
   return (
@@ -123,6 +125,8 @@ export default async function POSPage() {
         printerConfig={store?.printerConfig}
         planName={planNameUpper}
         isFiscalEnabled={isFiscal}
+        isKdsEnabled={isKdsEnabled}
+        requireTableForKitchen={requireTableForKitchen}
         initialProducts={serializedProducts} 
         initialCategories={categories}
         initialBaristas={baristas as any} 
