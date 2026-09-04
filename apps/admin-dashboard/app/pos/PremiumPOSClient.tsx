@@ -3894,10 +3894,10 @@ export default function PremiumPOSClient({
                          </table>
                        )}
                   </div>
-
-
+                </div>
+              )}
              {/* Tab 3: En attente — Commandes cuisine non payées */}
-             {(closingTab as any) === 'UNPAID' && (
+             {closingTab === 'UNPAID' && (
                <div style={{ flex: 1, overflowY: 'auto' }}>
                  <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                    <div style={{ fontWeight: 900, fontSize: 16, color: 'var(--pos-text-main)' }}>
@@ -3974,7 +3974,7 @@ export default function PremiumPOSClient({
                    </div>
                  )}
                </div>
-             )}
+              )}
                   {/* Return to Count button */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--pos-border)' }}>
                      <button
@@ -4001,9 +4001,7 @@ export default function PremiumPOSClient({
                      </div>
                   </div>
                </div>
-             )}
           </div>
-        </div>
       )}
       {/* Mobile Bottom Nav */}
       <nav className="pos-mobile-nav">
