@@ -204,6 +204,7 @@ model Store {
   trialEndsAt   DateTime?
   isVerified    Boolean  @default(false)
   forceMarketplaceAccess Boolean @default(false)
+  isSetupComplete Boolean @default(false) // Wizard d'initialisation métier complété
 
   // Branding
   logoUrl       String?  // Store logo URL (used in dashboard + tickets)

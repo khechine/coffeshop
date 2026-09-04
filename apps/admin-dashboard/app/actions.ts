@@ -73,6 +73,7 @@ export async function getStore() {
           businessType: true,
           isFiscalEnabled: true,
           forceMarketplaceAccess: true,
+          isSetupComplete: true,
           trialEndsAt: true,
           createdAt: true,
           logoUrl: true,
@@ -129,6 +130,7 @@ export async function getStore() {
           id: true,
           name: true,
           city: true,
+          isSetupComplete: true,
           trialEndsAt: true,
           createdAt: true,
           subscription: {
@@ -217,6 +219,131 @@ export async function updateStore(data: {
   revalidatePath('/admin/settings');
   revalidatePath('/');
   revalidatePath('/pos');
+}
+
+// ── SETUP WIZARD & DATA PACKS ──────────────────────────────────────────────────
+
+export async function installDataPackAction(industry: string) {
+  const store = await getStore();
+  if (!store) throw new Error('Non authentifié ou boutique non trouvée');
+
+  const { getDataPack } = await import('./lib/data-packs');
+  const pack = getDataPack(industry);
+  if (!pack) throw new Error(`Pack de données introuvable pour le métier: ${industry}`);
+
+  // 1. Installe les catégories prédéfinies (évite les doublons)
+  const categoryMap: Record<string, string> = {};
+  const existingCategories = await prisma.category.findMany({
+    where: { storeId: store.id },
+  });
+  const existingCatNames = new Set(existingCategories.map((c) => c.name.toLowerCase().trim()));
+
+  for (const cat of pack.categories) {
+    if (!existingCatNames.has(cat.name.toLowerCase().trim())) {
+      const created = await prisma.category.create({
+        data: {
+          name: cat.name,
+          color: cat.color,
+          icon: cat.icon,
+          storeId: store.id,
+        },
+      });
+      categoryMap[cat.name] = created.id;
+    } else {
+      const found = existingCategories.find((c) => c.name.toLowerCase().trim() === cat.name.toLowerCase().trim());
+      if (found) categoryMap[cat.name] = found.id;
+    }
+  }
+
+  // 2. Installe les matières premières (StockItems)
+  const existingStockItems = await prisma.stockItem.findMany({
+    where: { storeId: store.id },
+  });
+  const existingStockNames = new Set(existingStockItems.map((s) => s.name.toLowerCase().trim()));
+
+  for (const item of pack.stockItems) {
+    if (!existingStockNames.has(item.name.toLowerCase().trim())) {
+      await prisma.stockItem.create({
+        data: {
+          name: item.name,
+          unitId: item.unit,
+          cost: item.cost,
+          quantity: item.quantity,
+          minThreshold: item.minThreshold,
+          storeId: store.id,
+        },
+      });
+    }
+  }
+
+  // 3. Installe les produits
+  const existingProducts = await prisma.product.findMany({
+    where: { storeId: store.id },
+  });
+  const existingProdNames = new Set(existingProducts.map((p) => p.name.toLowerCase().trim()));
+
+  for (const prod of pack.products) {
+    if (!existingProdNames.has(prod.name.toLowerCase().trim())) {
+      const catId = categoryMap[prod.category];
+      if (catId) {
+        await prisma.product.create({
+          data: {
+            name: prod.name,
+            price: prod.price,
+            taxRate: prod.taxRate,
+            categoryId: catId,
+            storeId: store.id,
+          },
+        });
+      }
+    }
+  }
+
+  revalidatePath('/admin');
+  revalidatePath('/pos');
+  return { success: true, countCategories: pack.categories.length, countProducts: pack.products.length, countStockItems: pack.stockItems.length };
+}
+
+export async function completeSetupAction(data: {
+  industry?: string;
+  installDataPack?: boolean;
+  matriculeFiscal?: string;
+  commercialName?: string;
+  establishmentReference?: string;
+  imdf?: string;
+  governorate?: string;
+}) {
+  const store = await getStore();
+  if (!store) throw new Error('Non authentifié');
+
+  // 1. Installe le pack si demandé
+  if (data.installDataPack && data.industry) {
+    try {
+      await installDataPackAction(data.industry);
+    } catch (e: any) {
+      console.warn('Data pack install warning:', e.message);
+    }
+  }
+
+  // 2. Met à jour les paramètres fiscaux et le statut du wizard
+  await (prisma.store as any).update({
+    where: { id: store.id },
+    data: {
+      industry: data.industry || store.industry,
+      isSetupComplete: true,
+      ...(data.matriculeFiscal ? { matriculeFiscal: data.matriculeFiscal.trim() } : {}),
+      ...(data.commercialName ? { commercialName: data.commercialName.trim() } : {}),
+      ...(data.establishmentReference ? { establishmentReference: data.establishmentReference.trim() } : {}),
+      ...(data.imdf ? { imdf: data.imdf.trim() } : {}),
+      ...(data.governorate ? { governorate: data.governorate } : {}),
+      ...(data.matriculeFiscal ? { isFiscalEnabled: true } : {}),
+    },
+  });
+
+  revalidatePath('/admin');
+  revalidatePath('/pos');
+  revalidatePath('/');
+  return { success: true };
 }
 
 // ── NACEF Server Actions ──────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { 
   ShoppingCart, ShoppingBag, TrendingUp, AlertTriangle, Coffee, ArrowRight, Package, 
   Layers, Users, Zap, ArrowUpRight, User, Wallet, Truck, Boxes, FileText, 
-  Settings, Activity, LayoutGrid, Star, ShieldCheck, CheckCircle2, Clock, DollarSign, Award, RefreshCw
+  Settings, Activity, LayoutGrid, Star, ShieldCheck, CheckCircle2, Clock, DollarSign, Award, RefreshCw, Sparkles
 } from 'lucide-react';
 
 import { redirect } from 'next/navigation';
@@ -15,6 +15,10 @@ export default async function AdminDashboardPage() {
   const store = await getStore();
   if (!store) {
     redirect('/login');
+  }
+
+  if (!store.isSetupComplete) {
+    redirect('/admin/setup');
   }
 
   const hasMarketplace = (store as any)?.subscription?.plan?.hasMarketplace === true;
@@ -137,6 +141,14 @@ export default async function AdminDashboardPage() {
 
         {/* Quick Action Navigation Buttons */}
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <Link href="/admin/setup" style={{ 
+            background: 'rgba(255, 255, 255, 0.9)', 
+            color: '#475569', padding: '12px 18px', borderRadius: '14px', textDecoration: 'none',
+            fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px',
+            border: '1px solid #E2E8F0', boxShadow: '0 2px 4px rgba(0,0,0,0.03)'
+          }}>
+            <Sparkles size={16} color="#6366F1" /> Assistant Métier
+          </Link>
           <Link href="/marketplace" style={{ 
             background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', 
             color: '#fff', padding: '12px 20px', borderRadius: '14px', textDecoration: 'none',
